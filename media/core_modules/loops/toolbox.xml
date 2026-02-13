@@ -1,0 +1,36 @@
+<category name="%{BKY_CAT_LOOPS}" colour="%{BKY_COLOUR_LOOPS}">
+    <block type="py_loop_while"></block>
+    <block type="py_loop_for_range">
+        <value name="START">
+            <shadow type="py_math_number"><field name="NUM">0</field></shadow>
+        </value>
+        <value name="STOP">
+            <shadow type="py_math_number"><field name="NUM">10</field></shadow>
+        </value>
+        <value name="STEP">
+            <shadow type="py_math_number"><field name="NUM">1</field></shadow>
+        </value>
+    </block>
+    <block type="py_loop_for_in">
+        <value name="ITERABLE">
+            <block type="py_type_list">
+                <mutation items="0"></mutation>
+            </block>
+        </value>
+    </block>
+    <block type="py_loop_enumerate">
+        <value name="LIST">
+            <block type="py_type_list">
+                <mutation items="0"></mutation>
+            </block>
+        </value>
+    </block>
+    <block type="py_loop_items">
+        <value name="DICT">
+            <block type="py_type_dict">
+                <mutation items="0"></mutation>
+            </block>
+        </value>
+    </block>
+    <block type="py_loop_flow_control"></block>
+</category>

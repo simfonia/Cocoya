@@ -1,0 +1,13 @@
+{
+    "modules": [
+        { "id": "structure", "name": "Structure" },
+        { "id": "logic", "name": "Logic" },
+        { "id": "loops", "name": "Loops" },
+        { "id": "math", "name": "Math" },
+        { "id": "text", "name": "Text" },
+        { "id": "types", "name": "Types" },
+        { "id": "tools", "name": "Tools" },
+        { "id": "variables", "name": "Variables" },
+        { "id": "functions", "name": "Functions" }
+    ]
+}

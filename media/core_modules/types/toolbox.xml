@@ -1,0 +1,11 @@
+<category name="%{BKY_CAT_TYPES}" colour="%{BKY_COLOUR_TYPES}">
+    <block type="py_type_list">
+        <mutation items="3"></mutation>
+    </block>
+    <block type="py_type_tuple">
+        <mutation items="3"></mutation>
+    </block>
+    <block type="py_type_dict">
+        <mutation items="1"></mutation>
+    </block>
+</category>

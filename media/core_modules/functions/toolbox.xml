@@ -1,0 +1,12 @@
+<category name="%{BKY_CAT_FUNCTIONS}" colour="%{BKY_COLOUR_FUNCTIONS}">
+    <block type="py_function_def"></block>
+    <block type="py_function_return"></block>
+    <block type="py_function_local_set">
+        <value name="VALUE">
+            <shadow type="py_math_number"><field name="NUM">0</field></shadow>
+        </value>
+    </block>
+    <block type="py_function_local_get"></block>
+    <block type="py_function_call"></block>
+    <block type="py_function_call_expr"></block>
+</category>

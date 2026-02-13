@@ -1,0 +1,11 @@
+<category name="%{BKY_CAT_TEXT}" colour="%{BKY_COLOUR_TEXT}">
+    <block type="py_text"></block>
+    <block type="py_text_multiline"></block>
+    <block type="py_text_join">
+        <mutation items="2"></mutation>
+        <value name="ADD0">
+            <shadow type="py_text"><field name="TEXT">score: </field></shadow>
+        </value>
+    </block>
+    <block type="py_text_length"></block>
+</category>

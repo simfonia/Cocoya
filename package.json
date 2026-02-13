@@ -1,0 +1,54 @@
+{
+    "name": "cocoya",
+    "displayName": "Cocoya: Code, Compute, Yield AI",
+    "description": "Visual Python programming for AI and Hardware education",
+    "version": "0.0.1",
+    "publisher": "simfonia",
+    "engines": {
+        "vscode": "^1.75.0"
+    },
+    "categories": [
+        "Education",
+        "Programming Languages"
+    ],
+    "activationEvents": [
+        "onCommand:cocoya.openWorkspace",
+        "*"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "commands": [
+            {
+                "command": "cocoya.openWorkspace",
+                "title": "Cocoya: Open Workspace",
+                "category": "Cocoya"
+            }
+        ],
+        "menus": {
+            "editor/title": [
+                {
+                    "command": "cocoya.openWorkspace",
+                    "group": "navigation",
+                    "when": "resourceExtname == .xml"
+                }
+            ]
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./",
+        "pretest": "npm run compile && npm run lint",
+        "lint": "eslint src --ext ts",
+        "test": "node ./out/test/runTest.js"
+    },
+    "devDependencies": {
+        "@types/node": "16.x",
+        "@types/vscode": "^1.75.0",
+        "@typescript-eslint/eslint-plugin": "^5.45.0",
+        "@typescript-eslint/parser": "^5.45.0",
+        "@vscode/test-electron": "^2.2.0",
+        "eslint": "^8.28.0",
+        "typescript": "^4.9.4"
+    }
+}

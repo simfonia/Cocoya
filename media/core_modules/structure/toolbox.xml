@@ -1,0 +1,17 @@
+<category name="%{BKY_CAT_STRUCTURE}" colour="%{BKY_COLOUR_STRUCTURE}">
+    <block type="py_definition_zone">
+        <statement name="DEFS">
+            <block type="py_import">
+                <field name="LIB">math</field>
+                <next>
+                    <block type="py_import">
+                        <field name="LIB">random</field>
+                    </block>
+                </next>
+            </block>
+        </statement>
+    </block>
+    <block type="py_import"></block>
+    <block type="py_import_from"></block>
+    <block type="py_main"></block>
+</category>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Cocoya Blockly Editor</title>
+    <!-- Highlight.js 語法高亮 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #f0f0f0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        #container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+        #blocklyArea {
+            flex: 1;
+            position: relative;
+            min-width: 300px;
+        }
+        #blocklyDiv {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+        #codeArea {
+            width: 400px;
+            background-color: #ffffff;
+            color: #333333;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid #ddd;
+            transition: width 0.2s;
+        }
+        #codeHeader {
+            padding: 8px 12px;
+            background-color: #f3f3f3;
+            color: #666;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #codeContent {
+            flex: 1;
+            margin: 0;
+            padding: 0;
+            overflow: auto;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            counter-reset: line;
+            background-color: #fff;
+        }
+        .hljs {
+            background: transparent !important;
+            padding: 0 !important;
+        }
+        .code-line {
+            display: block;
+            padding: 0 12px;
+            white-space: pre;
+            min-height: 1.5em;
+        }
+        .code-line:before {
+            counter-increment: line;
+            content: counter(line);
+            display: inline-block;
+            width: 2em;
+            margin-right: 1em;
+            color: #999;
+            text-align: right;
+            user-select: none;
+            border-right: 1px solid #eee;
+            padding-right: 0.5em;
+        }
+        .highlight-line {
+            background-color: #fff59d !important; /* 明亮的黃色高亮 */
+            border-top: 1px solid #ffe082;
+            border-bottom: 1px solid #ffe082;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="blocklyArea">
+            <div id="blocklyDiv"></div>
+        </div>
+        <div id="codeArea">
+            <div id="codeHeader">
+                <span>Python Preview</span>
+            </div>
+            <div id="codeContent"></div>
+        </div>
+    </div>
+
+    <!-- Blockly 核心 -->
+    <script src="blockly/core/blockly.js"></script>
+    <script src="blockly/core/python_compressed.js"></script>
+    <script src="zh-hant.js"></script>
+    
+    <!-- 插件 -->
+    <script src="blockly/plugins/field-colour.js"></script>
+    <script src="blockly/plugins/field-multilineinput.js"></script>
+    <!-- 工具箱定義 (動態載入預留) -->
+    <xml id="toolbox" style="display: none"></xml>
+
+    <!-- 主程式邏輯 -->
+    <script src="utils.js"></script>
+    <script src="ui_manager.js"></script>
+    <script src="module_loader.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>

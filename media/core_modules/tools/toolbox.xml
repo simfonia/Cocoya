@@ -1,0 +1,20 @@
+<category name="%{BKY_CAT_TOOLS}" colour="%{BKY_COLOUR_TOOLS}">
+    <block type="py_tools_print">
+        <value name="TEXT">
+            <block type="py_text_join">
+                <mutation items="2"></mutation>
+                <value name="ADD0">
+                    <shadow type="py_text"><field name="TEXT">msg: </field></shadow>
+                </value>
+            </block>
+        </value>
+    </block>
+    <block type="py_tools_input">
+        <value name="PROMPT">
+            <shadow type="py_text"><field name="TEXT">Input?</field></shadow>
+        </value>
+    </block>
+    <block type="py_tools_comment"></block>
+    <block type="py_tools_raw_statement"></block>
+    <block type="py_tools_raw_expression"></block>
+</category>

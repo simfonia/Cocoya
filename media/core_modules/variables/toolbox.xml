@@ -1,0 +1,9 @@
+<category name="%{BKY_CAT_VARIABLES}" colour="%{BKY_COLOUR_VARIABLES}" custom="VARIABLE">
+    <block type="py_variables_global"></block>
+    <block type="py_variables_set">
+        <value name="VALUE">
+            <shadow type="py_math_number"><field name="NUM">0</field></shadow>
+        </value>
+    </block>
+    <block type="py_variables_get"></block>
+</category>
