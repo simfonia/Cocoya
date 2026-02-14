@@ -69,6 +69,9 @@
             const coreToolboxes = await CocoyaLoader.loadModules(manifest, `${mediaUri}/core_modules`);
             const finalToolboxXML = `<xml>${document.getElementById('toolbox').innerHTML}${coreToolboxes.join('')}</xml>`;
 
+            // 套用語系文字到 UI
+            window.CocoyaUI.applyI18n();
+
             const workspace = Blockly.inject('blocklyDiv', {
                 toolbox: finalToolboxXML,
                 grid: { spacing: 20, length: 3, colour: '#ccc', snap: true },
@@ -78,6 +81,9 @@
                 move: { scrollbars: true, drag: true, wheel: true },
                 zoom: { controls: true, wheel: false, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 }
             });
+
+            // 將語系檔傳回 Host 供對話框使用
+            vscode.postMessage({ command: 'setLocale', messages: Blockly.Msg });
 
             const updateBlocksEnabledState = function(ws) {
                 const blocks = ws.getAllBlocks(false);
@@ -150,6 +156,30 @@
                 mainBlock.setDeletable(false);
             }
 
+            // 初始化工具列與狀態管理
+            let isDirty = false;
+            const setDirty = (dirty) => {
+                isDirty = dirty;
+                window.CocoyaUI.setDirty(dirty);
+            };
+            window.CocoyaUI.initToolbar((msg) => vscode.postMessage(msg));
+
+            // 代碼預覽更新邏輯
+            let updateTimer = null;
+            const triggerCodeUpdate = () => {
+                if (updateTimer) clearTimeout(updateTimer);
+                updateTimer = setTimeout(() => {
+                    try {
+                        let code = Blockly.Python.workspaceToCode(workspace);
+                        // 移除自動產生的變數初始化
+                        code = code.replace(/^[a-zA-Z_][a-zA-Z0-9_]* = None\n/mg, '');
+                        window.CocoyaUI.renderPythonPreview(code);
+                    } catch (e) {
+                        console.error('Update failed:', e);
+                    }
+                }, 200);
+            };
+
             // 5. 代碼產生器擴充 (攔截禁用積木)
             Blockly.Python.scrub_ = function(block, code, opt_thisOnly) {
                 if (!block.isEnabled()) {
@@ -165,14 +195,17 @@
             };
 
             // 8. 事件監聽 (含防抖機制)
-            let updateTimer = null;
             workspace.addChangeListener((event) => {
                 const isBlockChange = event.type === Blockly.Events.BLOCK_MOVE || 
                                      event.type === Blockly.Events.BLOCK_CREATE || 
                                      event.type === Blockly.Events.BLOCK_CHANGE ||
-                                     event.type === Blockly.Events.BLOCK_DELETE;
+                                     event.type === Blockly.Events.BLOCK_DELETE ||
+                                     event.type === Blockly.Events.VAR_CREATE ||
+                                     event.type === Blockly.Events.VAR_RENAME ||
+                                     event.type === Blockly.Events.VAR_DELETE;
 
-                if (isBlockChange) {
+                if (isBlockChange && !event.isUiEvent) {
+                    setDirty(true);
                     setTimeout(() => {
                         // 狀態同步不應產生 Undo 紀錄
                         Blockly.Events.disable();
@@ -189,17 +222,56 @@
                 }
 
                 if (!event.isUiEvent || isBlockChange) {
-                    if (updateTimer) clearTimeout(updateTimer);
-                    updateTimer = setTimeout(() => {
+                    triggerCodeUpdate();
+                }
+            });
+
+            // 監聽來自 Host 的訊息
+            window.addEventListener('message', event => {
+                const message = event.data;
+                switch (message.command) {
+                    case 'loadWorkspace':
+                        Blockly.Events.disable();
                         try {
-                            let code = Blockly.Python.workspaceToCode(workspace);
-                            // 移除自動產生的變數初始化 (例如 test = None)
-                            code = code.replace(/^[a-zA-Z_][a-zA-Z0-9_]* = None\n/mg, '');
-                            window.CocoyaUI.renderPythonPreview(code);
-                        } catch (e) {
-                            console.error('Update failed:', e);
+                            const xmlDom = Blockly.utils.xml.textToDom(message.xml);
+                            workspace.clear();
+                            Blockly.Xml.domToWorkspace(xmlDom, workspace);
+                        } finally {
+                            Blockly.Events.enable();
                         }
-                    }, 200);
+                        window.CocoyaUI.updateFileStatus(message.filename);
+                        setDirty(false);
+                        triggerCodeUpdate();
+                        break;
+                    case 'resetWorkspace':
+                        Blockly.Events.disable();
+                        try {
+                            workspace.clear();
+                            // 載入基本 Structure (Definition Zone + Main)
+                            const mainXml = '<xml>' +
+                                '<block type="py_definition_zone" x="20" y="20"></block>' +
+                                '<block type="py_main" x="20" y="140"></block>' +
+                                '</xml>';
+                            Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(mainXml), workspace);
+                            workspace.getTopBlocks().forEach(b => b.setDeletable(false));
+                        } finally {
+                            Blockly.Events.enable();
+                        }
+                        window.CocoyaUI.updateFileStatus('New Project');
+                        setDirty(false);
+                        triggerCodeUpdate();
+                        break;
+                    case 'saveCompleted':
+                        if (message.filename) window.CocoyaUI.updateFileStatus(message.filename);
+                        setDirty(false);
+                        window.CocoyaUI.flashButton('btn-save', '#e3f2fd');
+                        break;
+                    case 'runCompleted':
+                        window.CocoyaUI.flashButton('btn-run', '#c8e6c9');
+                        break;
+                    case 'updateStatus':
+                        window.CocoyaUI.setUpdateStatus(message.data);
+                        break;
                 }
             });
 

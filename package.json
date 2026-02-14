@@ -2,7 +2,7 @@
     "name": "cocoya",
     "displayName": "Cocoya: Code, Compute, Yield AI",
     "description": "Visual Python programming for AI and Hardware education",
-    "version": "0.0.1",
+    "version": "0.5.0",
     "publisher": "simfonia",
     "engines": {
         "vscode": "^1.75.0"
@@ -11,9 +11,12 @@
         "Education",
         "Programming Languages"
     ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/simfonia/Cocoya.git"
+    },
     "activationEvents": [
-        "onCommand:cocoya.openWorkspace",
-        "*"
+        "onCommand:cocoya.openWorkspace"
     ],
     "main": "./out/extension.js",
     "contributes": {

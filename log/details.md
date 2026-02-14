@@ -21,7 +21,7 @@
 
 ### 1. 雙欄佈局與積木定位 (Precise Positioning)
 - **實作方式**：
-    - 在 `Blockly.Python.scrub_` 注入自定義 ID 標籤。陳述句使用 `# ID:xxx`，運算式使用 `@@ID:xxx@@` 行內標記。
+    - 在 `Blockly.Python.scrub_` 注入自定義 ID 標籤。陳述句使用 `# ID:xxx`，運算式使用不可見字元 `\u0001ID:xxx\u0002` 標記。
     - 前端 `ui_manager.js` 解析這些標記，建立 `blockId -> DOM Line` 的映射表。
     - 點擊積木時，利用 `scrollIntoView` 與黃色高亮色塊實現同步導航。
 - **防抖 (Debounce)**：程式碼預覽渲染加入 200ms 延遲，防止高頻率操作下的效能抖動。
@@ -31,19 +31,29 @@
 - **解決**：
     - 在 `main.js` 徹底覆寫 `window.prompt` 與 `Blockly.prompt`。
     - 透過 `postMessage` 向 Host 請求 `vscode.window.showInputBox`。
-    - 採用非同步回調機制 (Map 儲存 requestId) 接收使用者輸入並回傳給 Webview。
+    - 採用非同步回調機制 (Map 儲存 requestId) 接收使用者輸入。
 
-### 3. 孤兒積木限制規則 (Orphan Protection)
-- **核心規則**：僅允許 `py_main`、變數設定、函式定義作為頂層積木；其餘積木若脫離容器必須變灰且不產生程式碼。
-- **API 踩坑 (Blockly V12.3.1)**：
-    - 原生 `Blockly.Events.disableOrphans` 過於嚴格，不適用於 Python 腳本風格。
-    - `block.setEnabled()` 在 V12 中視覺回饋不穩定，且會被內部邏輯覆蓋。
-    - **最終方案**：使用 `block.setDisabledReason(true, 'orphan')`。這能強制積木變灰，且必須配合 `Blockly.Python.scrub_` 攔截 `!block.isEnabled()` 的積木以防產生無效程式碼。
-- **時序問題**：檢測邏輯必須包裹在 `setTimeout(..., 0)` 中，確保在積木移動完成、模型關係更新後才執行啟用/禁用判斷。
+### 3. 變形積木的終極 Undo 方案 (A-E 流程)
+- **問題**：Plus-Minus 積木在有連線內容時，減少項次會導致連線遞補事件與 Mutation 事件衝突，毀壞 Undo 棧。
+- **解決 (A-E 流程)**：
+    1.  **A (Record)**: 紀錄舊 Mutation。
+    2.  **B (Data)**: 修改數據 (count--)。
+    3.  **C (Disable)**: `Blockly.Events.disable()` 暫停事件紀錄。
+    4.  **D (Shape)**: 執行 `updateShape_` (包含斷開並遞補連線)。
+    5.  **E (Enable)**: `Blockly.Events.enable()` 恢復紀錄。
+    6.  **Fire**: 手動發送 Mutation 事件。
+- **結果**：Undo 時，分支會恢復，但被踢出的積木保持浮動，不會崩潰。
 
-### 4. 變數分類動態化 (Engineer Style)
-- **自定義 Flyout**：透過 `workspace.registerToolboxCategoryCallback('VARIABLE', ...)` 接管變數分類。
-- **視覺一致性**：為了維持「Engineer Mode」風格，捨棄 Blockly 預設變數積木，改為動態產出 `py_variables_set` (=) 與 `py_variables_get`。
+### 4. 孤兒串檢測 (Chain-aware Orphan Protection)
+- **遞迴檢查**：`updateBlocksEnabledState` 現在會向上追溯至根積木。只要根積木不在白名單（Main, Global Def, Function Def）內，整串積木都會自動變灰。
+- **API (V12.3.1)**：優先使用 `block.setDisabledReason(true, 'orphan')`。
+
+### 5. 視覺風格與 i18n 顏色管理
+- **中央集權**：所有分類與積木顏色均定義在語系檔中的 `COLOUR_...` 標籤。
+- **色彩策略**：避開暖色系 (0-100)，預留給 AI 與硬體模組。
+
+### 6. 多行字串縮排修正
+- **對策**：使用 `'\n'.join([...])` 代替 `"""` 產出，確保字串內容不受 Python 外部縮排影響，維持「所見即所得」。
 
 ## 關鍵踩坑與解決紀錄 (2026-02-12)
 1. **Webview 通訊失效**：改用標準 `postMessage` 流程。

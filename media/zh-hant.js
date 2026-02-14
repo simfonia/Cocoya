@@ -6,6 +6,34 @@
     "BKY_SAVE_SUCCESS": "儲存成功！",
     "BKY_NEW_VARIABLE_HINT": "請輸入變數名稱（可使用逗號分隔建立多個）。\n注意：名稱不可由數字開頭，且不可包含底線以外的特殊符號。",
 
+    // 工具列與 UI 文字
+    "TLB_NEW": "開新專案",
+    "TLB_OPEN": "開啟專案",
+    "TLB_SAVE": "儲存專案",
+    "TLB_SAVE_AS": "另存專案",
+    "TLB_SETTINGS": "設定 Python 路徑",
+    "TLB_RUN": "執行程式",
+    "TLB_UPDATE": "檢查更新",
+    "TLB_STOP": "關閉",
+    "TLB_FILE_NEW": "未命名專案",
+    "TLB_PYTHON_PREVIEW": "Python 程式碼預覽",
+
+    // 更新檢查訊息
+    "MSG_UPDATE_LATEST": "目前已是最新版本 (%1)",
+    "MSG_UPDATE_AVAILABLE": "有新版本可更新 (%1)",
+    "MSG_UPDATE_LATEST_TOOLTIP": "目前已是最新版本 (%1)",
+    "MSG_UPDATE_AVAILABLE_TOOLTIP": "有新版本可更新 (%1)，點擊前往下載",
+
+    // 對話框與訊息
+    "MSG_SAVE_CONFIRM": "您要儲存對目前專案的變更嗎？",
+    "MSG_SAVE": "儲存",
+    "MSG_DONT_SAVE": "不儲存",
+    "MSG_CANCEL": "取消",
+    "MSG_SELECT_PATH": "選取路徑",
+    "MSG_UPDATE_LATEST": "目前已是最新版本！",
+    "MSG_PYTHON_NOT_FOUND": "無法執行 Python (目前設定: %1)。請指定正確的 python.exe 路徑。",
+    "MSG_PYTHON_UPDATED": "Python 路徑已更新: %1",
+
     // 分類顏色 (Hue)
     "COLOUR_STRUCTURE": "180",
     "COLOUR_LOGIC": "210",

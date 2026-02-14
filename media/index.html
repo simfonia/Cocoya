@@ -25,13 +25,81 @@
             flex: 1;
             position: relative;
             min-width: 300px;
+            display: flex;
+            flex-direction: column;
+        }
+        #toolbar {
+            height: 40px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            user-select: none;
+            justify-content: space-between;
+        }
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        #file-status {
+            flex: 1;
+            margin-left: 15px;
+            font-size: 12px;
+            color: #888;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .toolbar-btn {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+            position: relative;
+        }
+        .toolbar-btn:hover {
+            background-color: #f0f0f0;
+        }
+        .toolbar-btn img {
+            width: 24px;
+            height: 24px;
+        }
+        .toolbar-btn .hover-icon {
+            display: none;
+        }
+        .toolbar-btn:hover .normal-icon {
+            display: none;
+        }
+        .toolbar-btn:hover .hover-icon {
+            display: block;
+        }
+        @keyframes blink-update {
+            0% { background-color: transparent; }
+            50% { background-color: #ffcdd2; }
+            100% { background-color: transparent; }
+        }
+        .update-blink {
+            animation: blink-update 1.5s infinite;
+        }
+        .update-latest:hover {
+            background-color: #c8e6c9 !important; /* 綠色 */
+        }
+        .update-available:hover {
+            background-color: #ffcdd2 !important; /* 紅色 */
+        }
+        .toolbar-spacer {
+            width: 20px;
         }
         #blocklyDiv {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
+            flex: 1;
+            position: relative;
         }
         #codeArea {
             width: 400px;
@@ -98,11 +166,52 @@
 <body>
     <div id="container">
         <div id="blocklyArea">
+            <div id="toolbar">
+                <div class="toolbar-group">
+                    <div class="toolbar-btn" id="btn-new" title="%{BKY_TLB_NEW}">
+                        <img src="icons/new_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="icons/new_24dp_FE2F89.png" class="hover-icon">
+                    </div>
+                    <div class="toolbar-btn" id="btn-open" title="%{BKY_TLB_OPEN}">
+                        <img src="icons/load_project_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="icons/load_project_24dp_FE2F89.png" class="hover-icon">
+                    </div>
+                    <div class="toolbar-btn" id="btn-save" title="%{BKY_TLB_SAVE}">
+                        <img src="icons/save_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="icons/save_24dp_FE2F89.png" class="hover-icon">
+                    </div>
+                    <div class="toolbar-btn" id="btn-save-as" title="%{BKY_TLB_SAVE_AS}">
+                        <img src="icons/save_as_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="icons/save_as_24dp_FE2F89.png" class="hover-icon">
+                    </div>
+                    <div class="toolbar-btn" id="btn-settings" title="%{BKY_TLB_SETTINGS}">
+                        <img src="icons/settings_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="icons/settings_24dp_FE2F89.png" class="hover-icon">
+                    </div>
+                </div>
+
+                <div id="file-status"></div>
+                
+                <div class="toolbar-group">
+                    <div class="toolbar-btn" id="btn-run" title="%{BKY_TLB_RUN}">
+                        <img src="icons/run_blocks_24dp_75FB4C.png" class="normal-icon">
+                        <img src="icons/run_blocks_24dp_FE2F89.png" class="hover-icon">
+                    </div>
+                    <div class="toolbar-btn" id="btn-update" title="%{BKY_TLB_UPDATE}">
+                        <img src="icons/published_with_changes_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="icons/published_with_changes_24dp_FE2F89.png" class="hover-icon">
+                    </div>
+                    <div class="toolbar-btn" id="btn-stop" title="%{BKY_TLB_STOP}">
+                        <img src="icons/dangerous_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="icons/dangerous_24dp_FE2F89.png" class="hover-icon">
+                    </div>
+                </div>
+            </div>
             <div id="blocklyDiv"></div>
         </div>
         <div id="codeArea">
             <div id="codeHeader">
-                <span>Python Preview</span>
+                <span>%{BKY_TLB_PYTHON_PREVIEW}</span>
             </div>
             <div id="codeContent"></div>
         </div>
