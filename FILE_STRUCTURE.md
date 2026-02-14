@@ -1,4 +1,6 @@
 C:\Workspace\cocoya\
+├── docs/                  # 專案文檔
+│   └── system_spec.html   # 系統規格說明書 (電子書)
 ├── log/                   # 專案日誌與任務追蹤
 │   ├── details.md         # 技術細節與 API 踩坑紀錄
 │   ├── handover.md        # 任務交接檔
@@ -7,19 +9,19 @@ C:\Workspace\cocoya\
 ├── media/                 # Webview 前端資源
 │   ├── blockly/           # Blockly 核心庫與插件
 │   ├── core_modules/      # 內建積木模組 (math, text, logic, etc.)
-│   │   ├── functions/     # 函式與程式入口模組 (New!)
-│   │   ├── math/          # 算術模組
-│   │   ├── variables/     # 變數模組 (Engineer Style)
-│   │   └── ...
+│   ├── icons/             # 工具列與功能圖示
 │   ├── core_manifest.json # 模組載入清單
-│   ├── index.html         # 主介面 (雙欄佈局)
-│   ├── main.js            # Webview 進入點與事件調度
+│   ├── index.html         # 主介面 (雙欄佈局 + 工具列)
+│   ├── main.js            # Webview 進入點 (CocoyaApp)
 │   ├── module_loader.js   # 動態模組載入器
-│   ├── ui_manager.js      # 代碼預覽渲染與高亮庫 (New!)
-│   ├── utils.js           # 通用工具庫 (New!)
+│   ├── ui_manager.js      # UI 渲染與互動管理器 (CocoyaUI)
+│   ├── utils.js           # 通用工具庫 (Mutator, ID Parser)
 │   ├── zh-hant.js         # 正體中文語系
 │   └── en.js              # 英文語系
-├── src/                   # Extension 後端
-│   └── extension.ts       # VS Code 擴充功能進入點 (含 Prompt 橋樑)
-├── package.json
-└── tsconfig.json
+├── src/                   # Extension 後端 (TypeScript)
+│   └── extension.ts       # 擴充功能管理器 (CocoyaManager)
+├── temp_scripts/          # 執行期間暫存目錄
+├── LICENSE.md             # MIT License
+├── README.md              # 專案說明文件
+├── package.json           # 插件配置與依賴
+└── tsconfig.json          # TS 編譯設定
