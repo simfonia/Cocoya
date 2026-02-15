@@ -92,6 +92,7 @@
         .tag { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 0.8rem; margin-right: 5px; background: #e1e1e1; }
         .tag-ts { background: #3178c6; color: white; }
         .tag-js { background: #f7df1e; color: black; }
+        .tag-py { background: #3776ab; color: white; }
         .tag-xml { background: #ff6600; color: white; }
 
         footer { text-align: center; margin-top: 40px; color: #888; font-size: 0.8rem; }
@@ -105,69 +106,43 @@
         <li><a href="#overview">1. 專案概述</a></li>
         <li><a href="#naming">2. 開發規範</a></li>
         <li><a href="#structure">3. 檔案架構</a></li>
-        <li><a href="#host">4. Host 端架構 (TS)</a></li>
-        <li><a href="#webview">5. Webview 前端 (JS)</a></li>
-        <li><a href="#communication">6. 通訊協議</a></li>
-        <li><a href="#i18n">7. 語系與轉義處理</a></li>
-        <li><a href="#future">8. 未來擴充</a></li>
+        <li><a href="#platform">4. 平台模式與自動偵測</a></li>
+        <li><a href="#deployment">5. 硬體部署系統 (MCU)</a></li>
+        <li><a href="#webview">6. Webview 前端物件</a></li>
+        <li><a href="#communication">7. 通訊協議</a></li>
+        <li><a href="#i18n">8. 語系與轉義處理</a></li>
     </ul>
 </nav>
 
 <main id="content">
     <header>
-        <h1>Cocoya 系統規格說明書 v1.0</h1>
+        <h1>Cocoya 系統規格說明書 v1.1</h1>
         <p><strong>Code, Compute, Yield AI</strong> - 專為 AI 教育設計的視覺化開發環境。</p>
     </header>
 
     <section id="overview">
         <h2>1. 專案概述</h2>
-        <p>Cocoya 是一個整合了 Blockly 與 Python (OpenCV/MediaPipe) 的 VS Code 擴充功能。它旨在消除初學者進入 AI 視覺開發時的語法障礙，提供即時的程式碼反饋與穩定的執行環境。</p>
+        <p>Cocoya 是一個整合了 Blockly 與 Python (OpenCV/MediaPipe) 的 VS Code 擴充功能。它具備跨平台支援能力，可開發 PC 端 AI 程式或 CircuitPython 硬體程式。</p>
         <h3>核心技術</h3>
         <ul>
             <li><strong>Extension Host:</strong> TypeScript 4.9+ (VS Code API)</li>
             <li><strong>Frontend:</strong> Vanilla JavaScript (ES6), HTML5, CSS3</li>
             <li><strong>Logic Engine:</strong> Google Blockly v12.x</li>
-            <li><strong>Styling:</strong> Highlight.js (語法高亮)</li>
+            <li><strong>Hardware Bridge:</strong> Python Serial REPL / Disk Mount</li>
         </ul>
     </section>
 
     <section id="naming">
         <h2>2. 開發規範</h2>
-        <p>為了確保程式碼的可讀性與一致性，所有開發者必須遵守以下命名規範：</p>
         <table class="spec-table">
             <thead>
-                <tr>
-                    <th>類型</th>
-                    <th>規範</th>
-                    <th>範例</th>
-                </tr>
+                <tr><th>類型</th><th>規範</th><th>範例</th></tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>類別名稱 (Classes)</td>
-                    <td><code>PascalCase</code></td>
-                    <td><code>CocoyaManager</code>, <code>UpdateManager</code></td>
-                </tr>
-                <tr>
-                    <td>變數與函式 (Variables/Funcs)</td>
-                    <td><code>camelCase</code></td>
-                    <td><code>currentFilePath</code>, <code>handleRunCode()</code></td>
-                </tr>
-                <tr>
-                    <td>常數 (Constants)</td>
-                    <td><code>UPPER_SNAKE_CASE</code></td>
-                    <td><code>TAG_START</code>, <code>MAX_BUFFER_SIZE</code></td>
-                </tr>
-                <tr>
-                    <td>積木 ID (Block Types)</td>
-                    <td><code>py_[module]_[name]</code></td>
-                    <td><code>py_logic_compare</code>, <code>py_ai_face_mesh</code></td>
-                </tr>
-                <tr>
-                    <td>私有成員 (Private)</td>
-                    <td>前綴底線 <code>_</code> 或 TS <code>private</code></td>
-                    <td><code>this._isDirty</code></td>
-                </tr>
+                <tr><td>類別名稱</td><td><code>PascalCase</code></td><td><code>CocoyaManager</code></td></tr>
+                <tr><td>變數與函式</td><td><code>camelCase</code></td><td><code>isDirty</code>, <code>handleRunCode()</code></td></tr>
+                <tr><td>常數</td><td><code>UPPER_SNAKE_CASE</code></td><td><code>COLOUR_AI</code>, <code>TAG_START</code></td></tr>
+                <tr><td>積木 ID</td><td><code>py_[module]_[name]</code></td><td><code>py_ai_open_camera</code></td></tr>
             </tbody>
         </table>
     </section>
@@ -176,107 +151,73 @@
         <h2>3. 檔案架構</h2>
         <div class="file-tree">
             cocoya/<br>
-            ├── src/ <span class="tag tag-ts">TS</span> (Extension Host)<br>
-            │   └── extension.ts (主入口，控制 Manager 類別)<br>
-            ├── media/ (Webview 資源)<br>
-            │   ├── core_modules/ <span class="tag tag-xml">XML</span> (積木定義區)<br>
-            │   │   └── logic/ (含 _blocks.js, _generators.js, toolbox.xml)<br>
-            │   ├── icons/ (工具列與積木圖示)<br>
-            │   ├── main.js <span class="tag tag-js">JS</span> (前端主邏輯物件)<br>
-            │   ├── ui_manager.js <span class="tag tag-js">JS</span> (UI 渲染與狀態管理)<br>
-            │   ├── utils.js (通用輔助工具)<br>
-            │   ├── zh-hant.js / en.js (語系定義)<br>
-            │   └── index.html (Webview 結構與樣式)<br>
-            ├── temp_scripts/ (存放執行中的暫存 Python 檔)<br>
-            ├── log/ (開發與技術日誌)<br>
-            └── package.json (插件定義與指令貢獻)
+            ├── src/ <span class="tag tag-ts">TS</span> (Host 端管理器)<br>
+            ├── media/ (Webview 前端)<br>
+            │   ├── core_modules/ <span class="tag tag-xml">XML</span> (積木分類模組)<br>
+            │   ├── main.js <span class="tag tag-js">JS</span> (應用程式物件 CocoyaApp)<br>
+            │   └── ui_manager.js <span class="tag tag-js">JS</span> (UI 管理器 CocoyaUI)<br>
+            ├── resources/ <span class="tag tag-py">PY</span> (靜態資源)<br>
+            │   └── deploy_mcu.py (硬體部署工具)<br>
+            ├── temp_scripts/ (執行期暫存檔)<br>
+            └── docs/ (系統規格書)
         </div>
     </section>
 
-    <section id="host">
-        <h2>4. Host 端架構 (TypeScript)</h2>
-        <p>Host 端負責處理作業系統層級的操作，例如檔案 IO、終端機控制與網路請求。</p>
-        <h3>CocoyaManager 類別</h3>
-        <p>這是 Host 端的中央處理器，封裝了所有與 Webview 對接的行為。</p>
-        <pre><code class="language-typescript">
-class CocoyaManager {
-    private currentFilePath: string; // 追蹤目前開啟的 XML 路徑
-    private localeMessages: any;     // 儲存來自前端的語系檔內容
-    
-    // 主要函式功能
-    private checkDirtyAndConfirm(); // 毀滅性操作前的安全檢查
-    private handleRunCode();        // 清理 ID 標記、寫入暫存檔並開啟終端機
-    private checkUpdate();          // 透過 GitHub API 比對版本
-}
-        </code></pre>
+    <section id="platform">
+        <h2>4. 平台模式與自動偵測</h2>
+        <p>Cocoya 支援 <strong>PC (Python)</strong> 與 <strong>CircuitPython (MCU)</strong> 雙模式隔離。</p>
+        <h3>XML 屬性標記</h3>
+        <p>存檔時，系統會在 <code>&lt;xml&gt;</code> 標籤注入 <code>platform</code> 屬性：</p>
+        <pre><code class="language-xml">&lt;xml platform="CircuitPython"&gt; ... &lt;/xml&gt;</code></pre>
+        <h3>自動偵測機制</h3>
+        <ul>
+            <li><strong>優先順序 1：</strong> 讀取 XML 根節點的 <code>platform</code> 屬性。</li>
+            <li><strong>優先順序 2 (備援)：</strong> 掃描積木內容。若包含 <code>py_loop_while</code> 則判定為 CircuitPython。</li>
+        </ul>
+    </section>
+
+    <section id="deployment">
+        <h2>5. 硬體部署系統 (MCU)</h2>
+        <p>部署邏輯封裝於 <code>resources/deploy_mcu.py</code> 中，執行流程如下：</p>
+        <ol>
+            <li><strong>磁碟偵測：</strong> 優先搜尋標籤為 <code>CIRCUITPY</code> 的磁碟進行直接寫入。</li>
+            <li><strong>REPL 備援：</strong> 若無磁碟，則透過 Serial 進入 Raw REPL 模式進行傳輸。</li>
+            <li><strong>Serial Monitor：</strong> 部署完成後自動開啟監控迴圈，即時顯示裝置 <code>print()</code> 輸出。</li>
+        </ol>
     </section>
 
     <section id="webview">
-        <h2>5. Webview 前端 (JavaScript)</h2>
-        <p>Webview 採用物件導向風格封裝，減少全域變數污染。</p>
-        
+        <h2>6. Webview 前端物件</h2>
         <h3>CocoyaApp (media/main.js)</h3>
-        <p>負責 Blockly 的生命週期管理與訊息路由。</p>
         <ul>
-            <li><code>init()</code>: 程式啟動點，初始化請求流程。</li>
-            <li><code>setupGeneratorOverrides()</code>: 核心方法，負責注入用於定位的隱藏 ID。</li>
-            <li><code>triggerCodeUpdate()</code>: 具備防抖 (Debounce) 機制的代碼產生器呼叫。</li>
+            <li><code>currentPlatform</code>: 追蹤目前模式 (PC/CircuitPython)。</li>
+            <li><code>switchPlatform(mode)</code>: 執行模式鎖定切換，重載 Toolbox 並重置工作區。</li>
         </ul>
-
         <h3>CocoyaUI (media/ui_manager.js)</h3>
-        <p>負責所有 DOM 操作與視覺反饋。</p>
         <ul>
-            <li><code>renderPythonPreview()</code>: 解析隱藏 ID，將代碼轉為語法高亮的 DOM 並建立映射。</li>
-            <li><code>setDirty(boolean)</code>: 同步更新「儲存按鈕桃紅線」與「檔名星號」。</li>
-            <li><code>setUpdateStatus()</code>: 根據版本檢查結果，切換工具列圖示的 CSS Class (Latest/Available)。</li>
+            <li><code>updateRunTooltip(platform)</code>: 根據模式動態切換執行按鈕的提示文字。</li>
+            <li><code>updateSerialPorts(ports)</code>: 動態更新序列埠下拉選單。</li>
         </ul>
     </section>
 
     <section id="communication">
-        <h2>6. 通訊協議 (Messaging)</h2>
-        <p>雙端通訊採用標準的 <code>postMessage</code> 機制，訊息結構統一為：</p>
-        <pre><code class="language-json">
-{
-    "command": "指令名稱",
-    "data": {},
-    "xml": "Blockly XML內容",
-    "isDirty": true
-}
-        </code></pre>
-        <h3>關鍵指令清單</h3>
+        <h2>7. 通訊協議</h2>
         <table class="spec-table">
-            <tr><th>指令</th><th>發送方</th><th>描述</th></tr>
-            <tr><td><code>setLocale</code></td><td>Webview</td><td>將 Blockly.Msg 傳給 Host 供原生對話框使用。</td></tr>
-            <tr><td><code>loadWorkspace</code></td><td>Host</td><td>將讀取的檔案內容載入進 Blockly.</td></tr>
-            <tr><td><code>runCode</code></td><td>Webview</td><td>請求執行產出的 Python 程式碼。</td></tr>
-            <tr><td><code>updateStatus</code></td><td>Host</td><td>通知前端版本檢查結果。</td></tr>
+            <tr><th>指令</th><th>酬載關鍵字</th><th>用途</th></tr>
+            <tr><td><code>loadWorkspace</code></td><td><code>xml, filename, platform</code></td><td>載入檔案並同步切換模式 UI。</td></tr>
+            <tr><td><code>runCode</code></td><td><code>code, platform, serialPort</code></td><td>請求執行或部署。</td></tr>
+            <tr><td><code>setDirty</code></td><td><code>isDirty</code></td><td>通知 Host 更新頁籤標題標記 (*)。</td></tr>
         </table>
     </section>
 
     <section id="i18n">
-        <h2>7. 語系與轉義處理</h2>
-        <h3>i18n 集中化</h3>
-        <p>所有的 UI 字串、Tooltip、甚至對話框訊息，必須定義在 <code>media/zh-hant.js</code> 與 <code>media/en.js</code> 中。前端透過 <code>applyI18n()</code> 自動掃描帶有 <code>%{BKY_...}</code> 標籤的元素。</p>
-        
-        <h3>關鍵字串處理 (Important!)</h3>
-        <ul>
-            <li><strong>換行符號：</strong> 在產生器 JS 中，實體換行是被禁止的。請務必使用 <code>
-</code> (字面量) 確保最終產出的 Python 檔案格式正確。</li>
-            <li><strong>ID 標記：</strong> 定位標記使用 <code>\u0001ID:xxx\u0002</code>。執行前 Host 端會使用 Regex <code>/\u0001ID:.*?\u0002/g</code> 進行清理。</li>
-        </ul>
-    </section>
-
-    <section id="future">
-        <h2>8. 未來擴充 (Roadmap)</h2>
-        <ul>
-            <li><strong>AI Vision 模組：</strong> 整合 MediaPipe 函式庫，提供 <code>Face Mesh</code> 與 <code>Gesture Recognition</code> 積木。</li>
-            <li><strong>Hardware 模組：</strong> 實作透過 Serial 傳輸協定與 CircuitPython (XIAO / RP2040) 通訊。</li>
-            <li><strong>教學引導系統：</strong> 加入 Step-by-step 的互動式積木導引。</li>
-        </ul>
+        <h2>8. 語系與轉義處理</h2>
+        <p>所有 UI 字串與 Tooltip 必須透過 <code>media/zh-hant.js</code> 定義。前端 <code>applyI18n()</code> 會處理 <code>span</code>, <code>title</code> 與 <code>option</code> 標籤。</p>
+        <p><strong>注意：</strong> 產出程式碼時，請使用 <code>\\n</code> 字面量換行符號，避免 JavaScript 載入錯誤。</p>
     </section>
 
     <footer>
-        <p>© 2026 simfonia - Cocoya 專案組。文件由 Gemini CLI 自動生成。</p>
+        <p>© 2026 simfonia - Cocoya 專案組。文件更新日期：2026-02-14</p>
     </footer>
 </main>
 

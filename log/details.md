@@ -59,3 +59,30 @@
 1. **Webview 通訊失效**：改用標準 `postMessage` 流程。
 2. **Python 產生器換行符號**：JS 檔案內必須維持 `\n` 字面量。
 3. **動態載入衝突**：強制使用 `[moduleId]_blocks.js` 識別化命名。
+
+## 關鍵技術實作紀錄 (2026-02-14 更新)
+
+### 1. 專業級 UI 佈局與同步
+- **頁籤標題同步**: 透過 vscode.postMessage 觸發 Host 端 updateTitle，標題格式定為 Cocoya Editor: [檔名.xml*]。
+- **Hex 色譜管理**: 棄用 Hue 值，改用 Hex 色碼以確保與品牌色 (#FE2F89) 一致。
+- **i18n 自動套用**: 前端 applyI18n() 支援自動替換 span, 	itle 與 option 標籤中的 %{BKY_...}。
+
+### 2. 專案模式自動偵測 (XML Metadata)
+- **實作方式**: 在存檔時於 XML 根節點注入 platform="PC" 或 platform="CircuitPython"。
+- **優點**: 解決了單純靠積木特徵判斷的不確定性，達成 100% 準確的模式切換。
+
+### 3. MCU 部署引擎 (Deployer)
+- **部署工具**: 獨立 Python 腳本 
+esources/deploy_mcu.py。
+- **優先策略**: 
+    1. 掃描 GetLogicalDrives() 尋找標籤為 CIRCUITPY 的磁碟機進行直接檔案寫入。
+    2. 若失敗，則降級為 Serial REPL 模式，透過 f.write() 傳輸程式碼。
+- **監控模式**: 部署後不關閉序列埠，自動進入監聽迴圈顯示 print() 訊息。
+
+### 4. 程式碼清理與安全性
+- **字串處理**: 嚴格遵守 \\n 轉義規範，避免產生器 JS 中的實體換行。
+- **ID 清理**: 執行前使用 Regex /\u0001ID:.*?\u0002/g 與 /# ID:.*?\n/g 確保產出純淨 Python 代碼。
+
+## 關鍵踩坑與解決紀錄 (2026-02-14)
+1. **Webview URI 權限 (403)**: 發現 JS 動態修改 img.src 會導致路徑失效。解決方案：預放所有圖示並透過 CSS Class 切換。
+2. **終端機崩潰 (-1073741510)**: 因自動發送 \u0003 導致 PowerShell 中斷。解決方案：改由使用者手動控制。

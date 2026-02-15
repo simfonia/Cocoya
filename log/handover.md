@@ -33,3 +33,15 @@
     - 實作 OpenCV 影像處理積木。
     - 實作硬體通訊 (Serial) 與 CircuitPython 部署機制。
 - **目前狀態**：開發容器已完全成熟，具備穩定的 Engineer Mode 操作體驗。
+
+## 2026-02-14 系統成熟與硬體部署 (里程碑 v1.5 完成)
+- **核心進度**：
+    - **架構重構**：全面引入 OOP 模式，建立 `CocoyaManager` (Host) 與 `CocoyaApp` (Webview) 管理物件，程式碼結構清晰且易於維護。
+    - **模式切換系統**：實作 Python (PC) 與 CircuitPython (MCU) 模式隔離，支援「模式鎖定」、Toolbox 動態過濾與 XML 屬性自動偵測。
+    - **硬體部署引擎**：完成真實的 MCU 部署邏輯，支援 `CIRCUITPY` 磁碟直接寫入與 Serial REPL 備援，並整合 Serial Monitor 即時監看輸出。
+    - **UI 精緻化**：實作「分隔線群組」佈局、頁籤標題同步 (`*` 標記)、以及專業的 Hex 色譜配色。
+    - **i18n 全面化**：語系檔現在掌控了從積木、分類到對話框、工具列 Tooltip 的所有文字。
+- **下一階段目標**：
+    - 進入里程碑 v2.0：正式實作 AI Vision (MediaPipe) 與 OpenCV 系列積木。
+    - 優化 MCU 的部署速度與穩定性。
+- **目前狀態**：系統基礎建設已達生產級水準，準備迎接 AI 功能擴充。

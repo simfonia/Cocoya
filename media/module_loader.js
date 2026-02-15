@@ -41,9 +41,20 @@ async function loadModule(moduleId, basePath) {
 }
 
 window.CocoyaLoader = {
-    loadModules: async function(manifest, corePath) {
+    /**
+     * 載入模組並根據平台過濾
+     * @param {Object} manifest 模組清單
+     * @param {string} corePath 基礎路徑
+     * @param {string} platform 目標平台 (PC/MCU)
+     */
+    loadModules: async function(manifest, corePath, platform = 'PC') {
         const toolboxes = [];
         for (const module of manifest.modules) {
+            // 如果模組定義了平台限制，且目前平台不在其中，則跳過
+            if (module.platforms && !module.platforms.includes(platform)) {
+                continue;
+            }
+            
             const toolbox = await loadModule(module.id, corePath);
             if (toolbox) toolboxes.push(toolbox);
         }

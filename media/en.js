@@ -39,10 +39,18 @@
     "TLB_SAVE_AS": "Save As...",
     "TLB_SETTINGS": "Set Python Path",
     "TLB_RUN": "Run Program",
+    "TLB_RUN_PC": "Run PC Program",
+    "TLB_RUN_MCU": "Upload to MCU",
     "TLB_UPDATE": "Check for Updates",
     "TLB_STOP": "Close",
+    "TLB_SERIAL_PORT": "Serial Port",
+    "TLB_SERIAL_REFRESH": "Detect Serial Port",
+    "TLB_SERIAL_CONNECT": "Connect Serial",
+    "TLB_SERIAL_DISCONNECT": "Disconnect Serial",
     "TLB_FILE_NEW": "Untitled Project",
-    "TLB_PYTHON_PREVIEW": "Python Code Preview",
+    "TLB_PYTHON_PREVIEW": "Code Preview",
+    "TLB_MODE_PC": "💻 Python (PC)",
+    "TLB_MODE_MCU": "📟 CircuitPython (MCU)",
 
     // Update messages
     "MSG_UPDATE_LATEST": "Already up to date (%1)",
@@ -52,10 +60,14 @@
 
     // Dialogs & Messages
     "MSG_SAVE_CONFIRM": "Do you want to save changes to the current project?",
+    "MSG_SWITCH_CONFIRM": "Switching modes will clear the workspace and start a new project. Are you sure you want to switch to %1 mode?",
     "MSG_SAVE": "Save",
     "MSG_DONT_SAVE": "Don't Save",
     "MSG_CANCEL": "Cancel",
     "MSG_SELECT_PATH": "Select Path",
+    "MSG_SELECT_PORT": "Please select a serial port first!",
+    "MSG_PYSERIAL_MISSING": "pyserial module not found. Please run 'pip install pyserial' to enable hardware deployment.",
+    "MSG_DEPLOYING_MCU": "Deploying code to MCU (%1)...",
     "MSG_UPDATE_LATEST": "You are already using the latest version.",
     "MSG_PYTHON_NOT_FOUND": "Could not execute Python (Current: %1). Please specify the correct python.exe path.",
     "MSG_PYTHON_UPDATED": "Python path updated: %1",
@@ -91,6 +103,16 @@
     // Block Messages
     "CONTROLS_IF_MSG_IF": "if",
     "CONTROLS_WHILEUNTIL_OPERATOR_WHILE": "while",
-    "TEXT_PRINT_TITLE": "print(%1)"
+    "TEXT_PRINT_TITLE": "print(%1)",
+
+    // AI Vision Blocks
+    "AI_OPEN_CAMERA": "Open Camera %1",
+    "AI_OPEN_CAMERA_TOOLTIP": "Initialize OpenCV camera and prepare for image capture.",
+
+    // Hardware Blocks
+    "HW_SET_LED": "Set onboard LED %1",
+    "HW_SET_LED_ON": "ON",
+    "HW_SET_LED_OFF": "OFF",
+    "HW_SET_LED_TOOLTIP": "Control the onboard LED on the development board."
   });
 })(Blockly);

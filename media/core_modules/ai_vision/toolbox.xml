@@ -1,0 +1,3 @@
+<category name="%{BKY_CAT_AI}" colour="%{BKY_COLOUR_AI}">
+    <block type="py_ai_open_camera"></block>
+</category>

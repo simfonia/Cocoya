@@ -1,13 +1,15 @@
 {
     "modules": [
-        { "id": "structure", "name": "Structure" },
-        { "id": "logic", "name": "Logic" },
-        { "id": "loops", "name": "Loops" },
-        { "id": "math", "name": "Math" },
-        { "id": "text", "name": "Text" },
-        { "id": "types", "name": "Types" },
-        { "id": "tools", "name": "Tools" },
-        { "id": "variables", "name": "Variables" },
-        { "id": "functions", "name": "Functions" }
+        { "id": "structure", "name": "Structure", "platforms": ["PC", "CircuitPython"] },
+        { "id": "logic", "name": "Logic", "platforms": ["PC", "CircuitPython"] },
+        { "id": "loops", "name": "Loops", "platforms": ["PC", "CircuitPython"] },
+        { "id": "math", "name": "Math", "platforms": ["PC", "CircuitPython"] },
+        { "id": "text", "name": "Text", "platforms": ["PC", "CircuitPython"] },
+        { "id": "types", "name": "Types", "platforms": ["PC", "CircuitPython"] },
+        { "id": "tools", "name": "Tools", "platforms": ["PC", "CircuitPython"] },
+        { "id": "variables", "name": "Variables", "platforms": ["PC", "CircuitPython"] },
+        { "id": "functions", "name": "Functions", "platforms": ["PC", "CircuitPython"] },
+        { "id": "ai_vision", "name": "AI Vision", "platforms": ["PC"] },
+        { "id": "hardware", "name": "Hardware", "platforms": ["CircuitPython"] }
     ]
 }
