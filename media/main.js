@@ -19,6 +19,8 @@
         isDirty: false,
         updateTimer: null,
         promptRequests: new Map(),
+        currentPlatform: 'PC',
+        manifest: null,
 
         /**
          * 啟動應用程式
@@ -28,8 +30,82 @@
             if (!window.CocoyaXMLRequests) window.CocoyaXMLRequests = new Map();
 
             this.setupWindowListeners();
+            this.setupPlatformSelector();
             // 請求初始清單
             vscode.postMessage({ command: 'getManifest' });
+        },
+
+        /**
+         * 設定平台切換監聽
+         */
+        setupPlatformSelector: function() {
+            const selector = document.getElementById('platform-selector');
+            if (!selector) return;
+            
+            selector.onchange = async () => {
+                const newPlatform = selector.value;
+                if (newPlatform === this.currentPlatform) return;
+
+                // 詢問確認 (傳送目前 XML 供儲存，並記下舊平台以便取消時回復)
+                const confirmMsg = (Blockly.Msg['MSG_SWITCH_CONFIRM'] || 'Switch to %1 mode?').replace('%1', newPlatform);
+                vscode.postMessage({ 
+                    command: 'confirmSwitch', 
+                    message: confirmMsg,
+                    newPlatform: newPlatform,
+                    xml: Blockly.Xml.domToPrettyText(Blockly.Xml.workspaceToDom(this.workspace))
+                });
+
+                // 暫時將 DOM 選單恢復原值，直到 Host 確認切換
+                selector.value = this.currentPlatform;
+            };
+        },
+
+        /**
+         * 真正執行切換邏輯 (由 Host 確認後觸發)
+         */
+        switchPlatform: async function(platform) {
+            await this.setPlatformUI(platform);
+            // 切換模式時重置工作區
+            this.resetWorkspace();
+        },
+
+        /**
+         * 僅更新 UI 與 Toolbox (不重置工作區)
+         */
+        setPlatformUI: async function(platform) {
+            this.currentPlatform = platform;
+            const selector = document.getElementById('platform-selector');
+            if (selector) selector.value = platform;
+
+            // 1. 重載 Toolbox
+            if (this.manifest) {
+                const toolboxes = await CocoyaLoader.loadModules(this.manifest, window.CocoyaMediaUri, platform, this.currentLang);
+                
+                const coreXml = [];
+                const aiXml = [];
+                const otherXml = [];
+
+                toolboxes.forEach(mod => {
+                    if (mod.id.startsWith('core/')) {
+                        coreXml.push(mod.xml);
+                    } else if (mod.id.startsWith('cv_') || mod.id.startsWith('ai_')) {
+                        aiXml.push(mod.xml);
+                    } else {
+                        otherXml.push(mod.xml);
+                    }
+                });
+
+                let finalXml = `<xml>${coreXml.join('')}`;
+                if (aiXml.length > 0) {
+                    finalXml += `<category name="%{BKY_CAT_AI}" colour="%{BKY_COLOUR_AI}">${aiXml.join('')}</category>`;
+                }
+                finalXml += `${otherXml.join('')}</xml>`;
+
+                this.workspace.updateToolbox(finalXml);
+            }
+
+            // 2. 更新按鈕提示
+            window.CocoyaUI.updateRunTooltip(platform);
         },
 
         /**
@@ -40,7 +116,7 @@
                 const message = event.data;
                 switch (message.command) {
                     case 'manifestData':
-                        await this.initializeCocoya(message.data, message.mediaUri);
+                        await this.initializeCocoya(message.data, message.mediaUri, message.lang);
                         break;
                     case 'toolboxData':
                         this.handleToolboxData(message);
@@ -49,7 +125,7 @@
                         this.handlePromptResponse(message);
                         break;
                     case 'loadWorkspace':
-                        this.loadWorkspace(message.xml, message.filename);
+                        await this.loadWorkspace(message.xml, message.filename, message.platform);
                         break;
                     case 'resetWorkspace':
                         this.resetWorkspace();
@@ -63,6 +139,12 @@
                     case 'updateStatus':
                         window.CocoyaUI.setUpdateStatus(message.data);
                         break;
+                    case 'serialPortsData':
+                        window.CocoyaUI.updateSerialPorts(message.ports);
+                        break;
+                    case 'switchPlatform':
+                        await this.switchPlatform(message.platform);
+                        break;
                 }
             });
         },
@@ -70,17 +152,42 @@
         /**
          * 初始化 Cocoya 編輯器環境
          */
-        initializeCocoya: async function(manifest, mediaUri) {
+        initializeCocoya: async function(manifest, mediaUri, lang) {
+            this.manifest = manifest;
+            this.currentLang = lang || 'en';
             window.CocoyaMediaUri = mediaUri;
             window.CocoyaUI.mediaUri = mediaUri;
 
             try {
+                // 1. 動態載入核心語系檔
+                await CocoyaLoader.loadScript(`${mediaUri}/${this.currentLang}.js`);
+
                 this.registerPlugins();
                 this.setupBlocklyPrompts();
 
-                // 載入模組並建立工具箱
-                const coreToolboxes = await CocoyaLoader.loadModules(manifest, `${mediaUri}/core_modules`);
-                const finalToolboxXML = `<xml>${document.getElementById('toolbox').innerHTML}${coreToolboxes.join('')}</xml>`;
+                // 2. 載入模組 (含模組語系) 並建立工具箱
+                const toolboxes = await CocoyaLoader.loadModules(manifest, mediaUri, this.currentPlatform, this.currentLang);
+                
+                // 實作分層：將 AI 相關模組包裝在一起
+                const coreXml = [];
+                const aiXml = [];
+                const otherXml = [];
+
+                toolboxes.forEach(mod => {
+                    if (mod.id.startsWith('core/')) {
+                        coreXml.push(mod.xml);
+                    } else if (mod.id.startsWith('cv_') || mod.id.startsWith('ai_')) {
+                        aiXml.push(mod.xml);
+                    } else {
+                        otherXml.push(mod.xml);
+                    }
+                });
+
+                let finalToolboxXML = `<xml>${coreXml.join('')}`;
+                if (aiXml.length > 0) {
+                    finalToolboxXML += `<category name="%{BKY_CAT_AI}" colour="%{BKY_COLOUR_AI}">${aiXml.join('')}</category>`;
+                }
+                finalToolboxXML += `${otherXml.join('')}</xml>`;
 
                 // 注入 Blockly
                 this.workspace = Blockly.inject('blocklyDiv', {
@@ -96,6 +203,7 @@
                 // 初始化 UI 元件
                 window.CocoyaUI.applyI18n();
                 window.CocoyaUI.initToolbar((msg) => vscode.postMessage(msg));
+                window.CocoyaUI.updateRunTooltip(this.currentPlatform); // 初始化 Tooltip
                 vscode.postMessage({ command: 'setLocale', messages: Blockly.Msg });
 
                 this.registerVariablesCallback();
@@ -182,17 +290,37 @@
         createDefaultBlocks: function() {
             Blockly.Events.disable();
             try {
-                const defBlock = this.workspace.newBlock('py_definition_zone');
-                defBlock.initSvg();
-                defBlock.render();
-                defBlock.moveBy(20, 20);
-                defBlock.setDeletable(false);
+                if (this.currentPlatform === 'PC') {
+                    const defBlock = this.workspace.newBlock('py_definition_zone');
+                    defBlock.initSvg();
+                    defBlock.render();
+                    defBlock.moveBy(20, 20);
+                    defBlock.setDeletable(false);
 
-                const mainBlock = this.workspace.newBlock('py_main');
-                mainBlock.initSvg();
-                mainBlock.render();
-                mainBlock.moveBy(20, 140);
-                mainBlock.setDeletable(false);
+                    const mainBlock = this.workspace.newBlock('py_main');
+                    mainBlock.initSvg();
+                    mainBlock.render();
+                    mainBlock.moveBy(20, 140);
+                    mainBlock.setDeletable(false);
+                } else {
+                    // MCU 模式的預設積木 (使用 Engineer 風格的 py_loop_while)
+                    const loopBlock = this.workspace.newBlock('py_loop_while');
+                    loopBlock.initSvg();
+                    loopBlock.render();
+                    loopBlock.moveBy(20, 20);
+                    loopBlock.setDeletable(false);
+                    
+                    const trueBlock = this.workspace.newBlock('py_logic_boolean');
+                    trueBlock.setFieldValue('True', 'BOOL');
+                    trueBlock.initSvg();
+                    trueBlock.render();
+                    
+                    // 連接 CONDITION 輸入
+                    const input = loopBlock.getInput('CONDITION');
+                    if (input && input.connection) {
+                        input.connection.connect(trueBlock.outputConnection);
+                    }
+                }
             } finally {
                 Blockly.Events.enable();
             }
@@ -245,27 +373,36 @@
         },
 
         /**
-         * 更新積木啟用狀態 (孤兒積木檢查)
+         * 更新積木啟用狀態 (孤兒積木檢查) - 效能優化版
          */
         triggerBlockStateUpdate: function() {
-            setTimeout(() => {
+            if (this.stateUpdateTimer) clearTimeout(this.stateUpdateTimer);
+            this.stateUpdateTimer = setTimeout(() => {
                 Blockly.Events.disable();
                 try {
-                    const blocks = this.workspace.getAllBlocks(false);
-                    blocks.forEach(block => {
-                        let root = block;
-                        while (root.getParent()) root = root.getParent();
-                        const isAllowed = ['py_main', 'py_definition_zone', 'py_function_def'].includes(root.type) || root.type.startsWith('procedures_def');
-                        if (typeof block.setDisabledReason === 'function') {
-                            block.setDisabledReason(!isAllowed, 'orphan');
-                        } else {
-                            block.setEnabled(isAllowed);
-                        }
+                    const topBlocks = this.workspace.getTopBlocks(false);
+                    const allowedTypes = ['py_main', 'py_definition_zone', 'py_function_def'];
+                    if (this.currentPlatform === 'CircuitPython') {
+                        allowedTypes.push('py_loop_while');
+                    }
+
+                    topBlocks.forEach(root => {
+                        const isAllowed = allowedTypes.includes(root.type) || root.type.startsWith('procedures_def');
+                        
+                        // 遞迴處理該樹下的所有積木
+                        const descendants = root.getDescendants(false);
+                        descendants.forEach(block => {
+                            if (typeof block.setDisabledReason === 'function') {
+                                block.setDisabledReason(!isAllowed, 'orphan');
+                            } else {
+                                block.setEnabled(isAllowed);
+                            }
+                        });
                     });
                 } finally {
                     Blockly.Events.enable();
                 }
-            }, 0);
+            }, 150); // 150ms 防抖，釋放 CPU 給動畫渲染
         },
 
         /**
@@ -281,7 +418,7 @@
                 } catch (e) {
                     console.error('Code update failed:', e);
                 }
-            }, 200);
+            }, 300);
         },
 
         /**
@@ -290,6 +427,8 @@
         setDirty: function(dirty) {
             this.isDirty = dirty;
             window.CocoyaUI.setDirty(dirty);
+            // 通知 Host 更新頁籤標題
+            vscode.postMessage({ command: 'setDirty', isDirty: dirty });
         },
 
         // --- 訊息處理實作 ---
@@ -321,7 +460,12 @@
             }
         },
 
-        loadWorkspace: function(xml, filename) {
+        loadWorkspace: async function(xml, filename, platform) {
+            // 如果傳入的平台與目前不同，則切換 UI (但不重置工作區，因為隨後要載入 XML)
+            if (platform && platform !== this.currentPlatform) {
+                await this.setPlatformUI(platform);
+            }
+
             Blockly.Events.disable();
             try {
                 this.workspace.clear();

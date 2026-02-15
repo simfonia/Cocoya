@@ -19,6 +19,38 @@ window.CocoyaUI = {
     updateUrl: '',
 
     /** @type {string} 基礎媒體資源路徑 */
+    /**
+     * 更新序列埠下拉選單
+     * @param {string[]} ports 序列埠名稱列表
+     */
+    updateSerialPorts: function(ports) {
+        const selector = document.getElementById('serial-selector');
+        if (!selector) return;
+
+        // 保留目前選中的值 (若存在)
+        const currentValue = selector.value;
+        selector.innerHTML = '';
+
+        if (ports.length === 0) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = '(No Port)';
+            selector.appendChild(opt);
+        } else {
+            ports.forEach(port => {
+                const opt = document.createElement('option');
+                opt.value = port;
+                opt.textContent = port;
+                selector.appendChild(opt);
+            });
+        }
+
+        // 嘗試恢復選中狀態
+        if (currentValue && ports.includes(currentValue)) {
+            selector.value = currentValue;
+        }
+    },
+
     mediaUri: '',
 
     /**
@@ -104,26 +136,17 @@ window.CocoyaUI = {
     updateFileStatus: function(filename) {
         if (filename !== undefined) this.currentFilename = filename;
         
-        // 使用 i18n 文字作為預設檔名
-        let displayName = this.currentFilename;
-        if (!displayName || displayName === 'New Project') {
-            displayName = (typeof Blockly !== 'undefined' && Blockly.Msg['TLB_FILE_NEW']) || 'Untitled Project';
-        }
-        
-        const el = document.getElementById('file-status');
-        if (el) {
-            el.textContent = displayName + (this.isDirty ? ' *' : '');
-        }
+        // 檔名狀態現在由 VS Code 頁籤顯示，不再需要更新前端 DOM
     },
 
     /**
      * 處理 HTML 中的 i18n 佔位符 (%{BKY_...})
-     * 會掃描所有的 title 屬性與 span 內容
+     * 會掃描所有的 title 屬性、span 內容以及 option 內容
      */
     applyI18n: function() {
         if (typeof Blockly === 'undefined') return;
         
-        const elements = document.querySelectorAll('[title^="%{BKY_"], span');
+        const elements = document.querySelectorAll('[title^="%{BKY_"], span, option');
         elements.forEach(el => {
             // 1. 處理 Tooltip (title)
             const title = el.getAttribute('title');
@@ -139,6 +162,19 @@ window.CocoyaUI = {
                 if (Blockly.Msg[key]) el.textContent = Blockly.Msg[key];
             }
         });
+    },
+
+    /**
+     * 更新執行按鈕的 Tooltip
+     * @param {string} platform 
+     */
+    updateRunTooltip: function(platform) {
+        const btn = document.getElementById('btn-run');
+        if (!btn || typeof Blockly === 'undefined') return;
+        
+        const key = (platform === 'MCU') ? 'TLB_RUN_MCU' : 'TLB_RUN_PC';
+        const tip = Blockly.Msg[key] || (platform === 'MCU' ? 'Upload to MCU' : 'Run PC Program');
+        btn.setAttribute('title', tip);
     },
 
     /**
@@ -215,12 +251,19 @@ window.CocoyaUI = {
 
                 // 3. 若需要 XML (檔案操作)
                 if (options.includeXml && typeof Blockly !== 'undefined') {
-                    msg.xml = Blockly.Xml.domToPrettyText(Blockly.Xml.workspaceToDom(Blockly.getMainWorkspace()));
+                    const dom = Blockly.Xml.workspaceToDom(Blockly.getMainWorkspace());
+                    // 注入平台屬性標記 (PC 或 CircuitPython)
+                    const platform = document.getElementById('platform-selector')?.value || 'PC';
+                    dom.setAttribute('platform', platform);
+                    
+                    msg.xml = Blockly.Xml.domToPrettyText(dom);
                 }
 
                 // 4. 若需要程式碼 (執行程式)
                 if (cmd === 'runCode' && typeof Blockly !== 'undefined') {
                     msg.code = Blockly.Python.workspaceToCode(Blockly.getMainWorkspace());
+                    msg.platform = document.getElementById('platform-selector')?.value || 'PC';
+                    msg.serialPort = document.getElementById('serial-selector')?.value || '';
                     self.flashButton(id, '#e8f5e9'); // 綠色回饋
                 }
 
@@ -236,6 +279,7 @@ window.CocoyaUI = {
         
         // 綁定設定與功能按鈕
         bind('btn-settings', 'setPythonPath');
+        bind('btn-refresh-serial', 'refreshSerialPorts');
         bind('btn-run', 'runCode');
         bind('btn-update', 'checkUpdate');
         

@@ -1,13 +1,17 @@
 {
     "modules": [
-        { "id": "structure", "name": "Structure" },
-        { "id": "logic", "name": "Logic" },
-        { "id": "loops", "name": "Loops" },
-        { "id": "math", "name": "Math" },
-        { "id": "text", "name": "Text" },
-        { "id": "types", "name": "Types" },
-        { "id": "tools", "name": "Tools" },
-        { "id": "variables", "name": "Variables" },
-        { "id": "functions", "name": "Functions" }
+        { "id": "core/structure", "name": "Structure", "platforms": ["PC", "CircuitPython"] },
+        { "id": "core/logic", "name": "Logic", "platforms": ["PC", "CircuitPython"] },
+        { "id": "core/loops", "name": "Loops", "platforms": ["PC", "CircuitPython"] },
+        { "id": "core/math", "name": "Math", "platforms": ["PC", "CircuitPython"] },
+        { "id": "core/text", "name": "Text", "platforms": ["PC", "CircuitPython"] },
+        { "id": "core/types", "name": "Types", "platforms": ["PC", "CircuitPython"] },
+        { "id": "core/tools", "name": "Tools", "platforms": ["PC", "CircuitPython"] },
+        { "id": "core/variables", "name": "Variables", "platforms": ["PC", "CircuitPython"] },
+        { "id": "core/functions", "name": "Functions", "platforms": ["PC", "CircuitPython"] },
+        { "id": "cv_basic", "name": "OpenCV Basic", "platforms": ["PC"] },
+        { "id": "cv_draw", "name": "OpenCV Drawing", "platforms": ["PC"] },
+        { "id": "ai_hand", "name": "MediaPipe Hand", "platforms": ["PC"] },
+        { "id": "hardware", "name": "Hardware", "platforms": ["CircuitPython"] }
     ]
 }

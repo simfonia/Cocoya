@@ -26,12 +26,24 @@ async function fetchXMLViaHost(moduleId) {
     });
 }
 
-async function loadModule(moduleId, basePath) {
+async function loadModule(moduleId, mediaUri, lang) {
     try {
+        const basePath = `${mediaUri}/modules`;
         console.log(`Loading module: ${moduleId}`);
-        // 改用具辨識度的檔名：moduleId_blocks.js
-        await loadScript(`${basePath}/${moduleId}/${moduleId}_blocks.js`);
-        await loadScript(`${basePath}/${moduleId}/${moduleId}_generators.js`);
+        
+        // 1. 先載入語系檔 (如果有的話)
+        if (lang) {
+            try {
+                await CocoyaLoader.loadScript(`${basePath}/${moduleId}/i18n/${lang}.js`);
+            } catch (e) {
+                // 如果該模組沒有該語系檔，靜默跳過
+            }
+        }
+        // 2. 載入積木定義與產生器 (注意：moduleId 可能包含路徑如 core/logic)
+        // 我們從 moduleId 中提取純檔名部分 (例如 logic)
+        const pureId = moduleId.split('/').pop();
+        await CocoyaLoader.loadScript(`${basePath}/${moduleId}/${pureId}_blocks.js`);
+        await CocoyaLoader.loadScript(`${basePath}/${moduleId}/${pureId}_generators.js`);
         
         return await fetchXMLViaHost(moduleId);
     } catch (error) {
@@ -41,12 +53,26 @@ async function loadModule(moduleId, basePath) {
 }
 
 window.CocoyaLoader = {
-    loadModules: async function(manifest, corePath) {
-        const toolboxes = [];
-        for (const module of manifest.modules) {
-            const toolbox = await loadModule(module.id, corePath);
-            if (toolbox) toolboxes.push(toolbox);
-        }
-        return toolboxes;
+    loadScript: loadScript,
+
+    /**
+     * 載入模組並根據平台過濾
+     * @param {Object} manifest 模組清單
+     * @param {string} mediaUri 基礎路徑
+     * @param {string} platform 目標平台 (PC/MCU)
+     * @param {string} lang 目前語系
+     */
+    loadModules: async function(manifest, mediaUri, platform = 'PC', lang) {
+        const promises = manifest.modules.map(async (module) => {
+            if (module.platforms && !module.platforms.includes(platform)) {
+                return null;
+            }
+            
+            const xml = await loadModule(module.id, mediaUri, lang);
+            return xml ? { id: module.id, xml: xml } : null;
+        });
+
+        const results = await Promise.all(promises);
+        return results.filter(res => res !== null);
     }
 };
