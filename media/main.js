@@ -21,6 +21,7 @@
         promptRequests: new Map(),
         currentPlatform: 'PC',
         manifest: null,
+        lastCleanCode: '',
 
         /**
          * 啟動應用程式
@@ -31,8 +32,31 @@
 
             this.setupWindowListeners();
             this.setupPlatformSelector();
+            this.setupIndentSelector();
             // 請求初始清單
             vscode.postMessage({ command: 'getManifest' });
+        },
+
+        /**
+         * 設定縮排空格數監聽
+         */
+        setupIndentSelector: function() {
+            const selector = document.getElementById('indent-selector');
+            if (!selector) return;
+
+            const updateIndent = () => {
+                const size = parseInt(selector.value, 10);
+                if (typeof Blockly !== 'undefined' && Blockly.Python) {
+                    Blockly.Python.INDENT = ' '.repeat(size);
+                    this.triggerCodeUpdate();
+                }
+            };
+
+            selector.onchange = updateIndent;
+            // 初始設定 (預設為 4)
+            if (typeof Blockly !== 'undefined' && Blockly.Python) {
+                Blockly.Python.INDENT = '    ';
+            }
         },
 
         /**
@@ -168,7 +192,6 @@
                 // 2. 載入模組 (含模組語系) 並建立工具箱
                 const toolboxes = await CocoyaLoader.loadModules(manifest, mediaUri, this.currentPlatform, this.currentLang);
                 
-                // 實作分層：將 AI 相關模組包裝在一起
                 const coreXml = [];
                 const aiXml = [];
                 const otherXml = [];
@@ -340,7 +363,22 @@
                 
                 const s = window.CocoyaUtils.TAG_START;
                 const e = window.CocoyaUtils.TAG_END;
-                return block.outputConnection ? `${s}ID:${block.id}${e}${code}${nextCode}` : `# ID:${block.id}\n${code}${nextCode}`;
+
+                if (block.outputConnection) {
+                    // 運算式：使用不可見標記
+                    return `${s}ID:${block.id}${e}${code}${nextCode}`;
+                } else {
+                    // 陳述句：將 ID 註解放在行尾以維持行號 1:1
+                    let lines = code.split('\n');
+                    // 處理最後一個換行導致的空陣列元素
+                    if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
+                    
+                    if (lines.length > 0) {
+                        // 只在該積木產出的第一行加上 ID 標記
+                        lines[0] += `  # ID:${block.id}`;
+                    }
+                    return lines.join('\n') + '\n' + nextCode;
+                }
             };
         },
 
@@ -413,8 +451,21 @@
             this.updateTimer = setTimeout(() => {
                 try {
                     let code = Blockly.Python.workspaceToCode(this.workspace);
-                    code = code.replace(/^[a-zA-Z_][a-zA-Z0-9_]* = None\n/mg, '');
-                    window.CocoyaUI.renderPythonPreview(code);
+                    
+                    // 1. 移除自動產生的變數宣告 (連同換行符一起移除，避免殘留空行)
+                    code = code.replace(/^[a-zA-Z_][a-zA-Z0-9_]* = None(  # ID:.*)?\n/mg, '');
+                    
+                    // 2. 移除運算式內部的隱形標記
+                    code = code.replace(/\u0001ID:.*?\u0002/g, '');
+                    
+                    // 3. 建立「真理」基準：移除頭尾空白，這份代碼將直接用於執行與預覽
+                    const theTruth = code.trim();
+                    
+                    // 4. 保存供執行使用的代碼 (包含行尾 ID 註解，Python 會忽略它們)
+                    window.CocoyaApp.lastCleanCode = theTruth;
+                    
+                    // 5. 將這份唯一的字串傳給 UI 管理器
+                    window.CocoyaUI.renderPythonPreview(theTruth);
                 } catch (e) {
                     console.error('Code update failed:', e);
                 }
@@ -494,5 +545,6 @@
     };
 
     // 啟動 Cocoya
+    window.CocoyaApp = CocoyaApp;
     CocoyaApp.init();
 })();

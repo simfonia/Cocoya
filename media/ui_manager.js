@@ -6,9 +6,6 @@ window.CocoyaUI = {
     /** @type {Map<string, HTMLElement>} 積木 ID 到程式碼行 DOM 的映射表 */
     blockToLineMap: new Map(),
     
-    /** @type {string[]} 用於累積空行處積木 ID 的暫存陣列 */
-    pendingIds: [],
-
     /** @type {string} 目前編輯的檔案名稱 */
     currentFilename: '',
 
@@ -59,43 +56,59 @@ window.CocoyaUI = {
      */
     renderPythonPreview: function(rawCode) {
         const codeContent = document.getElementById('codeContent');
+        const indentSize = (typeof Blockly !== 'undefined' && Blockly.Python) ? 
+            Blockly.Python.INDENT.length : 4;
+
         if (!codeContent) return;
 
-        const lines = rawCode.split('\n');
+        // 使用原始換行分割，確保 1:1 行號
+        let lines = rawCode.split('\n');
+        
+        // 如果最後一行是空字串（因為 split '\n' 的特性），則移除它
+        if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
+
         codeContent.innerHTML = '';
         this.blockToLineMap.clear();
-        this.pendingIds = [];
 
         lines.forEach((line) => {
+            // 解析並提取 ID，同時取得乾淨的代碼列
             const result = window.CocoyaUtils.extractIds(line);
             const { cleanLine, ids } = result;
-            
-            let blockIdsOnThisLine = [...this.pendingIds, ...ids];
-            this.pendingIds = [];
-
-            // 處理空行中的 ID 累積 (將 ID 延後到下一個有內容的行顯示)
-            if (cleanLine.trim() === '' && blockIdsOnThisLine.length > 0) {
-                this.pendingIds = blockIdsOnThisLine;
-                return;
-            }
-            if (cleanLine.trim() === '' && blockIdsOnThisLine.length === 0) return;
 
             // 建立行容器
             const lineDiv = document.createElement('div');
             lineDiv.className = 'code-line';
             
-            if (cleanLine.trim() !== '') {
-                lineDiv.innerHTML = hljs.highlight(cleanLine, { language: 'python' }).value;
+            // 只要不是全空白行，就進行處理，否則顯示空行佔位
+            if (cleanLine.length > 0) {
+                // 解析縮排對齊線 (動態對齊 indentSize)
+                const leadingSpaceMatch = cleanLine.match(/^(\s+)/);
+                const leadingSpaces = leadingSpaceMatch ? leadingSpaceMatch[1].length : 0;
+                const actualCode = cleanLine.substring(leadingSpaces);
+                
+                let guideHtml = '';
+                const spaces = '&nbsp;'.repeat(indentSize);
+                for (let i = 0; i < leadingSpaces; i += indentSize) {
+                    guideHtml += `<span class="indent-guide" style="width: ${indentSize}ch;">${spaces}</span>`;
+                }
+
+                // 剩餘代碼進行語法高亮
+                const highlighted = hljs.highlight(actualCode, { language: 'python' }).value;
+                lineDiv.innerHTML = guideHtml + highlighted;
             } else {
-                lineDiv.textContent = ' ';
+                lineDiv.innerHTML = '&nbsp;'; 
             }
 
             // 同步目前的選取狀態
             const selectedId = (typeof Blockly !== 'undefined' && Blockly.getSelected()) ? Blockly.getSelected().id : null;
 
-            blockIdsOnThisLine.forEach(id => {
+            ids.forEach(id => {
                 lineDiv.setAttribute('data-block-id', id);
-                if (!this.blockToLineMap.has(id)) this.blockToLineMap.set(id, lineDiv);
+                // 記錄積木 ID 與 DOM 的映射 (只記錄第一次出現的行)
+                if (!this.blockToLineMap.has(id)) {
+                    this.blockToLineMap.set(id, lineDiv);
+                }
+                
                 if (id === selectedId) lineDiv.classList.add('highlight-line');
             });
 
@@ -172,8 +185,10 @@ window.CocoyaUI = {
         const btn = document.getElementById('btn-run');
         if (!btn || typeof Blockly === 'undefined') return;
         
-        const key = (platform === 'MCU') ? 'TLB_RUN_MCU' : 'TLB_RUN_PC';
-        const tip = Blockly.Msg[key] || (platform === 'MCU' ? 'Upload to MCU' : 'Run PC Program');
+        // 修正判定條件：選單的值是 CircuitPython
+        const isMCU = (platform === 'MCU' || platform === 'CircuitPython');
+        const key = isMCU ? 'TLB_RUN_MCU' : 'TLB_RUN_PC';
+        const tip = Blockly.Msg[key] || (isMCU ? 'Upload to MCU' : 'Run PC Program');
         btn.setAttribute('title', tip);
     },
 
@@ -261,7 +276,8 @@ window.CocoyaUI = {
 
                 // 4. 若需要程式碼 (執行程式)
                 if (cmd === 'runCode' && typeof Blockly !== 'undefined') {
-                    msg.code = Blockly.Python.workspaceToCode(Blockly.getMainWorkspace());
+                    // 使用 CocoyaApp 處理過的乾淨代碼，確保行號與 Preview 一致且縮排正確
+                    msg.code = window.CocoyaApp.lastCleanCode || Blockly.Python.workspaceToCode(Blockly.getMainWorkspace());
                     msg.platform = document.getElementById('platform-selector')?.value || 'PC';
                     msg.serialPort = document.getElementById('serial-selector')?.value || '';
                     self.flashButton(id, '#e8f5e9'); // 綠色回饋
@@ -282,6 +298,20 @@ window.CocoyaUI = {
         bind('btn-refresh-serial', 'refreshSerialPorts');
         bind('btn-run', 'runCode');
         bind('btn-update', 'checkUpdate');
+
+        // 綁定複製程式碼按鈕
+        const copyBtn = document.getElementById('btn-copy-code');
+        if (copyBtn) {
+            copyBtn.onclick = () => {
+                const rawCode = window.CocoyaApp.lastCleanCode || '';
+                // 徹底清理：濾掉行尾 ID 註解與運算式隱形標記
+                const cleanCode = rawCode.replace(/  # ID:.*$/mg, '').replace(/\u0001ID:.*?\u0002/g, '');
+                
+                navigator.clipboard.writeText(cleanCode).then(() => {
+                    self.flashButton('btn-copy-code', '#c8e6c9'); // 綠色閃爍表示成功
+                });
+            };
+        }
         
         // 綁定關閉按鈕
         const stopBtn = document.getElementById('btn-stop');

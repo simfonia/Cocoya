@@ -1,15 +1,22 @@
 // Hardware Blocks: hardware_blocks.js
 Blockly.Blocks['mcu_set_led'] = {
   init: function() {
-    this.appendDummyInput()
-        .appendField(Blockly.Msg["HW_SET_LED"].replace('%1', ''))
-        .appendField(new Blockly.FieldDropdown([
+    this.jsonInit({
+      "message0": Blockly.Msg["HW_SET_LED"],
+      "args0": [
+        { 
+          "type": "field_dropdown", 
+          "name": "STATE",
+          "options": [
             [Blockly.Msg["HW_SET_LED_ON"], "True"], 
             [Blockly.Msg["HW_SET_LED_OFF"], "False"]
-        ]), "STATE");
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(Blockly.Msg["COLOUR_HARDWARE"]);
-    this.setTooltip(Blockly.Msg["HW_SET_LED_TOOLTIP"]);
+          ]
+        }
+      ],
+      "previousStatement": null,
+      "nextStatement": null,
+      "colour": Blockly.Msg["COLOUR_HARDWARE"],
+      "tooltip": Blockly.Msg["HW_SET_LED_TOOLTIP"]
+    });
   }
 };

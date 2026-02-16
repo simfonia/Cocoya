@@ -19,7 +19,7 @@
     "COLOUR_AI": "#FF661A",
     "COLOUR_HARDWARE": "#FFBF00",
 
-    // 分類名稱
+    // 分類名稱 (核心管理)
     "CAT_LOGIC": "Logic",
     "CAT_LOOPS": "Loops",
     "CAT_MATH": "Math",
@@ -69,43 +69,15 @@
     "MSG_CANCEL": "取消",
     "MSG_SELECT_PATH": "選取路徑",
     "MSG_SELECT_PORT": "請先選擇序列埠！",
-    "MSG_PYSERIAL_MISSING": "找不到 pyserial 模識，請先執行 'pip install pyserial' 以支援硬體部署。",
+    "MSG_PYSERIAL_MISSING": "找不到 pyserial 模組，請先執行 'pip install pyserial' 以支援硬體部署。",
     "MSG_DEPLOYING_MCU": "正在部署程式至 MCU (%1)...",
-    "MSG_UPDATE_LATEST": "目前已是最新版本！",
     "MSG_PYTHON_NOT_FOUND": "無法執行 Python (目前設定: %1)。請指定正確的 python.exe 路徑。",
     "MSG_PYTHON_UPDATED": "Python 路徑已更新: %1",
 
-    // Python 語法元件
-    "PY_COLON": ":",
-    "PY_EQUAL": "=",
+    // Python 核心關鍵字 (保留在核心或分散皆可，目前先移除已分散部分)
     "PY_DEF": "def",
     "PY_RETURN": "return",
     "PY_GLOBAL": "global",
-    "PY_LOCAL": "local",
-
-    // 工具積木
-    "TOOLS_COMMENT": "# 註解",
-    "TOOLS_COMMENT_TOOLTIP": "新增多行註解內容。",
-    "TOOLS_RAW_CODE": "Raw Code",
-    "TOOLS_RAW_STATEMENT_TOOLTIP": "自由編寫原始碼 (陳述句)。",
-    "TOOLS_RAW_EXPRESSION_TOOLTIP": "自由編寫原始碼 (運算式)。",
-
-    // 數學與文字
-    "MATH_SQRT": "sqrt",
-    "MATH_ABS": "abs",
-    "MATH_SIN": "sin",
-    "MATH_COS": "cos",
-    "MATH_TAN": "tan",
-    "MATH_ROUND": "round",
-    "MATH_RANDOM": "random",
-    "TEXT_JOIN": "f-string",
-    "TEXT_JOIN_TOOLTIP": "合併文字與變數。拼入文字積木會直接顯示，拼入變數則會自動加上 {}。",
-    "TEXT_LENGTH": "len",
-    "TEXT_INPUT": "input",
-
-    // 通用積木文字
-    "CONTROLS_IF_MSG_IF": "if",
-    "CONTROLS_WHILEUNTIL_OPERATOR_WHILE": "while",
-    "TEXT_PRINT_TITLE": "print(%1)"
+    "PY_LOCAL": "local"
   });
 })(Blockly);

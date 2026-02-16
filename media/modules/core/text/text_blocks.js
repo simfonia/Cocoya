@@ -9,28 +9,35 @@ function getIcon(name) {
 
 Blockly.Blocks['py_text'] = {
   init: function() {
-    this.appendDummyInput().appendField('"').appendField(new Blockly.FieldTextInput(""), "TEXT").appendField('"');
-    this.setOutput(true, "String");
-    this.setColour(Blockly.Msg["COLOUR_TEXT"]);
+    this.jsonInit({
+      "message0": "\" %1 \"",
+      "args0": [{ "type": "field_input", "name": "TEXT", "text": "" }],
+      "output": "String",
+      "colour": Blockly.Msg["COLOUR_TEXT"]
+    });
   }
 };
 
 Blockly.Blocks['py_text_multiline'] = {
   init: function() {
     const FieldMultilineInput = window.FieldMultilineInput || Blockly.FieldMultilineInput;
-    this.appendDummyInput().appendField('"""').appendField(new FieldMultilineInput(""), "TEXT").appendField('"""');
-    this.setOutput(true, "String");
-    this.setColour(Blockly.Msg["COLOUR_TEXT"]);
+    this.jsonInit({
+      "message0": "\"\"\" %1 \"\"\"",
+      "args0": [{ "type": "field_multilinetext", "name": "TEXT", "text": "" }],
+      "output": "String",
+      "colour": Blockly.Msg["COLOUR_TEXT"]
+    });
   }
 };
 
 Blockly.Blocks['py_text_length'] = {
   init: function() {
-    this.appendValueInput("VALUE").setCheck(["String", "Array", "Dict", "Tuple"]).appendField("len(");
-    this.appendDummyInput().appendField(")");
-    this.setInputsInline(true);
-    this.setOutput(true, "Number");
-    this.setColour(Blockly.Msg["COLOUR_TEXT"]);
+    this.jsonInit({
+      "message0": "len ( %1 )",
+      "args0": [{ "type": "input_value", "name": "VALUE", "check": ["String", "Array", "Dict", "Tuple"] }],
+      "output": "Number",
+      "colour": Blockly.Msg["COLOUR_TEXT"]
+    });
   }
 };
 

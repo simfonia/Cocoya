@@ -8,16 +8,24 @@ window.CocoyaUtils = {
     extractIds: function(line) {
         let ids = [];
         let cleanLine = line;
-        const regex = new RegExp(this.TAG_START + 'ID:([\\s\\S]+?)' + this.TAG_END, 'g');
-        const matches = line.matchAll(regex);
-        for (const match of matches) ids.push(match[1]);
-        cleanLine = line.replace(regex, '');
-        const commentIdMatch = cleanLine.match(/# ID:([^\s]+)/);
-        if (commentIdMatch) {
-            ids.push(commentIdMatch[1]);
-            cleanLine = cleanLine.replace(/# ID:[^\s]+/, '').trimEnd();
+        
+        // 1. 處理不可見標記 (運算式)
+        const invisibleRegex = new RegExp(this.TAG_START + 'ID:([\\s\\S]+?)' + this.TAG_END, 'g');
+        const invisibleMatches = [...cleanLine.matchAll(invisibleRegex)];
+        for (const match of invisibleMatches) ids.push(match[1]);
+        cleanLine = cleanLine.replace(invisibleRegex, '');
+
+        // 2. 處理行尾註解 ID (陳述句)
+        // 匹配 "  # ID:xxx" 並確保抓取所有非空白字元，直到行尾
+        const commentRegex = /  # ID:([^\s\n]+)/g;
+        const commentMatches = [...cleanLine.matchAll(commentRegex)];
+        for (const match of commentMatches) {
+            ids.push(match[1]);
         }
-        return { cleanLine, ids };
+        // 直接將匹配到的標記替換為空字串，防止殘留
+        cleanLine = cleanLine.replace(commentRegex, '');
+
+        return { cleanLine: cleanLine.trimEnd(), ids };
     },
 
     /**

@@ -1,0 +1,56 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
+  <variables>
+    <variable id="-Q%A^XaH8;k;t:2gt-$9">frame</variable>
+  </variables>
+  <block type="py_definition_zone" id="Bdnw_V/[8M]Jo#_UyXzr" deletable="false" x="10" y="10">
+    <statement name="DEFS">
+      <block type="py_import" id="FVJEH)kt-HX6d]SA2=86">
+        <field name="LIB">cv2</field>
+      </block>
+    </statement>
+  </block>
+  <block type="py_main" id="p:|{}^h|CUVx%-*[UR[:" deletable="false" x="10" y="110">
+    <statement name="DO">
+      <block type="py_ai_open_camera" id="KNSpp|FG?Q2lG~TWzUzX">
+        <field name="INDEX">0</field>
+        <next>
+          <block type="py_loop_while" id="(,knB!Ds3VQp,o0BTr(f">
+            <value name="CONDITION">
+              <block type="py_logic_boolean" id=".H8}p+LQMimQjR0FayU?">
+                <field name="BOOL">True</field>
+              </block>
+            </value>
+            <statement name="DO">
+              <block type="py_ai_read_frame" id="y~*-jX{W6f4eHdfDP85:">
+                <field name="VAR" id="-Q%A^XaH8;k;t:2gt-$9">frame</field>
+                <next>
+                  <block type="py_ai_flip_image" id="1kR!ykjk/ErC*mA0;NtV">
+                    <field name="VAR" id="-Q%A^XaH8;k;t:2gt-$9">frame</field>
+                    <field name="CODE">1</field>
+                    <next>
+                      <block type="py_ai_show_image" id="Q^lZgVIg-,biE-b$W1!^">
+                        <value name="IMAGE">
+                          <block type="py_variables_get" id="2s/_W;dh#1kvta!KwS}y">
+                            <field name="VAR" id="-Q%A^XaH8;k;t:2gt-$9">frame</field>
+                          </block>
+                        </value>
+                        <next>
+                          <block type="py_ai_wait_key_break" id="D~})?7P+sabTaEXgqI9N">
+                            <field name="KEY">q</field>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="py_ai_release_all" id="A(CtJW7060y(j%Audi=%"></block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

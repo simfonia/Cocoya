@@ -2,52 +2,67 @@
 
 Blockly.Blocks['py_tools_print'] = {
   init: function() {
-    this.appendValueInput("TEXT").setCheck(null).appendField("print").appendField("(");
-    this.appendDummyInput().appendField(")");
-    this.setInputsInline(true);
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(Blockly.Msg["COLOUR_TOOLS"]);
+    this.jsonInit({
+      "message0": "print ( %1 )",
+      "args0": [{ "type": "input_value", "name": "TEXT" }],
+      "previousStatement": null,
+      "nextStatement": null,
+      "colour": Blockly.Msg["COLOUR_TOOLS"]
+    });
   }
 };
 
 Blockly.Blocks['py_tools_input'] = {
   init: function() {
-    this.appendValueInput("PROMPT").setCheck("String").appendField(Blockly.Msg["TEXT_INPUT"]).appendField("(");
-    this.appendDummyInput().appendField(")");
-    this.setInputsInline(true);
-    this.setOutput(true, "String");
-    this.setColour(Blockly.Msg["COLOUR_TOOLS"]);
+    this.jsonInit({
+      "message0": "input ( %1 )",
+      "args0": [{ "type": "input_value", "name": "PROMPT", "check": "String" }],
+      "output": "String",
+      "colour": Blockly.Msg["COLOUR_TOOLS"]
+    });
   }
 };
 
 Blockly.Blocks['py_tools_comment'] = {
   init: function() {
-    const FieldMultilineInput = window.FieldMultilineInput || Blockly.FieldMultilineInput;
-    this.appendDummyInput().appendField(Blockly.Msg["TOOLS_COMMENT"]).appendField(new FieldMultilineInput(""), "TEXT");
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(Blockly.Msg["COLOUR_TOOLS"]);
-    this.setTooltip(Blockly.Msg["TOOLS_COMMENT_TOOLTIP"]);
+    this.jsonInit({
+      "message0": "%1 %2",
+      "args0": [
+        { "type": "field_label", "text": Blockly.Msg["TOOLS_COMMENT"] },
+        { "type": "field_multilinetext", "name": "TEXT", "text": "" }
+      ],
+      "previousStatement": null,
+      "nextStatement": null,
+      "colour": Blockly.Msg["COLOUR_TOOLS"],
+      "tooltip": Blockly.Msg["TOOLS_COMMENT_TOOLTIP"]
+    });
   }
 };
 
 Blockly.Blocks['py_tools_raw_statement'] = {
   init: function() {
-    const FieldMultilineInput = window.FieldMultilineInput || Blockly.FieldMultilineInput;
-    this.appendDummyInput().appendField(Blockly.Msg["TOOLS_RAW_CODE"]).appendField(new FieldMultilineInput(""), "TEXT");
-    this.setPreviousStatement(true, null);
-    this.setNextStatement(true, null);
-    this.setColour(Blockly.Msg["COLOUR_TOOLS"]);
-    this.setTooltip(Blockly.Msg["TOOLS_RAW_STATEMENT_TOOLTIP"]);
+    this.jsonInit({
+      "message0": "%1 %2",
+      "args0": [
+        { "type": "field_label", "text": Blockly.Msg["TOOLS_RAW_CODE"] },
+        { "type": "field_multilinetext", "name": "TEXT", "text": "" }
+      ],
+      "previousStatement": null,
+      "nextStatement": null,
+      "colour": Blockly.Msg["COLOUR_TOOLS"],
+      "tooltip": Blockly.Msg["TOOLS_RAW_STATEMENT_TOOLTIP"]
+    });
   }
 };
 
 Blockly.Blocks['py_tools_raw_expression'] = {
   init: function() {
-    this.appendDummyInput().appendField(new Blockly.FieldTextInput(""), "TEXT");
-    this.setOutput(true, null);
-    this.setColour(Blockly.Msg["COLOUR_TOOLS"]);
-    this.setTooltip(Blockly.Msg["TOOLS_RAW_EXPRESSION_TOOLTIP"]);
+    this.jsonInit({
+      "message0": "%1",
+      "args0": [{ "type": "field_input", "name": "TEXT", "text": "" }],
+      "output": null,
+      "colour": Blockly.Msg["COLOUR_TOOLS"],
+      "tooltip": Blockly.Msg["TOOLS_RAW_EXPRESSION_TOOLTIP"]
+    });
   }
 };

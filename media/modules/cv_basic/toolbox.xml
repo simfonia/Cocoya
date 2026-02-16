@@ -1,6 +1,7 @@
 <category name="%{BKY_CAT_AI_BASIC}" colour="%{BKY_COLOUR_AI}">
     <block type="py_ai_open_camera"></block>
     <block type="py_ai_read_frame"></block>
+    <block type="py_ai_flip_image"></block>
     <block type="py_ai_show_image">
         <value name="IMAGE">
             <block type="py_variables_get">

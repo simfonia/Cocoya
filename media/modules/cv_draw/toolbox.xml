@@ -1,2 +1,99 @@
 <category name="%{BKY_CAT_AI_DRAW}" colour="%{BKY_COLOUR_AI}">
+    <!-- 矩形 -->
+    <block type="py_ai_draw_rect">
+        <value name="START">
+            <shadow type="py_ai_point">
+                <field name="X">0</field>
+                <field name="Y">0</field>
+            </shadow>
+        </value>
+        <value name="END">
+            <shadow type="py_ai_point">
+                <field name="X">100</field>
+                <field name="Y">100</field>
+            </shadow>
+        </value>
+        <value name="COLOR">
+            <shadow type="py_ai_color">
+                <field name="B">255</field>
+                <field name="G">0</field>
+                <field name="R">0</field>
+            </shadow>
+        </value>
+        <value name="THICKNESS">
+            <shadow type="py_math_number"><field name="NUM">2</field></shadow>
+        </value>
+    </block>
+
+    <!-- 圓形 -->
+    <block type="py_ai_draw_circle">
+        <value name="CENTER">
+            <shadow type="py_ai_point">
+                <field name="X">50</field>
+                <field name="Y">50</field>
+            </shadow>
+        </value>
+        <value name="RADIUS">
+            <shadow type="py_math_number"><field name="NUM">20</field></shadow>
+        </value>
+        <value name="COLOR">
+            <shadow type="py_ai_color">
+                <field name="B">0</field>
+                <field name="G">255</field>
+                <field name="R">0</field>
+            </shadow>
+        </value>
+        <value name="THICKNESS">
+            <shadow type="py_math_number"><field name="NUM">2</field></shadow>
+        </value>
+    </block>
+
+    <!-- 直線 -->
+    <block type="py_ai_draw_line">
+        <value name="START">
+            <shadow type="py_ai_point">
+                <field name="X">0</field>
+                <field name="Y">0</field>
+            </shadow>
+        </value>
+        <value name="END">
+            <shadow type="py_ai_point">
+                <field name="X">100</field>
+                <field name="Y">100</field>
+            </shadow>
+        </value>
+        <value name="COLOR">
+            <shadow type="py_ai_color">
+                <field name="B">0</field>
+                <field name="G">0</field>
+                <field name="R">255</field>
+            </shadow>
+        </value>
+        <value name="THICKNESS">
+            <shadow type="py_math_number"><field name="NUM">2</field></shadow>
+        </value>
+    </block>
+
+    <!-- 文字 -->
+    <block type="py_ai_draw_text">
+        <value name="TEXT">
+            <shadow type="py_text"><field name="TEXT">Hello</field></shadow>
+        </value>
+        <value name="POS">
+            <shadow type="py_ai_point">
+                <field name="X">10</field>
+                <field name="Y">30</field>
+            </shadow>
+        </value>
+        <value name="COLOR">
+            <shadow type="py_ai_color">
+                <field name="B">255</field>
+                <field name="G">255</field>
+                <field name="R">255</field>
+            </shadow>
+        </value>
+        <value name="SCALE">
+            <shadow type="py_math_number"><field name="NUM">1</field></shadow>
+        </value>
+    </block>
 </category>

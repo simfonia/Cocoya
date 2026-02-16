@@ -55,25 +55,19 @@
 ### 6. 多行字串縮排修正
 - **對策**：使用 `'\n'.join([...])` 代替 `"""` 產出，確保字串內容不受 Python 外部縮排影響，維持「所見即所得」。
 
-## 關鍵踩坑與解決紀錄 (2026-02-12)
-1. **Webview 通訊失效**：改用標準 `postMessage` 流程。
-2. **Python 產生器換行符號**：JS 檔案內必須維持 `\n` 字面量。
-3. **動態載入衝突**：強制使用 `[moduleId]_blocks.js` 識別化命名。
-
 ## 關鍵技術實作紀錄 (2026-02-14 更新)
 
 ### 1. 專業級 UI 佈局與同步
 - **頁籤標題同步**: 透過 vscode.postMessage 觸發 Host 端 updateTitle，標題格式定為 Cocoya Editor: [檔名.xml*]。
 - **Hex 色譜管理**: 棄用 Hue 值，改用 Hex 色碼以確保與品牌色 (#FE2F89) 一致。
-- **i18n 自動套用**: 前端 applyI18n() 支援自動替換 span, 	itle 與 option 標籤中的 %{BKY_...}。
+- **i18n 自動套用**: 前端 applyI18n() 支援自動替換 span, title 與 option 標籤中的 %{BKY_...}。
 
 ### 2. 專案模式自動偵測 (XML Metadata)
 - **實作方式**: 在存檔時於 XML 根節點注入 platform="PC" 或 platform="CircuitPython"。
 - **優點**: 解決了單純靠積木特徵判斷的不確定性，達成 100% 準確的模式切換。
 
 ### 3. MCU 部署引擎 (Deployer)
-- **部署工具**: 獨立 Python 腳本 
-esources/deploy_mcu.py。
+- **部署工具**: 獨立 Python 腳本 resources/deploy_mcu.py。
 - **優先策略**: 
     1. 掃描 GetLogicalDrives() 尋找標籤為 CIRCUITPY 的磁碟機進行直接檔案寫入。
     2. 若失敗，則降級為 Serial REPL 模式，透過 f.write() 傳輸程式碼。
@@ -83,6 +77,27 @@ esources/deploy_mcu.py。
 - **字串處理**: 嚴格遵守 \\n 轉義規範，避免產生器 JS 中的實體換行。
 - **ID 清理**: 執行前使用 Regex /\u0001ID:.*?\u0002/g 與 /# ID:.*?\n/g 確保產出純淨 Python 代碼。
 
-## 關鍵踩坑與解決紀錄 (2026-02-14)
-1. **Webview URI 權限 (403)**: 發現 JS 動態修改 img.src 會導致路徑失效。解決方案：預放所有圖示並透過 CSS Class 切換。
-2. **終端機崩潰 (-1073741510)**: 因自動發送 \u0003 導致 PowerShell 中斷。解決方案：改由使用者手動控制。
+## 關鍵技術實作紀錄 (2026-02-16 更新)
+
+### 1. 扁平化模組架構 (Flattened Module Structure)
+- **目錄變更**：所有模組統一移至 `media/modules/` 下，核心模組位於 `modules/core/`。
+- **平行載入**：`module_loader.js` 使用 `Promise.all` 加載模組，回傳物件包含 ID 與 XML，確保分組與排序一致。
+- **載入邏輯**：`loadModule` 自動偵測 ID 中的路徑（如 `core/logic`）並動態加載對應的 `blocks.js` 與 `generators.js`。
+
+### 2. 語系分散化管理 (Modular i18n)
+- **機制**：各模組在載入積木前，會先嘗試加載 `i18n/[lang].js`。
+- **核心瘦身**：`media/zh-hant.js` 僅保留全域 UI 文字，大幅提昇維護性。
+
+### 3. 完美同步與 ID 定位 (Regex Deep Dive)
+- **Execute the Preview**：將 Preview 處理後的代碼作為唯一真理傳給執行引擎，徹底消除行號位移。
+- **行尾註解 ID**：陳述句使用 `  # ID:xxx` 行尾註解。解析正則為 `/  # ID:([^\s\n]+)/g`，支援多重 ID（容器積木）且不影響 Python 縮排。
+- **效能檢查**：孤兒檢查改為 $O(N)$ Top-Down 遍歷，配合 150ms 防抖，垃圾桶動畫流暢度大幅提升。
+
+### 4. 積木標準化 (Standardization)
+- **JSON 化**：現有積木定義全面改用 `jsonInit` + `args0` 模式，解決手動 `split` 導致的 `%n` 殘留與佈局混亂。
+- **精簡積木**：針對 CV Draw 實作 `py_ai_point` 與 `py_ai_color` 固定尺寸積木，取代變形 Tuple。
+
+### 5. UI/UX 增強
+- **縮排輔助線**：在 Preview 中動態繪製灰線，支援 2/4 Spaces 切換且同步剪貼簿。
+- **複製功能**：實作品牌色 Hover 複製按鈕，自動清理定位 ID。
+- **路徑導航**：標題列與狀態列同步顯示完整檔案路徑。

@@ -144,6 +144,20 @@
             align-items: center;
             box-sizing: border-box;
         }
+        .indent-select {
+            background: transparent;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 10px;
+            color: #666;
+            cursor: pointer;
+            outline: none;
+            padding: 1px 4px;
+        }
+        .indent-select:hover {
+            border-color: #FE2F89;
+            color: #FE2F89;
+        }
         #codeContent {
             flex: 1;
             margin: 0;
@@ -181,6 +195,20 @@
             background-color: #fff59d !important; /* 明亮的黃色高亮 */
             border-top: 1px solid #ffe082;
             border-bottom: 1px solid #ffe082;
+        }
+        /* 縮排對齊線 */
+        .indent-guide {
+            display: inline-block;
+            border-left: 1px solid #ccc;
+            width: 2ch;
+            height: 1.5em;
+            vertical-align: top;
+            box-sizing: border-box;
+            white-space: pre; /* 確保空格被保留 */
+        }
+        /* 當該行被高亮時，對齊線也稍微加深 */
+        .highlight-line .indent-guide {
+            border-left: 1px solid #999;
         }
     </style>
 </head>
@@ -250,6 +278,18 @@
         <div id="codeArea">
             <div id="codeHeader">
                 <span>%{BKY_TLB_PYTHON_PREVIEW}</span>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="toolbar-btn" id="btn-copy-code" title="Copy Code" style="width: 24px; height: 24px;">
+                        <img src="icons/content_copy_24dp_1F1F1F.png" class="normal-icon" style="width: 18px; height: 18px;">
+                        <img src="icons/content_copy_24dp_FE2F89.png" class="hover-icon" style="width: 18px; height: 18px;">
+                    </div>
+                    <div class="toolbar-separator" style="height: 16px; margin: 0;"></div>
+                    <span style="font-size: 10px;">Indent:</span>
+                    <select id="indent-selector" class="indent-select">
+                        <option value="2">2 Spaces</option>
+                        <option value="4" selected>4 Spaces</option>
+                    </select>
+                </div>
             </div>
             <div id="codeContent"></div>
         </div>

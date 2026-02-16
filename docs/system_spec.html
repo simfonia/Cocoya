@@ -111,6 +111,7 @@
         <li><a href="#platform">6. 平台模式與自動偵測</a></li>
         <li><a href="#performance">7. 效能優化 (State Check)</a></li>
         <li><a href="#deployment">8. 硬體部署系統 (MCU)</a></li>
+        <li><a href="#regex">9. 積木定位技術 (Regex)</a></li>
     </ul>
 </nav>
 
@@ -192,6 +193,39 @@
     <section id="deployment">
         <h2>8. 硬體部署系統 (MCU)</h2>
         <p>部署邏輯封裝於 <code>resources/deploy_mcu.py</code> 中，支援透過磁碟 (CIRCUITPY) 或 Serial REPL 進行傳輸，並整合即時 Monitor。</p>
+    </section>
+
+    <section id="regex">
+        <h2>9. 積木定位技術 (Regex Deep Dive)</h2>
+        <p>為了達成「積木」與「產出代碼」之間的精確導航，Cocoya 採用了雙軌 ID 注入機制。這套機制保證了 1:1 的行號對齊，且不破壞 Python 語法執行。</p>
+        
+        <h3>A. 運算式標記 (Invisible Markers)</h3>
+        <p>用於行內拼入的積木（如變數、數值）。使用不可見字元包裹 ID，避免破壞運算子結構。</p>
+        <ul>
+            <li><strong>Regex:</strong> <code>\u0001ID:([\s\S]+?)\u0002</code></li>
+            <li><strong>原理:</strong> 使用控制字元 <code>\u0001</code> (SOH) 與 <code>\u0002</code> (STX) 封裝。</li>
+        </ul>
+
+        <h3>B. 陳述句標記 (Trailing Comments)</h3>
+        <p>用於完整的程式碼列（如 <code>import</code>, <code>if</code>）。將 ID 隱藏在行尾註解中。</p>
+        <ul>
+            <li><strong>Regex:</strong> <code>/  # ID:([^\s\n]+)/g</code></li>
+            <li><strong>細節解析:</strong>
+                <ul>
+                    <li><code>  # ID:</code>: 以兩個空格開頭的 Python 註解，執行時會被忽略。</li>
+                    <li><code>([^\s\n]+)</code>: 捕獲群組。匹配除空白與換行外的所有字元，確保能完整抓取包含特殊符號的 Blockly ID。</li>
+                    <li><code>/g</code>: 全域匹配。當父子積木共用第一行代碼時（如 Global Definitions 容器），可同時抓取多個 ID 確保定位不失效。</li>
+                </ul>
+            </li>
+        </ul>
+
+        <h3>C. 處理流程 (The Workflow)</h3>
+        <p>當 UI 渲染器處理每一行代碼時：</p>
+        <ol>
+            <li><strong>提取:</strong> 透過捕獲群組將 ID 存入映射表 (Map)，實現「點擊積木 -> 捲動至代碼行」的功能。</li>
+            <li><strong>抹除:</strong> 使用 <code>.replace()</code> 將標記從字串中徹底刪除。</li>
+            <li><strong>基準:</strong> 由於執行檔與預覽 UI 使用相同的「清理後字串」，行號誤差值為 0。</li>
+        </ol>
     </section>
 
     <footer>

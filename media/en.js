@@ -75,37 +75,10 @@
     "MSG_PYTHON_NOT_FOUND": "Could not execute Python (Current: %1). Please specify the correct python.exe path.",
     "MSG_PYTHON_UPDATED": "Python path updated: %1",
 
-    // Python Syntax Elements
-    "PY_COLON": ":",
-    "PY_EQUAL": "=",
+    // Syntax (Basic)
     "PY_DEF": "def",
     "PY_RETURN": "return",
     "PY_GLOBAL": "global",
-    "PY_LOCAL": "local",
-
-    // Tool Blocks
-    "TOOLS_COMMENT": "# Comment",
-    "TOOLS_COMMENT_TOOLTIP": "Add multi-line comments.",
-    "TOOLS_RAW_CODE": "Raw Code",
-    "TOOLS_RAW_STATEMENT_TOOLTIP": "Write custom Python code (statement).",
-    "TOOLS_RAW_EXPRESSION_TOOLTIP": "Write custom Python code (expression).",
-
-    // Math & Text
-    "MATH_SQRT": "sqrt",
-    "MATH_ABS": "abs",
-    "MATH_SIN": "sin",
-    "MATH_COS": "cos",
-    "MATH_TAN": "tan",
-    "MATH_ROUND": "round",
-    "MATH_RANDOM": "random",
-    "TEXT_JOIN": "f-string",
-    "TEXT_JOIN_TOOLTIP": "Join text and variables. Text blocks are included literally, while others are wrapped in {}.",
-    "TEXT_LENGTH": "len",
-    "TEXT_INPUT": "input",
-
-    // Block Messages
-    "CONTROLS_IF_MSG_IF": "if",
-    "CONTROLS_WHILEUNTIL_OPERATOR_WHILE": "while",
-    "TEXT_PRINT_TITLE": "print(%1)"
+    "PY_LOCAL": "local"
   });
 })(Blockly);

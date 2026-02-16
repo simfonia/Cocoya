@@ -1,6 +1,6 @@
 // Logic Blocks: logic_blocks.js
 
-// --- If-Elif-Else Block ---
+// --- If-Elif-Else Block --- (Keep Procedural for Mutator)
 Blockly.Blocks['py_logic_if'] = {
   init: function() {
     this.elifCount_ = 0;
@@ -111,45 +111,73 @@ function getIcon(name) {
 // --- Comparison ---
 Blockly.Blocks['py_logic_compare'] = {
   init: function() {
-    this.appendValueInput("A");
-    this.appendValueInput("B")
-        .appendField(new Blockly.FieldDropdown([
-            ["==", "=="], ["!=", "!="], ["<", "<"], ["<=", "<="], [">", ">"], [">=", ">="]
-        ]), "OP");
-    this.setInputsInline(true);
-    this.setOutput(true, "Boolean");
-    this.setColour(Blockly.Msg["COLOUR_LOGIC"]);
+    this.jsonInit({
+      "message0": "%1 %2 %3",
+      "args0": [
+        { "type": "input_value", "name": "A" },
+        { 
+          "type": "field_dropdown", 
+          "name": "OP",
+          "options": [["==", "=="], ["!=", "!="], ["<", "<"], ["<=", "<="], [">", ">"], [">=", ">="]]
+        },
+        { "type": "input_value", "name": "B" }
+      ],
+      "inputsInline": true,
+      "output": "Boolean",
+      "colour": Blockly.Msg["COLOUR_LOGIC"]
+    });
   }
 };
 
 // --- And/Or ---
 Blockly.Blocks['py_logic_operation'] = {
   init: function() {
-    this.appendValueInput("A").setCheck("Boolean");
-    this.appendValueInput("B").setCheck("Boolean")
-        .appendField(new Blockly.FieldDropdown([["and", "and"], ["or", "or"]]), "OP");
-    this.setInputsInline(true);
-    this.setOutput(true, "Boolean");
-    this.setColour(Blockly.Msg["COLOUR_LOGIC"]);
+    this.jsonInit({
+      "message0": "%1 %2 %3",
+      "args0": [
+        { "type": "input_value", "name": "A", "check": "Boolean" },
+        { 
+          "type": "field_dropdown", 
+          "name": "OP",
+          "options": [["and", "and"], ["or", "or"]]
+        },
+        { "type": "input_value", "name": "B", "check": "Boolean" }
+      ],
+      "inputsInline": true,
+      "output": "Boolean",
+      "colour": Blockly.Msg["COLOUR_LOGIC"]
+    });
   }
 };
 
 // --- Not ---
 Blockly.Blocks['py_logic_negate'] = {
   init: function() {
-    this.appendValueInput("BOOL").setCheck("Boolean")
-        .appendField("not");
-    this.setOutput(true, "Boolean");
-    this.setColour(Blockly.Msg["COLOUR_LOGIC"]);
+    this.jsonInit({
+      "message0": "not %1",
+      "args0": [
+        { "type": "input_value", "name": "BOOL", "check": "Boolean" }
+      ],
+      "output": "Boolean",
+      "colour": Blockly.Msg["COLOUR_LOGIC"]
+    });
   }
 };
 
 // --- Boolean/None ---
 Blockly.Blocks['py_logic_boolean'] = {
   init: function() {
-    this.appendDummyInput()
-        .appendField(new Blockly.FieldDropdown([["True", "True"], ["False", "False"], ["None", "None"]]), "BOOL");
-    this.setOutput(true);
-    this.setColour(Blockly.Msg["COLOUR_LOGIC"]);
+    this.jsonInit({
+      "message0": "%1",
+      "args0": [
+        { 
+          "type": "field_dropdown", 
+          "name": "BOOL",
+          "options": [["True", "True"], ["False", "False"], ["None", "None"]]
+        }
+      ],
+      "output": null,
+      "colour": Blockly.Msg["COLOUR_LOGIC"]
+    });
   }
 };

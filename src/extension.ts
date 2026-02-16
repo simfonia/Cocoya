@@ -203,7 +203,17 @@ export class CocoyaManager {
     private updateTitle() {
         const displayName = this.currentFilePath ? path.basename(this.currentFilePath) : this.t('TLB_FILE_NEW');
         const dirtyMarker = this.lastDirtyState ? '*' : '';
-        this.panel.title = `Cocoya Editor: [${displayName}${dirtyMarker}]`;
+        
+        // 1. 更新頁籤標題 (採用 檔名 - 資料夾名 格式)
+        if (this.currentFilePath) {
+            const folderName = path.basename(path.dirname(this.currentFilePath));
+            this.panel.title = `${displayName}${dirtyMarker} (${folderName}) - Cocoya`;
+            
+            // 2. 同步完整路徑到 VS Code 狀態列，讓使用者隨時可見
+            vscode.window.setStatusBarMessage(`Cocoya Project: ${this.currentFilePath}`, 5000);
+        } else {
+            this.panel.title = `${displayName}${dirtyMarker} - Cocoya`;
+        }
     }
 
     private async handleNewFile(message: any) {
@@ -293,8 +303,8 @@ export class CocoyaManager {
         const tempDir = path.join(this.context.extensionPath, 'temp_scripts');
         if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 
-        // 1. 清理定位用的標記並準備代碼
-        const cleanCode = message.code.replace(/\u0001ID:.*?\u0002/g, '').replace(/# ID:.*?\n/g, '');
+        // 1. 清理定位用的隱形標記 (保留 # ID 註解以維持行號一致)
+        const cleanCode = message.code.replace(/\u0001ID:.*?\u0002/g, '');
         
         if (platform === 'CircuitPython') {
             const port = message.serialPort;
