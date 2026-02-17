@@ -64,3 +64,14 @@
 - **下一階段目標**：
     - 實作 Face Mesh (ai_face) 與 Pose Estimation (ai_pose)。
     - 擴充手勢識別的種類 (如：握拳、比讚等)。
+
+## 2026-02-17 臉部與手勢 AI 強化 (里程碑 v2.1+v2.2 完成)
+- **核心進度**：
+    - **AI 模組開發**：完成 ai_hand (手勢) 與 ai_face (臉部網格) 模組。實作 468 點臉部追蹤。
+    - **AR 繪圖突破**：實作 Overlay Image 積木，支援 PNG 透明度與自動 Alpha 混合，解決虛擬濾鏡需求。
+    - **UX 革命**：透過 Blockly.dialog 橋樑徹底解決 Webview 禁止同步 Prompt 的限制，變數更名功能回復正常。
+    - **規範落實**：完成全模組 generator.INDENT 縮排標準化，並更新 system_spec.html 至 v2.2。
+- **下一階段目標**：
+    - 進入里程碑 v2.3：實作 MediaPipe 姿勢偵測 (ai_pose)。
+    - 優化圖片覆蓋積木的效能。
+- **目前狀態**：系統已具備開發高難度 AI 互動（如 AR 皇冠、表情觸發）的能力。

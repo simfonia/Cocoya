@@ -57,6 +57,12 @@ export class CocoyaManager {
                 case 'prompt':
                     this.handlePrompt(message);
                     break;
+                case 'confirm':
+                    this.handleConfirm(message);
+                    break;
+                case 'alert':
+                    vscode.window.showInformationMessage(message.message);
+                    break;
                 case 'newFile':
                     await this.handleNewFile(message);
                     break;
@@ -167,6 +173,13 @@ export class CocoyaManager {
     private async handlePrompt(message: any) {
         const result = await vscode.window.showInputBox({ prompt: message.message, value: message.defaultValue });
         this.panel.webview.postMessage({ command: 'promptResponse', requestId: message.requestId, result });
+    }
+
+    private async handleConfirm(message: any) {
+        const ok = this.t('MSG_OK') || 'OK';
+        const cancel = this.t('MSG_CANCEL') || 'Cancel';
+        const choice = await vscode.window.showInformationMessage(message.message, { modal: true }, ok, cancel);
+        this.panel.webview.postMessage({ command: 'promptResponse', requestId: message.requestId, result: choice === ok });
     }
 
     private async checkDirtyAndConfirm(message: any): Promise<boolean> {
@@ -361,6 +374,14 @@ export class CocoyaManager {
         let terminal = vscode.window.terminals.find(t => t.name === 'Cocoya Execution');
         if (!terminal) terminal = vscode.window.createTerminal('Cocoya Execution');
         terminal.show();
+
+        // 2. 如果已存檔，先切換終端機目錄至專案路徑
+        if (this.currentFilePath) {
+            const projectDir = path.dirname(this.currentFilePath);
+            // 使用 pushd 以便後續可以 popd，或是單純 cd
+            terminal.sendText(`cd "${projectDir}"`);
+        }
+
         terminal.sendText(`& "${pythonPath}" "${tempFilePath}"`);
         this.panel.webview.postMessage({ command: 'runCompleted' });
     }

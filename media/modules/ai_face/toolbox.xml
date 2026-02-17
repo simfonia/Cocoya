@@ -1,0 +1,60 @@
+<category name="%{BKY_CAT_AI_FACE}" colour="%{BKY_COLOUR_AI}">
+    <block type="py_ai_face_init">
+        <field name="MAX_FACES">1</field>
+        <field name="MIN_CONF">0.5</field>
+    </block>
+    <block type="py_ai_face_process">
+        <value name="FRAME">
+            <block type="variables_get">
+                <field name="VAR">frame</field>
+            </block>
+        </value>
+        <field name="VAR">results_face</field>
+    </block>
+    <block type="py_ai_face_is_detected">
+        <field name="VAR">results_face</field>
+    </block>
+    <block type="py_ai_face_get_landmarks">
+        <field name="VAR">results_face</field>
+        <field name="INDEX">0</field>
+    </block>
+    <block type="py_ai_face_get_landmark">
+        <value name="FACE">
+            <block type="py_ai_face_get_landmarks">
+                <field name="VAR">results_face</field>
+                <field name="INDEX">0</field>
+            </block>
+        </value>
+        <field name="INDEX">0</field>
+    </block>
+    <block type="py_ai_face_draw">
+        <field name="FRAME">frame</field>
+        <field name="VAR">results_face</field>
+    </block>
+    <block type="py_ai_face_draw_indices">
+        <field name="FRAME">frame</field>
+        <field name="VAR">results_face</field>
+        <value name="START">
+            <shadow type="py_math_number">
+                <field name="NUM">0</field>
+            </shadow>
+        </value>
+        <value name="END">
+            <shadow type="py_math_number">
+                <field name="NUM">10</field>
+            </shadow>
+        </value>
+        <value name="SIZE">
+            <shadow type="py_math_number">
+                <field name="NUM">0.3</field>
+            </shadow>
+        </value>
+        <value name="COLOR">
+            <shadow type="py_ai_color">
+                <field name="B">255</field>
+                <field name="G">255</field>
+                <field name="R">255</field>
+            </shadow>
+        </value>
+    </block>
+</category>

@@ -9,11 +9,12 @@ C:\Workspace\cocoya\
 ├── media/                 # Webview 前端資源
 │   ├── blockly/           # Blockly 核心庫與插件
 │   ├── icons/             # 工具列與功能圖示
-│   ├── modules/           # 統一模組目錄 (New!)
+│   ├── modules/           # 統一模組目錄
 │   │   ├── core/          # 基礎積木 (logic, loops, math, etc.)
 │   │   ├── cv_basic/      # OpenCV 基礎操作
 │   │   ├── cv_draw/       # OpenCV 繪圖標註
 │   │   ├── ai_hand/       # MediaPipe 手勢偵測
+│   │   ├── ai_face/       # MediaPipe 臉部網格偵測 (New!)
 │   │   └── hardware/      # CircuitPython 硬體控制
 │   ├── core_manifest.json # 模組載入清單 (含路徑定義)
 │   ├── index.html         # 主介面

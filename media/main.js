@@ -30,6 +30,8 @@
             // 初始化請求 Map (確保 module_loader 能共用)
             if (!window.CocoyaXMLRequests) window.CocoyaXMLRequests = new Map();
 
+            this.registerPlugins();
+            this.setupBlocklyPrompts();
             this.setupWindowListeners();
             this.setupPlatformSelector();
             this.setupIndentSelector();
@@ -262,20 +264,36 @@
         },
 
         /**
-         * 設定自定義 Prompt 橋樑
+         * 設定自定義 Prompt 與 Confirm 橋樑
          */
         setupBlocklyPrompts: function() {
             const self = this;
+            
             const customPrompt = function(msg, defaultValue, callback) {
                 const requestId = Date.now() + Math.random();
                 if (typeof callback === 'function') self.promptRequests.set(requestId, callback);
-                vscode.postMessage({ command: 'prompt', message: msg, defaultValue: defaultValue, requestId: requestId });
+                vscode.postMessage({ command: 'prompt', message: msg, defaultValue: defaultValue || '', requestId: requestId });
             };
-            window.prompt = (msg, def) => { customPrompt(msg, def); return null; };
-            Blockly.prompt = customPrompt;
-            if (Blockly.dialog) {
-                Blockly.dialog.prompt = customPrompt;
-            }
+
+            const customConfirm = function(msg, callback) {
+                const requestId = Date.now() + Math.random();
+                if (typeof callback === 'function') self.promptRequests.set(requestId, callback);
+                vscode.postMessage({ command: 'confirm', message: msg, requestId: requestId });
+            };
+
+            // 1. 覆寫 window 原生方法 (雖然同步無法達成，但可防崩潰)
+            window.prompt = (msg, def) => { console.warn('Sync prompt ignored in Webview'); return null; };
+            window.confirm = (msg) => { console.warn('Sync confirm ignored in Webview'); return false; };
+            window.alert = (msg) => { vscode.postMessage({ command: 'alert', message: msg }); };
+            
+            // 2. 注入 Blockly 非同步對話框介面 (這是最關鍵的)
+            // Blockly 核心會優先檢查並使用這些非同步介面
+            Blockly.dialog.setPrompt(customPrompt);
+            Blockly.dialog.setConfirm(customConfirm);
+            Blockly.dialog.setAlert((msg, cb) => {
+                vscode.postMessage({ command: 'alert', message: msg });
+                if (cb) cb();
+            });
         },
 
         /**

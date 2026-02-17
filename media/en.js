@@ -32,6 +32,7 @@
     "CAT_AI_BASIC": "OpenCV Basic",
     "CAT_AI_DRAW": "Drawing",
     "CAT_AI_HAND": "Hand Tracking",
+    "CAT_AI_FACE": "Face Mesh",
     "CAT_STRUCTURE": "Structure",
     "CAT_HARDWARE": "Hardware",
 

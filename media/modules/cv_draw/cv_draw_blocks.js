@@ -80,6 +80,26 @@ Blockly.Blocks['py_ai_draw_text'] = {
   }
 };
 
+Blockly.Blocks['py_ai_draw_overlay_image'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["AI_DRAW_OVERLAY_IMAGE"],
+      "args0": [
+        { "type": "field_variable", "name": "VAR", "variable": "frame" },
+        { "type": "input_value", "name": "PATH", "check": "String" },
+        { "type": "input_value", "name": "CENTER", "check": "Tuple" },
+        { "type": "input_value", "name": "WIDTH", "check": "Number" },
+        { "type": "input_value", "name": "ANGLE", "check": "Number" }
+      ],
+      "inputsInline": true,
+      "previousStatement": null,
+      "nextStatement": null,
+      "colour": Blockly.Msg["COLOUR_AI"],
+      "tooltip": Blockly.Msg["AI_DRAW_OVERLAY_IMAGE_TOOLTIP"]
+    });
+  }
+};
+
 Blockly.Blocks['py_ai_point'] = {
   init: function() {
     this.jsonInit({

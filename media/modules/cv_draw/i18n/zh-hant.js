@@ -4,6 +4,8 @@ Object.assign(Blockly.Msg, {
   "AI_DRAW_CIRCLE": "影像%1畫圓 圓心%2 半徑%3 顏色%4 粗細%5",
   "AI_DRAW_LINE": "影像%1畫線 %2到%3 顏色%4 粗細%5",
   "AI_DRAW_TEXT": "影像%1寫字%2 位置%3 顏色%4 大小%5",
+  "AI_DRAW_OVERLAY_IMAGE": "影像 %1 覆蓋圖片 %2 中心 %3 寬度 %4 旋轉角度 %5",
+  "AI_DRAW_OVERLAY_IMAGE_TOOLTIP": "在指定位置覆蓋圖片（支援 PNG 透明度）。角度為逆時針方向。",
   "AI_DRAW_TOOLTIP": "在影像上繪製標註圖形。注意顏色需為 (B, G, R) 格式。",
   "AI_POINT": "(%1, %2)",
   "AI_COLOR": "(%1, %2, %3)",

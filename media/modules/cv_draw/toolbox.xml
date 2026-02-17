@@ -96,4 +96,23 @@
             <shadow type="py_math_number"><field name="NUM">1</field></shadow>
         </value>
     </block>
+
+    <!-- 圖片覆蓋 -->
+    <block type="py_ai_draw_overlay_image">
+        <value name="PATH">
+            <shadow type="py_text"><field name="TEXT">resources/crown.png</field></shadow>
+        </value>
+        <value name="CENTER">
+            <shadow type="py_ai_point">
+                <field name="X">320</field>
+                <field name="Y">240</field>
+            </shadow>
+        </value>
+        <value name="WIDTH">
+            <shadow type="py_math_number"><field name="NUM">100</field></shadow>
+        </value>
+        <value name="ANGLE">
+            <shadow type="py_math_number"><field name="NUM">0</field></shadow>
+        </value>
+    </block>
 </category>

@@ -114,12 +114,14 @@
         <li><a href="#regex">9. 積木定位技術 (Regex)</a></li>
         <li><a href="#ai-spec">10. AI 視覺模組規範 (MediaPipe)</a></li>
         <li><a href="#indent-spec">11. 縮排與代碼產生規範</a></li>
+        <li><a href="#async-dialogs">12. 非同步對話框機制 (Bridge)</a></li>
+        <li><a href="#variable-mgmt">13. 變數管理與動態回調</a></li>
     </ul>
 </nav>
 
 <main id="content">
     <header>
-        <h1>Cocoya 系統規格說明書 v2.1</h1>
+        <h1>Cocoya 系統規格說明書 v2.2</h1>
         <p><strong>Code, Compute, Yield AI</strong> - 專為 AI 教育設計的視覺化開發環境。</p>
     </header>
 
@@ -266,8 +268,34 @@ var branch = generator.statementToCode(block, 'DO') || generator.INDENT + 'pass\
         <p>儘量避免使用 <code>generator.definitions_</code> 來注入長篇初始化代碼。這類代碼應透過「初始化積木」顯式產出，並建議使用者放置於「全域定義區」中，以維持 Preview 視窗中的代碼順序與可讀性。</p>
     </section>
 
+    <section id="async-dialogs">
+        <h2>12. 非同步對話框機制 (Bridge)</h2>
+        <p>由於 VS Code Webview 禁止使用同步的 <code>window.prompt()</code>, <code>confirm()</code> 與 <code>alert()</code>，系統實作了一套跨端非同步橋樑：</p>
+        <ul>
+            <li><strong>核心技術:</strong> 透過 <code>Blockly.dialog.setPrompt()</code> 與 <code>setConfirm()</code> 攔截核心事件。</li>
+            <li><strong>通訊流程:</strong> 
+                <ol>
+                    <li>Webview 發送 <code>postMessage</code> 至 Host。</li>
+                    <li>Host 呼叫 <code>vscode.window.showInputBox</code> 或 <code>showInformationMessage</code>。</li>
+                    <li>使用者輸入後，Host 回傳結果並帶上唯一的 <code>requestId</code>。</li>
+                    <li>Webview 透過 <code>Map</code> 儲存的回調函式 (Callback) 異步完成操作。</li>
+                </ol>
+            </li>
+            <li><strong>規範:</strong> 禁止在任何積木產生器或 UI 邏輯中使用同步彈窗，必須遵循此非同步回調規範。</li>
+        </ul>
+    </section>
+
+    <section id="variable-mgmt">
+        <h2>13. 變數管理與動態回調</h2>
+        <p>為了解決變數建立與重新命名的同步性問題：</p>
+        <ul>
+            <li><strong>動態 Toolbox:</strong> 變數分類採用 <code>registerToolboxCategoryCallback</code> 動態產生，允許注入「建立變數」等自定義按鈕。</li>
+            <li><strong>更名邏輯:</strong> 透過上述的非同步橋樑，系統能正確處理 Blockly 核心的「重新命名變數」選單，實現無感知的 Host-Webview 同步。</li>
+        </ul>
+    </section>
+
     <footer>
-        <p>© 2026 simfonia - Cocoya 專案組。文件更新日期：2026-02-17 (v2.1)</p>
+        <p>© 2026 simfonia - Cocoya 專案組。文件更新日期：2026-02-17 (v2.2)</p>
     </footer>
 </main>
 

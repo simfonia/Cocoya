@@ -101,3 +101,25 @@
 - **縮排輔助線**：在 Preview 中動態繪製灰線，支援 2/4 Spaces 切換且同步剪貼簿。
 - **複製功能**：實作品牌色 Hover 複製按鈕，自動清理定位 ID。
 - **路徑導航**：標題列與狀態列同步顯示完整檔案路徑。
+
+## 關鍵技術實作紀錄 (2026-02-17 更新)
+
+### 1. 非同步對話框系統 (Bridge Architecture)
+- **問題**：Webview 禁止原生 prompt() / confirm()，導致變數更名無效且報錯。
+- **解決**：
+    - 使用 Blockly.dialog.setPrompt() 與 setConfirm() 攔截核心對話框。
+    - 結合 
+equestId 追蹤與 Map 存儲 callback，將 UI 呈現交給 VS Code Host 執行。
+- **優點**：不改動核心，徹底相容 Webview 沙盒。
+
+### 2. 進階影像覆蓋 (Alpha Blending)
+- **演算法**：在 Python 注入 cocoya_overlay_image 輔助函式。
+- **透明度處理**：使用 NumPy 廣播運算執行 alpha * src + (1-alpha) * dst。
+- **旋轉補償**：使用 getRotationMatrix2D 搭配邊框計算，防止旋轉後邊角被裁切。
+
+### 3. 座標自動轉整數 (Int Casting)
+- **背景**：OpenCV 繪圖函式嚴禁浮點數。
+- **修正**：在 cv_draw 產生器中統一加入 	uple(map(int, ...)) 包裝，容許數學積木運算出的浮點座標自動轉換為像素整數。
+
+### 4. 智慧標註 (Range Filtering)
+- **臉部編號**：針對 Face Mesh 實作 START 與 END 參數過濾，讓開發者能分區域觀察特徵點，解決 468 個編號擠在一起的混亂。

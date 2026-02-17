@@ -1,0 +1,114 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
+  <variables>
+    <variable id="v_frame">frame</variable>
+    <variable id="v_results_face">results_face</variable>
+  </variables>
+  <block type="py_definition_zone" id="def_zone" deletable="false" x="10" y="10">
+    <statement name="DEFS">
+      <block type="py_ai_face_init" id="face_init">
+        <field name="MAX_FACES">1</field>
+        <field name="MIN_CONF">0.5</field>
+      </block>
+    </statement>
+  </block>
+  <block type="py_main" id="main_zone" deletable="false" x="10" y="110">
+    <statement name="DO">
+      <block type="py_ai_open_camera" id="open_cam">
+        <field name="INDEX">0</field>
+        <next>
+          <block type="py_loop_while" id="main_loop">
+            <value name="CONDITION">
+              <block type="py_logic_boolean" id="bool_true">
+                <field name="BOOL">True</field>
+              </block>
+            </value>
+            <statement name="DO">
+              <block type="py_ai_read_frame" id="read_f">
+                <field name="VAR" id="v_frame">frame</field>
+                <next>
+                  <block type="py_ai_flip_image" id="flip_f">
+                    <field name="VAR" id="v_frame">frame</field>
+                    <field name="CODE">1</field>
+                    <next>
+                      <block type="py_ai_face_process" id="proc_f">
+                        <field name="VAR" id="v_results_face">results_face</field>
+                        <value name="FRAME">
+                          <block type="py_variables_get" id="get_f">
+                            <field name="VAR" id="v_frame">frame</field>
+                          </block>
+                        </value>
+                        <next>
+                          <block type="py_logic_if" id="if_face">
+                            <mutation elif="0" else="0"></mutation>
+                            <value name="IF0">
+                              <block type="py_ai_face_is_detected" id="is_det">
+                                <field name="VAR" id="v_results_face">results_face</field>
+                              </block>
+                            </value>
+                            <statement name="DO0">
+                              <block type="py_ai_face_draw" id="draw_f">
+                                <field name="FRAME" id="v_frame">frame</field>
+                                <field name="VAR" id="v_results_face">results_face</field>
+                                <field name="MESH_COLOR">#ffcc66</field>
+                                <field name="CONTOUR_COLOR">#ff0000</field>
+                                <next>
+                                  <block type="py_ai_face_draw_indices" id="]W{k/XQyz(fc-UWLf6bR">
+                                    <field name="FRAME" id="v_frame">frame</field>
+                                    <field name="VAR" id="v_results_face">results_face</field>
+                                    <value name="START">
+                                      <shadow type="py_math_number" id="n=Ks5LkA]lvap@6!rPo0">
+                                        <field name="NUM">1</field>
+                                      </shadow>
+                                    </value>
+                                    <value name="END">
+                                      <shadow type="py_math_number" id="v@IP4a!y2AUpE;,=Ol/7">
+                                        <field name="NUM">1</field>
+                                      </shadow>
+                                    </value>
+                                    <value name="SIZE">
+                                      <shadow type="py_math_number" id="(-Ec8vW(PkRpvTSWnEwS">
+                                        <field name="NUM">0.6</field>
+                                      </shadow>
+                                    </value>
+                                    <value name="COLOR">
+                                      <shadow type="py_ai_color" id="q^A?y3iy%}gt37r8|/vO">
+                                        <field name="B">255</field>
+                                        <field name="G">0</field>
+                                        <field name="R">0</field>
+                                      </shadow>
+                                    </value>
+                                  </block>
+                                </next>
+                              </block>
+                            </statement>
+                            <next>
+                              <block type="py_ai_show_image" id="show">
+                                <value name="IMAGE">
+                                  <block type="py_variables_get" id="get_f_final">
+                                    <field name="VAR" id="v_frame">frame</field>
+                                  </block>
+                                </value>
+                                <next>
+                                  <block type="py_ai_wait_key_break" id="wait">
+                                    <field name="KEY">q</field>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="py_ai_release_all" id="rel"></block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

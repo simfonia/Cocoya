@@ -1,0 +1,358 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
+  <variables>
+    <variable id="v_frame">frame</variable>
+    <variable id="v_results_face">results_face</variable>
+    <variable id="v_face0">face_0</variable>
+    <variable id="v_p13">p13</variable>
+    <variable id="v_p14">p14</variable>
+    <variable id="v_dist">dist</variable>
+  </variables>
+  <block type="py_definition_zone" id="def_zone" deletable="false" x="10" y="10">
+    <statement name="DEFS">
+      <block type="py_import" id="imp_math">
+        <field name="LIB">math</field>
+        <next>
+          <block type="py_ai_face_init" id="face_init">
+            <field name="MAX_FACES">1</field>
+            <field name="MIN_CONF">0.5</field>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+  <block type="py_main" id="main_zone" deletable="false" x="10" y="150">
+    <statement name="DO">
+      <block type="py_ai_open_camera" id="open_cam">
+        <field name="INDEX">0</field>
+        <next>
+          <block type="py_loop_while" id="main_loop">
+            <value name="CONDITION">
+              <block type="py_logic_boolean" id="bool_true">
+                <field name="BOOL">True</field>
+              </block>
+            </value>
+            <statement name="DO">
+              <block type="py_ai_read_frame" id="read_f">
+                <field name="VAR" id="v_frame">frame</field>
+                <next>
+                  <block type="py_ai_flip_image" id="flip_f">
+                    <field name="VAR" id="v_frame">frame</field>
+                    <field name="CODE">1</field>
+                    <next>
+                      <block type="py_ai_face_process" id="proc_f">
+                        <field name="VAR" id="v_results_face">results_face</field>
+                        <value name="FRAME">
+                          <block type="py_variables_get" id="get_f">
+                            <field name="VAR" id="v_frame">frame</field>
+                          </block>
+                        </value>
+                        <next>
+                          <block type="py_logic_if" id="if_face">
+                            <value name="IF0">
+                              <block type="py_ai_face_is_detected" id="is_det">
+                                <field name="VAR" id="v_results_face">results_face</field>
+                              </block>
+                            </value>
+                            <statement name="DO0">
+                              <block type="py_variables_set" id="set_face0">
+                                <field name="VAR" id="v_face0">face_0</field>
+                                <value name="VALUE">
+                                  <block type="py_ai_face_get_landmarks" id="get_face_val">
+                                    <field name="VAR" id="v_results_face">results_face</field>
+                                    <field name="INDEX">0</field>
+                                  </block>
+                                </value>
+                                <next>
+                                  <block type="py_tools_comment" id="cmt_get_pos">
+                                    <field name="TEXT">取得嘴巴上下點位 (Index 13, 14)</field>
+                                    <next>
+                                      <block type="py_variables_set" id="set_p13">
+                                        <field name="VAR" id="v_p13">p13</field>
+                                        <value name="VALUE">
+                                          <block type="py_ai_hand_get_landmark_xy" id="get_p13_xy">
+                                            <field name="WIDTH">640</field>
+                                            <field name="HEIGHT">480</field>
+                                            <value name="LANDMARK">
+                                              <block type="py_ai_face_get_landmark" id="get_lm13">
+                                                <field name="INDEX">13</field>
+                                                <value name="FACE">
+                                                  <block type="py_variables_get" id="get_face_var">
+                                                    <field name="VAR" id="v_face0">face_0</field>
+                                                  </block>
+                                                </value>
+                                              </block>
+                                            </value>
+                                          </block>
+                                        </value>
+                                        <next>
+                                          <block type="py_variables_set" id="set_p14">
+                                            <field name="VAR" id="v_p14">p14</field>
+                                            <value name="VALUE">
+                                              <block type="py_ai_hand_get_landmark_xy" id="get_p14_xy">
+                                                <field name="WIDTH">640</field>
+                                                <field name="HEIGHT">480</field>
+                                                <value name="LANDMARK">
+                                                  <block type="py_ai_face_get_landmark" id="get_lm14">
+                                                    <field name="INDEX">14</field>
+                                                    <value name="FACE">
+                                                      <block type="py_variables_get" id="get_face_var2">
+                                                        <field name="VAR" id="v_face0">face_0</field>
+                                                      </block>
+                                                    </value>
+                                                  </block>
+                                                </value>
+                                              </block>
+                                            </value>
+                                            <next>
+                                              <block type="py_ai_draw_circle" id="draw_p13">
+                                                <field name="VAR" id="v_frame">frame</field>
+                                                <value name="CENTER">
+                                                  <block type="py_variables_get" id="get_p13_draw">
+                                                    <field name="VAR" id="v_p13">p13</field>
+                                                  </block>
+                                                </value>
+                                                <value name="RADIUS">
+                                                  <shadow type="py_math_number" id="rad13">
+                                                    <field name="NUM">3</field>
+                                                  </shadow>
+                                                </value>
+                                                <value name="COLOR">
+                                                  <shadow type="py_ai_color" id="clr13">
+                                                    <field name="B">0</field>
+                                                    <field name="G">255</field>
+                                                    <field name="R">255</field>
+                                                  </shadow>
+                                                </value>
+                                                <value name="THICKNESS">
+                                                  <shadow type="py_math_number" id="thk13">
+                                                    <field name="NUM">-1</field>
+                                                  </shadow>
+                                                </value>
+                                                <next>
+                                                  <block type="py_ai_draw_circle" id="draw_p14">
+                                                    <field name="VAR" id="v_frame">frame</field>
+                                                    <value name="CENTER">
+                                                      <block type="py_variables_get" id="get_p14_draw">
+                                                        <field name="VAR" id="v_p14">p14</field>
+                                                      </block>
+                                                    </value>
+                                                    <value name="RADIUS">
+                                                      <shadow type="py_math_number" id="rad14">
+                                                        <field name="NUM">3</field>
+                                                      </shadow>
+                                                    </value>
+                                                    <value name="COLOR">
+                                                      <shadow type="py_ai_color" id="clr14">
+                                                        <field name="B">0</field>
+                                                        <field name="G">255</field>
+                                                        <field name="R">255</field>
+                                                      </shadow>
+                                                    </value>
+                                                    <value name="THICKNESS">
+                                                      <shadow type="py_math_number" id="thk14">
+                                                        <field name="NUM">-1</field>
+                                                      </shadow>
+                                                    </value>
+                                                    <next>
+                                                      <block type="py_tools_comment" id="cmt_calc_dist">
+                                                        <field name="TEXT">計算兩點垂直距離</field>
+                                                        <next>
+                                                          <block type="py_variables_set" id="set_dist">
+                                                            <field name="VAR" id="v_dist">dist</field>
+                                                            <value name="VALUE">
+                                                              <block type="py_math_single" id="calc_sqrt">
+                                                                <field name="OP">math.sqrt</field>
+                                                                <value name="NUM">
+                                                                  <block type="py_math_arithmetic" id="calc_sum_sq">
+                                                                    <field name="OP">+</field>
+                                                                    <value name="A">
+                                                                      <block type="py_math_arithmetic" id="sq_dx">
+                                                                        <field name="OP">**</field>
+                                                                        <value name="A">
+                                                                          <block type="py_math_arithmetic" id="calc_dx">
+                                                                            <field name="OP">-</field>
+                                                                            <value name="A">
+                                                                              <block type="lists_getIndex" id="get_p13x">
+                                                                                <field name="MODE">GET</field>
+                                                                                <field name="WHERE">FROM_START</field>
+                                                                                <value name="VALUE">
+                                                                                  <block type="py_variables_get" id="get_p13_var">
+                                                                                    <field name="VAR" id="v_p13">p13</field>
+                                                                                  </block>
+                                                                                </value>
+                                                                                <value name="AT">
+                                                                                  <block type="math_number" id="idx1">
+                                                                                    <field name="NUM">1</field>
+                                                                                  </block>
+                                                                                </value>
+                                                                              </block>
+                                                                            </value>
+                                                                            <value name="B">
+                                                                              <block type="lists_getIndex" id="get_p14x">
+                                                                                <field name="MODE">GET</field>
+                                                                                <field name="WHERE">FROM_START</field>
+                                                                                <value name="VALUE">
+                                                                                  <block type="py_variables_get" id="get_p14_var">
+                                                                                    <field name="VAR" id="v_p14">p14</field>
+                                                                                  </block>
+                                                                                </value>
+                                                                                <value name="AT">
+                                                                                  <block type="math_number" id="idx1b">
+                                                                                    <field name="NUM">1</field>
+                                                                                  </block>
+                                                                                </value>
+                                                                              </block>
+                                                                            </value>
+                                                                          </block>
+                                                                        </value>
+                                                                        <value name="B">
+                                                                          <block type="math_number" id="num2">
+                                                                            <field name="NUM">2</field>
+                                                                          </block>
+                                                                        </value>
+                                                                      </block>
+                                                                    </value>
+                                                                    <value name="B">
+                                                                      <block type="py_math_arithmetic" id="sq_dy">
+                                                                        <field name="OP">**</field>
+                                                                        <value name="A">
+                                                                          <block type="py_math_arithmetic" id="calc_dy">
+                                                                            <field name="OP">-</field>
+                                                                            <value name="A">
+                                                                              <block type="lists_getIndex" id="get_p13y">
+                                                                                <field name="MODE">GET</field>
+                                                                                <field name="WHERE">FROM_START</field>
+                                                                                <value name="VALUE">
+                                                                                  <block type="py_variables_get" id="get_p13_var2">
+                                                                                    <field name="VAR" id="v_p13">p13</field>
+                                                                                  </block>
+                                                                                </value>
+                                                                                <value name="AT">
+                                                                                  <block type="math_number" id="idx2">
+                                                                                    <field name="NUM">2</field>
+                                                                                  </block>
+                                                                                </value>
+                                                                              </block>
+                                                                            </value>
+                                                                            <value name="B">
+                                                                              <block type="lists_getIndex" id="get_p14y">
+                                                                                <field name="MODE">GET</field>
+                                                                                <field name="WHERE">FROM_START</field>
+                                                                                <value name="VALUE">
+                                                                                  <block type="py_variables_get" id="get_p14_var2">
+                                                                                    <field name="VAR" id="v_p14">p14</field>
+                                                                                  </block>
+                                                                                </value>
+                                                                                <value name="AT">
+                                                                                  <block type="math_number" id="idx2b">
+                                                                                    <field name="NUM">2</field>
+                                                                                  </block>
+                                                                                </value>
+                                                                              </block>
+                                                                            </value>
+                                                                          </block>
+                                                                        </value>
+                                                                        <value name="B">
+                                                                          <block type="math_number" id="num2b">
+                                                                            <field name="NUM">2</field>
+                                                                          </block>
+                                                                        </value>
+                                                                      </block>
+                                                                    </value>
+                                                                  </block>
+                                                                </value>
+                                                              </block>
+                                                            </value>
+                                                            <next>
+                                                              <block type="py_logic_if" id="check_open">
+                                                                <value name="IF0">
+                                                                  <block type="py_logic_compare" id="dist_big">
+                                                                    <field name="OP">&gt;</field>
+                                                                    <value name="A">
+                                                                      <block type="py_variables_get" id="get_dist_var">
+                                                                        <field name="VAR" id="v_dist">dist</field>
+                                                                      </block>
+                                                                    </value>
+                                                                    <value name="B">
+                                                                      <block type="math_number" id="thresh">
+                                                                        <field name="NUM">15</field>
+                                                                      </block>
+                                                                    </value>
+                                                                  </block>
+                                                                </value>
+                                                                <statement name="DO0">
+                                                                  <block type="py_ai_draw_text" id="draw_wow">
+                                                                    <field name="VAR" id="v_frame">frame</field>
+                                                                    <value name="TEXT">
+                                                                      <shadow type="py_text" id="txt_wow">
+                                                                        <field name="TEXT">WOW!</field>
+                                                                      </shadow>
+                                                                    </value>
+                                                                    <value name="POS">
+                                                                      <block type="py_variables_get" id="wow_pos">
+                                                                        <field name="VAR" id="v_p13">p13</field>
+                                                                      </block>
+                                                                    </value>
+                                                                    <value name="COLOR">
+                                                                      <shadow type="py_ai_color" id="wow_clr">
+                                                                        <field name="B">0</field>
+                                                                        <field name="G">255</field>
+                                                                        <field name="R">255</field>
+                                                                      </shadow>
+                                                                    </value>
+                                                                    <value name="SCALE">
+                                                                      <shadow type="py_math_number" id="wow_scl">
+                                                                        <field name="NUM">2</field>
+                                                                      </shadow>
+                                                                    </value>
+                                                                  </block>
+                                                                </statement>
+                                                              </block>
+                                                            </next>
+                                                          </block>
+                                                        </next>
+                                                      </block>
+                                                    </next>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </statement>
+                            <next>
+                              <block type="py_ai_show_image" id="show">
+                                <value name="IMAGE">
+                                  <block type="py_variables_get" id="get_f_final">
+                                    <field name="VAR" id="v_frame">frame</field>
+                                  </block>
+                                </value>
+                                <next>
+                                  <block type="py_ai_wait_key_break" id="wait">
+                                    <field name="KEY">q</field>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="py_ai_release_all" id="rel"></block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>
