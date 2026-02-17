@@ -9,7 +9,7 @@ Blockly.Python.forBlock['py_function_def'] = function(block, generator) {
     params.push(block.getFieldValue('PRM' + i));
   }
   
-  var branch = generator.statementToCode(block, 'DO') || '  pass\n';
+  var branch = generator.statementToCode(block, 'DO') || generator.INDENT + 'pass\n';
   return 'def ' + name + '(' + params.join(', ') + '):\n' + branch;
 };
 

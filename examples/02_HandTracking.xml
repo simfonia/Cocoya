@@ -1,0 +1,254 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
+  <variables>
+    <variable id="-Q%A^XaH8;k;t:2gt-$9">frame</variable>
+    <variable id="results_variable_id">results</variable>
+    <variable id="hand_0_id">hand_0</variable>
+    <variable id="index_tip_id">index_tip</variable>
+    <variable id="tip_pos_id">tip_pos</variable>
+    <variable id="tip_x_id">tip_x</variable>
+    <variable id="tip_y_id">tip_y</variable>
+  </variables>
+  <block type="py_definition_zone" id="Bdnw_V/[8M]Jo#_UyXzr" deletable="false" x="10" y="10">
+    <statement name="DEFS">
+      <block type="py_ai_hand_init" id="hand_init_id">
+        <field name="MAX_HANDS">2</field>
+        <field name="MIN_CONF">0.5</field>
+      </block>
+    </statement>
+  </block>
+  <block type="py_main" id="p:|{}^h|CUVx%-*[UR[:" deletable="false" x="10" y="150">
+    <statement name="DO">
+      <block type="py_ai_open_camera" id="KNSpp|FG?Q2lG~TWzUzX">
+        <field name="INDEX">0</field>
+        <next>
+          <block type="py_loop_while" id="(,knB!Ds3VQp,o0BTr(f">
+            <value name="CONDITION">
+              <block type="py_logic_boolean" id=".H8}p+LQMimQjR0FayU?">
+                <field name="BOOL">True</field>
+              </block>
+            </value>
+            <statement name="DO">
+              <block type="py_ai_read_frame" id="y~*-jX{W6f4eHdfDP85:">
+                <field name="VAR" id="-Q%A^XaH8;k;t:2gt-$9">frame</field>
+                <next>
+                  <block type="py_ai_flip_image" id="1kR!ykjk/ErC*mA0;NtV">
+                    <field name="VAR" id="-Q%A^XaH8;k;t:2gt-$9">frame</field>
+                    <field name="CODE">1</field>
+                    <next>
+                      <block type="py_ai_hand_process" id="hand_process_id">
+                        <field name="VAR" id="results_variable_id">results</field>
+                        <value name="FRAME">
+                          <block type="py_variables_get" id="get_frame_id">
+                            <field name="VAR" id="-Q%A^XaH8;k;t:2gt-$9">frame</field>
+                          </block>
+                        </value>
+                        <next>
+                          <block type="py_logic_if" id="detect_if_id">
+                            <mutation elif="0" else="0"></mutation>
+                            <value name="IF0">
+                              <block type="py_ai_hand_is_detected" id="is_detected_id">
+                                <field name="VAR" id="results_variable_id">results</field>
+                              </block>
+                            </value>
+                            <statement name="DO0">
+                              <block type="py_ai_hand_draw" id="draw_hand_id">
+                                <field name="FRAME" id="-Q%A^XaH8;k;t:2gt-$9">frame</field>
+                                <field name="VAR" id="results_variable_id">results</field>
+                                <field name="LANDMARK_COLOR">#ffff00</field>
+                                <field name="LINE_COLOR">#00ff00</field>
+                                <next>
+                                  <block type="py_ai_hand_draw_indices" id="draw_indices_id">
+                                    <field name="FRAME" id="-Q%A^XaH8;k;t:2gt-$9">frame</field>
+                                    <field name="VAR" id="results_variable_id">results</field>
+                                    <value name="SIZE">
+                                      <shadow type="py_math_number" id="indices_size_id">
+                                        <field name="NUM">0.6</field>
+                                      </shadow>
+                                    </value>
+                                    <value name="COLOR">
+                                      <shadow type="py_ai_color" id="indices_color_id">
+                                        <field name="B">255</field>
+                                        <field name="G">0</field>
+                                        <field name="R">0</field>
+                                      </shadow>
+                                    </value>
+                                    <next>
+                                      <block type="py_logic_if" id="finger_up_if_id">
+                                        <mutation elif="0" else="0"></mutation>
+                                        <value name="IF0">
+                                          <block type="py_ai_hand_is_finger_up" id="is_finger_up_id">
+                                            <field name="VAR" id="results_variable_id">results</field>
+                                            <field name="INDEX">0</field>
+                                            <field name="FINGER">INDEX</field>
+                                          </block>
+                                        </value>
+                                        <statement name="DO0">
+                                          <block type="py_variables_set" id="set_hand_0">
+                                            <field name="VAR" id="hand_0_id">hand_0</field>
+                                            <value name="VALUE">
+                                              <block type="py_ai_hand_get_landmarks" id="get_hand_0">
+                                                <field name="VAR" id="results_variable_id">results</field>
+                                                <field name="INDEX">0</field>
+                                              </block>
+                                            </value>
+                                            <next>
+                                              <block type="py_variables_set" id="set_index_tip">
+                                                <field name="VAR" id="index_tip_id">index_tip</field>
+                                                <value name="VALUE">
+                                                  <block type="py_ai_hand_get_landmark" id="get_landmark_8">
+                                                    <field name="INDEX">8</field>
+                                                    <value name="HAND">
+                                                      <block type="py_variables_get" id="get_hand_0_var">
+                                                        <field name="VAR" id="hand_0_id">hand_0</field>
+                                                      </block>
+                                                    </value>
+                                                  </block>
+                                                </value>
+                                                <next>
+                                                  <block type="py_variables_set" id="set_tip_pos">
+                                                    <field name="VAR" id="tip_pos_id">tip_pos</field>
+                                                    <value name="VALUE">
+                                                      <block type="py_ai_hand_get_landmark_xy" id="get_index_tip_pos">
+                                                        <field name="WIDTH">640</field>
+                                                        <field name="HEIGHT">480</field>
+                                                        <value name="LANDMARK">
+                                                          <block type="py_variables_get" id="get_index_tip_var">
+                                                            <field name="VAR" id="index_tip_id">index_tip</field>
+                                                          </block>
+                                                        </value>
+                                                      </block>
+                                                    </value>
+                                                    <next>
+                                                      <block type="py_variables_set" id="set_tip_x">
+                                                        <field name="VAR" id="tip_x_id">tip_x</field>
+                                                        <value name="VALUE">
+                                                          <block type="lists_getIndex" id="get_x_id">
+                                                            <mutation statement="false" at="true"></mutation>
+                                                            <field name="MODE">GET</field>
+                                                            <field name="WHERE">FROM_START</field>
+                                                            <value name="VALUE">
+                                                              <block type="py_variables_get" id="get_tip_pos_var_x">
+                                                                <field name="VAR" id="tip_pos_id">tip_pos</field>
+                                                              </block>
+                                                            </value>
+                                                            <value name="AT">
+                                                              <block type="math_number" id="index_1">
+                                                                <field name="NUM">1</field>
+                                                              </block>
+                                                            </value>
+                                                          </block>
+                                                        </value>
+                                                        <next>
+                                                          <block type="py_variables_set" id="set_tip_y">
+                                                            <field name="VAR" id="tip_y_id">tip_y</field>
+                                                            <value name="VALUE">
+                                                              <block type="lists_getIndex" id="get_y_id">
+                                                                <mutation statement="false" at="true"></mutation>
+                                                                <field name="MODE">GET</field>
+                                                                <field name="WHERE">FROM_START</field>
+                                                                <value name="VALUE">
+                                                                  <block type="py_variables_get" id="get_tip_pos_var_y">
+                                                                    <field name="VAR" id="tip_pos_id">tip_pos</field>
+                                                                  </block>
+                                                                </value>
+                                                                <value name="AT">
+                                                                  <block type="math_number" id="index_2">
+                                                                    <field name="NUM">2</field>
+                                                                  </block>
+                                                                </value>
+                                                              </block>
+                                                            </value>
+                                                            <next>
+                                                              <block type="py_ai_draw_text" id="draw_text_id">
+                                                                <field name="VAR" id="-Q%A^XaH8;k;t:2gt-$9">frame</field>
+                                                                <value name="TEXT">
+                                                                  <shadow type="py_text" id="text_val_id">
+                                                                    <field name="TEXT">INDEX FINGER UP!</field>
+                                                                  </shadow>
+                                                                </value>
+                                                                <value name="POS">
+                                                                  <block type="py_type_tuple" id="final_pos_tuple">
+                                                                    <mutation items="2"></mutation>
+                                                                    <value name="ADD0">
+                                                                      <block type="py_variables_get" id="get_tip_x_final">
+                                                                        <field name="VAR" id="tip_x_id">tip_x</field>
+                                                                      </block>
+                                                                    </value>
+                                                                    <value name="ADD1">
+                                                                      <block type="py_math_arithmetic" id="sub_y_10">
+                                                                        <field name="OP">-</field>
+                                                                        <value name="A">
+                                                                          <block type="py_variables_get" id="get_tip_y_final">
+                                                                            <field name="VAR" id="tip_y_id">tip_y</field>
+                                                                          </block>
+                                                                        </value>
+                                                                        <value name="B">
+                                                                          <block type="math_number" id="num_10">
+                                                                            <field name="NUM">10</field>
+                                                                          </block>
+                                                                        </value>
+                                                                      </block>
+                                                                    </value>
+                                                                  </block>
+                                                                </value>
+                                                                <value name="COLOR">
+                                                                  <shadow type="py_ai_color" id="color_val_id">
+                                                                    <field name="B">121</field>
+                                                                    <field name="G">47</field>
+                                                                    <field name="R">254</field>
+                                                                  </shadow>
+                                                                </value>
+                                                                <value name="SCALE">
+                                                                  <shadow type="py_math_number" id="scale_val_id">
+                                                                    <field name="NUM">0.8</field>
+                                                                  </shadow>
+                                                                </value>
+                                                              </block>
+                                                            </next>
+                                                          </block>
+                                                        </next>
+                                                      </block>
+                                                    </next>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </statement>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </statement>
+                            <next>
+                              <block type="py_ai_show_image" id="Q^lZgVIg-,biE-b$W1!^">
+                                <value name="IMAGE">
+                                  <block type="py_variables_get" id="2s/_W;dh#1kvta!KwS}y">
+                                    <field name="VAR" id="-Q%A^XaH8;k;t:2gt-$9">frame</field>
+                                  </block>
+                                </value>
+                                <next>
+                                  <block type="py_ai_wait_key_break" id="D~})?7P+sabTaEXgqI9N">
+                                    <field name="KEY">q</field>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="py_ai_release_all" id="A(CtJW7060y(j%Audi=%"></block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

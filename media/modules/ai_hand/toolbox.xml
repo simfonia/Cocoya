@@ -1,2 +1,68 @@
 <category name="%{BKY_CAT_AI_HAND}" colour="%{BKY_COLOUR_AI}">
+    <block type="py_ai_hand_init">
+        <field name="MAX_HANDS">2</field>
+        <field name="MIN_CONF">0.5</field>
+    </block>
+    <block type="py_ai_hand_process">
+        <value name="FRAME">
+            <block type="variables_get">
+                <field name="VAR">frame</field>
+            </block>
+        </value>
+        <field name="VAR">results</field>
+    </block>
+    <block type="py_ai_hand_is_detected">
+        <field name="VAR">results</field>
+    </block>
+    <block type="py_ai_hand_get_landmarks">
+        <field name="VAR">results</field>
+        <field name="INDEX">0</field>
+    </block>
+    <block type="py_ai_hand_get_landmark">
+        <value name="HAND">
+            <block type="py_ai_hand_get_landmarks">
+                <field name="VAR">results</field>
+                <field name="INDEX">0</field>
+            </block>
+        </value>
+        <field name="INDEX">8</field>
+    </block>
+    <block type="py_ai_hand_get_landmark_xy">
+        <value name="LANDMARK">
+            <block type="py_ai_hand_get_landmark">
+                <value name="HAND">
+                    <block type="py_ai_hand_get_landmarks">
+                        <field name="VAR">results</field>
+                        <field name="INDEX">0</field>
+                    </block>
+                </value>
+                <field name="INDEX">8</field>
+            </block>
+        </value>
+    </block>
+    <block type="py_ai_hand_is_finger_up">
+        <field name="VAR">results</field>
+        <field name="INDEX">0</field>
+        <field name="FINGER">INDEX</field>
+    </block>
+    <block type="py_ai_hand_draw">
+        <field name="FRAME">frame</field>
+        <field name="VAR">results</field>
+    </block>
+    <block type="py_ai_hand_draw_indices">
+        <field name="FRAME">frame</field>
+        <field name="VAR">results</field>
+        <value name="SIZE">
+            <shadow type="py_math_number">
+                <field name="NUM">0.4</field>
+            </shadow>
+        </value>
+        <value name="COLOR">
+            <shadow type="py_ai_color">
+                <field name="B">255</field>
+                <field name="G">255</field>
+                <field name="R">255</field>
+            </shadow>
+        </value>
+    </block>
 </category>

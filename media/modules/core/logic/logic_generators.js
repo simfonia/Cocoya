@@ -5,19 +5,19 @@ Blockly.Python.forBlock['py_logic_if'] = function(block, generator) {
   var code = '';
   // IF
   var condition = generator.valueToCode(block, 'IF' + n, Blockly.Python.ORDER_NONE) || 'False';
-  var branch = generator.statementToCode(block, 'DO' + n) || '  pass\n';
+  var branch = generator.statementToCode(block, 'DO' + n) || generator.INDENT + 'pass\n';
   code += 'if ' + condition + ':\n' + branch;
   
   // ELIF
   for (n = 1; n <= block.elifCount_; n++) {
     condition = generator.valueToCode(block, 'IF' + n, Blockly.Python.ORDER_NONE) || 'False';
-    branch = generator.statementToCode(block, 'DO' + n) || '  pass\n';
+    branch = generator.statementToCode(block, 'DO' + n) || generator.INDENT + 'pass\n';
     code += 'elif ' + condition + ':\n' + branch;
   }
   
   // ELSE
   if (block.elsePresent_) {
-    branch = generator.statementToCode(block, 'ELSE') || '  pass\n';
+    branch = generator.statementToCode(block, 'ELSE') || generator.INDENT + 'pass\n';
     code += 'else:\n' + branch;
   }
   return code;

@@ -1,14 +1,16 @@
 // Structure Generators: structure_generators.js
 
 Blockly.Python.forBlock['py_main'] = function(block, generator) {
-  var branch = generator.statementToCode(block, 'DO') || '  pass\n';
+  var branch = generator.statementToCode(block, 'DO') || generator.INDENT + 'pass\n';
   return 'if __name__ == "__main__":\n' + branch;
 };
 
 Blockly.Python.forBlock['py_definition_zone'] = function(block, generator) {
   var defs = generator.statementToCode(block, 'DEFS') || '';
-  // 移除每行開頭的兩個空格縮排，使其成為真正的全域代碼
-  return defs.replace(/^  /mg, '');
+  // 動態移除縮排 (根據當前設定的 INDENT)
+  var indent = generator.INDENT || '  ';
+  var reg = new RegExp('^' + indent, 'mg');
+  return defs.replace(reg, '');
 };
 
 Blockly.Python.forBlock['py_import'] = function(block) {

@@ -1,3 +1,27 @@
 Object.assign(Blockly.Msg, {
-  // Hand Tracking Blocks (Placeholder)
+  "AI_HAND_INIT": "Init Hand Tracking Max Hands %1 Min Confidence %2",
+  "AI_HAND_INIT_TOOLTIP": "Initialize MediaPipe Hand Tracking model. Recommended to place in the 'Global Definition Zone'.",
+  "AI_HAND_INIT_WARNING": "Tip: Init block should be placed inside 'Global Definition Zone'.",
+  "AI_HAND_PROCESS": "Process frame %1 save to %2",
+  "AI_HAND_PROCESS_TOOLTIP": "Convert frame to RGB and execute hand detection.",
+  "AI_HAND_IS_DETECTED": "is hand detected in %1?",
+  "AI_HAND_IS_DETECTED_TOOLTIP": "Returns True if at least one hand is detected. Returns: Boolean.",
+  "AI_HAND_GET_LANDMARKS": "get landmarks of hand %2 from %1",
+  "AI_HAND_GET_LANDMARKS_TOOLTIP": "Get 21 landmarks of specified hand (0-based index). Returns: HandLandmarks.",
+  "AI_HAND_GET_LANDMARK": "pick landmark %2 from %1",
+  "AI_HAND_GET_LANDMARK_TOOLTIP": "Get a specific landmark (0-20) from hand. Returns: Landmark.",
+  "AI_HAND_GET_LANDMARK_XY": "get landmark %1 (x, y) Width %2 Height %3",
+  "AI_HAND_GET_LANDMARK_XY_TOOLTIP": "Convert normalized coords to pixel coords. Returns: (x, y) Tuple.",
+  "AI_HAND_IS_FINGER_UP": "is hand %2 %3 up in %1?",
+  "AI_HAND_IS_FINGER_UP_TOOLTIP": "Check if specified finger is extended (0-based hand index). Returns: Boolean.",
+  "AI_HAND_DRAW": "Draw %2 skeleton on %1 Landmark %3 Line %4",
+  "AI_HAND_DRAW_TOOLTIP": "Draw landmarks and connections on image.",
+  "AI_HAND_DRAW_INDICES": "Label %2 indices on %1 Size %3 Color %4",
+  "AI_HAND_DRAW_INDICES_TOOLTIP": "Draw index numbers (0-20) next to each landmark.",
+  
+  "AI_HAND_THUMB": "Thumb",
+  "AI_HAND_INDEX": "Index",
+  "AI_HAND_MIDDLE": "Middle",
+  "AI_HAND_RING": "Ring",
+  "AI_HAND_PINKY": "Pinky"
 });

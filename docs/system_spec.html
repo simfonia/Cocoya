@@ -112,12 +112,14 @@
         <li><a href="#performance">7. 效能優化 (State Check)</a></li>
         <li><a href="#deployment">8. 硬體部署系統 (MCU)</a></li>
         <li><a href="#regex">9. 積木定位技術 (Regex)</a></li>
+        <li><a href="#ai-spec">10. AI 視覺模組規範 (MediaPipe)</a></li>
+        <li><a href="#indent-spec">11. 縮排與代碼產生規範</a></li>
     </ul>
 </nav>
 
 <main id="content">
     <header>
-        <h1>Cocoya 系統規格說明書 v1.5</h1>
+        <h1>Cocoya 系統規格說明書 v2.1</h1>
         <p><strong>Code, Compute, Yield AI</strong> - 專為 AI 教育設計的視覺化開發環境。</p>
     </header>
 
@@ -228,8 +230,44 @@
         </ol>
     </section>
 
+    <section id="ai-spec">
+        <h2>10. AI 視覺模組規範 (MediaPipe)</h2>
+        <p>為了確保 MediaPipe 與 OpenCV 的整合穩定性，AI 模組須遵循以下實作標準：</p>
+        <ul>
+            <li><strong>物件導向初始化:</strong> 產生器必須完整產出初始化代碼（包含 <code>import</code>、<code>mp.solutions</code> 初始化），以便使用者在全域定義區直接使用。</li>
+            <li><strong>座標歸一化 (Normalization):</strong> 
+                <ul>
+                    <li>原始資料傳回 MediaPipe 座標 (0.0 - 1.0)。</li>
+                    <li>提供專用的 <code>get_landmark_xy</code> 積木進行像素轉換。</li>
+                </ul>
+            </li>
+            <li><strong>強型別連線檢查 (Type Safety):</strong> 
+                <ul>
+                    <li>偵測結果使用 <code>HandLandmarks</code> 與 <code>Landmark</code> 自定義類型。</li>
+                    <li>確保「取得特徵點」積木與「座標轉換」積木之間的連線安全性。</li>
+                </ul>
+            </li>
+        </ul>
+    </section>
+
+    <section id="indent-spec">
+        <h2>11. 縮排與代碼產生規範</h2>
+        <p>為了解決不同開發環境下的縮排位移問題，系統建立了嚴格的產生器標準：</p>
+        
+        <h3>A. 動態縮排 (Dynamic Indentation)</h3>
+        <p>嚴禁在產生器中寫死空格（如 <code>'  pass\n'</code>）。必須使用 <code>generator.INDENT</code> 以對齊 UI 設定。</p>
+        <pre><code class="language-javascript">// 正確做法
+var branch = generator.statementToCode(block, 'DO') || generator.INDENT + 'pass\n';</code></pre>
+
+        <h3>B. 全域定義區行為 (Definition Zone)</h3>
+        <p><code>py_definition_zone</code> 積木具備<strong>自動移除縮排</strong>機制。它會根據當前系統的 <code>INDENT</code> 設定，自動裁切內部積木產出的縮排，使 <code>import</code> 與全域初始化代碼能正確靠左對齊。</p>
+
+        <h3>C. 避免隱式注入</h3>
+        <p>儘量避免使用 <code>generator.definitions_</code> 來注入長篇初始化代碼。這類代碼應透過「初始化積木」顯式產出，並建議使用者放置於「全域定義區」中，以維持 Preview 視窗中的代碼順序與可讀性。</p>
+    </section>
+
     <footer>
-        <p>© 2026 simfonia - Cocoya 專案組。文件更新日期：2026-02-16 (v1.5)</p>
+        <p>© 2026 simfonia - Cocoya 專案組。文件更新日期：2026-02-17 (v2.1)</p>
     </footer>
 </main>
 

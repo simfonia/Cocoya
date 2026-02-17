@@ -1,3 +1,27 @@
 Object.assign(Blockly.Msg, {
-  // 手勢偵測積木 (預留)
+  "AI_HAND_INIT": "初始化手勢偵測 最大手部數量 %1 最小信心度 %2",
+  "AI_HAND_INIT_TOOLTIP": "初始化 MediaPipe 手勢偵測模型。建議放入「全域定義區」中以確保程式順序正確。",
+  "AI_HAND_INIT_WARNING": "提醒：初始化積木建議放入「全域定義區」內。",
+  "AI_HAND_PROCESS": "從影像 %1 進行手勢分析並存入 %2",
+  "AI_HAND_PROCESS_TOOLTIP": "將影像轉換為 RGB 並執行手勢偵測。",
+  "AI_HAND_IS_DETECTED": "%1 中是否存在手部",
+  "AI_HAND_IS_DETECTED_TOOLTIP": "若畫面中偵測到至少一隻手則傳回真 (True)。傳回：布林值 (Boolean)。",
+  "AI_HAND_GET_LANDMARKS": "取得 %1 中第 %2 隻手的特徵點",
+  "AI_HAND_GET_LANDMARKS_TOOLTIP": "取得指定手部的 21 個特徵點資料 (索引從 0 開始)。傳回：手部物件 (HandLandmarks)。",
+  "AI_HAND_GET_LANDMARK": "挑出 %1 中的第 %2 個特徵點",
+  "AI_HAND_GET_LANDMARK_TOOLTIP": "從手部物件中取得特定特徵點 (索引 0-20)。傳回：單一特徵點 (Landmark)。",
+  "AI_HAND_GET_LANDMARK_XY": "取得特徵點 %1 的座標 (x, y) 影像寬度 %2 影像高度 %3",
+  "AI_HAND_GET_LANDMARK_XY_TOOLTIP": "將特徵點的歸一化座標轉換為像素座標。傳回：(x, y) 數值元組 (Tuple)。",
+  "AI_HAND_IS_FINGER_UP": "%1 中的第 %2 隻手的 %3 是否伸直",
+  "AI_HAND_IS_FINGER_UP_TOOLTIP": "判斷指定的手指是否處於伸直狀態 (索引從 0 開始)。傳回：布林值 (Boolean)。",
+  "AI_HAND_DRAW": "在影像 %1 繪製 %2 手勢框架圖 特徵點顏色 %3 線條顏色 %4",
+  "AI_HAND_DRAW_TOOLTIP": "在影像上標註手部特徵點與連接線。",
+  "AI_HAND_DRAW_INDICES": "在影像 %1 標註 %2 手勢特徵點編號 大小 %3 顏色 %4",
+  "AI_HAND_DRAW_INDICES_TOOLTIP": "在特徵點旁標註索引編號 (0-20)。",
+  
+  "AI_HAND_THUMB": "大拇指",
+  "AI_HAND_INDEX": "食指",
+  "AI_HAND_MIDDLE": "中指",
+  "AI_HAND_RING": "無名指",
+  "AI_HAND_PINKY": "小拇指"
 });

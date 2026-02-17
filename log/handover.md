@@ -38,7 +38,7 @@
 - **核心進度**：
     - **架構重構**：全面引入 OOP 模式，建立 `CocoyaManager` (Host) 與 `CocoyaApp` (Webview) 管理物件，程式碼結構清晰且易於維護。
     - **模式切換系統**：實作 Python (PC) 與 CircuitPython (MCU) 模式隔離，支援「模式鎖定」、Toolbox 動態過濾與 XML 屬性自動偵測。
-    - **硬體部署引擎**：完成真實的 MCU 部署邏輯，支援 `CIRCUITPY` 磁碟直接寫入與 Serial REPL 備援，並整合 Serial Monitor 即時監看輸出。
+    - **硬體部署引擎**：完成真實的 MCU 部署邏輯，支援 `CIRCUITPY` 磁碟直接寫入與 Serial REPL 模式。
     - **UI 精緻化**：實作「分隔線群組」佈局、頁籤標題同步 (`*` 標記)、以及專業的 Hex 色譜配色。
     - **i18n 全面化**：語系檔現在掌控了從積木、分類到對話框、工具列 Tooltip 的所有文字。
 - **下一階段目標**：
@@ -48,13 +48,19 @@
 
 ## 2026-02-16 結構統整與 AI 視覺基礎 (里程碑 v1.5+v2.0 補強)
 - **核心進度**：
-    - **目錄統整**：完成 `media/modules/` 的扁平化結構，將 `core` 模組納入統一管理，並實現 `Promise.all` 平行載入。
-    - **語系分散化**：落實「核心管 UI，模組管積木」標準，各模組擁有獨立 `i18n` 目錄，核心語系檔大幅瘦身。
-    - **AI 視覺基礎**：完成 `cv_basic` (鏡頭、翻轉、讀取) 與 `cv_draw` (繪圖、文字) 模組開發。
-    - **除錯同步革命**：確立「Execute the Preview」策略，改用行尾 `# ID` 註解，實現 1:1 精確行號對齊與高亮。
-    - **積木定義標準化**：現有積木全面改用 `jsonInit` + `args0` 模式重構，提升語系適應性。
-    - **UI 進階功能**：新增縮排輔助線、2/4 Spaces 動態切換、複製純淨代碼等專業 IDE 功能。
+    - **目錄統整**：完成 `media/modules/` 的扁平化結構，將 `core` 模組納入統一管理。
+    - **語系分散化**：落實「核心管 UI，模組管積木」標準，各模組擁有獨立 `i18n` 目錄。
+    - **AI 視覺基礎**：完成 `cv_basic` 與 `cv_draw` 模組開發。
+    - **除錯同步革命**：確立「Execute the Preview」策略，改用行尾 `# ID` 註解。
+    - **積木定義標準化**：現有積木全面改用 `jsonInit` + `args0` 模式重構。
+- **目前狀態**：架構已達極度穩定與高效。
+
+## 2026-02-17 MediaPipe 手勢偵測實作 (里程碑 v2.1 階段性完成)
+- **核心進度**：
+    - **AI 手勢模組 (ai_hand)**：完成 `py_ai_hand_init`, `py_ai_hand_process`, `py_ai_hand_is_detected`, `py_ai_hand_get_landmarks`, `py_ai_hand_get_landmark`, `py_ai_hand_get_landmark_xy`, `py_ai_hand_is_finger_up`, `py_ai_hand_draw` 等 8 個核心積木。
+    - **座標轉換系統**：實作 Normalized 到 Pixel 座標的轉換邏輯，並提供專用的「特徵點選取」積木。
+    - **手指偵測邏輯**：內建手指伸直 (is_finger_up) 判斷逻辑。
+    - **自動匯入機制**：產生器會自動在代碼頂端注入 `import mediapipe as mp` 與 `import cv2`。
 - **下一階段目標**：
-    - 進入里程碑 v2.1：實作 MediaPipe 手勢偵測 (ai_hand)。
-    - 優化繪圖積木的座標預覽。
-- **目前狀態**：架構已達極度穩定與高效，具備支撐複雜 AI 功能擴充的能力。
+    - 實作 Face Mesh (ai_face) 與 Pose Estimation (ai_pose)。
+    - 擴充手勢識別的種類 (如：握拳、比讚等)。
