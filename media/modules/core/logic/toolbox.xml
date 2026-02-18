@@ -7,4 +7,5 @@
     <block type="py_logic_operation"></block>
     <block type="py_logic_negate"></block>
     <block type="py_logic_boolean"></block>
+    <block type="py_logic_ternary"></block>
 </category>

@@ -1,6 +1,7 @@
 C:\Workspace\cocoya\
 ├── docs/                  # 專案文檔
 │   └── system_spec.html   # 系統規格說明書 (電子書)
+├── examples/              # 範例檔
 ├── log/                   # 專案日誌與任務追蹤
 │   ├── details.md         # 技術細節與 API 踩坑紀錄
 │   ├── handover.md        # 任務交接檔
@@ -14,7 +15,8 @@ C:\Workspace\cocoya\
 │   │   ├── cv_basic/      # OpenCV 基礎操作
 │   │   ├── cv_draw/       # OpenCV 繪圖標註
 │   │   ├── ai_hand/       # MediaPipe 手勢偵測
-│   │   ├── ai_face/       # MediaPipe 臉部網格偵測 (New!)
+│   │   ├── ai_face/       # MediaPipe 臉部網格偵測
+│   │   ├── ai_pose/       # MediaPipe 姿勢偵測模組
 │   │   └── hardware/      # CircuitPython 硬體控制
 │   ├── core_manifest.json # 模組載入清單 (含路徑定義)
 │   ├── index.html         # 主介面
@@ -33,3 +35,4 @@ C:\Workspace\cocoya\
 ├── README.md              # 專案說明文件
 ├── package.json           # 插件配置與依賴
 └── tsconfig.json          # TS 編譯設定
+

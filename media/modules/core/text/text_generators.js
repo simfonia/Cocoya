@@ -18,6 +18,12 @@ Blockly.Python.forBlock['py_text_length'] = function(block, generator) {
   return ['len(' + val + ')', Blockly.Python.ORDER_FUNCTION_CALL];
 };
 
+Blockly.Python.forBlock['py_text_zfill'] = function(block, generator) {
+  var val = generator.valueToCode(block, 'VALUE', Blockly.Python.ORDER_MEMBER) || '0';
+  var width = block.getFieldValue('WIDTH');
+  return ['str(' + val + ').zfill(' + width + ')', Blockly.Python.ORDER_FUNCTION_CALL];
+};
+
 Blockly.Python.forBlock['py_text_join'] = function(block, generator) {
   var parts = [];
   for (var i = 0; i < block.itemCount_; i++) {

@@ -33,6 +33,7 @@
     "CAT_AI_DRAW": "Drawing",
     "CAT_AI_HAND": "Hand Tracking",
     "CAT_AI_FACE": "Face Mesh",
+    "CAT_AI_POSE": "Pose Detection",
     "CAT_STRUCTURE": "Structure",
     "CAT_HARDWARE": "Hardware",
 

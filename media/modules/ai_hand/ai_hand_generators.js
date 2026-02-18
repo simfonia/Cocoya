@@ -8,7 +8,7 @@ Blockly.Python.forBlock['py_ai_hand_init'] = function(block, generator) {
              'import mediapipe as mp\n' +
              'mp_hands = mp.solutions.hands\n' +
              'mp_draw = mp.solutions.drawing_utils\n' +
-             'hands = mp_hands.Hands(max_num_hands=' + maxHands + ', min_detection_confidence=' + minConf + ')\n';
+             'mp_hands_model = mp_hands.Hands(max_num_hands=' + maxHands + ', min_detection_confidence=' + minConf + ')\n';
   
   return code;
 };
@@ -17,7 +17,7 @@ Blockly.Python.forBlock['py_ai_hand_process'] = function(block, generator) {
   var frame = generator.valueToCode(block, 'FRAME', Blockly.Python.ORDER_ATOMIC) || 'frame';
   var varName = generator.nameDB_.getName(block.getFieldValue('VAR'), Blockly.VARIABLE_CATEGORY_NAME);
   
-  return varName + ' = hands.process(cv2.cvtColor(' + frame + ', cv2.COLOR_BGR2RGB))\n';
+  return varName + ' = mp_hands_model.process(cv2.cvtColor(' + frame + ', cv2.COLOR_BGR2RGB))\n';
 };
 
 Blockly.Python.forBlock['py_ai_hand_is_detected'] = function(block, generator) {

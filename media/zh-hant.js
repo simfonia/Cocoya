@@ -33,6 +33,7 @@
     "CAT_AI_DRAW": "繪圖標註",
     "CAT_AI_HAND": "手勢偵測",
     "CAT_AI_FACE": "臉部網格",
+    "CAT_AI_POSE": "姿勢偵測",
     "CAT_STRUCTURE": "Structure",
     "CAT_HARDWARE": "硬體控制",
 

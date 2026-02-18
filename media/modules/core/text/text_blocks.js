@@ -41,6 +41,21 @@ Blockly.Blocks['py_text_length'] = {
   }
 };
 
+Blockly.Blocks['py_text_zfill'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["TEXT_ZFILL"],
+      "args0": [
+        { "type": "input_value", "name": "VALUE" },
+        { "type": "field_number", "name": "WIDTH", "value": 3, "min": 1 }
+      ],
+      "output": "String",
+      "colour": Blockly.Msg["COLOUR_TEXT"],
+      "tooltip": Blockly.Msg["TEXT_ZFILL_TOOLTIP"]
+    });
+  }
+};
+
 Blockly.Blocks['py_text_join'] = {
   init: function() {
     this.itemCount_ = 2;

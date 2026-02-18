@@ -181,3 +181,19 @@ Blockly.Blocks['py_logic_boolean'] = {
     });
   }
 };
+
+Blockly.Blocks['py_logic_ternary'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["LOGIC_TERNARY"],
+      "args0": [
+        { "type": "input_value", "name": "IF", "check": "Boolean" },
+        { "type": "input_value", "name": "THEN" },
+        { "type": "input_value", "name": "ELSE" }
+      ],
+      "output": null,
+      "colour": Blockly.Msg["COLOUR_LOGIC"],
+      "tooltip": Blockly.Msg["LOGIC_TERNARY_TOOLTIP"]
+    });
+  }
+};

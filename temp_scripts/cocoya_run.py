@@ -1,71 +1,92 @@
+from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 
 
-def cocoya_overlay_image(img, path, center, width, angle):
-    overlay = cv2.imread(path, cv2.IMREAD_UNCHANGED)
-    if overlay is None:
-        print(f"Warning: Cannot load image at {path}")
-        return
-    h_orig, w_orig = overlay.shape[:2]
-    width = max(1, int(width))
-    height = max(1, int(h_orig * (width / w_orig)))
-    overlay = cv2.resize(overlay, (width, height), interpolation=cv2.INTER_AREA)
-    (h, w) = overlay.shape[:2]
-    (cX, cY) = (w // 2, h // 2)
-    M = cv2.getRotationMatrix2D((cX, cY), angle, 1.0)
-    cos, sin = np.abs(M[0, 0]), np.abs(M[0, 1])
-    nW, nH = int((h * sin) + (w * cos)), int((h * cos) + (w * sin))
-    M[0, 2] += (nW / 2) - cX
-    M[1, 2] += (nH / 2) - cY
-    overlay = cv2.warpAffine(overlay, M, (nW, nH), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0,0,0,0))
-    h, w = overlay.shape[:2]
-    x, y = int(center[0] - w // 2), int(center[1] - h // 2)
-    img_h, img_w = img.shape[:2]
-    x1, y1 = max(x, 0), max(y, 0)
-    x2, y2 = min(x + w, img_w), min(y + h, img_h)
-    if x1 >= x2 or y1 >= y2: return
-    overlay_crop = overlay[y1-y:y2-y, x1-x:x2-x]
-    img_crop = img[y1:y2, x1:x2]
-    if overlay_crop.shape[2] == 4:
-        alpha = overlay_crop[:, :, 3:] / 255.0
-        img_crop[:] = (alpha * overlay_crop[:, :, :3] + (1 - alpha) * img_crop).astype(np.uint8)
-    else:
-        img_crop[:] = overlay_crop[:, :, :3]
+def cocoya_draw_rect_alpha(img, pt1, pt2, color, alpha):
+    overlay = img.copy()
+    cv2.rectangle(overlay, tuple(map(int, pt1)), tuple(map(int, pt2)), color, -1)
+    cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0, img)
+
+def cocoya_draw_text_zh(img, text, pos, color, size):
+    img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    draw = ImageDraw.Draw(img_pil)
+    try:
+        # Windows 預設微軟正黑體
+        font = ImageFont.truetype("C:/Windows/Fonts/msjh.ttc", int(size))
+    except:
+        try:
+            # Linux 常用字體
+            font = ImageFont.truetype("/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc", int(size))
+        except:
+            font = ImageFont.load_default()
+
+    # PIL color is RGB, OpenCV color is BGR
+    b, g, r = color
+    draw.text(pos, str(text), font=font, fill=(r, g, b))
+    img[:] = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
 
 
-import math  # ID:imp_math  # ID:def_zone
-import cv2  # ID:face_init
+# AI 鼻子撞球遊戲 進階版 (物理反彈 + 防抖)  # ID:cmt_game  # ID:def_zone
+# 【遊戲調整說明】
+# 1. 下落速度：修改下面的 [fall_speed]，建議 5~12。
+# 2. 反彈力道：修改下面的 [bounce_power]，建議 10~25。
+#
+# 【技術重點】
+# 1. 雙球系統：挑戰左右夾擊。
+# 2. 物理防抖：增加 [只有 vy > 0 時才碰撞] 的判斷，防止同一球重複加分。
+# 3. 反彈機制：撞擊後將垂直速度設為負值，產生向上彈飛效果。
+import math  # ID:imp_math
+import random  # ID:imp_rand
+import cv2  # ID:pose_init
 import mediapipe as mp
-mp_face_mesh = mp.solutions.face_mesh
+mp_pose = mp.solutions.pose
 mp_draw = mp.solutions.drawing_utils
-face_mesh = mp_face_mesh.FaceMesh(max_num_faces=1, min_detection_confidence=0.5)
+mp_pose_model = mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5)
 
 if __name__ == "__main__":  # ID:main_zone
-    cap = cv2.VideoCapture(0)  # ID:open_cam
-    while True:  # ID:main_loop
-        ret, frame = cap.read()  # ID:read_f
-        frame = cv2.flip(frame, 1)  # ID:flip_f
-        results_face = face_mesh.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))  # ID:proc_f
-        if results_face.multi_face_landmarks is not None:  # ID:if_face
-            face_0 = results_face.multi_face_landmarks[0] if results_face.multi_face_landmarks and len(results_face.multi_face_landmarks) > 0 else None  # ID:set_face0
-            # 第一步：取得額頭三個定位點  # ID:cmt_p
-            # 103 與 332 分別是額頭左右兩側點
-            # 10 是額頭正中央點
-            p103 = (int((face_0.landmark[103] if face_0 else None).x * 640), int((face_0.landmark[103] if face_0 else None).y * 480)) if (face_0.landmark[103] if face_0 else None) else (0, 0)  # ID:get_p109_val
-            p332 = (int((face_0.landmark[332] if face_0 else None).x * 640), int((face_0.landmark[332] if face_0 else None).y * 480)) if (face_0.landmark[332] if face_0 else None) else (0, 0)  # ID:get_p338_val
-            p10 = (int((face_0.landmark[10] if face_0 else None).x * 640), int((face_0.landmark[10] if face_0 else None).y * 480)) if (face_0.landmark[10] if face_0 else None) else (0, 0)  # ID:get_p10_val
-            # 第二步：計算頭部寬度(dx, dy)  # ID:cmt_math
-            # 並利用 atan2 計算傾斜角度
-            # 最後將弧度轉為角度並修正正負號
-            dx = p332[int(1 - 1)] - p103[int(1 - 1)]  # ID:calc_dx
-            dy = p332[int(2 - 1)] - p103[int(2 - 1)]  # ID:calc_dy
-            crown_width = math.sqrt(dx ** 2 + dy ** 2) * 1.5  # ID:set_width
-            angle_deg = 0 - math.degrees(math.atan2(dy, dx))  # ID:set_deg
-            # 第三步：覆蓋圖片。將中心點上移  # ID:cmt_overlay
-            # 以確保皇冠戴在正確的高度
-            cocoya_overlay_image(frame, 'resources/princess-crown.png', tuple(map(int, (p10[int(1 - 1)], p10[int(2 - 1)] - crown_width * 0.4))), crown_width, angle_deg)  # ID:overlay_crown
-        cv2.imshow('Cocoya Video', frame)  # ID:show
-        if cv2.waitKey(1) & 0xFF == ord('q'):  # ID:wait
+    score = 0  # ID:i_sc
+    fall_speed = 8  # ID:i_sp
+    bounce_power = 15  # ID:i_bp
+    bx1 = random.randint(100, 500)  # ID:i_b1x
+    by1 = -50  # ID:i_b1y
+    vy1 = fall_speed  # ID:i_b1v
+    bx2 = random.randint(100, 500)  # ID:i_b2x
+    by2 = -300  # ID:i_b2y
+    vy2 = fall_speed  # ID:i_b2v
+    cap = cv2.VideoCapture(0)  # ID:oc
+    while True:  # ID:ml
+        ret, frame = cap.read()  # ID:rf
+        frame = cv2.flip(frame, 1)  # ID:ff
+        results = mp_pose_model.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))  # ID:pp
+        if results.pose_landmarks is not None:  # ID:ip
+            nose = (int(((results.pose_landmarks if results.pose_landmarks else None).landmark[0] if (results.pose_landmarks if results.pose_landmarks else None) else None).x * 640), int(((results.pose_landmarks if results.pose_landmarks else None).landmark[0] if (results.pose_landmarks if results.pose_landmarks else None) else None).y * 480)) if ((results.pose_landmarks if results.pose_landmarks else None).landmark[0] if (results.pose_landmarks if results.pose_landmarks else None) else None) else (0, 0)  # ID:sn
+            # 球 1 碰撞 (下落時才判定)  # ID:c1
+            dist = math.sqrt((nose[int(1 - 1)] - bx1) ** 2 + (nose[int(2 - 1)] - by1) ** 2)  # ID:d1
+            if dist < 45 and vy1 > 0:  # ID:h1
+                score = score + 1  # ID:su1
+                vy1 = 0 - bounce_power  # ID:rv1
+            # 球 2 碰撞判斷  # ID:c2
+            dist = math.sqrt((nose[int(1 - 1)] - bx2) ** 2 + (nose[int(2 - 1)] - by2) ** 2)  # ID:d2
+            if dist < 45 and vy2 > 0:  # ID:h2
+                score = score + 1  # ID:su2
+                vy2 = 0 - bounce_power  # ID:rv2
+        # 物理運動與邊界  # ID:c_upd
+        by1 = by1 + vy1  # ID:mv1
+        by2 = by2 + vy2  # ID:mv2
+        if by1 > 480 or by1 < -150:  # ID:ck1
+            bx1 = random.randint(100, 500)  # ID:rs1x
+            by1 = -50  # ID:rs1y
+            vy1 = fall_speed  # ID:rs1v
+        if by2 > 480 or by2 < -150:  # ID:ck2
+            bx2 = random.randint(100, 500)  # ID:rs2x
+            by2 = -50  # ID:rs2y
+            vy2 = fall_speed  # ID:rs2v
+        cv2.circle(frame, tuple(map(int, (bx1, by1))), int(25), (0, 165, 255), (-1))  # ID:dr1
+        cv2.circle(frame, tuple(map(int, (bx2, by2))), int(25), (255, 100, 0), (-1))  # ID:dr2
+        cocoya_draw_rect_alpha(frame, (20, 20), (250, 75), (0, 0, 0), 0.5)  # ID:sbg
+        cocoya_draw_text_zh(frame, f'遊戲得分：{score}', tuple(map(int, (30, 55))), (255, 255, 255), 30)  # ID:stxt
+        cv2.imshow('Cocoya Video', frame)  # ID:sh
+        if cv2.waitKey(1) & 0xFF == ord('q'):  # ID:wk
             break
-    cap.release()  # ID:rel
+    cap.release()  # ID:VN@xA:|IXrCqlM7b(CwJ
     cv2.destroyAllWindows()

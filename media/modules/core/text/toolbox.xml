@@ -4,7 +4,7 @@
     <block type="py_text_join">
         <mutation items="2"></mutation>
         <value name="ADD0">
-            <shadow type="py_text"><field name="TEXT">score: </field></shadow>
+            <shadow type="py_text"><field name="TEXT">msg: </field></shadow>
         </value>
     </block>
     <block type="py_text_length"></block>

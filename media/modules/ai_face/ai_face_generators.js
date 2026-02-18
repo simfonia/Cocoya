@@ -8,7 +8,7 @@ Blockly.Python.forBlock['py_ai_face_init'] = function(block, generator) {
              'import mediapipe as mp\n' +
              'mp_face_mesh = mp.solutions.face_mesh\n' +
              'mp_draw = mp.solutions.drawing_utils\n' +
-             'face_mesh = mp_face_mesh.FaceMesh(max_num_faces=' + maxFaces + ', min_detection_confidence=' + minConf + ')\n';
+             'mp_face_model = mp_face_mesh.FaceMesh(max_num_faces=' + maxFaces + ', min_detection_confidence=' + minConf + ')\n';
   
   return code;
 };
@@ -17,7 +17,7 @@ Blockly.Python.forBlock['py_ai_face_process'] = function(block, generator) {
   var frame = generator.valueToCode(block, 'FRAME', Blockly.Python.ORDER_ATOMIC) || 'frame';
   var varName = generator.nameDB_.getName(block.getFieldValue('VAR'), Blockly.VARIABLE_CATEGORY_NAME);
   
-  return varName + ' = face_mesh.process(cv2.cvtColor(' + frame + ', cv2.COLOR_BGR2RGB))\n';
+  return varName + ' = mp_face_model.process(cv2.cvtColor(' + frame + ', cv2.COLOR_BGR2RGB))\n';
 };
 
 Blockly.Python.forBlock['py_ai_face_is_detected'] = function(block, generator) {

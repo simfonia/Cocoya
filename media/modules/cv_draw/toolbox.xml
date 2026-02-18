@@ -97,6 +97,51 @@
         </value>
     </block>
 
+    <!-- 中文文字 (Pillow) -->
+    <block type="py_ai_draw_text_zh">
+        <value name="TEXT">
+            <shadow type="py_text"><field name="TEXT">你好，Cocoya！</field></shadow>
+        </value>
+        <value name="POS">
+            <shadow type="py_ai_point">
+                <field name="X">10</field>
+                <field name="Y">30</field>
+            </shadow>
+        </value>
+        <value name="COLOR">
+            <shadow type="py_ai_color">
+                <field name="B">255</field>
+                <field name="G">255</field>
+                <field name="R">255</field>
+            </shadow>
+        </value>
+        <value name="SIZE">
+            <shadow type="py_math_number"><field name="NUM">24</field></shadow>
+        </value>
+    </block>
+
+    <!-- 夾角圓弧 -->
+    <block type="py_ai_draw_angle_arc">
+        <value name="CENTER">
+            <shadow type="py_ai_point"><field name="X">100</field><field name="Y">100</field></shadow>
+        </value>
+        <value name="START">
+            <shadow type="py_ai_point"><field name="X">150</field><field name="Y">100</field></shadow>
+        </value>
+        <value name="END">
+            <shadow type="py_ai_point"><field name="X">100</field><field name="Y">150</field></shadow>
+        </value>
+        <value name="RADIUS">
+            <shadow type="py_math_number"><field name="NUM">30</field></shadow>
+        </value>
+        <value name="COLOR">
+            <shadow type="py_ai_color"><field name="B">0</field><field name="G">255</field><field name="R">255</field></shadow>
+        </value>
+        <value name="THICKNESS">
+            <shadow type="py_math_number"><field name="NUM">2</field></shadow>
+        </value>
+    </block>
+
     <!-- 圖片覆蓋 -->
     <block type="py_ai_draw_overlay_image">
         <value name="PATH">

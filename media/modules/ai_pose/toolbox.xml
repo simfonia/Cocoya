@@ -1,0 +1,64 @@
+<category name="%{BKY_CAT_AI_POSE}" colour="%{BKY_COLOUR_AI}">
+    <block type="py_ai_pose_init">
+        <field name="MIN_CONF">0.5</field>
+    </block>
+    <block type="py_ai_pose_process">
+        <value name="FRAME">
+            <block type="variables_get">
+                <field name="VAR">frame</field>
+            </block>
+        </value>
+        <field name="VAR">results</field>
+    </block>
+    <block type="py_ai_pose_is_detected">
+        <field name="VAR">results</field>
+    </block>
+    <block type="py_ai_pose_get_landmarks">
+        <field name="VAR">results</field>
+    </block>
+    <block type="py_ai_pose_get_landmark">
+        <value name="POSE">
+            <block type="py_ai_pose_get_landmarks">
+                <field name="VAR">results</field>
+            </block>
+        </value>
+        <field name="INDEX">0</field>
+    </block>
+    <block type="py_ai_pose_get_landmark_xy">
+        <value name="LANDMARK">
+            <block type="py_ai_pose_get_landmark">
+                <value name="POSE">
+                    <block type="py_ai_pose_get_landmarks">
+                        <field name="VAR">results</field>
+                    </block>
+                </value>
+                <field name="INDEX">0</field>
+            </block>
+        </value>
+        <field name="WIDTH">640</field>
+        <field name="HEIGHT">480</field>
+    </block>
+    <sep gap="32"></sep>
+    <block type="py_ai_pose_draw">
+        <field name="FRAME">frame</field>
+        <field name="VAR">results</field>
+        <field name="LANDMARK_COLOR">#ff0000</field>
+        <field name="LINE_COLOR">#00ff00</field>
+    </block>
+    <block type="py_ai_pose_draw_indices">
+        <field name="FRAME">frame</field>
+        <field name="VAR">results</field>
+        <value name="SIZE">
+            <shadow type="math_number">
+                <field name="NUM">0.4</field>
+            </shadow>
+        </value>
+        <value name="COLOR">
+            <shadow type="py_ai_color">
+                <field name="B">255</field>
+                <field name="G">255</field>
+                <field name="R">255</field>
+            </shadow>
+        </value>
+    </block>
+</category>

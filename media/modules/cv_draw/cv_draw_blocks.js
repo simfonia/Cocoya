@@ -20,6 +20,26 @@ Blockly.Blocks['py_ai_draw_rect'] = {
   }
 };
 
+Blockly.Blocks['py_ai_draw_rect_alpha'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["AI_DRAW_RECT_ALPHA"],
+      "args0": [
+        { "type": "field_variable", "name": "VAR", "variable": "frame" },
+        { "type": "input_value", "name": "START" },
+        { "type": "input_value", "name": "END" },
+        { "type": "input_value", "name": "COLOR" },
+        { "type": "input_value", "name": "ALPHA" }
+      ],
+      "inputsInline": true,
+      "previousStatement": null,
+      "nextStatement": null,
+      "colour": Blockly.Msg["COLOUR_AI"],
+      "tooltip": Blockly.Msg["AI_DRAW_RECT_ALPHA_TOOLTIP"]
+    });
+  }
+};
+
 Blockly.Blocks['py_ai_draw_circle'] = {
   init: function() {
     this.jsonInit({
@@ -76,6 +96,48 @@ Blockly.Blocks['py_ai_draw_text'] = {
       "nextStatement": null,
       "colour": Blockly.Msg["COLOUR_AI"],
       "tooltip": Blockly.Msg["AI_DRAW_TOOLTIP"]
+    });
+  }
+};
+
+Blockly.Blocks['py_ai_draw_text_zh'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["AI_DRAW_TEXT_ZH"],
+      "args0": [
+        { "type": "field_variable", "name": "VAR", "variable": "frame" },
+        { "type": "input_value", "name": "TEXT" },
+        { "type": "input_value", "name": "POS" },
+        { "type": "input_value", "name": "COLOR" },
+        { "type": "input_value", "name": "SIZE" }
+      ],
+      "inputsInline": true,
+      "previousStatement": null,
+      "nextStatement": null,
+      "colour": Blockly.Msg["COLOUR_AI"],
+      "tooltip": Blockly.Msg["AI_DRAW_TEXT_ZH_TOOLTIP"]
+    });
+  }
+};
+
+Blockly.Blocks['py_ai_draw_angle_arc'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["AI_DRAW_ANGLE_ARC"],
+      "args0": [
+        { "type": "field_variable", "name": "VAR", "variable": "frame" },
+        { "type": "input_value", "name": "CENTER" },
+        { "type": "input_value", "name": "START" },
+        { "type": "input_value", "name": "END" },
+        { "type": "input_value", "name": "RADIUS" },
+        { "type": "input_value", "name": "COLOR" },
+        { "type": "input_value", "name": "THICKNESS" }
+      ],
+      "inputsInline": true,
+      "previousStatement": null,
+      "nextStatement": null,
+      "colour": Blockly.Msg["COLOUR_AI"],
+      "tooltip": Blockly.Msg["AI_DRAW_ANGLE_ARC_TOOLTIP"]
     });
   }
 };

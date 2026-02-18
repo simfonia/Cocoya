@@ -1,0 +1,108 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
+  <variables>
+    <variable id="v_frame">frame</variable>
+    <variable id="v_results_pose">results_pose</variable>
+  </variables>
+  <block type="py_definition_zone" id="def_zone" deletable="false" x="10" y="10">
+    <statement name="DEFS">
+      <block type="py_tools_comment" id="cmt_intro">
+        <field name="TEXT">MediaPipe 姿勢偵測範例&amp;#10;這個範例展示了如何偵測人體姿勢並繪製 33 個特徵點與骨架連接線。&amp;#10;姿勢偵測可用於動作分析、運動計數等互動應用。</field>
+        <next>
+          <block type="py_ai_pose_init" id="pose_init">
+            <field name="MIN_CONF">0.5</field>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+  <block type="py_main" id="main_zone" deletable="false" x="10" y="170">
+    <statement name="DO">
+      <block type="py_ai_open_camera" id="open_cam">
+        <field name="INDEX">0</field>
+        <next>
+          <block type="py_loop_while" id="main_loop">
+            <value name="CONDITION">
+              <block type="py_logic_boolean" id="bool_true">
+                <field name="BOOL">True</field>
+              </block>
+            </value>
+            <statement name="DO">
+              <block type="py_ai_read_frame" id="read_f">
+                <field name="VAR" id="v_frame">frame</field>
+                <next>
+                  <block type="py_ai_flip_image" id="flip_f">
+                    <field name="VAR" id="v_frame">frame</field>
+                    <field name="CODE">1</field>
+                    <next>
+                      <block type="py_ai_pose_process" id="proc_p">
+                        <field name="VAR" id="v_results_pose">results_pose</field>
+                        <value name="FRAME">
+                          <block type="py_variables_get" id="get_f">
+                            <field name="VAR" id="v_frame">frame</field>
+                          </block>
+                        </value>
+                        <next>
+                          <block type="py_logic_if" id="if_pose">
+                            <mutation elif="0" else="0"></mutation>
+                            <value name="IF0">
+                              <block type="py_ai_pose_is_detected" id="is_det">
+                                <field name="VAR" id="v_results_pose">results_pose</field>
+                              </block>
+                            </value>
+                            <statement name="DO0">
+                              <block type="py_ai_pose_draw" id="draw_p">
+                                <field name="FRAME" id="v_frame">frame</field>
+                                <field name="VAR" id="v_results_pose">results_pose</field>
+                                <field name="LANDMARK_COLOR">#ff0000</field>
+                                <field name="LINE_COLOR">#00ff00</field>
+                                <next>
+                                  <block type="py_ai_pose_draw_indices" id="draw_idx">
+                                    <field name="FRAME" id="v_frame">frame</field>
+                                    <field name="VAR" id="v_results_pose">results_pose</field>
+                                    <value name="SIZE">
+                                      <shadow type="py_math_number" id="idx_size">
+                                        <field name="NUM">0.5</field>
+                                      </shadow>
+                                    </value>
+                                    <value name="COLOR">
+                                      <shadow type="py_ai_color" id="idx_clr">
+                                        <field name="B">255</field>
+                                        <field name="G">255</field>
+                                        <field name="R">255</field>
+                                      </shadow>
+                                    </value>
+                                  </block>
+                                </next>
+                              </block>
+                            </statement>
+                            <next>
+                              <block type="py_ai_show_image" id="show">
+                                <value name="IMAGE">
+                                  <block type="py_variables_get" id="get_f_final">
+                                    <field name="VAR" id="v_frame">frame</field>
+                                  </block>
+                                </value>
+                                <next>
+                                  <block type="py_ai_wait_key_break" id="wait">
+                                    <field name="KEY">q</field>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="py_ai_release_all" id="rel"></block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

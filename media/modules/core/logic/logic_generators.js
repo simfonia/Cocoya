@@ -47,3 +47,11 @@ Blockly.Python.forBlock['py_logic_negate'] = function(block, generator) {
 Blockly.Python.forBlock['py_logic_boolean'] = function(block) {
   return [block.getFieldValue('BOOL'), Blockly.Python.ORDER_ATOMIC];
 };
+
+Blockly.Python.forBlock['py_logic_ternary'] = function(block, generator) {
+  var valueIf = generator.valueToCode(block, 'IF', Blockly.Python.ORDER_CONDITIONAL) || 'False';
+  var valueThen = generator.valueToCode(block, 'THEN', Blockly.Python.ORDER_CONDITIONAL) || 'None';
+  var valueElse = generator.valueToCode(block, 'ELSE', Blockly.Python.ORDER_CONDITIONAL) || 'None';
+  var code = valueThen + ' if ' + valueIf + ' else ' + valueElse;
+  return [code, Blockly.Python.ORDER_CONDITIONAL];
+};

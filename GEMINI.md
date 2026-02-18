@@ -15,7 +15,8 @@ Cocoya 是一個針對 Python AI視覺的教學工具。它透過 Blockly 產生
 - **代碼風格**：
     - Extension: TypeScript (Strict)。
     - Webview: ES6 JavaScript。
-- **系統規格書**：`docs/system_spec.html`，撰寫時務必遵守。
+- **系統規格書**：`docs/system_spec.html`。
+    - **強制規範**：在進行任何積木或產生器開發前，**必須先詳細閱讀系統規格書**，以確保 ID 注入機制、轉義字元 (\\n) 與 AI 座標規範被嚴格執行。
 - **日誌要求**：異動需記錄於 `log/work/` 與 `log/todo.md`。
 
 ## 重要路徑

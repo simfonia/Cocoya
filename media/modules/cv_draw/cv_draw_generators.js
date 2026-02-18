@@ -10,6 +10,23 @@ Blockly.Python.forBlock['py_ai_draw_rect'] = function(block, generator) {
   return 'cv2.rectangle(' + varName + ', tuple(map(int, ' + start + ')), tuple(map(int, ' + end + ')), ' + color + ', ' + thickness + ')\n';
 };
 
+Blockly.Python.forBlock['py_ai_draw_rect_alpha'] = function(block, generator) {
+  var varName = generator.nameDB_.getName(block.getFieldValue('VAR'), Blockly.VARIABLE_CATEGORY_NAME);
+  var start = generator.valueToCode(block, 'START', Blockly.Python.ORDER_ATOMIC) || '(0, 0)';
+  var end = generator.valueToCode(block, 'END', Blockly.Python.ORDER_ATOMIC) || '(100, 100)';
+  var color = generator.valueToCode(block, 'COLOR', Blockly.Python.ORDER_ATOMIC) || '(0, 0, 0)';
+  var alpha = generator.valueToCode(block, 'ALPHA', Blockly.Python.ORDER_ATOMIC) || '0.5';
+
+  generator.definitions_['func_draw_rect_alpha'] = `
+def cocoya_draw_rect_alpha(img, pt1, pt2, color, alpha):
+    overlay = img.copy()
+    cv2.rectangle(overlay, tuple(map(int, pt1)), tuple(map(int, pt2)), color, -1)
+    cv2.addWeighted(overlay, alpha, img, 1 - alpha, 0, img)
+`;
+
+  return 'cocoya_draw_rect_alpha(' + varName + ', ' + start + ', ' + end + ', ' + color + ', ' + alpha + ')\n';
+};
+
 Blockly.Python.forBlock['py_ai_draw_circle'] = function(block, generator) {
   var varName = generator.nameDB_.getName(block.getFieldValue('VAR'), Blockly.VARIABLE_CATEGORY_NAME);
   var center = generator.valueToCode(block, 'CENTER', Blockly.Python.ORDER_ATOMIC) || '(50, 50)';
@@ -38,6 +55,68 @@ Blockly.Python.forBlock['py_ai_draw_text'] = function(block, generator) {
   var scale = generator.valueToCode(block, 'SCALE', Blockly.Python.ORDER_ATOMIC) || '1';
   
   return 'cv2.putText(' + varName + ', str(' + text + '), tuple(map(int, ' + pos + ')), cv2.FONT_HERSHEY_SIMPLEX, ' + scale + ', ' + color + ', 2)\n';
+};
+
+Blockly.Python.forBlock['py_ai_draw_text_zh'] = function(block, generator) {
+  var varName = generator.nameDB_.getName(block.getFieldValue('VAR'), Blockly.VARIABLE_CATEGORY_NAME);
+  var text = generator.valueToCode(block, 'TEXT', Blockly.Python.ORDER_ATOMIC) || "''";
+  var pos = generator.valueToCode(block, 'POS', Blockly.Python.ORDER_ATOMIC) || '(10, 30)';
+  var color = generator.valueToCode(block, 'COLOR', Blockly.Python.ORDER_ATOMIC) || '(255, 255, 255)';
+  var size = generator.valueToCode(block, 'SIZE', Blockly.Python.ORDER_ATOMIC) || '20';
+
+  generator.definitions_['import_pil'] = 'from PIL import Image, ImageDraw, ImageFont';
+  generator.definitions_['import_numpy'] = 'import numpy as np';
+  generator.definitions_['func_draw_text_zh'] = `
+def cocoya_draw_text_zh(img, text, pos, color, size):
+    img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+    draw = ImageDraw.Draw(img_pil)
+    try:
+        # Windows 預設微軟正黑體
+        font = ImageFont.truetype("C:/Windows/Fonts/msjh.ttc", int(size))
+    except:
+        try:
+            # Linux 常用字體
+            font = ImageFont.truetype("/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc", int(size))
+        except:
+            font = ImageFont.load_default()
+    
+    # PIL color is RGB, OpenCV color is BGR
+    b, g, r = color
+    draw.text(pos, str(text), font=font, fill=(r, g, b))
+    img[:] = cv2.cvtColor(np.array(img_pil), cv2.COLOR_RGB2BGR)
+`;
+
+  return 'cocoya_draw_text_zh(' + varName + ', ' + text + ', tuple(map(int, ' + pos + ')), ' + color + ', ' + size + ')\n';
+};
+
+Blockly.Python.forBlock['py_ai_draw_angle_arc'] = function(block, generator) {
+  var varName = generator.nameDB_.getName(block.getFieldValue('VAR'), Blockly.VARIABLE_CATEGORY_NAME);
+  var center = generator.valueToCode(block, 'CENTER', Blockly.Python.ORDER_ATOMIC) || '(0, 0)';
+  var start = generator.valueToCode(block, 'START', Blockly.Python.ORDER_ATOMIC) || '(0, 0)';
+  var end = generator.valueToCode(block, 'END', Blockly.Python.ORDER_ATOMIC) || '(0, 0)';
+  var radius = generator.valueToCode(block, 'RADIUS', Blockly.Python.ORDER_ATOMIC) || '30';
+  var color = generator.valueToCode(block, 'COLOR', Blockly.Python.ORDER_ATOMIC) || '(255, 255, 255)';
+  var thickness = generator.valueToCode(block, 'THICKNESS', Blockly.Python.ORDER_ATOMIC) || '2';
+
+  generator.definitions_['import_math'] = 'import math';
+  generator.definitions_['func_draw_angle_arc'] = `
+def cocoya_draw_angle_arc(img, center, start, end, radius, color, thickness):
+    try:
+        # 計算起點與終點相對於中心的角度
+        ang1 = math.degrees(math.atan2(start[1]-center[1], start[0]-center[0]))
+        ang2 = math.degrees(math.atan2(end[1]-center[1], end[0]-center[0]))
+        
+        # 確保圓弧是沿著夾角方向繪製
+        if ang2 < ang1: ang2 += 360
+        if ang2 - ang1 > 180: # 繪製內角
+            ang1, ang2 = ang2, ang1 + 360
+            
+        cv2.ellipse(img, tuple(map(int, center)), (int(radius), int(radius)), 0, ang1, ang2, color, thickness)
+    except:
+        pass
+`;
+
+  return 'cocoya_draw_angle_arc(' + varName + ', ' + center + ', ' + start + ', ' + end + ', ' + radius + ', ' + color + ', ' + thickness + ')\n';
 };
 
 Blockly.Python.forBlock['py_ai_draw_overlay_image'] = function(block, generator) {

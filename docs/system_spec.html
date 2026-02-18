@@ -203,28 +203,50 @@
         <h2>9. 積木定位技術 (Regex Deep Dive)</h2>
         <p>為了達成「積木」與「產出代碼」之間的精確導航，Cocoya 採用了雙軌 ID 注入機制。這套機制保證了 1:1 的行號對齊，且不破壞 Python 語法執行。</p>
         
-        <h3>A. 運算式標記 (Invisible Markers)</h3>
+        <h3>A. 全域注入機制 (The scrub_ Method)</h3>
+        <p>定位標記並非在個別產生器中手動撰寫，而是由 <code>media/main.js</code> 重寫 <code>Blockly.Python.scrub_</code> 函式統一注入。這確保了 100% 的積木覆蓋率且維護性極高。</p>
+        <pre><code class="language-javascript">// main.js 中的核心邏輯
+Blockly.Python.scrub_ = function(block, code, opt_thisOnly) {
+    if (!block.isEnabled()) {
+        const nextBlock = block.nextConnection && block.nextConnection.targetBlock();
+        return (nextBlock && !opt_thisOnly) ? Blockly.Python.blockToCode(nextBlock) : '';
+    }
+    const nextBlock = block.nextConnection && block.nextConnection.targetBlock();
+    const nextCode = (nextBlock && !opt_thisOnly) ? Blockly.Python.blockToCode(nextBlock) : '';
+    
+    if (block.outputConnection) {
+        // 運算式標記
+        return `\u0001ID:${block.id}\u0002${code}${nextCode}`;
+    } else {
+        // 陳述句標記
+        let lines = code.split('\n');
+        if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
+        if (lines.length > 0) lines[0] += `  # ID:${block.id}`;
+        return lines.join('\n') + '\n' + nextCode;
+    }
+};</code></pre>
+
+        <h3>B. 運算式標記 (Invisible Markers)</h3>
         <p>用於行內拼入的積木（如變數、數值）。使用不可見字元包裹 ID，避免破壞運算子結構。</p>
         <ul>
             <li><strong>Regex:</strong> <code>\u0001ID:([\s\S]+?)\u0002</code></li>
-            <li><strong>原理:</strong> 使用控制字元 <code>\u0001</code> (SOH) 與 <code>\u0002</code> (STX) 封裝。</li>
+            <li><strong>TAG 數值:</strong> <code>TAG_START = '\u0001' (SOH)</code>, <code>TAG_END = '\u0002' (STX)</code>。</li>
         </ul>
 
-        <h3>B. 陳述句標記 (Trailing Comments)</h3>
-        <p>用於完整的程式碼列（如 <code>import</code>, <code>if</code>）。將 ID 隱藏在行尾註解中。</p>
+        <h3>C. 陳述句標記 (Trailing Comments)</h3>
+        <p>用於完整的程式碼列（如 <code>import</code>, <code>if</code>）。將 ID 隱藏在行尾註解中，並保留兩個空格以符合 PEP8 風格規範。</p>
         <ul>
             <li><strong>Regex:</strong> <code>/  # ID:([^\s\n]+)/g</code></li>
             <li><strong>細節解析:</strong>
                 <ul>
-                    <li><code>  # ID:</code>: 以兩個空格開頭的 Python 註解，執行時會被忽略。</li>
+                    <li><code>  # ID:</code>: 以兩個空格開頭的 Python 註解。</li>
                     <li><code>([^\s\n]+)</code>: 捕獲群組。匹配除空白與換行外的所有字元，確保能完整抓取包含特殊符號的 Blockly ID。</li>
-                    <li><code>/g</code>: 全域匹配。當父子積木共用第一行代碼時（如 Global Definitions 容器），可同時抓取多個 ID 確保定位不失效。</li>
                 </ul>
             </li>
         </ul>
 
-        <h3>C. 處理流程 (The Workflow)</h3>
-        <p>當 UI 渲染器處理每一行代碼時：</p>
+        <h3>D. 處理流程 (The Workflow)</h3>
+        <p>UI 渲染器 (位於 <code>media/utils.js</code> 的 <code>extractIds</code>) 處理每一行代碼時：</p>
         <ol>
             <li><strong>提取:</strong> 透過捕獲群組將 ID 存入映射表 (Map)，實現「點擊積木 -> 捲動至代碼行」的功能。</li>
             <li><strong>抹除:</strong> 使用 <code>.replace()</code> 將標記從字串中徹底刪除。</li>
