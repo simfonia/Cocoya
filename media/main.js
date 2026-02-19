@@ -386,14 +386,15 @@
                     // 運算式：使用不可見標記
                     return `${s}ID:${block.id}${e}${code}${nextCode}`;
                 } else {
-                    // 陳述句：將 ID 註解放在行尾以維持行號 1:1
+                    // 陳述句：注入範圍標記以支援整段高亮
                     let lines = code.split('\n');
                     // 處理最後一個換行導致的空陣列元素
                     if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
                     
                     if (lines.length > 0) {
-                        // 只在該積木產出的第一行加上 ID 標記
-                        lines[0] += `  # ID:${block.id}`;
+                        // 注入開始與結束標記
+                        lines[0] += `  # S_ID:${block.id}`;
+                        lines[lines.length - 1] += `  # E_ID:${block.id}`;
                     }
                     return lines.join('\n') + '\n' + nextCode;
                 }

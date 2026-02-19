@@ -7,25 +7,46 @@ window.CocoyaUtils = {
 
     extractIds: function(line) {
         let ids = [];
+        let starts = [];
+        let ends = [];
         let cleanLine = line;
         
-        // 1. 處理不可見標記 (運算式)
+        // 1. 處理不可見標記 (運算式) - 運算式通常不跨行，視為既是開始也是結束
         const invisibleRegex = new RegExp(this.TAG_START + 'ID:([\\s\\S]+?)' + this.TAG_END, 'g');
         const invisibleMatches = [...cleanLine.matchAll(invisibleRegex)];
-        for (const match of invisibleMatches) ids.push(match[1]);
+        for (const match of invisibleMatches) {
+            ids.push(match[1]);
+        }
         cleanLine = cleanLine.replace(invisibleRegex, '');
 
         // 2. 處理行尾註解 ID (陳述句)
-        // 匹配 "  # ID:xxx" 並確保抓取所有非空白字元，直到行尾
-        const commentRegex = /  # ID:([^\s\n]+)/g;
-        const commentMatches = [...cleanLine.matchAll(commentRegex)];
-        for (const match of commentMatches) {
+        // 匹配 "  # ID:xxx", "  # S_ID:xxx", "  # E_ID:xxx"
+        const idRegex = /  # ID:([^\s\n]+)/g;
+        const startRegex = /  # S_ID:([^\s\n]+)/g;
+        const endRegex = /  # E_ID:([^\s\n]+)/g;
+
+        // 提取一般的 ID (視為單行範圍)
+        const idMatches = [...cleanLine.matchAll(idRegex)];
+        for (const match of idMatches) {
             ids.push(match[1]);
         }
-        // 直接將匹配到的標記替換為空字串，防止殘留
-        cleanLine = cleanLine.replace(commentRegex, '');
+        cleanLine = cleanLine.replace(idRegex, '');
 
-        return { cleanLine: cleanLine.trimEnd(), ids };
+        // 提取 S_ID (開始)
+        const startMatches = [...cleanLine.matchAll(startRegex)];
+        for (const match of startMatches) {
+            starts.push(match[1]);
+        }
+        cleanLine = cleanLine.replace(startRegex, '');
+
+        // 提取 E_ID (結束)
+        const endMatches = [...cleanLine.matchAll(endRegex)];
+        for (const match of endMatches) {
+            ends.push(match[1]);
+        }
+        cleanLine = cleanLine.replace(endRegex, '');
+
+        return { cleanLine: cleanLine.trimEnd(), ids, starts, ends };
     },
 
     /**

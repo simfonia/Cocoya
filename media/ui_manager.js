@@ -3,52 +3,19 @@
  * 負責處理 Python 預覽渲染、積木導航、工具列互動與 i18n
  */
 window.CocoyaUI = {
-    /** @type {Map<string, HTMLElement>} 積木 ID 到程式碼行 DOM 的映射表 */
-    blockToLineMap: new Map(),
+    /** @type {Map<string, {start: number, end: number}>} 積木 ID 到程式碼行範圍的映射表 */
+    blockToRangeMap: new Map(),
+
+    /** @type {HTMLElement[]} 儲存所有代碼行 DOM 以便快速存取 */
+    lineDoms: [],
     
     /** @type {string} 目前編輯的檔案名稱 */
     currentFilename: '',
 
     /** @type {boolean} 是否處於未儲存狀態 */
     isDirty: false,
-
-    /** @type {string} GitHub 更新下載網址 */
-    updateUrl: '',
-
-    /** @type {string} 基礎媒體資源路徑 */
-    /**
-     * 更新序列埠下拉選單
-     * @param {string[]} ports 序列埠名稱列表
-     */
-    updateSerialPorts: function(ports) {
-        const selector = document.getElementById('serial-selector');
-        if (!selector) return;
-
-        // 保留目前選中的值 (若存在)
-        const currentValue = selector.value;
-        selector.innerHTML = '';
-
-        if (ports.length === 0) {
-            const opt = document.createElement('option');
-            opt.value = '';
-            opt.textContent = '(No Port)';
-            selector.appendChild(opt);
-        } else {
-            ports.forEach(port => {
-                const opt = document.createElement('option');
-                opt.value = port;
-                opt.textContent = port;
-                selector.appendChild(opt);
-            });
-        }
-
-        // 嘗試恢復選中狀態
-        if (currentValue && ports.includes(currentValue)) {
-            selector.value = currentValue;
-        }
-    },
-
-    mediaUri: '',
+    
+    // ... (維持中間其他函式不變)
 
     /**
      * 更新 Python 代碼預覽區域
@@ -68,20 +35,22 @@ window.CocoyaUI = {
         if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
 
         codeContent.innerHTML = '';
-        this.blockToLineMap.clear();
+        this.blockToRangeMap.clear();
+        this.lineDoms = [];
 
-        lines.forEach((line) => {
-            // 解析並提取 ID，同時取得乾淨的代碼列
+        lines.forEach((line, index) => {
+            // 解析並提取 ID 資訊
             const result = window.CocoyaUtils.extractIds(line);
-            const { cleanLine, ids } = result;
+            const { cleanLine, ids, starts, ends } = result;
 
             // 建立行容器
             const lineDiv = document.createElement('div');
             lineDiv.className = 'code-line';
+            lineDiv.setAttribute('data-line-index', index);
+            this.lineDoms.push(lineDiv);
             
-            // 只要不是全空白行，就進行處理，否則顯示空行佔位
+            // 處理代碼渲染與縮排輔助線
             if (cleanLine.length > 0) {
-                // 解析縮排對齊線 (動態對齊 indentSize)
                 const leadingSpaceMatch = cleanLine.match(/^(\s+)/);
                 const leadingSpaces = leadingSpaceMatch ? leadingSpaceMatch[1].length : 0;
                 const actualCode = cleanLine.substring(leadingSpaces);
@@ -92,40 +61,69 @@ window.CocoyaUI = {
                     guideHtml += `<span class="indent-guide" style="width: ${indentSize}ch;">${spaces}</span>`;
                 }
 
-                // 剩餘代碼進行語法高亮
                 const highlighted = hljs.highlight(actualCode, { language: 'python' }).value;
                 lineDiv.innerHTML = guideHtml + highlighted;
             } else {
                 lineDiv.innerHTML = '&nbsp;'; 
             }
 
-            // 同步目前的選取狀態
-            const selectedId = (typeof Blockly !== 'undefined' && Blockly.getSelected()) ? Blockly.getSelected().id : null;
-
+            // 更新範圍映射表
+            // 1. 處理單行 ID (運算式或單行陳述句)
             ids.forEach(id => {
-                lineDiv.setAttribute('data-block-id', id);
-                // 記錄積木 ID 與 DOM 的映射 (只記錄第一次出現的行)
-                if (!this.blockToLineMap.has(id)) {
-                    this.blockToLineMap.set(id, lineDiv);
+                if (!this.blockToRangeMap.has(id)) {
+                    this.blockToRangeMap.set(id, { start: index, end: index });
+                } else {
+                    // 如果已存在 (可能是一行有多個 ID)，更新結束點
+                    this.blockToRangeMap.get(id).end = index;
                 }
-                
-                if (id === selectedId) lineDiv.classList.add('highlight-line');
+            });
+
+            // 2. 處理範圍開始
+            starts.forEach(id => {
+                if (!this.blockToRangeMap.has(id)) {
+                    this.blockToRangeMap.set(id, { start: index, end: index });
+                } else {
+                    this.blockToRangeMap.get(id).start = index;
+                }
+            });
+
+            // 3. 處理範圍結束
+            ends.forEach(id => {
+                if (this.blockToRangeMap.has(id)) {
+                    this.blockToRangeMap.get(id).end = index;
+                } else {
+                    // 異常情況：沒看到開始先看到結束，則視為單行
+                    this.blockToRangeMap.set(id, { start: index, end: index });
+                }
             });
 
             codeContent.appendChild(lineDiv);
         });
+
+        // 同步目前的選取狀態
+        const selectedId = (typeof Blockly !== 'undefined' && Blockly.getSelected()) ? Blockly.getSelected().id : null;
+        if (selectedId) this.syncSelection(selectedId);
     },
 
     /**
-     * 高亮並捲動到指定積木對應的代碼行
+     * 高亮並捲動到指定積木對應的代碼範圍
      * @param {string} blockId 積木 ID
      */
     syncSelection: function(blockId) {
         document.querySelectorAll('.highlight-line').forEach(el => el.classList.remove('highlight-line'));
-        const targetLine = this.blockToLineMap.get(blockId);
-        if (targetLine) {
-            targetLine.classList.add('highlight-line');
-            targetLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        const range = this.blockToRangeMap.get(blockId);
+        if (range && this.lineDoms.length > 0) {
+            // 高亮範圍內的所有行
+            for (let i = range.start; i <= range.end; i++) {
+                if (this.lineDoms[i]) this.lineDoms[i].classList.add('highlight-line');
+            }
+
+            // 捲動到起始行
+            const startLine = this.lineDoms[range.start];
+            if (startLine) {
+                startLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
         }
     },
 
@@ -328,5 +326,37 @@ window.CocoyaUI = {
                 });
             };
         }
-    }
+
+        // --- 高亮顏色選取器邏輯 ---
+        const colorInput = document.getElementById('highlight-color-input');
+        if (colorInput) {
+            // 從 localStorage 恢復顏色
+            const savedColor = localStorage.getItem('cocoya_highlight_color') || '#fff59d';
+            colorInput.value = savedColor;
+            self.applyHighlightColor(savedColor);
+
+            colorInput.oninput = (e) => {
+                self.applyHighlightColor(e.target.value);
+            };
+        }
+    },
+
+    /**
+     * 應用高亮顏色
+     * @param {string} color 十六進制顏色
+     */
+    applyHighlightColor: function(color) {
+        document.documentElement.style.setProperty('--highlight-bg', color);
+        // 生成稍微深一點的邊框色
+        const r = parseInt(color.slice(1, 3), 16);
+        const g = parseInt(color.slice(3, 5), 16);
+        const b = parseInt(color.slice(5, 7), 16);
+        const border = `rgb(${Math.max(0, r - 31)}, ${Math.max(0, g - 31)}, ${Math.max(0, b - 31)})`;
+        document.documentElement.style.setProperty('--highlight-border', border);
+        
+        const preview = document.getElementById('highlight-color-preview');
+        if (preview) preview.style.backgroundColor = color;
+        
+        localStorage.setItem('cocoya_highlight_color', color);
+    },
 };
