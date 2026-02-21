@@ -1,4 +1,5 @@
 <category name="%{BKY_CAT_TYPES}" colour="%{BKY_COLOUR_TYPES}">
+    <label text="%{BKY_TYPE_LBL_DEF}"></label>
     <block type="py_type_list">
         <mutation items="3"></mutation>
     </block>
@@ -8,4 +9,41 @@
     <block type="py_type_dict">
         <mutation items="1"></mutation>
     </block>
+
+    <sep gap="24"></sep>
+    <label text="%{BKY_TYPE_LBL_CAST}"></label>
+    <block type="py_types_cast">
+        <value name="VALUE"><shadow type="py_math_number"><field name="NUM">0</field></shadow></value>
+    </block>
+    <block type="py_types_type_of"></block>
+    <block type="py_types_map_int"></block>
+
+    <sep gap="24"></sep>
+    <label text="%{BKY_TYPE_LBL_OPS}"></label>
+    <block type="py_types_len"></block>
+    <block type="py_types_get_item">
+        <value name="INDEX"><shadow type="py_math_number"><field name="NUM">0</field></shadow></value>
+    </block>
+    <block type="py_types_set_item">
+        <value name="INDEX"><shadow type="py_math_number"><field name="NUM">0</field></shadow></value>
+        <value name="VALUE"><shadow type="py_math_number"><field name="NUM">0</field></shadow></value>
+    </block>
+    <block type="py_types_in">
+        <value name="ITEM"><shadow type="py_text"><field name="TEXT">item</field></shadow></value>
+    </block>
+
+    <sep gap="24"></sep>
+    <label text="%{BKY_TYPE_LBL_METHODS}"></label>
+    <block type="py_types_list_append">
+        <value name="ITEM"><shadow type="py_math_number"><field name="NUM">0</field></shadow></value>
+    </block>
+    <block type="py_types_pop">
+        <value name="INDEX"><shadow type="py_math_number"><field name="NUM">0</field></shadow></value>
+    </block>
+    <block type="py_types_dict_get_parts"></block>
+
+    <sep gap="24"></sep>
+    <label text="%{BKY_TYPE_LBL_SORT}"></label>
+    <block type="py_types_sorted"></block>
+    <block type="py_types_sort_list"></block>
 </category>

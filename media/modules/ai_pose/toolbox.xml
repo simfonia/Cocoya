@@ -1,4 +1,4 @@
-<category name="%{BKY_CAT_AI_POSE}" colour="%{BKY_COLOUR_AI}">
+<category name="%{BKY_CAT_AI_POSE}" colour="%{BKY_COLOUR_AI_POSE}">
     <block type="py_ai_pose_init">
         <field name="MIN_CONF">0.5</field>
     </block>

@@ -1,4 +1,4 @@
-<category name="%{BKY_CAT_AI_FACE}" colour="%{BKY_COLOUR_AI}">
+<category name="%{BKY_CAT_AI_FACE}" colour="%{BKY_COLOUR_AI_FACE}">
     <block type="py_ai_face_init">
         <field name="MAX_FACES">1</field>
         <field name="MIN_CONF">0.5</field>

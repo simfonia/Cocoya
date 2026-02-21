@@ -7,16 +7,22 @@
     "BKY_NEW_VARIABLE_HINT": "Enter variable name(s), comma separated.\nNote: Name cannot start with a number or contain special characters except underscores.",
 
     // Category Colours (Hex Palette)
-    "COLOUR_STRUCTURE": "#778899",
-    "COLOUR_LOGIC": "#4C97FF",
-    "COLOUR_LOOPS": "#0FBD8C",
-    "COLOUR_MATH": "#5968B5",
-    "COLOUR_TEXT": "#05ADAD",
-    "COLOUR_TYPES": "#885AD5",
-    "COLOUR_VARIABLES": "#FE2F89",
-    "COLOUR_FUNCTIONS": "#FF6680",
-    "COLOUR_TOOLS": "#9966FF",
+    "COLOUR_STRUCTURE": "#585858",
+    "COLOUR_LOGIC": "#b198de",
+    "COLOUR_LOOPS": "#7fcd81",
+    "COLOUR_MATH": "#5C68A6",
+    "COLOUR_TEXT": "#6a8871",
+    "COLOUR_TYPES": "#d1972b",
+    "COLOUR_VARIABLES": "#ef9a9a",
+    "COLOUR_FUNCTIONS": "#d22f73",
+    "COLOUR_IO": "#34495e",
+    "COLOUR_CODING": "#585858",
     "COLOUR_AI": "#FF661A",
+    "COLOUR_AI_BASIC": "#FF661A",
+    "COLOUR_AI_DRAW": "#E64A19",
+    "COLOUR_AI_HAND": "#FBC02D",
+    "COLOUR_AI_FACE": "#FFA000",
+    "COLOUR_AI_POSE": "#F57C00",
     "COLOUR_HARDWARE": "#FFBF00",
 
     // Category Names
@@ -25,7 +31,8 @@
     "CAT_MATH": "Math",
     "CAT_TEXT": "Text",
     "CAT_TYPES": "Types",
-    "CAT_TOOLS": "Tools",
+    "CAT_IO": "IO",
+    "CAT_CODING": "Coding",
     "CAT_VARIABLES": "Variables",
     "CAT_FUNCTIONS": "Functions",
     "CAT_AI": "AI Vision",
@@ -36,6 +43,13 @@
     "CAT_AI_POSE": "Pose Detection",
     "CAT_STRUCTURE": "Structure",
     "CAT_HARDWARE": "Hardware",
+
+    // Types Group Labels
+    "TYPE_LBL_DEF": "Definitions",
+    "TYPE_LBL_CAST": "Casting & Type Check",
+    "TYPE_LBL_OPS": "General Access",
+    "TYPE_LBL_METHODS": "Advanced Methods",
+    "TYPE_LBL_SORT": "Sorting",
 
     // Toolbar & UI
     "TLB_NEW": "New Project",

@@ -1,4 +1,4 @@
-<category name="%{BKY_CAT_AI_DRAW}" colour="%{BKY_COLOUR_AI}">
+<category name="%{BKY_CAT_AI_DRAW}" colour="%{BKY_COLOUR_AI_DRAW}">
     <!-- 矩形 -->
     <block type="py_ai_draw_rect">
         <value name="START">

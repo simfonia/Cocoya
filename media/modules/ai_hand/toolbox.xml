@@ -1,4 +1,4 @@
-<category name="%{BKY_CAT_AI_HAND}" colour="%{BKY_COLOUR_AI}">
+<category name="%{BKY_CAT_AI_HAND}" colour="%{BKY_COLOUR_AI_HAND}">
     <block type="py_ai_hand_init">
         <field name="MAX_HANDS">2</field>
         <field name="MIN_CONF">0.5</field>

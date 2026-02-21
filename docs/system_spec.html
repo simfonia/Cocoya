@@ -116,6 +116,7 @@
         <li><a href="#indent-spec">11. 縮排與代碼產生規範</a></li>
         <li><a href="#async-dialogs">12. 非同步對話框機制 (Bridge)</a></li>
         <li><a href="#variable-mgmt">13. 變數管理與動態回調</a></li>
+        <li><a href="#quote-spec">14. 產生器引號規範</a></li>
     </ul>
 </nav>
 
@@ -159,6 +160,7 @@
             cocoya/media/modules/<br>
             ├── core/ (基礎核心模組)<br>
             │   ├── logic/ (blocks.js, generators.js, toolbox.xml, i18n/)<br>
+            │   ├── coding/ (註解與原生代碼)<br>
             │   └── ...<br>
             ├── cv_basic/ (OpenCV 基礎操作)<br>
             ├── cv_draw/ (OpenCV 繪圖標註)<br>
@@ -307,8 +309,23 @@ var branch = generator.statementToCode(block, 'DO') || generator.INDENT + 'pass\
         </ul>
     </section>
 
+    <section id="quote-spec">
+        <h2>14. 產生器引號規範 (Quote Standards)</h2>
+        <p>為了避免使用者在積木中輸入引號與產生器外層引號衝突（導致 Python SyntaxError），系統建立以下規範：</p>
+        
+        <h3>A. 靜態字串與變數</h3>
+        <p>一般 <code>text</code> 積木或簡單變數賦值，統一遵循 Blockly 預設之<strong>單引號 <code>'...'</code></strong> 規範。底層透過 <code>Blockly.Python.quote_</code> 處理內容轉義。</p>
+
+        <h3>B. 複雜組合與 f-string (The Silver Bullet)</h3>
+        <p>針對 <code>py_text_join</code> 等涉及多個子積木拼接的運算式，產生器必須使用<strong>三雙引號 <code>f"""..."""</code></strong>。這能保證內部即便包含字典鍵值（如 <code>['key']</code>）或使用者手打的雙引號，皆不會引發語法錯誤。</p>
+        
+        <h3>C. 規範範例</h3>
+        <pre><code class="language-python"># 正確的產生結果
+print(f"""Alice 的分數是: {scores_dict['Alice']}""")</code></pre>
+    </section>
+
     <footer>
-        <p>© 2026 simfonia - Cocoya 專案組。文件更新日期：2026-02-19 (v2.3)</p>
+        <p>© 2026 simfonia - Cocoya 專案組。文件更新日期：2026-02-21 (v2.4)</p>
     </footer>
 </main>
 

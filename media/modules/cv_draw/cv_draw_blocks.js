@@ -14,7 +14,7 @@ Blockly.Blocks['py_ai_draw_rect'] = {
       "inputsInline": true,
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_DRAW"],
       "tooltip": Blockly.Msg["AI_DRAW_TOOLTIP"]
     });
   }
@@ -34,7 +34,7 @@ Blockly.Blocks['py_ai_draw_rect_alpha'] = {
       "inputsInline": true,
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_DRAW"],
       "tooltip": Blockly.Msg["AI_DRAW_RECT_ALPHA_TOOLTIP"]
     });
   }
@@ -54,7 +54,7 @@ Blockly.Blocks['py_ai_draw_circle'] = {
       "inputsInline": true,
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_DRAW"],
       "tooltip": Blockly.Msg["AI_DRAW_TOOLTIP"]
     });
   }
@@ -74,7 +74,7 @@ Blockly.Blocks['py_ai_draw_line'] = {
       "inputsInline": true,
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_DRAW"],
       "tooltip": Blockly.Msg["AI_DRAW_TOOLTIP"]
     });
   }
@@ -94,7 +94,7 @@ Blockly.Blocks['py_ai_draw_text'] = {
       "inputsInline": true,
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_DRAW"],
       "tooltip": Blockly.Msg["AI_DRAW_TOOLTIP"]
     });
   }
@@ -114,7 +114,7 @@ Blockly.Blocks['py_ai_draw_text_zh'] = {
       "inputsInline": true,
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_DRAW"],
       "tooltip": Blockly.Msg["AI_DRAW_TEXT_ZH_TOOLTIP"]
     });
   }
@@ -136,7 +136,7 @@ Blockly.Blocks['py_ai_draw_angle_arc'] = {
       "inputsInline": true,
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_DRAW"],
       "tooltip": Blockly.Msg["AI_DRAW_ANGLE_ARC_TOOLTIP"]
     });
   }
@@ -156,7 +156,7 @@ Blockly.Blocks['py_ai_draw_overlay_image'] = {
       "inputsInline": true,
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_DRAW"],
       "tooltip": Blockly.Msg["AI_DRAW_OVERLAY_IMAGE_TOOLTIP"]
     });
   }

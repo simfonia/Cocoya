@@ -9,7 +9,7 @@ Blockly.Blocks['py_ai_pose_init'] = {
       ],
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_POSE"],
       "tooltip": Blockly.Msg["AI_POSE_INIT_TOOLTIP"]
     });
   },
@@ -49,7 +49,7 @@ Blockly.Blocks['py_ai_pose_process'] = {
       ],
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_POSE"],
       "tooltip": Blockly.Msg["AI_POSE_PROCESS_TOOLTIP"]
     });
   }
@@ -63,7 +63,7 @@ Blockly.Blocks['py_ai_pose_is_detected'] = {
         { "type": "field_variable", "name": "VAR", "variable": "results" }
       ],
       "output": "Boolean",
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_POSE"],
       "tooltip": Blockly.Msg["AI_POSE_IS_DETECTED_TOOLTIP"]
     });
   }
@@ -77,7 +77,7 @@ Blockly.Blocks['py_ai_pose_get_landmarks'] = {
         { "type": "field_variable", "name": "VAR", "variable": "results" }
       ],
       "output": "PoseLandmarks",
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_POSE"],
       "tooltip": Blockly.Msg["AI_POSE_GET_LANDMARKS_TOOLTIP"]
     });
   }
@@ -92,7 +92,7 @@ Blockly.Blocks['py_ai_pose_get_landmark'] = {
         { "type": "field_number", "name": "INDEX", "value": 0, "min": 0, "max": 32 }
       ],
       "output": "Landmark",
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_POSE"],
       "tooltip": Blockly.Msg["AI_POSE_GET_LANDMARK_TOOLTIP"]
     });
   }
@@ -109,7 +109,7 @@ Blockly.Blocks['py_ai_pose_get_landmark_xy'] = {
       ],
       "output": "Tuple",
       "inputsInline": true,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_POSE"],
       "tooltip": Blockly.Msg["AI_POSE_GET_LANDMARK_XY_TOOLTIP"]
     });
   }
@@ -127,7 +127,7 @@ Blockly.Blocks['py_ai_pose_draw'] = {
       ],
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_POSE"],
       "tooltip": Blockly.Msg["AI_POSE_DRAW_TOOLTIP"]
     });
   }
@@ -146,7 +146,7 @@ Blockly.Blocks['py_ai_pose_draw_indices'] = {
       "inputsInline": true,
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_POSE"],
       "tooltip": Blockly.Msg["AI_POSE_DRAW_INDICES_TOOLTIP"]
     });
   }

@@ -121,7 +121,7 @@
                     }
                 });
 
-                let finalXml = `<xml>${coreXml.join('')}`;
+                let finalXml = `<xml>${coreXml.join('')}<sep></sep>`;
                 if (aiXml.length > 0) {
                     finalXml += `<category name="%{BKY_CAT_AI}" colour="%{BKY_COLOUR_AI}">${aiXml.join('')}</category>`;
                 }
@@ -208,7 +208,7 @@
                     }
                 });
 
-                let finalToolboxXML = `<xml>${coreXml.join('')}`;
+                let finalToolboxXML = `<xml>${coreXml.join('')}<sep></sep>`;
                 if (aiXml.length > 0) {
                     finalToolboxXML += `<category name="%{BKY_CAT_AI}" colour="%{BKY_COLOUR_AI}">${aiXml.join('')}</category>`;
                 }

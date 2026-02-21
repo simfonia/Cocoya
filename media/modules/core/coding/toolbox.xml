@@ -1,0 +1,5 @@
+<category name="%{BKY_CAT_CODING}" colour="%{BKY_COLOUR_CODING}">
+    <block type="py_coding_comment"></block>
+    <block type="py_coding_raw_statement"></block>
+    <block type="py_coding_raw_expression"></block>
+</category>

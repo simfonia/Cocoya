@@ -11,7 +11,12 @@ C:\Workspace\cocoya\
 │   ├── blockly/           # Blockly 核心庫與插件
 │   ├── icons/             # 工具列與功能圖示
 │   ├── modules/           # 統一模組目錄
-│   │   ├── core/          # 基礎積木 (logic, loops, math, etc.)
+│   │   ├── core/          # 基礎積木
+│   │   │   ├── structure/ (入口與定義區)
+│   │   │   ├── io/        (標準 IO、Serial 與 Sleep)
+│   │   │   ├── logic/     (邏輯判斷)
+│   │   │   ├── coding/    (註解與原生代碼)
+│   │   │   └── ...
 │   │   ├── cv_basic/      # OpenCV 基礎操作
 │   │   ├── cv_draw/       # OpenCV 繪圖標註
 │   │   ├── ai_hand/       # MediaPipe 手勢偵測

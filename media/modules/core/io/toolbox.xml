@@ -1,0 +1,44 @@
+<category name="%{BKY_CAT_IO}" colour="%{BKY_COLOUR_IO}">
+    <label text="%{BKY_IO_LBL_TERMINAL}"></label>
+    <block type="py_io_print">
+        <value name="TEXT">
+            <shadow type="py_text">
+                <field name="TEXT">Hello Cocoya!</field>
+            </shadow>
+        </value>
+    </block>
+    <block type="py_io_input">
+        <value name="PROMPT">
+            <shadow type="py_text">
+                <field name="TEXT">Please enter your name: </field>
+            </shadow>
+        </value>
+    </block>
+    <block type="py_io_sleep">
+        <value name="SECONDS">
+            <shadow type="py_math_number">
+                <field name="NUM">1</field>
+            </shadow>
+        </value>
+    </block>
+
+    <sep gap="24"></sep>
+    <label text="%{BKY_IO_LBL_SERIAL}"></label>
+    <block type="py_io_serial_init">
+        <value name="PORT">
+            <shadow type="py_text">
+                <field name="TEXT">COM1</field>
+            </shadow>
+        </value>
+    </block>
+    <block type="py_io_serial_available"></block>
+    <block type="py_io_serial_flush"></block>
+    <block type="py_io_serial_read"></block>
+    <block type="py_io_serial_write">
+        <value name="DATA">
+            <shadow type="py_text">
+                <field name="TEXT">msg</field>
+            </shadow>
+        </value>
+    </block>
+</category>

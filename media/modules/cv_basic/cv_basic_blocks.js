@@ -9,7 +9,7 @@ Blockly.Blocks['py_ai_open_camera'] = {
       ],
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_BASIC"],
       "tooltip": Blockly.Msg["AI_OPEN_CAMERA_TOOLTIP"]
     });
   }
@@ -24,7 +24,7 @@ Blockly.Blocks['py_ai_read_frame'] = {
       ],
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_BASIC"],
       "tooltip": Blockly.Msg["AI_READ_FRAME_TOOLTIP"]
     });
   }
@@ -48,7 +48,7 @@ Blockly.Blocks['py_ai_flip_image'] = {
       ],
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_BASIC"],
       "tooltip": Blockly.Msg["AI_FLIP_TOOLTIP"]
     });
   }
@@ -63,7 +63,7 @@ Blockly.Blocks['py_ai_show_image'] = {
       ],
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_BASIC"],
       "tooltip": Blockly.Msg["AI_SHOW_IMAGE_TOOLTIP"]
     });
   }
@@ -78,7 +78,7 @@ Blockly.Blocks['py_ai_wait_key_break'] = {
       ],
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_BASIC"],
       "tooltip": Blockly.Msg["AI_WAIT_KEY_BREAK_TOOLTIP"]
     });
   }
@@ -90,7 +90,7 @@ Blockly.Blocks['py_ai_release_all'] = {
       "message0": Blockly.Msg["AI_RELEASE_ALL"],
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_BASIC"],
       "tooltip": Blockly.Msg["AI_RELEASE_ALL_TOOLTIP"]
     });
   }

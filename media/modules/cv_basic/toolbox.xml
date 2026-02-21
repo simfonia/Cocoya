@@ -1,4 +1,4 @@
-<category name="%{BKY_CAT_AI_BASIC}" colour="%{BKY_COLOUR_AI}">
+<category name="%{BKY_CAT_AI_BASIC}" colour="%{BKY_COLOUR_AI_BASIC}">
     <block type="py_ai_open_camera"></block>
     <block type="py_ai_read_frame"></block>
     <block type="py_ai_flip_image"></block>

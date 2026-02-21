@@ -10,7 +10,7 @@ function getIcon(name) {
 Blockly.Blocks['py_text'] = {
   init: function() {
     this.jsonInit({
-      "message0": "\" %1 \"",
+      "message0": "' %1 '",
       "args0": [{ "type": "field_input", "name": "TEXT", "text": "" }],
       "output": "String",
       "colour": Blockly.Msg["COLOUR_TEXT"]
@@ -88,15 +88,15 @@ Blockly.Blocks['py_text_join'] = {
     let i = 0; while (this.getInput('ADD' + i)) { this.removeInput('ADD' + i); i++; }
 
     if (this.itemCount_ === 0 || (opt_skipIndex !== undefined && this.itemCount_ === 1)) {
-        this.appendDummyInput('EMPTY').appendField('f""').appendField(new Blockly.FieldImage(getIcon('plus'), 18, 18, '+', () => setTimeout(() => this.plus(), 0)), 'PLUS');
+        this.appendDummyInput('EMPTY').appendField('f""""""').appendField(new Blockly.FieldImage(getIcon('plus'), 18, 18, '+', () => setTimeout(() => this.plus(), 0)), 'PLUS');
     } else {
         const displayCount = opt_skipIndex !== undefined ? this.itemCount_ - 1 : this.itemCount_;
         for (let j = 0; j < displayCount; j++) {
             const input = this.appendValueInput('ADD' + j);
-            if (j === 0) input.appendField('f"');
+            if (j === 0) input.appendField('f"""');
         }
         this.appendDummyInput('TAIL')
-            .appendField('"')
+            .appendField('"""')
             .appendField(new Blockly.FieldImage(getIcon('minus'), 18, 18, '-', () => setTimeout(() => this.minus(this.itemCount_ - 1), 0)), 'MINUS')
             .appendField(new Blockly.FieldImage(getIcon('plus'), 18, 18, '+', () => setTimeout(() => this.plus(), 0)), 'PLUS');
     }

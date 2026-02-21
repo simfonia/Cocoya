@@ -9,7 +9,7 @@ Blockly.Python.forBlock['py_text_multiline'] = function(block) {
   var text = block.getFieldValue('TEXT');
   var lines = text.split('\n');
   var escapedLines = lines.map(line => Blockly.Python.quote_(line));
-  var code = "'\\n'.join([" + escapedLines.join(', ') + "])";
+  var code = "\"\\n\".join([" + escapedLines.join(', ') + "])";
   return [code, Blockly.Python.ORDER_FUNCTION_CALL];
 };
 
@@ -37,5 +37,5 @@ Blockly.Python.forBlock['py_text_join'] = function(block, generator) {
         }
     }
   }
-  return ["f'" + parts.join('') + "'", Blockly.Python.ORDER_ATOMIC];
+  return ["f\"\"\"" + parts.join('') + "\"\"\"", Blockly.Python.ORDER_ATOMIC];
 };

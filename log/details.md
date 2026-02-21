@@ -141,3 +141,21 @@ equestId 追蹤與 Map 存儲 callback，將 UI 呈現交給 VS Code Host 執行
 ### 4. 動態視覺反饋 (Conditional Styling)
 - **三元運算**: 實作 `py_logic_ternary` 支援行內顏色切換 (如：達標綠、未達標黃)，增強教學互動感。
 - **目標燈號**: 整合 `if-else` 與 `draw_circle` 實作指示燈系統與 「GOAL!!」標註。
+
+## 產生器規範與硬體優化 (2026-02-21 更新)
+
+### 1. f-string 引號衝突終極解決方案
+- **問題**: 使用 f'...' 拼接時，若內部包含字典鍵值（如 scores['Alice']），會因單引號衝突引發 SyntaxError。
+- **規範**: 凡涉及 join 或複雜拼接之產生器，統一使用三雙引號 **f"""..."""**。三引號能完美容納內部任何單/雙引號內容而不必轉義。
+
+### 2. 序列埠「拿最新一筆」邏輯
+- **問題**: 慢速輪詢 (如 sleep(1)) 快速發送設備 (如超音波) 時，
+eadline() 會讀到堆積的舊資料。
+- **解決**: 在 Read 產生器中注入 while s.in_waiting > 0: line = s.readline() 迴圈。這會不斷排空緩衝區直到最後一筆，保證數據的即時性。
+
+### 3. CPU 節能輪詢技巧
+- **對策**: 在 Available 檢查中使用 (time.sleep(0.001) or ser.in_waiting > 0)。
+- **原理**: 	ime.sleep 回傳 None (False)，強制每輪循環至少休息 1ms，將 CPU 佔用從 100% 降至 1% 以下，同時維持高反應度。
+
+### 4. JavaScript 寫入轉義陷阱
+- **提醒**: 透過 write_file 寫入產生器 JS 時，字串中的 \n 常被展開。必須寫成 \\n 才能在磁碟檔案中保持為字面量，避免 SyntaxError: Invalid token。

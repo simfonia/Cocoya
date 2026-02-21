@@ -176,6 +176,34 @@ window.CocoyaUI = {
     },
 
     /**
+     * 更新序列埠下拉選單
+     * @param {string[]} ports 序列埠列表
+     */
+    updateSerialPorts: function(ports) {
+        const selector = document.getElementById('serial-selector');
+        if (!selector) return;
+
+        const currentVal = selector.value;
+        selector.innerHTML = '';
+
+        if (!ports || ports.length === 0) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = '(No Port)';
+            selector.appendChild(opt);
+            return;
+        }
+
+        ports.forEach(port => {
+            const opt = document.createElement('option');
+            opt.value = port;
+            opt.textContent = port;
+            if (port === currentVal) opt.selected = true;
+            selector.appendChild(opt);
+        });
+    },
+
+    /**
      * 更新執行按鈕的 Tooltip
      * @param {string} platform 
      */

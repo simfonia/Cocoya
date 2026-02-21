@@ -1,0 +1,85 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
+  <variables>
+    <variable id="v_data">received_data</variable>
+  </variables>
+  <block type="py_definition_zone" id="def_root" x="20" y="20">
+    <statement name="DEFS">
+      <block type="py_coding_comment" id="c1">
+        <field name="TEXT">PC 端序列埠讀取範例 (自動讀取最新數據版)&amp;#10;1. 請先執行 'pip install pyserial'。&amp;#10;2. 修改下面 'COM5' 為你的埠號。</field>
+        <next>
+          <block type="py_io_serial_init" id="ser_init">
+            <field name="BAUD">9600</field>
+            <value name="PORT">
+              <shadow type="py_text" id="t1">
+                <field name="TEXT">COM5</field>
+              </shadow>
+            </value>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+  <block type="py_main" id="main_root" x="20" y="180">
+    <statement name="DO">
+      <block type="py_io_print" id="p1">
+        <value name="TEXT">
+          <shadow type="py_text" id="t2">
+            <field name="TEXT">--- PC Serial Listener Started ---</field>
+          </shadow>
+        </value>
+        <next>
+          <block type="py_loop_while" id="w1">
+            <value name="CONDITION">
+              <block type="py_logic_boolean" id="b1">
+                <field name="BOOL">True</field>
+              </block>
+            </value>
+            <statement name="DO">
+              <block type="controls_if" id="if1">
+                <value name="IF0">
+                  <block type="py_io_serial_available" id="av1"></block>
+                </value>
+                <statement name="DO0">
+                  <block type="variables_set" id="s1">
+                    <field name="VAR" id="v_data">received_data</field>
+                    <value name="VALUE">
+                      <block type="py_io_serial_read" id="r1"></block>
+                    </value>
+                    <next>
+                      <block type="py_io_print" id="p2">
+                        <value name="TEXT">
+                          <block type="py_text_join" id="j1">
+                            <mutation items="2"></mutation>
+                            <value name="ADD0">
+                              <shadow type="py_text" id="t3">
+                                <field name="TEXT">&gt; </field>
+                              </shadow>
+                            </value>
+                            <value name="ADD1">
+                              <block type="variables_get" id="g1">
+                                <field name="VAR" id="v_data">received_data</field>
+                              </block>
+                            </value>
+                          </block>
+                        </value>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+                <next>
+                  <block type="py_io_sleep" id="N]D/t0?W}X|QO8SjM]cU">
+                    <value name="SECONDS">
+                      <shadow type="py_math_number" id="8kRl=5aOE4BI.|Z3Pl-9">
+                        <field name="NUM">1</field>
+                      </shadow>
+                    </value>
+                  </block>
+                </next>
+              </block>
+            </statement>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

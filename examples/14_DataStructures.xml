@@ -1,0 +1,277 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
+  <variables>
+    <variable id="v_data">data_list</variable>
+    <variable id="v_scores">scores_dict</variable>
+    <variable id="v_sorted">sorted_result</variable>
+    <variable id="v_input">user_input</variable>
+  </variables>
+  <block type="py_main" id="main_root" x="20" y="20">
+    <statement name="DO">
+      <block type="py_coding_comment" id="c1">
+        <field name="TEXT">1. 型別轉換與運算</field>
+        <next>
+          <block type="variables_set" id="s1">
+            <field name="VAR" id="v_input">user_input</field>
+            <value name="VALUE">
+              <block type="py_io_input" id="in1">
+                <value name="PROMPT">
+                  <shadow type="py_text" id="t1">
+                    <field name="TEXT">請輸入一個數字: </field>
+                  </shadow>
+                </value>
+              </block>
+            </value>
+            <next>
+              <block type="py_io_print" id="p1">
+                <value name="TEXT">
+                  <block type="py_text_join" id="j1">
+                    <mutation items="2"></mutation>
+                    <value name="ADD0">
+                      <shadow type="py_text" id="t2">
+                        <field name="TEXT">輸入的型別是: </field>
+                      </shadow>
+                    </value>
+                    <value name="ADD1">
+                      <block type="py_types_cast" id="cast1">
+                        <field name="TYPE">str</field>
+                        <value name="VALUE">
+                          <block type="py_types_type_of" id="type1">
+                            <value name="VALUE">
+                              <block type="variables_get" id="g1">
+                                <field name="VAR" id="v_input">user_input</field>
+                              </block>
+                            </value>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                  </block>
+                </value>
+                <next>
+                  <block type="py_io_print" id="p2">
+                    <value name="TEXT">
+                      <block type="py_text_join" id="j2">
+                        <mutation items="2"></mutation>
+                        <value name="ADD0">
+                          <shadow type="py_text" id="t3">
+                            <field name="TEXT">加 100 之後結果: </field>
+                          </shadow>
+                        </value>
+                        <value name="ADD1">
+                          <block type="py_math_arithmetic" id="m1">
+                            <field name="OP">+</field>
+                            <value name="A">
+                              <shadow type="py_math_number" id="n1">
+                                <field name="NUM">1</field>
+                              </shadow>
+                              <block type="py_types_cast" id="cast2">
+                                <field name="TYPE">int</field>
+                                <value name="VALUE">
+                                  <block type="variables_get" id="g2">
+                                    <field name="VAR" id="v_input">user_input</field>
+                                  </block>
+                                </value>
+                              </block>
+                            </value>
+                            <value name="B">
+                              <shadow type="py_math_number" id="n2">
+                                <field name="NUM">100</field>
+                              </shadow>
+                            </value>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="py_coding_comment" id="c2">
+                        <field name="TEXT">2. 清單操作與排序</field>
+                        <next>
+                          <block type="variables_set" id="s2">
+                            <field name="VAR" id="v_data">data_list</field>
+                            <value name="VALUE">
+                              <block type="py_type_list" id="l1">
+                                <mutation items="3"></mutation>
+                                <value name="ADD0">
+                                  <block type="py_math_number" id="n3">
+                                    <field name="NUM">50</field>
+                                  </block>
+                                </value>
+                                <value name="ADD1">
+                                  <block type="py_math_number" id="n4">
+                                    <field name="NUM">10</field>
+                                  </block>
+                                </value>
+                                <value name="ADD2">
+                                  <block type="py_math_number" id="n5">
+                                    <field name="NUM">30</field>
+                                  </block>
+                                </value>
+                              </block>
+                            </value>
+                            <next>
+                              <block type="py_types_list_append" id="ap1">
+                                <value name="LIST">
+                                  <block type="variables_get" id="g3">
+                                    <field name="VAR" id="v_data">data_list</field>
+                                  </block>
+                                </value>
+                                <value name="ITEM">
+                                  <block type="py_math_number" id="n6">
+                                    <field name="NUM">25</field>
+                                  </block>
+                                </value>
+                                <next>
+                                  <block type="variables_set" id="s3">
+                                    <field name="VAR" id="v_sorted">sorted_result</field>
+                                    <value name="VALUE">
+                                      <block type="py_types_sorted" id="sort1">
+                                        <field name="REVERSE">False</field>
+                                        <value name="VALUE">
+                                          <block type="variables_get" id="g4">
+                                            <field name="VAR" id="v_data">data_list</field>
+                                          </block>
+                                        </value>
+                                      </block>
+                                    </value>
+                                    <next>
+                                      <block type="py_io_print" id="p3">
+                                        <value name="TEXT">
+                                          <block type="py_text_join" id="j3">
+                                            <mutation items="2"></mutation>
+                                            <value name="ADD0">
+                                              <shadow type="py_text" id="t4">
+                                                <field name="TEXT">排序後結果: </field>
+                                              </shadow>
+                                            </value>
+                                            <value name="ADD1">
+                                              <block type="variables_get" id="g5">
+                                                <field name="VAR" id="v_sorted">sorted_result</field>
+                                              </block>
+                                            </value>
+                                          </block>
+                                        </value>
+                                        <next>
+                                          <block type="py_coding_comment" id="c3">
+                                            <field name="TEXT">3. 字典與包含判斷</field>
+                                            <next>
+                                              <block type="variables_set" id="s4">
+                                                <field name="VAR" id="v_scores">scores_dict</field>
+                                                <value name="VALUE">
+                                                  <block type="py_type_dict" id="d1">
+                                                    <mutation items="2"></mutation>
+                                                    <value name="KEY0">
+                                                      <block type="py_text" id="t5">
+                                                        <field name="TEXT">Alice</field>
+                                                      </block>
+                                                    </value>
+                                                    <value name="VAL0">
+                                                      <block type="py_math_number" id="n7">
+                                                        <field name="NUM">95</field>
+                                                      </block>
+                                                    </value>
+                                                    <value name="KEY1">
+                                                      <block type="py_text" id="t6">
+                                                        <field name="TEXT">Bob</field>
+                                                      </block>
+                                                    </value>
+                                                    <value name="VAL1">
+                                                      <block type="py_math_number" id="n8">
+                                                        <field name="NUM">88</field>
+                                                      </block>
+                                                    </value>
+                                                  </block>
+                                                </value>
+                                                <next>
+                                                  <block type="controls_if" id="if1">
+                                                    <mutation else="1"></mutation>
+                                                    <value name="IF0">
+                                                      <block type="py_types_in" id="in2">
+                                                        <value name="ITEM">
+                                                          <block type="py_text" id="t7">
+                                                            <field name="TEXT">Alice</field>
+                                                          </block>
+                                                        </value>
+                                                        <value name="OBJ">
+                                                          <block type="variables_get" id="g6">
+                                                            <field name="VAR" id="v_scores">scores_dict</field>
+                                                          </block>
+                                                        </value>
+                                                      </block>
+                                                    </value>
+                                                    <statement name="DO0">
+                                                      <block type="py_io_print" id="p4">
+                                                        <value name="TEXT">
+                                                          <block type="py_text_join" id="j4">
+                                                            <mutation items="2"></mutation>
+                                                            <value name="ADD0">
+                                                              <shadow type="py_text" id="t8">
+                                                                <field name="TEXT">Alice 的分數是: </field>
+                                                              </shadow>
+                                                            </value>
+                                                            <value name="ADD1">
+                                                              <block type="py_types_get_item" id="gi1">
+                                                                <value name="OBJ">
+                                                                  <block type="variables_get" id="g7">
+                                                                    <field name="VAR" id="v_scores">scores_dict</field>
+                                                                  </block>
+                                                                </value>
+                                                                <value name="INDEX">
+                                                                  <block type="py_text" id="t9">
+                                                                    <field name="TEXT">Alice</field>
+                                                                  </block>
+                                                                </value>
+                                                              </block>
+                                                            </value>
+                                                          </block>
+                                                        </value>
+                                                      </block>
+                                                    </statement>
+                                                    <next>
+                                                      <block type="py_io_print" id="p5">
+                                                        <value name="TEXT">
+                                                          <block type="py_text_join" id="j5">
+                                                            <mutation items="2"></mutation>
+                                                            <value name="ADD0">
+                                                              <shadow type="py_text" id="t10">
+                                                                <field name="TEXT">字典長度: </field>
+                                                              </shadow>
+                                                            </value>
+                                                            <value name="ADD1">
+                                                              <block type="py_types_len" id="l2">
+                                                                <value name="VALUE">
+                                                                  <block type="variables_get" id="g8">
+                                                                    <field name="VAR" id="v_scores">scores_dict</field>
+                                                                  </block>
+                                                                </value>
+                                                              </block>
+                                                            </value>
+                                                          </block>
+                                                        </value>
+                                                      </block>
+                                                    </next>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

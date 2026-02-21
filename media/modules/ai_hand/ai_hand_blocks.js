@@ -10,7 +10,7 @@ Blockly.Blocks['py_ai_hand_init'] = {
       ],
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_HAND"],
       "tooltip": Blockly.Msg["AI_HAND_INIT_TOOLTIP"]
     });
   },
@@ -50,7 +50,7 @@ Blockly.Blocks['py_ai_hand_process'] = {
       ],
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_HAND"],
       "tooltip": Blockly.Msg["AI_HAND_PROCESS_TOOLTIP"]
     });
   }
@@ -64,7 +64,7 @@ Blockly.Blocks['py_ai_hand_is_detected'] = {
         { "type": "field_variable", "name": "VAR", "variable": "results" }
       ],
       "output": "Boolean",
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_HAND"],
       "tooltip": Blockly.Msg["AI_HAND_IS_DETECTED_TOOLTIP"]
     });
   }
@@ -79,7 +79,7 @@ Blockly.Blocks['py_ai_hand_get_landmarks'] = {
         { "type": "field_number", "name": "INDEX", "value": 0, "min": 0 }
       ],
       "output": "HandLandmarks",
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_HAND"],
       "tooltip": Blockly.Msg["AI_HAND_GET_LANDMARKS_TOOLTIP"]
     });
   }
@@ -94,7 +94,7 @@ Blockly.Blocks['py_ai_hand_get_landmark'] = {
         { "type": "field_number", "name": "INDEX", "value": 0, "min": 0, "max": 20 }
       ],
       "output": "Landmark",
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_HAND"],
       "tooltip": Blockly.Msg["AI_HAND_GET_LANDMARK_TOOLTIP"]
     });
   }
@@ -111,7 +111,7 @@ Blockly.Blocks['py_ai_hand_get_landmark_xy'] = {
       ],
       "output": "Tuple",
       "inputsInline": true,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_HAND"],
       "tooltip": Blockly.Msg["AI_HAND_GET_LANDMARK_XY_TOOLTIP"]
     });
   }
@@ -137,7 +137,7 @@ Blockly.Blocks['py_ai_hand_is_finger_up'] = {
         }
       ],
       "output": "Boolean",
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_HAND"],
       "tooltip": Blockly.Msg["AI_HAND_IS_FINGER_UP_TOOLTIP"]
     });
   }
@@ -155,7 +155,7 @@ Blockly.Blocks['py_ai_hand_draw'] = {
       ],
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_HAND"],
       "tooltip": Blockly.Msg["AI_HAND_DRAW_TOOLTIP"]
     });
   }
@@ -174,7 +174,7 @@ Blockly.Blocks['py_ai_hand_draw_indices'] = {
       "inputsInline": true,
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_AI"],
+      "colour": Blockly.Msg["COLOUR_AI_HAND"],
       "tooltip": Blockly.Msg["AI_HAND_DRAW_INDICES_TOOLTIP"]
     });
   }

@@ -1,12 +1,13 @@
 {
     "modules": [
         { "id": "core/structure", "name": "Structure", "platforms": ["PC", "CircuitPython"] },
+        { "id": "core/io", "name": "IO", "platforms": ["PC", "CircuitPython"] },
         { "id": "core/logic", "name": "Logic", "platforms": ["PC", "CircuitPython"] },
         { "id": "core/loops", "name": "Loops", "platforms": ["PC", "CircuitPython"] },
         { "id": "core/math", "name": "Math", "platforms": ["PC", "CircuitPython"] },
         { "id": "core/text", "name": "Text", "platforms": ["PC", "CircuitPython"] },
         { "id": "core/types", "name": "Types", "platforms": ["PC", "CircuitPython"] },
-        { "id": "core/tools", "name": "Tools", "platforms": ["PC", "CircuitPython"] },
+        { "id": "core/coding", "name": "Coding", "platforms": ["PC", "CircuitPython"] },
         { "id": "core/variables", "name": "Variables", "platforms": ["PC", "CircuitPython"] },
         { "id": "core/functions", "name": "Functions", "platforms": ["PC", "CircuitPython"] },
         { "id": "cv_basic", "name": "OpenCV Basic", "platforms": ["PC"] },
