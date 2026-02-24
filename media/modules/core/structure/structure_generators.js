@@ -2,6 +2,9 @@
 
 Blockly.Python.forBlock['py_main'] = function(block, generator) {
   var branch = generator.statementToCode(block, 'DO') || generator.INDENT + 'pass\n';
+  if (generator.PLATFORM === 'CircuitPython') {
+    return '# --- MCU Main Loop ---\n' + branch;
+  }
   return 'if __name__ == "__main__":\n' + branch;
 };
 

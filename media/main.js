@@ -103,6 +103,11 @@
             const selector = document.getElementById('platform-selector');
             if (selector) selector.value = platform;
 
+            // 讓產生器知道目前是什麼平台
+            if (typeof Blockly !== 'undefined' && Blockly.Python) {
+                Blockly.Python.PLATFORM = platform;
+            }
+
             // 1. 重載 Toolbox
             if (this.manifest) {
                 const toolboxes = await CocoyaLoader.loadModules(this.manifest, window.CocoyaMediaUri, platform, this.currentLang);
@@ -225,6 +230,11 @@
                     zoom: { controls: true, wheel: false, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 }
                 });
 
+                // 讓產生器知道目前是什麼平台
+                if (Blockly.Python) {
+                    Blockly.Python.PLATFORM = this.currentPlatform;
+                }
+
                 // 初始化 UI 元件
                 window.CocoyaUI.applyI18n();
                 window.CocoyaUI.initToolbar((msg) => vscode.postMessage(msg));
@@ -331,36 +341,35 @@
         createDefaultBlocks: function() {
             Blockly.Events.disable();
             try {
-                if (this.currentPlatform === 'PC') {
-                    const defBlock = this.workspace.newBlock('py_definition_zone');
-                    defBlock.initSvg();
-                    defBlock.render();
-                    defBlock.moveBy(20, 20);
-                    defBlock.setDeletable(false);
+                // 無論 PC 或 MCU，皆維持一致的「定義區 + 入口區」架構
+                const defBlock = this.workspace.newBlock('py_definition_zone');
+                defBlock.initSvg();
+                defBlock.render();
+                defBlock.moveBy(20, 20);
+                defBlock.setDeletable(false);
 
-                    const mainBlock = this.workspace.newBlock('py_main');
-                    mainBlock.initSvg();
-                    mainBlock.render();
-                    mainBlock.moveBy(20, 140);
-                    mainBlock.setDeletable(false);
-                } else {
-                    // MCU 模式的預設積木 (使用 Engineer 風格的 py_loop_while)
+                const mainBlock = this.workspace.newBlock('py_main');
+                mainBlock.initSvg();
+                mainBlock.render();
+                mainBlock.moveBy(20, 140);
+                mainBlock.setDeletable(false);
+
+                if (this.currentPlatform === 'CircuitPython') {
+                    // MCU 模式下，主程式內部預設放一個 while True 迴圈
                     const loopBlock = this.workspace.newBlock('py_loop_while');
                     loopBlock.initSvg();
                     loopBlock.render();
-                    loopBlock.moveBy(20, 20);
-                    loopBlock.setDeletable(false);
                     
                     const trueBlock = this.workspace.newBlock('py_logic_boolean');
                     trueBlock.setFieldValue('True', 'BOOL');
                     trueBlock.initSvg();
                     trueBlock.render();
+
+                    // 連接 while 的條件
+                    loopBlock.getInput('CONDITION').connection.connect(trueBlock.outputConnection);
                     
-                    // 連接 CONDITION 輸入
-                    const input = loopBlock.getInput('CONDITION');
-                    if (input && input.connection) {
-                        input.connection.connect(trueBlock.outputConnection);
-                    }
+                    // 將 while 迴圈放入 py_main 的 DO 插槽
+                    mainBlock.getInput('DO').connection.connect(loopBlock.previousConnection);
                 }
             } finally {
                 Blockly.Events.enable();

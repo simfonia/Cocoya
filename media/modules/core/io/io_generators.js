@@ -14,6 +14,10 @@ Blockly.Python.forBlock['py_io_input'] = function(block, generator) {
 };
 
 Blockly.Python.forBlock['py_io_serial_init'] = function(block, generator) {
+  if (generator.PLATFORM === 'CircuitPython') {
+    generator.definitions_['import_usb_cdc'] = 'import usb_cdc';
+    return 'ser = usb_cdc.data  # Use USB CDC data channel\n';
+  }
   generator.definitions_['import_serial'] = 'import serial';
   var port = generator.valueToCode(block, 'PORT', Blockly.Python.ORDER_NONE) || "'COM1'";
   var baud = block.getFieldValue('BAUD');
@@ -22,6 +26,18 @@ Blockly.Python.forBlock['py_io_serial_init'] = function(block, generator) {
 };
 
 Blockly.Python.forBlock['py_io_serial_read'] = function(block, generator) {
+  if (generator.PLATFORM === 'CircuitPython') {
+    generator.definitions_['func_get_latest_serial_mcu'] = `
+def cocoya_get_latest_serial(s):
+    if s is None or s.connected is False: return ""
+    # MCU 讀取通常使用 readline，若緩衝區有資料則排空至最新
+    line = b""
+    while s.in_waiting > 0:
+        line = s.readline()
+    return line.decode('utf-8').strip()
+`;
+    return ["cocoya_get_latest_serial(ser)", Blockly.Python.ORDER_FUNCTION_CALL];
+  }
   // 注入「讀取最新一筆」的輔助函式
   generator.definitions_['func_get_latest_serial'] = `
 def cocoya_get_latest_serial(s):
@@ -36,13 +52,19 @@ def cocoya_get_latest_serial(s):
 
 Blockly.Python.forBlock['py_io_serial_write'] = function(block, generator) {
   var data = generator.valueToCode(block, 'DATA', Blockly.Python.ORDER_NONE) || "''";
+  if (generator.PLATFORM === 'CircuitPython') {
+     return 'if ser and ser.connected: ser.write((str(' + data + ') + "\\n").encode("utf-8"))\n';
+  }
   // Python 寫入序列埠需要先轉為 bytes，通常加上換行符以便對方讀取
   return 'ser.write((str(' + data + ') + "\\n").encode(\'utf-8\'))\n';
 };
 
 Blockly.Python.forBlock['py_io_serial_available'] = function(block, generator) {
-  // 加入微型 sleep (1ms) 以保護 CPU 不會在 if 判斷失敗時瘋狂空轉
   generator.definitions_['import_time'] = 'import time';
+  if (generator.PLATFORM === 'CircuitPython') {
+    return ["(time.sleep(0.001) or (ser.connected and ser.in_waiting > 0))", Blockly.Python.ORDER_RELATIONAL];
+  }
+  // 加入微型 sleep (1ms) 以保護 CPU 不會在 if 判斷失敗時瘋狂空轉
   return ["(time.sleep(0.001) or ser.in_waiting > 0)", Blockly.Python.ORDER_RELATIONAL];
 };
 

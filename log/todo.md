@@ -2,6 +2,10 @@
 **專案名稱**：Cocoya (Code, Compute, Yield AI)
 **核心目標**：建立一個以 Blockly 為介面，幫助 Python 初學者進入 AI 世界的 VSCode extension。
 
+## [核心開發原則]
+- **跨平台相容性**：開發 `core/*` 目錄下的基礎 Python 核心積木時，**必須優先考慮與 CircuitPython 的語法相容性**。
+- **產生器分支**：若 PC 與 MCU 語法無法統一（如 Serial 庫），必須透過 `generator.PLATFORM` 實作條件分支。
+
 ## [已完成] 里程碑 v1.0 ~ v2.4 (核心架構、視覺 AI、資料處理、硬體通訊)
 - [x] UI 佈局、積木定位、硬體部署基礎。
 - [x] MediaPipe 手勢/臉部/姿勢偵測 (33/468 點全追蹤)。
@@ -14,6 +18,10 @@
 - [x] **[New]** 建立產生器引號規範 (`f"""..."""`)，解決 SyntaxError。
 
 ## [待辦] 里程碑 v2.5: 動作分析與教學優化
+- [x] **平台相容性優化 (PC & MCU)**：
+    - [x] 實作 `Blockly.Python.PLATFORM` 偵測機制。
+    - [x] 重構 Serial 積木，適配 PC (pyserial) 與 MCU (usb_cdc)。
+    - [x] 優化 `py_main` 與硬體初始化積木的平台分支代碼。
 - [ ] **高階動作判定**：
     - [ ] 實作「跳躍」高度計算法。
     - [ ] 實作「開合跳」自動偵測。
