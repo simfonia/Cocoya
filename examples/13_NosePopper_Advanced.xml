@@ -16,7 +16,7 @@
   </variables>
   <block type="py_definition_zone" id="def_zone" deletable="false" x="10" y="10">
     <statement name="DEFS">
-      <block type="py_tools_comment" id="cmt_game">
+      <block type="py_coding_comment" id="cmt_game">
         <field name="TEXT">AI 鼻子撞球遊戲  (反彈版)&amp;#10;【遊戲調整說明】&amp;#10;1. 下落速度：修改下面的 [fall_speed]，建議 5~12。&amp;#10;2. 反彈力道：修改下面的 [bounce_power]，建議 10~25。&amp;#10;&amp;#10;【技術重點】&amp;#10;1. 雙球系統：挑戰左右夾擊。&amp;#10;2. Debounce：只有 vy &gt; 0 時才做碰撞判斷，防止同一球重複加分。&amp;#10;3. 反彈機制：撞擊後將垂直速度設為負值，產生向上彈飛效果。</field>
         <next>
           <block type="py_import" id="imp_math">
@@ -180,7 +180,7 @@
                                                                       </block>
                                                                     </value>
                                                                     <next>
-                                                                      <block type="py_tools_comment" id="c1">
+                                                                      <block type="py_coding_comment" id="c1">
                                                                         <field name="TEXT">球 1 碰撞 (下落時才判定)</field>
                                                                         <next>
                                                                           <block type="py_variables_set" id="d1">
@@ -348,7 +348,7 @@
                                                                                   </block>
                                                                                 </statement>
                                                                                 <next>
-                                                                                  <block type="py_tools_comment" id="c2">
+                                                                                  <block type="py_coding_comment" id="c2">
                                                                                     <field name="TEXT">球 2 碰撞判斷</field>
                                                                                     <next>
                                                                                       <block type="py_variables_set" id="d2">
@@ -530,7 +530,7 @@
                                                                   </block>
                                                                 </statement>
                                                                 <next>
-                                                                  <block type="py_tools_comment" id="c_upd">
+                                                                  <block type="py_coding_comment" id="c_upd">
                                                                     <field name="TEXT">物理運動與邊界</field>
                                                                     <next>
                                                                       <block type="py_variables_set" id="mv1">

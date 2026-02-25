@@ -127,33 +127,50 @@ Blockly.Python.forBlock['py_ai_draw_overlay_image'] = function(block, generator)
   var angle = generator.valueToCode(block, 'ANGLE', Blockly.Python.ORDER_ATOMIC) || '0';
 
   generator.definitions_['import_numpy'] = 'import numpy as np';
+  generator.definitions_['cocoya_cache_init'] = 'cocoya_img_cache = {}';
   generator.definitions_['func_overlay_image'] = `
 def cocoya_overlay_image(img, path, center, width, angle):
-    overlay = cv2.imread(path, cv2.IMREAD_UNCHANGED)
-    if overlay is None:
-        print(f"Warning: Cannot load image at {path}")
-        return
-    h_orig, w_orig = overlay.shape[:2]
-    width = max(1, int(width))
-    height = max(1, int(h_orig * (width / w_orig)))
-    overlay = cv2.resize(overlay, (width, height), interpolation=cv2.INTER_AREA)
-    (h, w) = overlay.shape[:2]
-    (cX, cY) = (w // 2, h // 2)
-    M = cv2.getRotationMatrix2D((cX, cY), angle, 1.0)
-    cos, sin = np.abs(M[0, 0]), np.abs(M[0, 1])
-    nW, nH = int((h * sin) + (w * cos)), int((h * cos) + (w * sin))
-    M[0, 2] += (nW / 2) - cX
-    M[1, 2] += (nH / 2) - cY
-    overlay = cv2.warpAffine(overlay, M, (nW, nH), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0,0,0,0))
+    # 1. 快取檢查：避免重複讀取磁碟
+    cache_key = f"{path}_{width}_{angle}"
+    if cache_key in cocoya_img_cache:
+        overlay = cocoya_img_cache[cache_key]
+    else:
+        # 讀取並預處理
+        raw = cv2.imread(path, cv2.IMREAD_UNCHANGED)
+        if raw is None: return
+        h_orig, w_orig = raw.shape[:2]
+        width = max(1, int(width))
+        height = max(1, int(h_orig * (width / w_orig)))
+        overlay = cv2.resize(raw, (width, height), interpolation=cv2.INTER_AREA)
+        
+        # 旋轉處理
+        if angle != 0:
+            (h, w) = overlay.shape[:2]
+            (cX, cY) = (w // 2, h // 2)
+            M = cv2.getRotationMatrix2D((cX, cY), angle, 1.0)
+            cos, sin = np.abs(M[0, 0]), np.abs(M[0, 1])
+            nW, nH = int((h * sin) + (w * cos)), int((h * cos) + (w * sin))
+            M[0, 2] += (nW / 2) - cX
+            M[1, 2] += (nH / 2) - cY
+            overlay = cv2.warpAffine(overlay, M, (nW, nH), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0,0,0,0))
+        
+        # 存入快取 (限制快取大小防止記憶體溢出)
+        if len(cocoya_img_cache) > 20: cocoya_img_cache.clear()
+        cocoya_img_cache[cache_key] = overlay
+
+    # 2. 快速混合邏輯
     h, w = overlay.shape[:2]
     x, y = int(center[0] - w // 2), int(center[1] - h // 2)
     img_h, img_w = img.shape[:2]
     x1, y1 = max(x, 0), max(y, 0)
     x2, y2 = min(x + w, img_w), min(y + h, img_h)
     if x1 >= x2 or y1 >= y2: return
+    
     overlay_crop = overlay[y1-y:y2-y, x1-x:x2-x]
     img_crop = img[y1:y2, x1:x2]
+    
     if overlay_crop.shape[2] == 4:
+        # 使用 NumPy 廣播進行 Alpha 混合 (高效版)
         alpha = overlay_crop[:, :, 3:] / 255.0
         img_crop[:] = (alpha * overlay_crop[:, :, :3] + (1 - alpha) * img_crop).astype(np.uint8)
     else:

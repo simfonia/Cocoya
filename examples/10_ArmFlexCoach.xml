@@ -12,7 +12,7 @@
   </variables>
   <block type="py_definition_zone" id="def_zone" deletable="false" x="10" y="10">
     <statement name="DEFS">
-      <block type="py_tools_comment" id="cmt_intro">
+      <block type="py_coding_comment" id="cmt_intro">
         <field name="TEXT">AI 左手彎舉教練 (向量角度 + 達標提示版)&amp;#10;1. 追蹤左手 (鏡像的右方: 12 肩, 14 肘, 16 腕)。&amp;#10;2. 使用 atan2 計算角度並自動繪製夾角圓弧。&amp;#10;3. 達標時圓弧與燈號變綠色。&amp;#10;4. 座標點索引值參考：&amp;#10;https://chuoling.github.io/mediapipe/solutions/pose.html</field>
         <next>
           <block type="py_import" id="imp_math">

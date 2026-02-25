@@ -11,7 +11,7 @@
   </variables>
   <block type="py_definition_zone" id="def_zone" deletable="false" x="10" y="10">
     <statement name="DEFS">
-      <block type="py_tools_comment" id="cmt_game">
+      <block type="py_coding_comment" id="cmt_game">
         <field name="TEXT">AI 鼻子撞球遊戲 (基礎版)&amp;#10;【遊戲調整說明】&amp;#10;1. 改變下落速度：修改下面的 [fall_speed] 變數，數字越大掉越快。&amp;#10;2. 遊戲目標：用鼻子觸碰落下的橘色球得分。</field>
         <next>
           <block type="py_import" id="imp_math">

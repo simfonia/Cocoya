@@ -15,5 +15,13 @@ Object.assign(Blockly.Msg, {
   "AI_POSE_DRAW": "Draw %2 skeleton on %1 Landmark %3 Line %4",
   "AI_POSE_DRAW_TOOLTIP": "Draw landmarks and skeleton connections on image.",
   "AI_POSE_DRAW_INDICES": "Label %2 indices on %1 Size %3 Color %4",
-  "AI_POSE_DRAW_INDICES_TOOLTIP": "Draw index numbers (0-32) next to each landmark."
+  "AI_POSE_DRAW_INDICES_TOOLTIP": "Draw index numbers (0-32) next to each landmark.",
+  "AI_POSE_CALC_DIST": "calculate distance between %1 and %2 width %3 height %4",
+  "AI_POSE_CALC_DIST_TOOLTIP": "Calculate pixel distance between two pose landmarks. Returns: Number.",
+  "AI_POSE_DETECT_PUNCH": "detect %2 punch from %1 sensitivity %3",
+  "AI_POSE_DETECT_PUNCH_TOOLTIP": "Detect if a punch is performed. Logic: arm angle > (180 - sensitivity). e.g., sensitivity 20 means angle > 160 degrees. Returns: Boolean.",
+  "AI_POSE_GET_VELOCITY": "get velocity between current %1 and previous %2",
+  "AI_POSE_GET_VELOCITY_TOOLTIP": "Calculate distance between two coordinate tuples as a velocity reference. Returns: Number.",
+  "AI_POSE_IS_IN_FRAME": "is coordinate %1 in frame ( Width %2 Height %3 )",
+  "AI_POSE_IS_IN_FRAME_TOOLTIP": "Check if the coordinate is within the frame bounds (excludes 0 and max values). Returns: Boolean."
 });

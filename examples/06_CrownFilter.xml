@@ -15,7 +15,7 @@
   </variables>
   <block type="py_definition_zone" id="def_zone" deletable="false" x="10" y="10">
     <statement name="DEFS">
-      <block type="py_tools_comment" id="(VcKJ35|]05e`gV[/bd|">
+      <block type="py_coding_comment" id="(VcKJ35|]05e`gV[/bd|">
         <field name="TEXT">示範使用向量繪製簡單皇冠 AR&amp;#10;查閱臉部網格點的index值:&amp;#10;https://raw.githubusercontent.com/google/mediapipe/master/mediapipe/modules/face_geometry/data/canonical_face_model_uv_visualization.png</field>
         <next>
           <block type="py_import" id="imp_math">
@@ -75,7 +75,7 @@
                                   </block>
                                 </value>
                                 <next>
-                                  <block type="py_tools_comment" id="cmt_p">
+                                  <block type="py_coding_comment" id="cmt_p">
                                     <field name="TEXT">1. 取得定位點</field>
                                     <next>
                                       <block type="py_variables_set" id="get_p109_val">
@@ -135,7 +135,7 @@
                                                   </block>
                                                 </value>
                                                 <next>
-                                                  <block type="py_tools_comment" id="cmt_v">
+                                                  <block type="py_coding_comment" id="cmt_v">
                                                     <field name="TEXT">2. 計算向上向量 (ux, uy), ux=dy, uy=-dx</field>
                                                     <next>
                                                       <block type="py_variables_set" id="calc_dx">
@@ -248,7 +248,7 @@
                                                                       </block>
                                                                     </value>
                                                                     <next>
-                                                                      <block type="py_tools_comment" id="cmt_peaks">
+                                                                      <block type="py_coding_comment" id="cmt_peaks">
                                                                         <field name="TEXT">3. 計算左右尖峰座標</field>
                                                                         <next>
                                                                           <block type="py_variables_set" id="set_pl">
@@ -415,7 +415,7 @@
                                                                                   </block>
                                                                                 </value>
                                                                                 <next>
-                                                                                  <block type="py_tools_comment" id="cmt_d">
+                                                                                  <block type="py_coding_comment" id="cmt_d">
                                                                                     <field name="TEXT">4. 繪製鋸齒狀皇冠 (左底-&gt;左尖-&gt;中底-&gt;右尖-&gt;右底-&gt;左底)</field>
                                                                                     <next>
                                                                                       <block type="py_ai_draw_line" id="l1">

@@ -63,7 +63,7 @@
                                   </block>
                                 </value>
                                 <next>
-                                  <block type="py_tools_comment" id="cmt_get_pos">
+                                  <block type="py_coding_comment" id="cmt_get_pos">
                                     <field name="TEXT">取得嘴巴上下點位 (Index 13, 14)</field>
                                     <next>
                                       <block type="py_variables_set" id="set_p13">
@@ -154,7 +154,7 @@
                                                       </shadow>
                                                     </value>
                                                     <next>
-                                                      <block type="py_tools_comment" id="cmt_calc_dist">
+                                                      <block type="py_coding_comment" id="cmt_calc_dist">
                                                         <field name="TEXT">計算兩點垂直距離</field>
                                                         <next>
                                                           <block type="py_variables_set" id="set_dist">
@@ -356,3 +356,4 @@
     </statement>
   </block>
 </xml>
+

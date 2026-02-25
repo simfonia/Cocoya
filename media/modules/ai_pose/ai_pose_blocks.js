@@ -15,8 +15,6 @@ Blockly.Blocks['py_ai_pose_init'] = {
   },
   onchange: function(event) {
     if (!this.workspace || this.workspace.isDragging() || this.workspace.isFlyout) return;
-    
-    // 檢查祖先積木是否有 py_definition_zone
     let parent = this.getSurroundParent();
     let inDefZone = false;
     while (parent) {
@@ -26,7 +24,6 @@ Blockly.Blocks['py_ai_pose_init'] = {
       }
       parent = parent.getSurroundParent();
     }
-    
     if (!inDefZone) {
       this.setWarningText(Blockly.Msg["AI_POSE_INIT_WARNING"]);
       const svg = this.getSvgRoot();
@@ -148,6 +145,77 @@ Blockly.Blocks['py_ai_pose_draw_indices'] = {
       "nextStatement": null,
       "colour": Blockly.Msg["COLOUR_AI_POSE"],
       "tooltip": Blockly.Msg["AI_POSE_DRAW_INDICES_TOOLTIP"]
+    });
+  }
+};
+
+Blockly.Blocks['py_ai_pose_calc_dist'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["AI_POSE_CALC_DIST"],
+      "args0": [
+        { "type": "input_value", "name": "LM_A", "check": "Landmark" },
+        { "type": "input_value", "name": "LM_B", "check": "Landmark" },
+        { "type": "field_number", "name": "WIDTH", "value": 640 },
+        { "type": "field_number", "name": "HEIGHT", "value": 480 }
+      ],
+      "output": "Number",
+      "inputsInline": true,
+      "colour": Blockly.Msg["COLOUR_AI_POSE"],
+      "tooltip": Blockly.Msg["AI_POSE_CALC_DIST_TOOLTIP"]
+    });
+  }
+};
+
+Blockly.Blocks['py_ai_pose_detect_punch'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["AI_POSE_DETECT_PUNCH"],
+      "args0": [
+        { "type": "input_value", "name": "POSE", "check": "PoseLandmarks" },
+        { 
+          "type": "field_dropdown", 
+          "name": "SIDE", 
+          "options": [["左手", "LEFT"], ["右手", "RIGHT"]] 
+        },
+        { "type": "field_number", "name": "SENSITIVITY", "value": 20, "min": 1 }
+      ],
+      "output": "Boolean",
+      "colour": Blockly.Msg["COLOUR_AI_POSE"],
+      "tooltip": Blockly.Msg["AI_POSE_DETECT_PUNCH_TOOLTIP"]
+    });
+  }
+};
+
+Blockly.Blocks['py_ai_pose_get_velocity'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["AI_POSE_GET_VELOCITY"],
+      "args0": [
+        { "type": "input_value", "name": "CURR", "check": "Tuple" },
+        { "type": "input_value", "name": "PREV", "check": "Tuple" }
+      ],
+      "output": "Number",
+      "inputsInline": true,
+      "colour": Blockly.Msg["COLOUR_AI_POSE"],
+      "tooltip": Blockly.Msg["AI_POSE_GET_VELOCITY_TOOLTIP"]
+    });
+  }
+};
+
+Blockly.Blocks['py_ai_pose_is_in_frame'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["AI_POSE_IS_IN_FRAME"],
+      "args0": [
+        { "type": "input_value", "name": "POS", "check": "Tuple" },
+        { "type": "field_number", "name": "WIDTH", "value": 640 },
+        { "type": "field_number", "name": "HEIGHT", "value": 480 }
+      ],
+      "output": "Boolean",
+      "inputsInline": true,
+      "colour": Blockly.Msg["COLOUR_AI_POSE"],
+      "tooltip": Blockly.Msg["AI_POSE_IS_IN_FRAME_TOOLTIP"]
     });
   }
 };

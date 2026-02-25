@@ -9,7 +9,7 @@
   </variables>
   <block type="py_definition_zone" id="def_zone" deletable="false" x="10" y="10">
     <statement name="DEFS">
-      <block type="py_tools_comment" id="cmt_intro">
+      <block type="py_coding_comment" id="cmt_intro">
         <field name="TEXT">AI 360 度旋轉偵測 (風車手臂)&amp;#10;1. 追蹤肩膀(12)與手腕(16)。&amp;#10;2. 使用 atan2 計算向量相對於水平線的角度。&amp;#10;3. 利用 % 360 運算將結果轉換為 0-360 度。&amp;#10;4. 畫面上會顯示一個動態的指針雷達。</field>
         <next>
           <block type="py_import" id="imp_math">

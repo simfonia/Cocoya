@@ -11,7 +11,7 @@
   </variables>
   <block type="py_definition_zone" id="def_zone" deletable="false" x="10" y="10">
     <statement name="DEFS">
-      <block type="py_tools_comment" id="Y{8PN|lx,+^wrCPH.+t8">
+      <block type="py_coding_comment" id="Y{8PN|lx,+^wrCPH.+t8">
         <field name="TEXT">這個範例展示了如何透過數學運算來實現更精準的 AI 邏輯判斷，識別「OK」手勢。&amp;#10;辨識邏輯說明：&amp;#10;1. 距離計算：利用 math.sqrt 與 **2 積木，計算「大拇指尖 (4)」與「食指尖 (8)」之間的歐幾里得距離。&amp;#10;2. 多重條件組合：&amp;#10;    * 拇指與食指靠近：距離小於 30 像素。&amp;#10;    * 手指伸直狀態：同時檢查「中指」與「小拇指」是否保持伸直（Up）。&amp;#10;</field>
         <next>
           <block type="py_import" id="imp_math">

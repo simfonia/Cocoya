@@ -68,7 +68,7 @@
                                   </block>
                                 </value>
                                 <next>
-                                  <block type="py_tools_comment" id="cmt_p">
+                                  <block type="py_coding_comment" id="cmt_p">
                                     <field name="TEXT">第一步：取得額頭三個定位點&amp;#10;103 與 332 分別是額頭左右兩側點&amp;#10;10 是額頭正中央點</field>
                                     <next>
                                       <block type="py_variables_set" id="get_p109_val">
@@ -128,7 +128,7 @@
                                                   </block>
                                                 </value>
                                                 <next>
-                                                  <block type="py_tools_comment" id="cmt_math">
+                                                  <block type="py_coding_comment" id="cmt_math">
                                                     <field name="TEXT">第二步：計算頭部寬度(dx, dy)&amp;#10;並利用 atan2 計算傾斜角度&amp;#10;最後將弧度轉為角度並修正正負號(因為 OpenCV 的旋轉逆時針為正，&amp;#10;與 MediaPipe  座標系中的向量方向之間存在正負號差異。</field>
                                                     <next>
                                                       <block type="py_variables_set" id="calc_dx">
@@ -300,7 +300,7 @@
                                                                       </block>
                                                                     </value>
                                                                     <next>
-                                                                      <block type="py_tools_comment" id="cmt_overlay">
+                                                                      <block type="py_coding_comment" id="cmt_overlay">
                                                                         <field name="TEXT">第三步：覆蓋圖片。將中心點上移&amp;#10;以確保皇冠戴在正確的高度</field>
                                                                         <next>
                                                                           <block type="py_ai_draw_overlay_image" id="overlay_crown">

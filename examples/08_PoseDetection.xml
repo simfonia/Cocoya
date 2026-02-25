@@ -5,7 +5,7 @@
   </variables>
   <block type="py_definition_zone" id="def_zone" deletable="false" x="10" y="10">
     <statement name="DEFS">
-      <block type="py_tools_comment" id="cmt_intro">
+      <block type="py_coding_comment" id="cmt_intro">
         <field name="TEXT">MediaPipe 姿勢偵測範例&amp;#10;這個範例展示了如何偵測人體姿勢並繪製 33 個特徵點與骨架連接線。&amp;#10;姿勢偵測可用於動作分析、運動計數等互動應用。</field>
         <next>
           <block type="py_ai_pose_init" id="pose_init">

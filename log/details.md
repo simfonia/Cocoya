@@ -108,8 +108,7 @@
 - **問題**：Webview 禁止原生 prompt() / confirm()，導致變數更名無效且報錯。
 - **解決**：
     - 使用 Blockly.dialog.setPrompt() 與 setConfirm() 攔截核心對話框。
-    - 結合 
-equestId 追蹤與 Map 存儲 callback，將 UI 呈現交給 VS Code Host 執行。
+    - 結合 requestId 追蹤與 Map 存儲 callback，將 UI 呈現交給 VS Code Host 執行。
 - **優點**：不改動核心，徹底相容 Webview 沙盒。
 
 ### 2. 進階影像覆蓋 (Alpha Blending)
@@ -119,7 +118,7 @@ equestId 追蹤與 Map 存儲 callback，將 UI 呈現交給 VS Code Host 執行
 
 ### 3. 座標自動轉整數 (Int Casting)
 - **背景**：OpenCV 繪圖函式嚴禁浮點數。
-- **修正**：在 cv_draw 產生器中統一加入 	uple(map(int, ...)) 包裝，容許數學積木運算出的浮點座標自動轉換為像素整數。
+- **修正**：在 cv_draw 產生器中統一加入 tuple(map(int, ...)) 包裝，容許數學積木運算出的浮點座標自動轉換為像素整數。
 
 ### 4. 智慧標註 (Range Filtering)
 - **臉部編號**：針對 Face Mesh 實作 START 與 END 參數過濾，讓開發者能分區域觀察特徵點，解決 468 個編號擠在一起的混亂。
@@ -149,13 +148,30 @@ equestId 追蹤與 Map 存儲 callback，將 UI 呈現交給 VS Code Host 執行
 - **規範**: 凡涉及 join 或複雜拼接之產生器，統一使用三雙引號 **f"""..."""**。三引號能完美容納內部任何單/雙引號內容而不必轉義。
 
 ### 2. 序列埠「拿最新一筆」邏輯
-- **問題**: 慢速輪詢 (如 sleep(1)) 快速發送設備 (如超音波) 時，
-eadline() 會讀到堆積的舊資料。
+- **問題**: 慢速輪詢 (如 sleep(1)) 快速發送設備 (如超音波) 時，readline() 會讀到堆積的舊資料。
 - **解決**: 在 Read 產生器中注入 while s.in_waiting > 0: line = s.readline() 迴圈。這會不斷排空緩衝區直到最後一筆，保證數據的即時性。
 
 ### 3. CPU 節能輪詢技巧
 - **對策**: 在 Available 檢查中使用 (time.sleep(0.001) or ser.in_waiting > 0)。
-- **原理**: 	ime.sleep 回傳 None (False)，強制每輪循環至少休息 1ms，將 CPU 佔用從 100% 降至 1% 以下，同時維持高反應度。
+- **原理**: time.sleep 回傳 None (False)，強制每輪循環至少休息 1ms，將 CPU 佔用從 100% 降至 1% 以下，同時維持高反應度。
 
 ### 4. JavaScript 寫入轉義陷阱
 - **提醒**: 透過 write_file 寫入產生器 JS 時，字串中的 \n 常被展開。必須寫成 \\n 才能在磁碟檔案中保持為字面量，避免 SyntaxError: Invalid token。
+
+## 產生器平台適配機制 (2026-02-24 更新)
+
+### 1. 產生器環境變數注入
+- **機制**: 在 main.js 的 setPlatformUI 中，將 this.currentPlatform 賦值給 Blockly.Python.PLATFORM。
+- **用途**: 讓 forBlock 產生器函式能透過 generator.PLATFORM 判斷當前是 PC 或 MCU 模式，從而產出不同的 Python 代碼。
+
+### 2. 結構與入口適配 (Structure)
+- **py_main**: 
+    - PC 模式：產出 if __name__ == "__main__":。
+    - MCU 模式：直接產出內容（不包含入口檢查），適配 CircuitPython 的線性執行特性。
+
+### 3. 通訊協議適配 (Serial IO)
+- **PC (pyserial)**: 使用 import serial 與 serial.Serial(port, baud)。
+- **MCU (CircuitPython)**: 使用 import usb_cdc 與 usb_cdc.data。這允許使用者透過數據通道與電腦端 Cocoya 進行通訊。
+
+### 4. 硬體自動初始化 (Self-initialization)
+- **邏輯**: 在 mcu_set_led 等積木中，產生器會檢查 led 物件是否已存在於 globals()。若不存在，則自動注入 digitalio 與 board 的初始化代碼。

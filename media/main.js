@@ -381,27 +381,28 @@
          */
         setupGeneratorOverrides: function() {
             Blockly.Python.scrub_ = function(block, code, opt_thisOnly) {
+                const nextBlock = (block.nextConnection && !opt_thisOnly) ? block.nextConnection.targetBlock() : null;
+
+                // 1. 處理不啟用的積木
                 if (!block.isEnabled()) {
-                    const nextBlock = block.nextConnection && block.nextConnection.targetBlock();
-                    return (nextBlock && !opt_thisOnly) ? Blockly.Python.blockToCode(nextBlock) : '';
+                    return nextBlock ? Blockly.Python.blockToCode(nextBlock) : '';
                 }
-                const nextBlock = block.nextConnection && block.nextConnection.targetBlock();
-                const nextCode = (nextBlock && !opt_thisOnly) ? Blockly.Python.blockToCode(nextBlock) : '';
                 
                 const s = window.CocoyaUtils.TAG_START;
                 const e = window.CocoyaUtils.TAG_END;
 
+                // 2. 注入 ID 標記
                 if (block.outputConnection) {
-                    // 運算式：使用不可見標記
-                    return `${s}ID:${block.id}${e}${code}${nextCode}`;
+                    // 運算式 (Expression): 絕不尋找 nextBlock，防止 TypeError: Next statement does not exist
+                    return `${s}ID:${block.id}${e}${code}`;
                 } else {
-                    // 陳述句：注入範圍標記以支援整段高亮
+                    // 陳述句 (Statement): 遞迴尋找下一個
+                    const nextCode = nextBlock ? Blockly.Python.blockToCode(nextBlock) : '';
+                    
                     let lines = code.split('\n');
-                    // 處理最後一個換行導致的空陣列元素
                     if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
                     
                     if (lines.length > 0) {
-                        // 注入開始與結束標記
                         lines[0] += `  # S_ID:${block.id}`;
                         lines[lines.length - 1] += `  # E_ID:${block.id}`;
                     }

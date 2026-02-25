@@ -15,5 +15,13 @@ Object.assign(Blockly.Msg, {
   "AI_POSE_DRAW": "在影像 %1 繪製 %2 姿勢骨架圖 特徵點顏色 %3 線條顏色 %4",
   "AI_POSE_DRAW_TOOLTIP": "在影像上標註姿勢特徵點與骨架連接線。",
   "AI_POSE_DRAW_INDICES": "在影像 %1 標註 %2 姿勢特徵點編號 大小 %3 顏色 %4",
-  "AI_POSE_DRAW_INDICES_TOOLTIP": "在特徵點旁標註索引編號 (0-32)。"
+  "AI_POSE_DRAW_INDICES_TOOLTIP": "在特徵點旁標註索引編號 (0-32)。",
+  "AI_POSE_CALC_DIST": "計算特徵點 %1 與 %2 的距離 影像寬度 %3 高度 %4",
+  "AI_POSE_CALC_DIST_TOOLTIP": "計算兩個姿勢特徵點之間的像素距離。傳回：數值。",
+  "AI_POSE_DETECT_PUNCH": "從姿勢 %1 偵測 %2 出拳 靈敏度 %3",
+  "AI_POSE_DETECT_PUNCH_TOOLTIP": "偵測是否完成出拳動作。計算原理：手臂角度需大於 (180 - 靈敏度)。例如靈敏度 20 代表角度需大於 160 度才算出拳。傳回：布林值。",
+  "AI_POSE_GET_VELOCITY": "計算點 %1 與前次點 %2 的位移速度",
+  "AI_POSE_GET_VELOCITY_TOOLTIP": "計算兩個像素座標點之間的距離作為速度參考。傳回：數值。",
+  "AI_POSE_IS_IN_FRAME": "座標 %1 是否位於畫面內 ( 寬 %2 高 %3 )",
+  "AI_POSE_IS_IN_FRAME_TOOLTIP": "檢查座標點是否落在指定的畫面寬高範圍內（排除邊界值 0 與最大值）。傳回：布林值。"
 });

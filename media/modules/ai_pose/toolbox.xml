@@ -61,4 +61,34 @@
             </shadow>
         </value>
     </block>
+    <sep gap="32"></sep>
+    <block type="py_ai_pose_calc_dist">
+        <value name="LM_A">
+            <block type="py_ai_pose_get_landmark">
+                <field name="INDEX">11</field>
+            </block>
+        </value>
+        <value name="LM_B">
+            <block type="py_ai_pose_get_landmark">
+                <field name="INDEX">15</field>
+            </block>
+        </value>
+    </block>
+    <block type="py_ai_pose_get_velocity">
+        <value name="CURR">
+            <block type="variables_get"><field name="VAR">curr_pos</field></block>
+        </value>
+        <value name="PREV">
+            <block type="variables_get"><field name="VAR">prev_pos</field></block>
+        </value>
+    </block>
+    <block type="py_ai_pose_detect_punch">
+        <field name="SIDE">RIGHT</field>
+        <field name="SENSITIVITY">20</field>
+    </block>
+    <block type="py_ai_pose_is_in_frame">
+        <value name="POS">
+            <block type="variables_get"><field name="VAR">curr_pos</field></block>
+        </value>
+    </block>
 </category>

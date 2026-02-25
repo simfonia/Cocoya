@@ -12,7 +12,7 @@
   </variables>
   <block type="py_definition_zone" id="def_zone" deletable="false" x="10" y="10">
     <statement name="DEFS">
-      <block type="py_tools_comment" id="cmt_intro">
+      <block type="py_coding_comment" id="cmt_intro">
         <field name="TEXT">AI 深蹲計數器 (向量角度 + 霧面排版版)&amp;#10;1. 追蹤左半身 (鏡像的右方: 24 臀, 26 膝, 28 踝)。&amp;#10;2. 使用 atan2 計算夾角並顯示動態圓弧。&amp;#10;3. 角度 100 以下為下蹲，160 以上為站立。&amp;#10;4. 座標點索引值參考：&amp;#10;https://chuoling.github.io/mediapipe/solutions/pose.html</field>
         <next>
           <block type="py_import" id="imp_math">
