@@ -119,11 +119,60 @@ export class CocoyaManager {
                         this.panel.webview.postMessage({ command: 'switchPlatform', platform: message.newPlatform });
                     }
                     break;
+                case 'checkEnvironment':
+                    await this.handleCheckEnvironment();
+                    break;
+                case 'installModule':
+                    await this.handleInstallModule(message.module);
+                    break;
             }
         }, undefined, this.context.subscriptions);
     }
 
     // --- 訊息處理方法 ---
+
+    /**
+     * 檢查必要的 Python 模組是否已安裝
+     */
+    private async handleCheckEnvironment() {
+        let pythonPath = this.context.globalState.get<string>('pythonPath', 'python');
+        const modules = [
+            { id: 'cv2', name: 'opencv-python', importName: 'cv2' },
+            { id: 'mediapipe', name: 'mediapipe', importName: 'mediapipe' },
+            { id: 'PIL', name: 'Pillow', importName: 'PIL' },
+            { id: 'serial', name: 'pyserial', importName: 'serial' }
+        ];
+
+        const results: any = {};
+        const { execSync } = require('child_process');
+
+        for (const mod of modules) {
+            try {
+                execSync(`"${pythonPath}" -c "import ${mod.importName}"`, { stdio: 'ignore' });
+                results[mod.id] = true;
+            } catch (e) {
+                results[mod.id] = false;
+            }
+        }
+
+        this.panel.webview.postMessage({ command: 'environmentStatus', results });
+    }
+
+    /**
+     * 執行 pip install 安裝缺失模組
+     */
+    private async handleInstallModule(moduleName: string) {
+        let pythonPath = this.context.globalState.get<string>('pythonPath', 'python');
+        let terminal = vscode.window.terminals.find(t => t.name === 'Cocoya Environment');
+        if (!terminal) terminal = vscode.window.createTerminal('Cocoya Environment');
+        
+        terminal.show();
+        // 建議加上 --user 以避免權限問題，並使用 -m pip 確保安裝到正確的 Python 環境
+        terminal.sendText(`& "${pythonPath}" -m pip install ${moduleName} --user`);
+        
+        // 安裝後自動重新診斷 (延遲 5 秒讓 pip 開始跑)
+        setTimeout(() => this.handleCheckEnvironment(), 5000);
+    }
 
     /**
      * 重新整理序列埠清單 (目前僅支援 Windows)

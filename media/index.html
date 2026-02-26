@@ -248,6 +248,73 @@
             stroke-width: 4px !important;
             filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.8));
         }
+        /* 環境診斷視窗 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 400px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+        .modal-header {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #FE2F89;
+            display: flex;
+            justify-content: space-between;
+        }
+        .module-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .module-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .module-status {
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-ok { color: #2e7d32; }
+        .status-missing { color: #c62828; }
+        .btn-install {
+            background: #FE2F89;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+        .btn-install:hover { background: #d81b60; }
+        .modal-footer {
+            margin-top: 20px;
+            text-align: right;
+        }
+        .btn-close {
+            background: #eee;
+            border: 1px solid #ddd;
+            padding: 5px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -281,6 +348,10 @@
                     <div class="toolbar-btn" id="btn-settings" title="%{BKY_TLB_SETTINGS}">
                         <img src="icons/settings_24dp_1F1F1F.png" class="normal-icon">
                         <img src="icons/settings_24dp_FE2F89.png" class="hover-icon">
+                    </div>
+                    <div class="toolbar-btn" id="btn-diagnose" title="%{BKY_TLB_DIAGNOSE}">
+                        <img src="icons/dashboard_customize_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="icons/dashboard_customize_24dp_FE2F89.png" class="hover-icon">
                     </div>
                 </div>
 
@@ -334,6 +405,24 @@
                 </div>
             </div>
             <div id="codeContent"></div>
+        </div>
+    </div>
+
+    <!-- 環境診斷視窗 -->
+    <div id="diagnose-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>%{BKY_DIAG_TITLE}</span>
+            </div>
+            <div id="diagnose-body">
+                <p style="font-size: 13px; color: #666;">%{BKY_DIAG_LOADING}</p>
+                <ul class="module-list" id="module-list">
+                    <!-- 動態插入 -->
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-close" onclick="document.getElementById('diagnose-modal').style.display='none'">%{BKY_MSG_CLOSE}</button>
+            </div>
         </div>
     </div>
 

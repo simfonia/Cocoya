@@ -157,7 +157,8 @@ window.CocoyaUI = {
     applyI18n: function() {
         if (typeof Blockly === 'undefined') return;
         
-        const elements = document.querySelectorAll('[title^="%{BKY_"], span, option');
+        // 擴大掃描範圍，包含 p, button 等常用標籤
+        const elements = document.querySelectorAll('[title^="%{BKY_"], span, p, button, option');
         elements.forEach(el => {
             // 1. 處理 Tooltip (title)
             const title = el.getAttribute('title');
@@ -167,7 +168,7 @@ window.CocoyaUI = {
             }
             
             // 2. 處理文字內容 (textContent)
-            const text = el.textContent;
+            const text = el.textContent.trim();
             if (text && text.startsWith('%{BKY_')) {
                 const key = text.substring(6, text.length - 1);
                 if (Blockly.Msg[key]) el.textContent = Blockly.Msg[key];
@@ -325,6 +326,15 @@ window.CocoyaUI = {
         bind('btn-run', 'runCode');
         bind('btn-update', 'checkUpdate');
 
+        // 綁定診斷按鈕
+        const diagBtn = document.getElementById('btn-diagnose');
+        if (diagBtn) {
+            diagBtn.onclick = () => {
+                self.showDiagnoseModal();
+                postMessageFunc({ command: 'checkEnvironment' });
+            };
+        }
+
         // 綁定複製程式碼按鈕
         const copyBtn = document.getElementById('btn-copy-code');
         if (copyBtn) {
@@ -387,4 +397,55 @@ window.CocoyaUI = {
         
         localStorage.setItem('cocoya_highlight_color', color);
     },
+
+    /**
+     * 顯示環境診斷視窗
+     */
+    showDiagnoseModal: function() {
+        const modal = document.getElementById('diagnose-modal');
+        if (modal) modal.style.display = 'flex';
+        
+        const list = document.getElementById('module-list');
+        if (list) list.innerHTML = `<li>${Blockly.Msg['DIAG_CHECKING'] || 'Checking...'}</li>`;
+    },
+
+    /**
+     * 更新環境偵測結果
+     * @param {Object} results 模組安裝狀態
+     */
+    updateEnvironmentStatus: function(results) {
+        const list = document.getElementById('module-list');
+        if (!list) return;
+
+        const modules = [
+            { id: 'cv2', name: 'opencv-python' },
+            { id: 'mediapipe', name: 'mediapipe' },
+            { id: 'PIL', name: 'Pillow (Image)' },
+            { id: 'serial', name: 'pyserial' }
+        ];
+
+        list.innerHTML = '';
+        modules.forEach(mod => {
+            const installed = results[mod.id];
+            const li = document.createElement('li');
+            li.className = 'module-item';
+            
+            const statusTxt = installed ? 
+                (Blockly.Msg['DIAG_INSTALLED'] || '● Installed') : 
+                (Blockly.Msg['DIAG_MISSING'] || '○ Missing');
+            
+            const btnTxt = Blockly.Msg['DIAG_INSTALL_BTN'] || 'Install';
+            
+            li.innerHTML = `
+                <span style="font-size: 14px;">${mod.name}</span>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span class="module-status ${installed ? 'status-ok' : 'status-missing'}">
+                        ${statusTxt}
+                    </span>
+                    ${!installed ? `<button class="btn-install" onclick="vsCodeApi.postMessage({command: 'installModule', module: '${mod.name}'})">${btnTxt}</button>` : ''}
+                </div>
+            `;
+            list.appendChild(li);
+        });
+    }
 };

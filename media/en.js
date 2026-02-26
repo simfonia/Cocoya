@@ -70,6 +70,16 @@
     "TLB_PYTHON_PREVIEW": "Code Preview",
     "TLB_MODE_PC": "💻 Python (PC)",
     "TLB_MODE_MCU": "📟 CircuitPython (MCU)",
+    "TLB_DIAGNOSE": "Check Python Package Requirements",
+
+    // Environment Diagnosis
+    "DIAG_TITLE": "Environment Diagnostic Assistant",
+    "DIAG_LOADING": "Detecting Python module status...",
+    "DIAG_CHECKING": "Checking...",
+    "DIAG_INSTALLED": "● Installed",
+    "DIAG_MISSING": "○ Missing",
+    "DIAG_INSTALL_BTN": "Install",
+    "MSG_CLOSE": "Close",
 
     // Update messages
     "MSG_UPDATE_LATEST": "Already up to date (%1)",

@@ -70,6 +70,16 @@
     "TLB_PYTHON_PREVIEW": "程式碼預覽",
     "TLB_MODE_PC": "💻 Python (PC)",
     "TLB_MODE_MCU": "📟 CircuitPython (MCU)",
+    "TLB_DIAGNOSE": "檢查 Python 套件需求",
+
+    // 環境診斷
+    "DIAG_TITLE": "環境診斷與安裝助手",
+    "DIAG_LOADING": "正在偵測 Python 模組狀態...",
+    "DIAG_CHECKING": "正在檢查...",
+    "DIAG_INSTALLED": "● 已安裝",
+    "DIAG_MISSING": "○ 未安裝",
+    "DIAG_INSTALL_BTN": "安裝",
+    "MSG_CLOSE": "關閉",
 
     // 更新檢查訊息
     "MSG_UPDATE_LATEST": "目前已是最新版本 (%1)",

@@ -117,12 +117,14 @@
         <li><a href="#async-dialogs">12. 非同步對話框機制 (Bridge)</a></li>
         <li><a href="#variable-mgmt">13. 變數管理與動態回調</a></li>
         <li><a href="#quote-spec">14. 產生器引號規範</a></li>
+        <li><a href="#env-diag">15. 環境診斷與套件管理</a></li>
+        <li><a href="#perf-opt">16. 效能優化 (圖片快取)</a></li>
     </ul>
 </nav>
 
 <main id="content">
     <header>
-        <h1>Cocoya 系統規格說明書 v2.3</h1>
+        <h1>Cocoya 系統規格說明書 v2.6</h1>
         <p><strong>Code, Compute, Yield AI</strong> - 專為 AI 教育設計的視覺化開發環境。</p>
     </header>
 
@@ -206,21 +208,32 @@
         <h2>9. 積木定位技術 (Regex Deep Dive)</h2>
         <p>為了達成「積木」與「產出代碼」之間的精確導航，Cocoya 採用了區塊範圍 ID 注入機制。這套機制保證了積木與代碼區塊之間的 1:1 對齊，支援整段高亮功能。</p>
         
-        <h3>A. 全域注入機制 (The scrub_ Method)</h3>
-        <p>定位標記由 <code>media/main.js</code> 重寫 <code>Blockly.Python.scrub_</code> 函式統一注入。陳述句積木會被標記起始與結束行。</p>
-        <pre><code class="language-javascript">// main.js 中的核心邏輯 (v2.3 範圍標記版)
+        <h3>A. 全域注入機制 (Defensive scrub_)</h3>
+        <p>定位標記由 <code>media/main.js</code> 重寫 <code>Blockly.Python.scrub_</code> 函式。為了防止連線屬性缺失導致的崩潰，系統實作了嚴格的連接點檢查。</p>
+        <pre><code class="language-javascript">// main.js 中的核心邏輯 (v2.6 防禦性遍歷版)
 Blockly.Python.scrub_ = function(block, code, opt_thisOnly) {
-    // ... 啟用檢查與下一積木處理 ...
+    const nextBlock = (block.nextConnection && !opt_thisOnly) ? block.nextConnection.targetBlock() : null;
+
+    // 1. 處理不啟用的積木：遞迴跳過並抓取下一個
+    if (!block.isEnabled()) {
+        return nextBlock ? Blockly.Python.blockToCode(nextBlock) : '';
+    }
+    
+    const s = window.CocoyaUtils.TAG_START;
+    const e = window.CocoyaUtils.TAG_END;
+
+    // 2. 區分積木類型以注入標記
     if (block.outputConnection) {
-        // 運算式標記 (單行)
-        return `\u0001ID:${block.id}\u0002${code}${nextCode}`;
+        // 運算式 (Expression): 絕不尋找 nextBlock，防止 TypeError
+        return `${s}ID:${block.id}${e}${code}`;
     } else {
-        // 陳述句標記 (範圍)
+        // 陳述句 (Statement): 連接下一個積木並注入範圍標記
+        const nextCode = nextBlock ? Blockly.Python.blockToCode(nextBlock) : '';
         let lines = code.split('\n');
         if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
         if (lines.length > 0) {
-            lines[0] += `  # S_ID:${block.id}`;           // Start Marker
-            lines[lines.length - 1] += `  # E_ID:${block.id}`; // End Marker
+            lines[0] += `  # S_ID:${block.id}`;
+            lines[lines.length - 1] += `  # E_ID:${block.id}`;
         }
         return lines.join('\n') + '\n' + nextCode;
     }
@@ -325,8 +338,32 @@ var branch = generator.statementToCode(block, 'DO') || generator.INDENT + 'pass\
 print(f"""Alice 的分數是: {scores_dict['Alice']}""")</code></pre>
     </section>
 
+    <section id="env-diag">
+        <h2>15. 環境診斷與套件管理</h2>
+        <p>為了解決 AI 教育中常見的 Python 環境設定挫折，系統內建了自動化診斷與安裝助手。</p>
+        
+        <h3>A. 偵測機制 (Diagnostic Logic)</h3>
+        <p>當使用者點擊診斷按鈕時，Webview 會發送 <code>checkEnvironment</code> 訊息至 Host 端。Host 端會針對 <code>cv2</code>, <code>mediapipe</code>, <code>PIL</code>, <code>serial</code> 執行背景導入測試：</p>
+        <pre><code class="language-typescript">// Host 端的模組探測實作
+execSync(`"${pythonPath}" -c "import ${module}"`, { stdio: 'ignore' });</code></pre>
+
+        <h3>B. 一鍵安裝 (One-click Installation)</h3>
+        <p>針對偵測為「未安裝」的模組，系統會呼叫 <code>-m pip install</code> 命令，並自動開啟 VS Code 整合終端機 <code>Cocoya Environment</code> 顯示進度，安裝後自動觸發重新掃描。</p>
+    </section>
+
+    <section id="perf-opt">
+        <h2>16. 效能優化 (圖片快取)</h2>
+        <p>針對 <code>Overlay Image</code> 積木在高頻 AI 迴圈中可能導致的 FPS 低落問題，系統實作了全域圖片快取機制。</p>
+        
+        <h3>A. 緩存 Key 產生 (Cache Matching)</h3>
+        <p>系統根據 <code>Path + Width + Angle</code> 生成唯一雜湊值。只有當參數變動或首次載入時，才會執行耗時的磁碟讀取 (<code>imread</code>) 與仿射變換 (<code>warpAffine</code>)。</p>
+
+        <h3>B. 記憶體管理 (GC Policy)</h3>
+        <p>產生器會在產出的代碼中自動維護 <code>cocoya_img_cache</code> 字典。當快取項次超過 20 個時會執行自動排空，防止長時間執行導致的記憶體溢出。</p>
+    </section>
+
     <footer>
-        <p>© 2026 simfonia - Cocoya 專案組。文件更新日期：2026-02-21 (v2.4)</p>
+        <p>© 2026 simfonia - Cocoya 專案組。文件更新日期：2026-02-24 (v2.6)</p>
     </footer>
 </main>
 

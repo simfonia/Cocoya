@@ -173,6 +173,9 @@
                     case 'serialPortsData':
                         window.CocoyaUI.updateSerialPorts(message.ports);
                         break;
+                    case 'environmentStatus':
+                        window.CocoyaUI.updateEnvironmentStatus(message.results);
+                        break;
                     case 'switchPlatform':
                         await this.switchPlatform(message.platform);
                         break;
