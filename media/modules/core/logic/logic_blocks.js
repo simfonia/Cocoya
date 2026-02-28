@@ -47,27 +47,27 @@ Blockly.Blocks['py_logic_if'] = {
 
     this.appendValueInput('IF0').setCheck('Boolean')
         .appendField(new Blockly.FieldImage(getIcon('plus'), 16, 16, '+', () => setTimeout(() => this.plusElif(), 0)), 'PLUS_ELIF')
-        .appendField('if');
-    this.appendDummyInput('C0').appendField(':');
+        .appendField(Blockly.Msg["LOGIC_IF_IF"]);
+    this.appendDummyInput('C0').appendField(Blockly.Msg["PY_COLON"]);
     this.appendStatementInput('DO0');
 
     for (let j = 1; j <= this.elifCount_; j++) {
         this.appendValueInput('IF' + j).setCheck('Boolean')
             .appendField(new Blockly.FieldImage(getIcon('minus'), 16, 16, '-', () => setTimeout(() => this.minusElif(j), 0)), 'MINUS_ELIF' + j)
-            .appendField('elif');
-        this.appendDummyInput('C' + j).appendField(':');
+            .appendField(Blockly.Msg["LOGIC_IF_ELIF"]);
+        this.appendDummyInput('C' + j).appendField(Blockly.Msg["PY_COLON"]);
         this.appendStatementInput('DO' + j);
     }
 
     if (this.elsePresent_) {
         this.appendDummyInput('ELSE_HEADER')
             .appendField(new Blockly.FieldImage(getIcon('minus'), 16, 16, '-', () => setTimeout(() => this.removeElse(), 0)), 'MINUS_ELSE')
-            .appendField('else:');
+            .appendField(Blockly.Msg["LOGIC_IF_ELSE"]);
         this.appendStatementInput('ELSE');
     } else {
         this.appendDummyInput('ADD_ELSE_ROW')
             .appendField(new Blockly.FieldImage(getIcon('plus'), 16, 16, '+', () => setTimeout(() => this.addElse(), 0)), 'PLUS_ELSE')
-            .appendField('add else');
+            .appendField(Blockly.Msg["LOGIC_IF_ADD_ELSE"]);
     }
 
     for (let k = 0; k < conds.length; k++) {

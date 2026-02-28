@@ -26,15 +26,15 @@ Blockly.Blocks['py_type_list'] = {
     let i = 0; while (this.getInput('ADD' + i)) { this.removeInput('ADD' + i); i++; }
 
     if (this.itemCount_ === 0 || (opt_skipIndex !== undefined && this.itemCount_ === 1)) {
-        this.appendDummyInput('EMPTY').appendField('[  ]').appendField(new Blockly.FieldImage(getIcon('plus'), 18, 18, '+', () => setTimeout(() => this.plus(), 0)), 'PLUS');
+        this.appendDummyInput('EMPTY').appendField(Blockly.Msg["TYPE_LIST_EMPTY"]).appendField(new Blockly.FieldImage(getIcon('plus'), 18, 18, '+', () => setTimeout(() => this.plus(), 0)), 'PLUS');
     } else {
         const displayCount = opt_skipIndex !== undefined ? this.itemCount_ - 1 : this.itemCount_;
         for (let j = 0; j < displayCount; j++) {
             const input = this.appendValueInput('ADD' + j);
-            if (j === 0) input.appendField('['); else input.appendField(',');
+            if (j === 0) input.appendField(Blockly.Msg["TYPE_LIST_START"]); else input.appendField(',');
         }
         this.appendDummyInput('TAIL')
-            .appendField(']')
+            .appendField(Blockly.Msg["TYPE_LIST_END"])
             .appendField(new Blockly.FieldImage(getIcon('minus'), 18, 18, '-', () => setTimeout(() => this.minus(this.itemCount_ - 1), 0)), 'MINUS')
             .appendField(new Blockly.FieldImage(getIcon('plus'), 18, 18, '+', () => setTimeout(() => this.plus(), 0)), 'PLUS');
     }
@@ -84,17 +84,17 @@ Blockly.Blocks['py_type_dict'] = {
     }
 
     if (this.itemCount_ === 0 || (opt_skipIndex !== undefined && this.itemCount_ === 1)) {
-        this.appendDummyInput('EMPTY').appendField('{  }').appendField(new Blockly.FieldImage(getIcon('plus'), 18, 18, '+', () => setTimeout(() => this.plus(), 0)), 'PLUS');
+        this.appendDummyInput('EMPTY').appendField(Blockly.Msg["TYPE_DICT_EMPTY"]).appendField(new Blockly.FieldImage(getIcon('plus'), 18, 18, '+', () => setTimeout(() => this.plus(), 0)), 'PLUS');
     } else {
         const displayCount = opt_skipIndex !== undefined ? this.itemCount_ - 1 : this.itemCount_;
-        this.appendDummyInput('HEAD').appendField('{');
+        this.appendDummyInput('HEAD').appendField(Blockly.Msg["TYPE_DICT_START"]);
         for (let j = 0; j < displayCount; j++) {
             const kInput = this.appendValueInput('KEY' + j);
             if (j > 0) kInput.appendField(',');
-            this.appendValueInput('VAL' + j).appendField(':');
+            this.appendValueInput('VAL' + j).appendField(Blockly.Msg["PY_COLON"]);
         }
         this.appendDummyInput('TAIL')
-            .appendField('}')
+            .appendField(Blockly.Msg["TYPE_DICT_END"])
             .appendField(new Blockly.FieldImage(getIcon('minus'), 18, 18, '-', () => setTimeout(() => this.minus(this.itemCount_ - 1), 0)), 'MINUS')
             .appendField(new Blockly.FieldImage(getIcon('plus'), 18, 18, '+', () => setTimeout(() => this.plus(), 0)), 'PLUS');
     }
@@ -126,15 +126,15 @@ Blockly.Blocks['py_type_tuple'] = {
     if (this.getInput('TAIL')) this.removeInput('TAIL');
     let i = 0; while (this.getInput('ADD' + i)) { this.removeInput('ADD' + i); i++; }
     if (this.itemCount_ === 0 || (opt_skipIndex !== undefined && this.itemCount_ === 1)) {
-        this.appendDummyInput('EMPTY').appendField('(  )').appendField(new Blockly.FieldImage(getIcon('plus'), 18, 18, '+', () => setTimeout(() => this.plus(), 0)), 'PLUS');
+        this.appendDummyInput('EMPTY').appendField(Blockly.Msg["TYPE_TUPLE_EMPTY"]).appendField(new Blockly.FieldImage(getIcon('plus'), 18, 18, '+', () => setTimeout(() => this.plus(), 0)), 'PLUS');
     } else {
         const displayCount = opt_skipIndex !== undefined ? this.itemCount_ - 1 : this.itemCount_;
         for (let j = 0; j < displayCount; j++) {
             const input = this.appendValueInput('ADD' + j);
-            if (j === 0) input.appendField('('); else input.appendField(',');
+            if (j === 0) input.appendField(Blockly.Msg["TYPE_TUPLE_START"]); else input.appendField(',');
         }
         this.appendDummyInput('TAIL')
-            .appendField(')')
+            .appendField(Blockly.Msg["TYPE_TUPLE_END"])
             .appendField(new Blockly.FieldImage(getIcon('minus'), 18, 18, '-', () => setTimeout(() => this.minus(this.itemCount_ - 1), 0)), 'MINUS')
             .appendField(new Blockly.FieldImage(getIcon('plus'), 18, 18, '+', () => setTimeout(() => this.plus(), 0)), 'PLUS');
     }
@@ -148,7 +148,7 @@ Blockly.Blocks['py_type_tuple'] = {
 Blockly.Blocks['py_types_cast'] = {
   init: function() {
     this.jsonInit({
-      "message0": "%1 ( %2 )",
+      "message0": Blockly.Msg["TYPE_CAST"],
       "args0": [
         {
           "type": "field_dropdown",
@@ -166,7 +166,7 @@ Blockly.Blocks['py_types_cast'] = {
       ],
       "output": null,
       "colour": Blockly.Msg["COLOUR_TYPES"],
-      "tooltip": "%{BKY_TYPES_CAST_TOOLTIP}"
+      "tooltip": Blockly.Msg["TYPES_CAST_TOOLTIP"]
     });
   }
 };
@@ -175,11 +175,11 @@ Blockly.Blocks['py_types_cast'] = {
 Blockly.Blocks['py_types_type_of'] = {
   init: function() {
     this.jsonInit({
-      "message0": "type ( %1 )",
+      "message0": Blockly.Msg["TYPE_TYPE_OF"],
       "args0": [{ "type": "input_value", "name": "VALUE" }],
       "output": null,
       "colour": Blockly.Msg["COLOUR_TYPES"],
-      "tooltip": "%{BKY_TYPES_TYPE_OF_TOOLTIP}"
+      "tooltip": Blockly.Msg["TYPES_TYPE_OF_TOOLTIP"]
     });
   }
 };
@@ -188,11 +188,11 @@ Blockly.Blocks['py_types_type_of'] = {
 Blockly.Blocks['py_types_map_int'] = {
   init: function() {
     this.jsonInit({
-      "message0": "tuple ( map ( int , %1 ) )",
+      "message0": Blockly.Msg["TYPE_MAP_INT"],
       "args0": [{ "type": "input_value", "name": "VALUE" }],
       "output": "Tuple",
       "colour": Blockly.Msg["COLOUR_TYPES"],
-      "tooltip": "%{BKY_TYPES_MAP_INT_TOOLTIP}"
+      "tooltip": Blockly.Msg["TYPES_MAP_INT_TOOLTIP"]
     });
   }
 };
@@ -201,11 +201,11 @@ Blockly.Blocks['py_types_map_int'] = {
 Blockly.Blocks['py_types_len'] = {
   init: function() {
     this.jsonInit({
-      "message0": "len ( %1 )",
+      "message0": Blockly.Msg["TYPE_LEN"],
       "args0": [{ "type": "input_value", "name": "VALUE" }],
       "output": "Number",
       "colour": Blockly.Msg["COLOUR_TYPES"],
-      "tooltip": "%{BKY_TYPES_LEN_TOOLTIP}"
+      "tooltip": Blockly.Msg["TYPES_LEN_TOOLTIP"]
     });
   }
 };
@@ -214,7 +214,7 @@ Blockly.Blocks['py_types_len'] = {
 Blockly.Blocks['py_types_get_item'] = {
   init: function() {
     this.jsonInit({
-      "message0": "%1 [ %2 ]",
+      "message0": Blockly.Msg["TYPE_GET_ITEM"],
       "args0": [
         { "type": "input_value", "name": "OBJ" },
         { "type": "input_value", "name": "INDEX" }
@@ -222,7 +222,7 @@ Blockly.Blocks['py_types_get_item'] = {
       "output": null,
       "inputsInline": true,
       "colour": Blockly.Msg["COLOUR_TYPES"],
-      "tooltip": "%{BKY_TYPES_GET_ITEM_TOOLTIP}"
+      "tooltip": Blockly.Msg["TYPES_GET_ITEM_TOOLTIP"]
     });
   }
 };
@@ -231,7 +231,7 @@ Blockly.Blocks['py_types_get_item'] = {
 Blockly.Blocks['py_types_set_item'] = {
   init: function() {
     this.jsonInit({
-      "message0": "%1 [ %2 ] = %3",
+      "message0": Blockly.Msg["TYPE_SET_ITEM"],
       "args0": [
         { "type": "input_value", "name": "OBJ" },
         { "type": "input_value", "name": "INDEX" },
@@ -241,7 +241,7 @@ Blockly.Blocks['py_types_set_item'] = {
       "nextStatement": null,
       "inputsInline": true,
       "colour": Blockly.Msg["COLOUR_TYPES"],
-      "tooltip": "%{BKY_TYPES_SET_ITEM_TOOLTIP}"
+      "tooltip": Blockly.Msg["TYPES_SET_ITEM_TOOLTIP"]
     });
   }
 };
@@ -250,7 +250,7 @@ Blockly.Blocks['py_types_set_item'] = {
 Blockly.Blocks['py_types_list_append'] = {
   init: function() {
     this.jsonInit({
-      "message0": "%1 . append ( %2 )",
+      "message0": Blockly.Msg["TYPE_APPEND"],
       "args0": [
         { "type": "input_value", "name": "LIST" },
         { "type": "input_value", "name": "ITEM" }
@@ -259,7 +259,7 @@ Blockly.Blocks['py_types_list_append'] = {
       "nextStatement": null,
       "inputsInline": true,
       "colour": Blockly.Msg["COLOUR_TYPES"],
-      "tooltip": "%{BKY_TYPES_LIST_APPEND_TOOLTIP}"
+      "tooltip": Blockly.Msg["TYPES_LIST_APPEND_TOOLTIP"]
     });
   }
 };
@@ -268,7 +268,7 @@ Blockly.Blocks['py_types_list_append'] = {
 Blockly.Blocks['py_types_pop'] = {
   init: function() {
     this.jsonInit({
-      "message0": "%1 . pop ( %2 )",
+      "message0": Blockly.Msg["TYPE_POP"],
       "args0": [
         { "type": "input_value", "name": "OBJ" },
         { "type": "input_value", "name": "INDEX" }
@@ -276,7 +276,7 @@ Blockly.Blocks['py_types_pop'] = {
       "output": null,
       "inputsInline": true,
       "colour": Blockly.Msg["COLOUR_TYPES"],
-      "tooltip": "%{BKY_TYPES_POP_TOOLTIP}"
+      "tooltip": Blockly.Msg["TYPES_POP_TOOLTIP"]
     });
   }
 };
@@ -285,7 +285,7 @@ Blockly.Blocks['py_types_pop'] = {
 Blockly.Blocks['py_types_in'] = {
   init: function() {
     this.jsonInit({
-      "message0": "%1 in %2",
+      "message0": Blockly.Msg["TYPE_IN"],
       "args0": [
         { "type": "input_value", "name": "ITEM" },
         { "type": "input_value", "name": "OBJ" }
@@ -293,7 +293,7 @@ Blockly.Blocks['py_types_in'] = {
       "output": "Boolean",
       "inputsInline": true,
       "colour": Blockly.Msg["COLOUR_TYPES"],
-      "tooltip": "%{BKY_TYPES_IN_TOOLTIP}"
+      "tooltip": Blockly.Msg["TYPES_IN_TOOLTIP"]
     });
   }
 };
@@ -302,7 +302,7 @@ Blockly.Blocks['py_types_in'] = {
 Blockly.Blocks['py_types_dict_get_parts'] = {
   init: function() {
     this.jsonInit({
-      "message0": "%1 ( %2 )",
+      "message0": Blockly.Msg["TYPE_DICT_GET_PARTS"],
       "args0": [
         {
           "type": "field_dropdown",
@@ -326,7 +326,7 @@ Blockly.Blocks['py_types_dict_get_parts'] = {
 Blockly.Blocks['py_types_sorted'] = {
   init: function() {
     this.jsonInit({
-      "message0": "sorted ( %1 , reverse = %2 )",
+      "message0": Blockly.Msg["TYPE_SORTED"],
       "args0": [
         { "type": "input_value", "name": "VALUE" },
         {
@@ -341,7 +341,7 @@ Blockly.Blocks['py_types_sorted'] = {
       "output": "Array",
       "inputsInline": true,
       "colour": Blockly.Msg["COLOUR_TYPES"],
-      "tooltip": "%{BKY_TYPES_SORTED_TOOLTIP}"
+      "tooltip": Blockly.Msg["TYPES_SORTED_TOOLTIP"]
     });
   }
 };
@@ -350,7 +350,7 @@ Blockly.Blocks['py_types_sorted'] = {
 Blockly.Blocks['py_types_sort_list'] = {
   init: function() {
     this.jsonInit({
-      "message0": "%1 . sort ( reverse = %2 )",
+      "message0": Blockly.Msg["TYPE_SORT"],
       "args0": [
         { "type": "input_value", "name": "LIST" },
         {
@@ -366,7 +366,7 @@ Blockly.Blocks['py_types_sort_list'] = {
       "nextStatement": null,
       "inputsInline": true,
       "colour": Blockly.Msg["COLOUR_TYPES"],
-      "tooltip": "%{BKY_TYPES_SORT_TOOLTIP}"
+      "tooltip": Blockly.Msg["TYPES_SORT_TOOLTIP"]
     });
   }
 };

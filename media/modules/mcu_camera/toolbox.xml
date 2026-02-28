@@ -1,0 +1,4 @@
+<category name="%{BKY_CAT_MCU_CAMERA}" colour="%{BKY_COLOUR_MCU_CAMERA}">
+    <block type="mcu_camera_init"></block>
+    <block type="mcu_camera_capture_serial"></block>
+</category>

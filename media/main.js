@@ -184,6 +184,26 @@
         },
 
         /**
+         * 過濾 Toolbox XML 中的平台特定積木
+         * @param {string} xmlString 原始 XML 字串
+         * @returns {string} 過濾後的 XML 字串
+         */
+        filterToolboxXML: function(xmlString) {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlString, "text/xml");
+            const blocks = xmlDoc.querySelectorAll('block');
+
+            blocks.forEach(block => {
+                const platform = block.getAttribute('platform');
+                if (platform && platform !== this.currentPlatform) {
+                    block.parentNode.removeChild(block);
+                }
+            });
+
+            return new XMLSerializer().serializeToString(xmlDoc);
+        },
+
+        /**
          * 初始化 Cocoya 編輯器環境
          */
         initializeCocoya: async function(manifest, mediaUri, lang) {
@@ -207,12 +227,15 @@
                 const otherXml = [];
 
                 toolboxes.forEach(mod => {
+                    // 執行平台過濾
+                    const filteredXml = this.filterToolboxXML(mod.xml);
+
                     if (mod.id.startsWith('core/')) {
-                        coreXml.push(mod.xml);
+                        coreXml.push(filteredXml);
                     } else if (mod.id.startsWith('cv_') || mod.id.startsWith('ai_')) {
-                        aiXml.push(mod.xml);
+                        aiXml.push(filteredXml);
                     } else {
-                        otherXml.push(mod.xml);
+                        otherXml.push(filteredXml);
                     }
                 });
 
@@ -344,35 +367,36 @@
         createDefaultBlocks: function() {
             Blockly.Events.disable();
             try {
-                // 無論 PC 或 MCU，皆維持一致的「定義區 + 入口區」架構
+                // 定義區積木 (PC/MCU 均有)
                 const defBlock = this.workspace.newBlock('py_definition_zone');
                 defBlock.initSvg();
                 defBlock.render();
                 defBlock.moveBy(20, 20);
-                defBlock.setDeletable(false);
-
-                const mainBlock = this.workspace.newBlock('py_main');
-                mainBlock.initSvg();
-                mainBlock.render();
-                mainBlock.moveBy(20, 140);
-                mainBlock.setDeletable(false);
 
                 if (this.currentPlatform === 'CircuitPython') {
-                    // MCU 模式下，主程式內部預設放一個 while True 迴圈
+                    // MCU 模式：mcu_main 內含 while True
+                    const mcuMain = this.workspace.newBlock('mcu_main');
+                    mcuMain.initSvg();
+                    mcuMain.render();
+                    mcuMain.moveBy(20, 200);
+
                     const loopBlock = this.workspace.newBlock('py_loop_while');
                     loopBlock.initSvg();
                     loopBlock.render();
-                    
+
                     const trueBlock = this.workspace.newBlock('py_logic_boolean');
                     trueBlock.setFieldValue('True', 'BOOL');
                     trueBlock.initSvg();
                     trueBlock.render();
 
-                    // 連接 while 的條件
                     loopBlock.getInput('CONDITION').connection.connect(trueBlock.outputConnection);
-                    
-                    // 將 while 迴圈放入 py_main 的 DO 插槽
-                    mainBlock.getInput('DO').connection.connect(loopBlock.previousConnection);
+                    mcuMain.getInput('DO').connection.connect(loopBlock.previousConnection);
+                } else {
+                    // PC 模式：if __name__ == "__main__":
+                    const mainBlock = this.workspace.newBlock('py_main');
+                    mainBlock.initSvg();
+                    mainBlock.render();
+                    mainBlock.moveBy(20, 140);
                 }
             } finally {
                 Blockly.Events.enable();
@@ -451,10 +475,7 @@
                 Blockly.Events.disable();
                 try {
                     const topBlocks = this.workspace.getTopBlocks(false);
-                    const allowedTypes = ['py_main', 'py_definition_zone', 'py_function_def'];
-                    if (this.currentPlatform === 'CircuitPython') {
-                        allowedTypes.push('py_loop_while');
-                    }
+                    const allowedTypes = ['py_main', 'mcu_main', 'py_definition_zone', 'py_function_def'];
 
                     topBlocks.forEach(root => {
                         const isAllowed = allowedTypes.includes(root.type) || root.type.startsWith('procedures_def');

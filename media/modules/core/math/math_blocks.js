@@ -34,7 +34,7 @@ Blockly.Blocks['py_math_arithmetic'] = {
 Blockly.Blocks['py_math_single'] = {
   init: function() {
     this.jsonInit({
-      "message0": "%1 ( %2 )",
+      "message0": Blockly.Msg["MATH_SINGLE"],
       "args0": [
         { 
           "type": "field_dropdown", 
@@ -61,7 +61,7 @@ Blockly.Blocks['py_math_single'] = {
 Blockly.Blocks['py_math_atan2'] = {
   init: function() {
     this.jsonInit({
-      "message0": "math.atan2 ( y: %1 , x: %2 )",
+      "message0": Blockly.Msg["MATH_ATAN2"],
       "args0": [
         { "type": "input_value", "name": "Y", "check": "Number" },
         { "type": "input_value", "name": "X", "check": "Number" }
@@ -77,7 +77,7 @@ Blockly.Blocks['py_math_atan2'] = {
 Blockly.Blocks['py_math_round'] = {
   init: function() {
     this.jsonInit({
-      "message0": "round ( %1 )",
+      "message0": Blockly.Msg["MATH_ROUND"],
       "args0": [
         { "type": "input_value", "name": "NUM", "check": "Number" }
       ],
@@ -91,7 +91,7 @@ Blockly.Blocks['py_math_round'] = {
 Blockly.Blocks['py_math_random'] = {
   init: function() {
     this.jsonInit({
-      "message0": "random.randint ( %1 , %2 )",
+      "message0": Blockly.Msg["MATH_RANDINT"],
       "args0": [
         { "type": "input_value", "name": "FROM", "check": "Number" },
         { "type": "input_value", "name": "TO", "check": "Number" }

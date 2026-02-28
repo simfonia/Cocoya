@@ -10,7 +10,7 @@ function getIcon(name) {
 Blockly.Blocks['py_text'] = {
   init: function() {
     this.jsonInit({
-      "message0": "' %1 '",
+      "message0": Blockly.Msg["TEXT_QUOTE"],
       "args0": [{ "type": "field_input", "name": "TEXT", "text": "" }],
       "output": "String",
       "colour": Blockly.Msg["COLOUR_TEXT"]
@@ -20,9 +20,8 @@ Blockly.Blocks['py_text'] = {
 
 Blockly.Blocks['py_text_multiline'] = {
   init: function() {
-    const FieldMultilineInput = window.FieldMultilineInput || Blockly.FieldMultilineInput;
     this.jsonInit({
-      "message0": "\"\"\" %1 \"\"\"",
+      "message0": Blockly.Msg["TEXT_TRIPLE_QUOTE"],
       "args0": [{ "type": "field_multilinetext", "name": "TEXT", "text": "" }],
       "output": "String",
       "colour": Blockly.Msg["COLOUR_TEXT"]
@@ -33,7 +32,7 @@ Blockly.Blocks['py_text_multiline'] = {
 Blockly.Blocks['py_text_length'] = {
   init: function() {
     this.jsonInit({
-      "message0": "len ( %1 )",
+      "message0": Blockly.Msg["TEXT_LEN"],
       "args0": [{ "type": "input_value", "name": "VALUE", "check": ["String", "Array", "Dict", "Tuple"] }],
       "output": "Number",
       "colour": Blockly.Msg["COLOUR_TEXT"]
@@ -88,15 +87,15 @@ Blockly.Blocks['py_text_join'] = {
     let i = 0; while (this.getInput('ADD' + i)) { this.removeInput('ADD' + i); i++; }
 
     if (this.itemCount_ === 0 || (opt_skipIndex !== undefined && this.itemCount_ === 1)) {
-        this.appendDummyInput('EMPTY').appendField('f""""""').appendField(new Blockly.FieldImage(getIcon('plus'), 18, 18, '+', () => setTimeout(() => this.plus(), 0)), 'PLUS');
+        this.appendDummyInput('EMPTY').appendField(Blockly.Msg["TEXT_F_STRING_EMPTY"]).appendField(new Blockly.FieldImage(getIcon('plus'), 18, 18, '+', () => setTimeout(() => this.plus(), 0)), 'PLUS');
     } else {
         const displayCount = opt_skipIndex !== undefined ? this.itemCount_ - 1 : this.itemCount_;
         for (let j = 0; j < displayCount; j++) {
             const input = this.appendValueInput('ADD' + j);
-            if (j === 0) input.appendField('f"""');
+            if (j === 0) input.appendField(Blockly.Msg["TEXT_F_STRING_START"]);
         }
         this.appendDummyInput('TAIL')
-            .appendField('"""')
+            .appendField(Blockly.Msg["TEXT_F_STRING_END"])
             .appendField(new Blockly.FieldImage(getIcon('minus'), 18, 18, '-', () => setTimeout(() => this.minus(this.itemCount_ - 1), 0)), 'MINUS')
             .appendField(new Blockly.FieldImage(getIcon('plus'), 18, 18, '+', () => setTimeout(() => this.plus(), 0)), 'PLUS');
     }

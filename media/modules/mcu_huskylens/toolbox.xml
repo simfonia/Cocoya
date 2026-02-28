@@ -1,0 +1,18 @@
+<category name="%{BKY_CAT_HUSKYLENS}" colour="%{BKY_COLOUR_HUSKYLENS}">
+    <block type="mcu_huskylens_init"></block>
+    <block type="mcu_huskylens_request"></block>
+    <block type="mcu_huskylens_get_box">
+        <value name="ID">
+            <shadow type="math_number">
+                <field name="NUM">1</field>
+            </shadow>
+        </value>
+    </block>
+    <block type="mcu_huskylens_is_detected">
+        <value name="ID">
+            <shadow type="math_number">
+                <field name="NUM">1</field>
+            </shadow>
+        </value>
+    </block>
+</category>

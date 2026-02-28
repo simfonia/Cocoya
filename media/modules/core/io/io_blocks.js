@@ -6,11 +6,12 @@
 Blockly.Blocks['py_io_print'] = {
   init: function() {
     this.jsonInit({
-      "message0": "print ( %1 )",
+      "message0": "%{BKY_IO_PRINT}",
       "args0": [{ "type": "input_value", "name": "TEXT" }],
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_IO"] || "#34495e"
+      "colour": Blockly.Msg["COLOUR_IO"] || "#34495e",
+      "tooltip": ""
     });
   }
 };
@@ -18,10 +19,11 @@ Blockly.Blocks['py_io_print'] = {
 Blockly.Blocks['py_io_input'] = {
   init: function() {
     this.jsonInit({
-      "message0": "input ( %1 )",
+      "message0": "%{BKY_IO_INPUT}",
       "args0": [{ "type": "input_value", "name": "PROMPT", "check": "String" }],
       "output": "String",
-      "colour": Blockly.Msg["COLOUR_IO"] || "#34495e"
+      "colour": Blockly.Msg["COLOUR_IO"] || "#34495e",
+      "tooltip": ""
     });
   }
 };
@@ -42,7 +44,7 @@ Blockly.Blocks['py_io_serial_init'] = {
       "previousStatement": null,
       "nextStatement": null,
       "colour": Blockly.Msg["COLOUR_IO"],
-      "tooltip": "%{BKY_IO_SERIAL_TOOLTIP}"
+      "tooltip": "%{BKY_IO_SERIAL_INIT_TOOLTIP}"
     });
   }
 };
@@ -69,7 +71,7 @@ Blockly.Blocks['py_io_serial_write'] = {
       "nextStatement": null,
       "inputsInline": true,
       "colour": Blockly.Msg["COLOUR_IO"],
-      "tooltip": "%{BKY_IO_SERIAL_TOOLTIP}"
+      "tooltip": "%{BKY_IO_SERIAL_WRITE_TOOLTIP}"
     });
   }
 };
@@ -81,7 +83,7 @@ Blockly.Blocks['py_io_serial_available'] = {
       "message0": "%{BKY_IO_SERIAL_AVAILABLE}",
       "output": "Boolean",
       "colour": Blockly.Msg["COLOUR_IO"],
-      "tooltip": "%{BKY_IO_SERIAL_TOOLTIP}"
+      "tooltip": "%{BKY_IO_SERIAL_AVAILABLE_TOOLTIP}"
     });
   }
 };
@@ -109,7 +111,7 @@ Blockly.Blocks['py_io_serial_flush'] = {
       "previousStatement": null,
       "nextStatement": null,
       "colour": Blockly.Msg["COLOUR_IO"],
-      "tooltip": "丟棄目前序列埠緩衝區中所有尚未讀取的舊資料，確保下一次讀取的是最新數據。"
+      "tooltip": "%{BKY_IO_SERIAL_READ_TOOLTIP}"
     });
   }
 };

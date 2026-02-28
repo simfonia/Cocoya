@@ -7,7 +7,7 @@ function getIcon(name) {
     return '';
 }
 
-// --- Function Definition Block (修正：保留名稱與參數名) ---
+// --- Function Definition Block ---
 Blockly.Blocks['py_function_def'] = {
   init: function() {
     this.paramCount_ = 0;
@@ -24,7 +24,6 @@ Blockly.Blocks['py_function_def'] = {
     this.updateShape_();
   },
   updateShape_: function() {
-    // 1. 備份連線與欄位數值
     const doConn = this.getInput('DO') ? this.getInput('DO').connection.targetConnection : null;
     if (doConn) doConn.disconnect();
 
@@ -34,11 +33,9 @@ Blockly.Blocks['py_function_def'] = {
         prmNames.push(this.getFieldValue('PRM' + i) || ("p" + i));
     }
 
-    // 2. 清理
     if (this.getInput('HEADER')) this.removeInput('HEADER');
     if (this.getInput('DO')) this.removeInput('DO');
 
-    // 3. 重建單行標頭
     const header = this.appendDummyInput('HEADER');
     header.appendField(Blockly.Msg["PY_DEF"])
           .appendField(new Blockly.FieldTextInput(funcName), "NAME")
@@ -50,20 +47,19 @@ Blockly.Blocks['py_function_def'] = {
     }
 
     header.appendField(")")
-          .appendField(Blockly.Msg["PY_COLON"])
+          .appendField(Blockly.Msg["PY_COLON"] || ":")
           .appendField(new Blockly.FieldImage(getIcon('minus'), 16, 16, '-', () => setTimeout(() => this.minus(), 0)), 'MINUS')
           .appendField(new Blockly.FieldImage(getIcon('plus'), 16, 16, '+', () => setTimeout(() => this.plus(), 0)), 'PLUS');
 
     this.appendStatementInput("DO").setCheck(null);
-
-    // 4. 恢復連線
     if (doConn && this.getInput('DO')) this.getInput('DO').connection.connect(doConn);
+    this.setTooltip(Blockly.Msg["PY_FUNCTION_DEF_TOOLTIP"]);
   },
   plus: function() { window.CocoyaUtils.Mutator.execute(this, () => { this.paramCount_++; this.updateShape_(); }); },
   minus: function() { if (this.paramCount_ > 0) { window.CocoyaUtils.Mutator.execute(this, () => { this.paramCount_--; this.updateShape_(); }); } }
 };
 
-// --- Function Call Block (修正：保留名稱) ---
+// --- Function Call Block ---
 Blockly.Blocks['py_function_call'] = {
   init: function() {
     this.argCount_ = 0;
@@ -92,7 +88,6 @@ Blockly.Blocks['py_function_call'] = {
     }
 
     const funcName = this.getFieldValue('NAME') || "my_function";
-
     let i = 0; while (this.getInput('ARG' + i)) { this.removeInput('ARG' + i); i++; }
     if (this.getInput('HEAD')) this.removeInput('HEAD');
     if (this.getInput('TAIL')) this.removeInput('TAIL');
@@ -102,7 +97,6 @@ Blockly.Blocks['py_function_call'] = {
         .appendField("(");
 
     this.setInputsInline(true);
-
     const displayCount = opt_skipIndex !== undefined ? this.argCount_ - 1 : this.argCount_;
     for (let j = 0; j < displayCount; j++) {
         const input = this.appendValueInput('ARG' + j);
@@ -118,6 +112,7 @@ Blockly.Blocks['py_function_call'] = {
         const input = this.getInput('ARG' + k);
         if (conns[k] && input && input.connection) input.connection.connect(conns[k]);
     }
+    this.setTooltip(Blockly.Msg["PY_FUNCTION_CALL_TOOLTIP"]);
   },
   plus: function() { window.CocoyaUtils.Mutator.execute(this, () => { this.argCount_++; this.updateShape_(); }); },
   minus: function(idx) { if (this.argCount_ > 0) { window.CocoyaUtils.Mutator.execute(this, () => { this.argCount_--; this.updateShape_(idx); this.updateShape_(); }); } }
@@ -137,6 +132,31 @@ Blockly.Blocks['py_function_call_expr'] = {
   minus: Blockly.Blocks['py_function_call'].minus
 };
 
-Blockly.Blocks['py_function_return'] = { init: function() { this.appendValueInput("VALUE").appendField(Blockly.Msg["PY_RETURN"]); this.setPreviousStatement(true, null); this.setNextStatement(true, null); this.setColour(Blockly.Msg["COLOUR_FUNCTIONS"]); this.setTooltip("從函式回傳數值"); } };
-Blockly.Blocks['py_function_local_set'] = { init: function() { this.appendValueInput("VALUE").appendField(Blockly.Msg["PY_LOCAL"]).appendField(new Blockly.FieldTextInput("x"), "VAR").appendField(Blockly.Msg["PY_EQUAL"]); this.setPreviousStatement(true, null); this.setNextStatement(true, null); this.setColour(Blockly.Msg["COLOUR_FUNCTIONS"]); this.setTooltip("設定或建立區域變數（僅限函式內部使用）"); } };
-Blockly.Blocks['py_function_local_get'] = { init: function() { this.appendDummyInput().appendField(Blockly.Msg["PY_LOCAL"]).appendField(new Blockly.FieldTextInput("x"), "VAR"); this.setOutput(true, null); this.setColour(Blockly.Msg["COLOUR_FUNCTIONS"]); this.setTooltip("讀取區域變數或參數（僅限函式內部使用）"); } };
+Blockly.Blocks['py_function_return'] = { 
+  init: function() { 
+    this.appendValueInput("VALUE").appendField(Blockly.Msg["PY_RETURN"]); 
+    this.setPreviousStatement(true, null); 
+    this.setNextStatement(true, null); 
+    this.setColour(Blockly.Msg["COLOUR_FUNCTIONS"]); 
+    this.setTooltip(Blockly.Msg["PY_FUNCTION_RETURN_TOOLTIP"]); 
+  } 
+};
+
+Blockly.Blocks['py_function_local_set'] = { 
+  init: function() { 
+    this.appendValueInput("VALUE").appendField(Blockly.Msg["PY_LOCAL"]).appendField(new Blockly.FieldTextInput("x"), "VAR").appendField(Blockly.Msg["PY_EQUAL"] || "="); 
+    this.setPreviousStatement(true, null); 
+    this.setNextStatement(true, null); 
+    this.setColour(Blockly.Msg["COLOUR_FUNCTIONS"]); 
+    this.setTooltip(Blockly.Msg["PY_FUNCTION_LOCAL_SET_TOOLTIP"]); 
+  } 
+};
+
+Blockly.Blocks['py_function_local_get'] = { 
+  init: function() { 
+    this.appendDummyInput().appendField(Blockly.Msg["PY_LOCAL"]).appendField(new Blockly.FieldTextInput("x"), "VAR"); 
+    this.setOutput(true, null); 
+    this.setColour(Blockly.Msg["COLOUR_FUNCTIONS"]); 
+    this.setTooltip(Blockly.Msg["PY_FUNCTION_LOCAL_GET_TOOLTIP"]); 
+  } 
+};

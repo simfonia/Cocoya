@@ -1,7 +1,11 @@
 Object.assign(Blockly.Msg, {
-  "TEXT_JOIN": "f-string",
-  "TEXT_JOIN_TOOLTIP": "合併文字與變數。拼入文字積木會直接顯示，拼入變數則會自動加上 {}。",
-  "TEXT_ZFILL": "將 %1 補零至 %2 位數",
-  "TEXT_ZFILL_TOOLTIP": "在數字或字串左側補零，使其達到指定長度。常用於固定 UI 排版。",
-  "TEXT_LENGTH": "len", "TEXT_INPUT": "input", "TEXT_PRINT_TITLE": "print(%1)"
+  "TEXT_QUOTE": "' %1 '",
+  "TEXT_TRIPLE_QUOTE": "\"\"\" %1 \"\"\"",
+  "TEXT_LEN": "len( %1 )",
+  "TEXT_ZFILL": "str(%1).zfill(%2)",
+  "TEXT_ZFILL_TOOLTIP": "字串補零。將數字或字串補齊至指定位數。",
+  "TEXT_JOIN_TOOLTIP": "使用 f-string 組合多個字串或變數。",
+  "TEXT_F_STRING_START": "f\"\"\"",
+  "TEXT_F_STRING_END": "\"\"\"",
+  "TEXT_F_STRING_EMPTY": "f\"\"\"\"\"\""
 });

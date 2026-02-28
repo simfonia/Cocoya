@@ -24,6 +24,9 @@
     "COLOUR_AI_FACE": "#FFA000",
     "COLOUR_AI_POSE": "#F57C00",
     "COLOUR_HARDWARE": "#FFBF00",
+    "COLOUR_MCU_CAMERA": "#FF6600",
+    "COLOUR_HUSKYLENS": "#00A8E8",
+    "COLOUR_MCU_CAR": "#4CAF50",
 
     // 分類名稱 (核心管理)
     "CAT_IO": "IO",
@@ -43,6 +46,9 @@
     "CAT_AI_POSE": "姿勢偵測",
     "CAT_STRUCTURE": "Structure",
     "CAT_HARDWARE": "硬體控制",
+    "CAT_MCU_CAMERA": "AI 相機",
+    "CAT_HUSKYLENS": "HuskyLens",
+    "CAT_MCU_CAR": "πCar 小車",
 
     // Types 分組標籤
     "TYPE_LBL_DEF": "建立資料結構",

@@ -24,6 +24,9 @@
     "COLOUR_AI_FACE": "#FFA000",
     "COLOUR_AI_POSE": "#F57C00",
     "COLOUR_HARDWARE": "#FFBF00",
+    "COLOUR_MCU_CAMERA": "#FF6600",
+    "COLOUR_HUSKYLENS": "#00A8E8",
+    "COLOUR_MCU_CAR": "#4CAF50",
 
     // Category Names
     "CAT_LOGIC": "Logic",
@@ -43,6 +46,9 @@
     "CAT_AI_POSE": "Pose Detection",
     "CAT_STRUCTURE": "Structure",
     "CAT_HARDWARE": "Hardware",
+    "CAT_MCU_CAMERA": "AI Camera",
+    "CAT_HUSKYLENS": "HuskyLens",
+    "CAT_MCU_CAR": "πCar / Motor",
 
     // Types Group Labels
     "TYPE_LBL_DEF": "Definitions",

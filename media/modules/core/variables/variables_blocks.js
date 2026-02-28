@@ -2,11 +2,13 @@
 
 Blockly.Blocks['py_variables_set'] = {
   init: function() {
-    this.appendValueInput("VALUE").appendField(new Blockly.FieldVariable("item"), "VAR").appendField(Blockly.Msg["PY_EQUAL"]);
+    this.appendValueInput("VALUE")
+        .appendField(new Blockly.FieldVariable("item"), "VAR")
+        .appendField(Blockly.Msg["PY_EQUAL"] || "=");
     this.setPreviousStatement(true, null);
     this.setNextStatement(true, null);
     this.setColour(Blockly.Msg["COLOUR_VARIABLES"]);
-    this.setTooltip("");
+    this.setTooltip(Blockly.Msg["PY_VARIABLES_SET_TOOLTIP"]);
   }
 };
 
@@ -15,7 +17,7 @@ Blockly.Blocks['py_variables_get'] = {
     this.appendDummyInput().appendField(new Blockly.FieldVariable("item"), "VAR");
     this.setOutput(true, null);
     this.setColour(Blockly.Msg["COLOUR_VARIABLES"]);
-    this.setTooltip("");
+    this.setTooltip(Blockly.Msg["PY_VARIABLES_GET_TOOLTIP"]);
   }
 };
 

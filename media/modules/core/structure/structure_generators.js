@@ -2,10 +2,15 @@
 
 Blockly.Python.forBlock['py_main'] = function(block, generator) {
   var branch = generator.statementToCode(block, 'DO') || generator.INDENT + 'pass\n';
-  if (generator.PLATFORM === 'CircuitPython') {
-    return '# --- MCU Main Loop ---\n' + branch;
-  }
   return 'if __name__ == "__main__":\n' + branch;
+};
+
+Blockly.Python.forBlock['mcu_main'] = function(block, generator) {
+  var branch = generator.statementToCode(block, 'DO') || generator.INDENT + 'pass\n';
+  // 針對 MCU 模式移除一層縮排
+  var indent = generator.INDENT || '  ';
+  var reg = new RegExp('^' + indent, 'mg');
+  return '# --- MCU Main Program ---\n' + branch.replace(reg, '');
 };
 
 Blockly.Python.forBlock['py_definition_zone'] = function(block, generator) {

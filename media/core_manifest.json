@@ -15,6 +15,9 @@
         { "id": "ai_hand", "name": "MediaPipe Hand", "platforms": ["PC"] },
         { "id": "ai_face", "name": "MediaPipe Face", "platforms": ["PC"] },
         { "id": "ai_pose", "name": "MediaPipe Pose", "platforms": ["PC"] },
-        { "id": "hardware", "name": "Hardware", "platforms": ["CircuitPython"] }
+        { "id": "hardware", "name": "Hardware", "platforms": ["CircuitPython"] },
+        { "id": "mcu_camera", "name": "MCU Camera", "platforms": ["CircuitPython"] },
+        { "id": "mcu_huskylens", "name": "HuskyLens", "platforms": ["CircuitPython"] },
+        { "id": "mcu_car", "name": "πCar / Motor", "platforms": ["CircuitPython"] }
     ]
 }
