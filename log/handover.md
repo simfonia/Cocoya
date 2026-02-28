@@ -27,7 +27,7 @@
     - **變形系統 (Plus-Minus)**：建立 `CocoyaUtils.Mutator` 方案，支援高階 Undo/Redo 與靜默連線重組，解決複雜積木變形時的崩潰問題。
     - **安全性與規則**：實作嚴格的「頂層限制規則」，僅允許 `Main`, `Global Definitions`, `Function Def` 存在於頂層，孤兒積木自動變灰且不產出代碼。
     - **模組化補全**：補齊 Logic (if-elif-else), Loops (enumerate, items), Math, Text (f-string, multiline), Types (List, Dict, Tuple), Variables, Structure (Import), Tools (Raw Code, Comment)。
-    - **環境優化**：移除不必要的 npm 依賴 (blockly)，大幅提升 `tsc` 編編速度。
+    - **環境優化**：移除不必要的 npm依賴 (blockly)，大幅提升 `tsc` 編編速度。
 - **下一階段目標**：
     - 進入里程碑 v2.0：實作 AI Vision (MediaPipe) 相關積木。
     - 實作 OpenCV 影像處理積木。
@@ -98,7 +98,7 @@
 - **核心進度**：
     - **IO 分類建立**: 抽離 print, input 並新增 Serial (序列埠) 與 sleep 積木。
     - **分類重構**: 將 Tools 全面更名為 Coding，並在 Toolbox 加入水平分隔線 (<sep>)。
-    - **Types 分類大升級**: 實作型別轉換 (int, str), 	ype() 檢查, len(), pop(), append(), in 判斷, sorted() 與 list.sort()。
+    - **Types 分類大升級**: 實作型別轉換 (int, str), type() 檢查, len(), pop(), append(), in 判斷, sorted() 與 list.sort()。
     - **序列埠智慧讀取**: 實作「智慧排空」邏輯，確保每次讀取均為緩衝區中最新的一行，解決感測器時差問題。
 - **下一階段目標**：
     - 進入里程碑 v2.5：開發高階動作判定（跳躍高度、開合跳計數）。
@@ -116,3 +116,17 @@
     - 里程碑 v2.6: 優化 Overlay Image 在高解析度下的效能 (NumPy 廣播優化)。
     - 里程碑 v3.0: 正式開發硬體 IO 控制積木。
 - **目前狀態**: 系統已具備極強的教學靈活性與跨平台擴充性。
+
+## 2026-02-28 硬體 AI 整合與 πCar 全能移植 (里程碑 v3.1+v3.2 完成)
+- **核心進度**：
+    - **硬體 AI 整合**：完成 `mcu_camera` (XIAO S3 採集)、`mcu_huskylens` (I2C 物體偵測) 模組。
+    - **πCar 全能移植**：對齊 #piBlockly 實作馬達、舵機、超音波(手動脈衝)、循跡、NeoPixel、8顆 IO LED。
+    - **音樂引擎突破**：實作 `MusicEngine` 類別，具備 Regex 旋律解析器，支援 `C4Q, R4H` 等複合語法與 BPM 控制。
+    - **架構重大更新**：
+        - 實作「積木級別平台過濾」，動態切換 PC/MCU 專屬積木。
+        - 完成核心 10 大模組的 **i18n 全面標準化**，並確立「雙軌制外觀」規範。
+        - 實作 MCU 專屬初始結構 (`mcu_main` + `while True`)。
+- **部署優化**：
+    - 修復序列埠衝突：上傳前自動發送 `Ctrl-C` 中斷舊監控。
+    - 實作「熱插拔重連」：`deploy_mcu.py` 現在能耐受 USB 拔插並自動恢復監控。
+- **目前狀態**：硬體支援度與教學美學已達新高度，為 TinyML 教學奠定基礎。

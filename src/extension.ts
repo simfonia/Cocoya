@@ -396,7 +396,14 @@ export class CocoyaManager {
             vscode.window.showInformationMessage(this.t('MSG_DEPLOYING_MCU', port));
 
             let terminal = vscode.window.terminals.find(t => t.name === 'Cocoya Execution');
-            if (!terminal) terminal = vscode.window.createTerminal('Cocoya Execution');
+            if (!terminal) {
+                terminal = vscode.window.createTerminal('Cocoya Execution');
+            } else {
+                // 強制中斷舊的部署或監控程序，釋放序列埠
+                terminal.sendText('\u0003'); 
+                await new Promise(resolve => setTimeout(resolve, 500));
+            }
+            
             terminal.show();
             terminal.sendText(`& "${pythonPath}" "${deployScriptPath}" "${port}" "${mcuCodePath}"`);
             

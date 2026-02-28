@@ -30,7 +30,7 @@
 - **問題**：Webview 沙盒禁止原生 `prompt()`，導致無法建立變數。
 - **解決**：
     - 在 `main.js` 徹底覆寫 `window.prompt` 與 `Blockly.prompt`。
-    - 透過 `postMessage` 向 Host 請求 `vscode.window.showInputBox`。
+    - 透過 `postMessage`向 Host 請求 `vscode.window.showInputBox`。
     - 採用非同步回調機制 (Map 儲存 requestId) 接收使用者輸入。
 
 ### 3. 變形積木的終極 Undo 方案 (A-E 流程)
@@ -144,7 +144,7 @@
 ## 產生器規範與硬體優化 (2026-02-21 更新)
 
 ### 1. f-string 引號衝突終極解決方案
-- **問題**: 使用 f'...' 拼接時，若內部包含字典鍵值（如 scores['Alice']），會因單引號衝突引發 SyntaxError。
+- **問題**: 使用 f'...' 拼接時，若內部包含字典鍵值（如 scores['Alice']），會因單引號衝突引發 SyntaxError.
 - **規範**: 凡涉及 join 或複雜拼接之產生器，統一使用三雙引號 **f"""..."""**。三引號能完美容納內部任何單/雙引號內容而不必轉義。
 
 ### 2. 序列埠「拿最新一筆」邏輯
@@ -158,20 +158,37 @@
 ### 4. JavaScript 寫入轉義陷阱
 - **提醒**: 透過 write_file 寫入產生器 JS 時，字串中的 \n 常被展開。必須寫成 \\n 才能在磁碟檔案中保持為字面量，避免 SyntaxError: Invalid token。
 
-## 產生器平台適配機制 (2026-02-24 更新)
+## 系統標準化與 πCar 全能化 (2026-02-28 更新)
+
 
 ### 1. 產生器環境變數注入
 - **機制**: 在 main.js 的 setPlatformUI 中，將 this.currentPlatform 賦值給 Blockly.Python.PLATFORM。
 - **用途**: 讓 forBlock 產生器函式能透過 generator.PLATFORM 判斷當前是 PC 或 MCU 模式，從而產出不同的 Python 代碼。
 
-### 2. 結構與入口適配 (Structure)
+### 2. 積木級別平台過濾 (Platform Filtering)
+- **實作**: 在 `toolbox.xml` 的 `<block>` 標籤中支援 `platform` 屬性（如 `platform="PC"`）。
+- **機制**: `main.js` 中的 `filterToolboxXML` 函式在載入時動態解析 DOM，根據當前 `PLATFORM` 狀態移除不符積木，實現 Toolbox 的動態適配。
+
+### 3. 結構與入口適配 (Structure)
 - **py_main**: 
     - PC 模式：產出 if __name__ == "__main__":。
     - MCU 模式：直接產出內容（不包含入口檢查），適配 CircuitPython 的線性執行特性。
 
-### 3. 通訊協議適配 (Serial IO)
+### 4. 通訊協議適配 (Serial IO)
 - **PC (pyserial)**: 使用 import serial 與 serial.Serial(port, baud)。
 - **MCU (CircuitPython)**: 使用 import usb_cdc 與 usb_cdc.data。這允許使用者透過數據通道與電腦端 Cocoya 進行通訊。
+### 5. 雙軌制視覺風格 (Dual-Track Visual Style)
+- **核心語法**: 維持 **Source Code Style**（如 `if`, `import`, `while`），強化學生的程式碼連結感。
+- **應用模組**: 採用 **Friendly UI Style**（如「設定馬達速度」、「播放音符」），降低硬體操作門檻。
 
-### 4. 硬體自動初始化 (Self-initialization)
-- **邏輯**: 在 mcu_set_led 等積木中，產生器會檢查 led 物件是否已存在於 globals()。若不存在，則自動注入 digitalio 與 board 的初始化代碼。
+### 6. 旋律解析器 (Regex Melody Parser)
+- **技術**: 在 Python 注入 `MusicEngine` 類別，使用正則表達式 `([A-GR][#S]?)([0-8])?([WHQEST])(\.)?(_T)?` 解析旋律。
+- **功能**: 支援音名、八度、六種時值、附點與三連音，並內建休止符 (`R`) 處理。
+
+### 7. 序列埠強健性 (Robust Serial Monitor)
+- **程序衝突解決**: 在 Host 端啟動新部署前，發送 `Ctrl-C` (`\u0003`) 訊號至終端機，強制中斷舊的監控程序以釋放序列埠。
+- **熱插拔支援**: `deploy_mcu.py` 的 `monitor` 函式實作了 `try-except` 重連迴圈，在拔掉 USB 時進入等待模式，插回時自動恢復連線。
+
+### 8. 高精度感測器驅動 (Helper Injection)
+- **超音波**: 實作手動脈衝計時類別，利用 `time.monotonic_ns()` 進行微秒級的高電位時長測量，達成免依賴 adafruit 庫的距離偵測。
+- **Servo校準**: 實作狀態化 `PiCarServo` 類別，支援 `min_us` / `max_us` 校準，並內建漸進式流暢移動演算法。

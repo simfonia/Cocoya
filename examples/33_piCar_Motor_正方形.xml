@@ -1,0 +1,135 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="CircuitPython">
+  <variables>
+    <variable id="4aOhs7E_6w}oa-8xGeq=">i</variable>
+  </variables>
+  <block type="py_definition_zone" id="p%o^qm1mE*.CEB!5%_(W" x="10" y="10"></block>
+  <block type="mcu_main" id="=NJ]emz+oNaL~f(Z,1Hj" x="10" y="90">
+    <statement name="DO">
+      <block type="py_io_print" id="P#3Kpzi^gf`)FU+}t2s#">
+        <value name="TEXT">
+          <shadow type="py_text" id="JxI[YY$DzxvidF_ueG7M">
+            <field name="TEXT">請按開始鍵繼續…</field>
+          </shadow>
+        </value>
+        <next>
+          <block type="py_loop_while" id="bz6vP6h+{.p;]^mwr5kU">
+            <value name="CONDITION">
+              <block type="py_logic_negate" id="ojVYB.!#!:X9y0x1O,*H">
+                <value name="BOOL">
+                  <block type="mcu_car_button_pressed" id="6oQVc*LC:w$0PgF_cmRg">
+                    <field name="PIN">board.GP20</field>
+                  </block>
+                </value>
+              </block>
+            </value>
+            <statement name="DO">
+              <block type="py_coding_comment" id=":c3kwGM.Gvldnw0ES$TB">
+                <field name="TEXT">等待按鈕事件</field>
+                <next>
+                  <block type="py_coding_raw_statement" id="/)IEE;LXZ1u+N#?eyX:`">
+                    <field name="TEXT">pass</field>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="py_coding_comment" id="|w|U|8gWgo#tln+H]^,?">
+                <field name="TEXT">等待0.5秒後才開始，讓手有時間離開。</field>
+                <next>
+                  <block type="py_io_sleep" id="yiW=4;Gw^{Z!v@D!:_OU">
+                    <value name="SECONDS">
+                      <shadow type="py_math_number" id="anLdOD[Y-Fqf/Uy*1`ma">
+                        <field name="NUM">0.5</field>
+                      </shadow>
+                    </value>
+                    <next>
+                      <block type="py_loop_for_range" id="L-#OWLF6!;1gt#.4uAad">
+                        <field name="VAR" id="4aOhs7E_6w}oa-8xGeq=">i</field>
+                        <value name="START">
+                          <shadow type="py_math_number" id="FRE=ROuO`P{F}d[OrE_L">
+                            <field name="NUM">0</field>
+                          </shadow>
+                        </value>
+                        <value name="STOP">
+                          <shadow type="py_math_number" id="`Q[5zeb#c{zn#2z`F=*f">
+                            <field name="NUM">4</field>
+                          </shadow>
+                        </value>
+                        <value name="STEP">
+                          <shadow type="py_math_number" id="@,wQ-{e)]4CE3G[._mjD">
+                            <field name="NUM">1</field>
+                          </shadow>
+                        </value>
+                        <statement name="DO">
+                          <block type="py_coding_comment" id="8^%.X~h3zX5Fd(d%1vF^">
+                            <field name="TEXT">直走1秒</field>
+                            <next>
+                              <block type="mcu_car_motor" id=")%z6@:SqW:vsk~b:]sL9">
+                                <value name="LEFT">
+                                  <shadow type="math_number" id="aQNxcOlmL:,L2J*osO{O">
+                                    <field name="NUM">50</field>
+                                  </shadow>
+                                </value>
+                                <value name="RIGHT">
+                                  <shadow type="math_number" id="fXe)*gT%A,s`J6L8+@Ud">
+                                    <field name="NUM">50</field>
+                                  </shadow>
+                                </value>
+                                <next>
+                                  <block type="py_io_sleep" id="z,niEwts+g1dps[xPijU">
+                                    <value name="SECONDS">
+                                      <shadow type="py_math_number" id="C[ExM6{:Xbk_qyP[]g36">
+                                        <field name="NUM">1</field>
+                                      </shadow>
+                                    </value>
+                                    <next>
+                                      <block type="mcu_car_stop" id="2JN)XT?_[u6@rdJ8/CR=">
+                                        <next>
+                                          <block type="mcu_car_motor" id="tRn*|xBNyK5};cYeyjP8">
+                                            <value name="LEFT">
+                                              <shadow type="math_number" id="$PDUyVaS3kGh5~2I29$`">
+                                                <field name="NUM">50</field>
+                                              </shadow>
+                                            </value>
+                                            <value name="RIGHT">
+                                              <shadow type="math_number" id="Qaw}9-DQxvH1:W*RS*SR">
+                                                <field name="NUM">-50</field>
+                                              </shadow>
+                                            </value>
+                                            <next>
+                                              <block type="py_io_sleep" id="feot|4XU6fGlGv7phsAK">
+                                                <value name="SECONDS">
+                                                  <shadow type="py_math_number" id="RF9cYE`d;2{7$sQQ8MgU">
+                                                    <field name="NUM">0.53</field>
+                                                  </shadow>
+                                                </value>
+                                                <next>
+                                                  <block type="mcu_car_stop" id="ac:%Y_rELiV_uQf%0*XM"></block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </statement>
+                        <next>
+                          <block type="mcu_reset" id="tc)0K~4N+CbLxmPqWA^f"></block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

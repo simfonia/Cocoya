@@ -1,0 +1,51 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="CircuitPython">
+  <block type="py_definition_zone" id="p%o^qm1mE*.CEB!5%_(W" x="10" y="10"></block>
+  <block type="mcu_main" id="=NJ]emz+oNaL~f(Z,1Hj" x="10" y="90">
+    <statement name="DO">
+      <block type="mcu_car_set_volume" id="J1w}b?%NmLR8ROc0IZ9[">
+        <value name="VOL">
+          <shadow type="math_number" id="i6V%R)x4vh3uD-?}]XUN">
+            <field name="NUM">20</field>
+          </shadow>
+        </value>
+        <next>
+          <block type="mcu_car_set_tempo" id="s4~AqeFzI%#G|u0~~7W%">
+            <value name="BPM">
+              <shadow type="math_number" id="`zWBi,lKahdk3a4([`/n">
+                <field name="NUM">120</field>
+              </shadow>
+            </value>
+            <next>
+              <block type="mcu_car_tone" id="%Os?/_@PnB9SthfwB[mN">
+                <value name="FREQ">
+                  <shadow type="math_number" id="i:ODuyD;_P6,P(~f[)B~">
+                    <field name="NUM">440</field>
+                  </shadow>
+                  <block type="mcu_car_note_freq" id=";7zwd+5i3Pg^h7KOBTNH">
+                    <field name="NOTE">G</field>
+                    <field name="OCTAVE">4</field>
+                  </block>
+                </value>
+                <value name="MS">
+                  <shadow type="math_number" id="e1+J1,^B_X@G68euiE))">
+                    <field name="NUM">200</field>
+                  </shadow>
+                </value>
+                <next>
+                  <block type="mcu_car_wait_start" id="|4]Lk7QqSrnkzk|_+3jg">
+                    <field name="PIN">board.GP20</field>
+                    <next>
+                      <block type="mcu_car_play_melody" id="gcc(UIzY{rO)X;AX%^hm">
+                        <field name="MELODY">D4Q. D4E B3Q D4Q&amp;#10;E4Q+E E4E G4Q B4Q&amp;#10;A4Q. B4E A4Q. G4E&amp;#10;F#4E_T RE_T F#4E_T D4E_T RE_T D4E_T G4E RE G5Q</field>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

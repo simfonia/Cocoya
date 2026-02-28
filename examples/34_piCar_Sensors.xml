@@ -1,0 +1,113 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="CircuitPython">
+  <variables>
+    <variable id="#a}}{,q47GkbYX!9)6%2">distance</variable>
+    <variable id="uXiA3]JB)+5oHTarh{Fv">color</variable>
+  </variables>
+  <block type="py_definition_zone" id="p%o^qm1mE*.CEB!5%_(W" x="10" y="10"></block>
+  <block type="mcu_main" id="=NJ]emz+oNaL~f(Z,1Hj" x="10" y="90">
+    <statement name="DO">
+      <block type="py_loop_while" id="sC#.Ys4+3Gw9PzA1Q1{{">
+        <value name="CONDITION">
+          <block type="py_logic_boolean" id="GO1EK$sL+Fj@IER(1Laz">
+            <field name="BOOL">True</field>
+          </block>
+        </value>
+        <statement name="DO">
+          <block type="py_variables_set" id="Z]Cso1]/AiWm5N9LjJ^+">
+            <field name="VAR" id="#a}}{,q47GkbYX!9)6%2">distance</field>
+            <value name="VALUE">
+              <shadow type="py_math_number" id="TG{UCNGR(Us%X*}!uJvN">
+                <field name="NUM">0</field>
+              </shadow>
+              <block type="mcu_car_ultrasonic" id="*v/oF*tukkD?{y9C|;Qj">
+                <field name="TRIG">board.GP28</field>
+                <field name="ECHO">board.GP7</field>
+              </block>
+            </value>
+            <next>
+              <block type="py_variables_set" id="A7^f#3c~*gCZ+=5HMZN)">
+                <field name="VAR" id="uXiA3]JB)+5oHTarh{Fv">color</field>
+                <value name="VALUE">
+                  <shadow type="py_math_number" id=".pqTd+!Y8:QiFE/i(Gfw">
+                    <field name="NUM">0</field>
+                  </shadow>
+                  <block type="py_logic_ternary" id="oq!!x}uP![pwv|N4ZY:;">
+                    <value name="THEN">
+                      <block type="py_text" id=",AX]N2N5F]:N.l:L7qBH">
+                        <field name="TEXT">白色</field>
+                      </block>
+                    </value>
+                    <value name="IF">
+                      <block type="py_logic_compare" id="e5@e9D2:q+aHk8Nm;(2h">
+                        <field name="OP">==</field>
+                        <value name="A">
+                          <shadow type="py_math_number" id="JBO$DqiY0Xxm0JW;TEN1">
+                            <field name="NUM">1</field>
+                          </shadow>
+                        </value>
+                        <value name="B">
+                          <shadow type="py_math_number" id="YTn94H:V.O8|jmJTUpG8">
+                            <field name="NUM">0</field>
+                          </shadow>
+                          <block type="mcu_car_check_color" id="$m90Q1)5//I)e[MRO^6J">
+                            <field name="PIN">board.GP26</field>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                    <value name="ELSE">
+                      <block type="py_text" id="7r#))iY#cC9cL~jfVF_`">
+                        <field name="TEXT">黑色</field>
+                      </block>
+                    </value>
+                  </block>
+                </value>
+                <next>
+                  <block type="py_io_print" id="R#BWujC#QAIBwBrEUp^#">
+                    <value name="TEXT">
+                      <shadow type="py_text" id="y,5ex8s{],@h!T:Kyi]O">
+                        <field name="TEXT">Hello Cocoya!</field>
+                      </shadow>
+                      <block type="py_text_join" id="f2_D@Afbgc9_6:?f$kD!">
+                        <mutation items="4"></mutation>
+                        <value name="ADD0">
+                          <shadow type="py_text" id="[L~.+suR=ntG`|W*q/+}">
+                            <field name="TEXT">距離: </field>
+                          </shadow>
+                        </value>
+                        <value name="ADD1">
+                          <block type="py_variables_get" id="5=#/InNT|)*qJL]Q]12h">
+                            <field name="VAR" id="#a}}{,q47GkbYX!9)6%2">distance</field>
+                          </block>
+                        </value>
+                        <value name="ADD2">
+                          <block type="py_text" id="6]bLM}PvyBL:F?pzt5!_">
+                            <field name="TEXT">cm   地面顏色: </field>
+                          </block>
+                        </value>
+                        <value name="ADD3">
+                          <block type="py_variables_get" id="R`{W!`6pu[.cq:@:f9O.">
+                            <field name="VAR" id="uXiA3]JB)+5oHTarh{Fv">color</field>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="py_io_sleep" id="nO8yR@jc}8MZlXgIGXvt">
+                        <value name="SECONDS">
+                          <shadow type="py_math_number" id="Vqs=y79svvv[^Gdu17!L">
+                            <field name="NUM">0.5</field>
+                          </shadow>
+                        </value>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </statement>
+      </block>
+    </statement>
+  </block>
+</xml>

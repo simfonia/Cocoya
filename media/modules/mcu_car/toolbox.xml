@@ -1,22 +1,55 @@
 <category name="%{BKY_CAT_MCU_CAR}" colour="%{BKY_COLOUR_MCU_CAR}">
+    <label text="%{BKY_CAR_LBL_DRIVE}"></label>
     <block type="mcu_car_motor">
-        <value name="LEFT">
-            <shadow type="math_number">
-                <field name="NUM">50</field>
-            </shadow>
-        </value>
-        <value name="RIGHT">
-            <shadow type="math_number">
-                <field name="NUM">50</field>
-            </shadow>
-        </value>
+        <value name="LEFT"><shadow type="math_number"><field name="NUM">50</field></shadow></value>
+        <value name="RIGHT"><shadow type="math_number"><field name="NUM">50</field></shadow></value>
     </block>
-    <block type="mcu_car_stop"></block>
+    <block type="mcu_car_stop" gap="32"></block>
+    
+    <label text="%{BKY_CAR_LBL_ACTION}"></label>
+    <block type="mcu_car_servo_setup"></block>
     <block type="mcu_car_servo">
-        <value name="ANGLE">
-            <shadow type="math_number">
-                <field name="NUM">90</field>
-            </shadow>
-        </value>
+        <field name="PIN">board.GP12</field>
+        <value name="ANGLE"><shadow type="math_number"><field name="NUM">90</field></shadow></value>
     </block>
+    <block type="mcu_car_in_position"></block>
+    <block type="mcu_car_hand_range">
+        <value name="RANGE"><shadow type="math_number"><field name="NUM">180</field></shadow></value>
+    </block>
+    <block type="mcu_car_move_hands">
+        <value name="PERCENT"><shadow type="math_number"><field name="NUM">50</field></shadow></value>
+        <value name="SPEED"><shadow type="math_number"><field name="NUM">8</field></shadow></value>
+    </block>
+
+    <label text="%{BKY_CAR_LBL_SENSOR}" gap="16"></label>
+    <block type="mcu_car_ultrasonic"></block>
+    <block type="mcu_car_check_color"></block>
+    <block type="mcu_car_check_gray" gap="32"></block>
+
+    <label text="%{BKY_CAR_LBL_SOUND}" gap="16"></label>
+    <block type="mcu_car_set_volume">
+        <value name="VOL"><shadow type="math_number"><field name="NUM">50</field></shadow></value>
+    </block>
+    <block type="mcu_car_set_tempo">
+        <value name="BPM"><shadow type="math_number"><field name="NUM">120</field></shadow></value>
+    </block>
+    <block type="mcu_car_play_note"></block>
+    <block type="mcu_car_play_melody"></block>
+    <block type="mcu_car_tone">
+        <value name="FREQ"><shadow type="math_number"><field name="NUM">440</field></shadow></value>
+        <value name="MS"><shadow type="math_number"><field name="NUM">200</field></shadow></value>
+    </block>
+    <block type="mcu_car_no_tone"></block>
+    <block type="mcu_car_note_freq"></block>
+    
+    <!-- 調整 LED 位置 -->
+    <block type="mcu_car_set_led_io">
+        <value name="PIN"><shadow type="math_number"><field name="NUM">0</field></shadow></value>
+        <value name="STATE"><shadow type="logic_boolean"><field name="BOOL">TRUE</field></shadow></value>
+    </block>
+    <block type="mcu_car_set_led_color" gap="32"></block>
+
+    <label text="%{BKY_CAR_LBL_OTHER}" gap="16"></label>
+    <block type="mcu_car_wait_start"></block>
+    <block type="mcu_car_button_pressed"></block>
 </category>

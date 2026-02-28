@@ -119,12 +119,13 @@
         <li><a href="#quote-spec">14. 產生器引號規範</a></li>
         <li><a href="#env-diag">15. 環境診斷與套件管理</a></li>
         <li><a href="#perf-opt">16. 效能優化 (圖片快取)</a></li>
+        <li><a href="#visual-style">17. 積木視覺外觀雙軌制</a></li>
     </ul>
 </nav>
 
 <main id="content">
     <header>
-        <h1>Cocoya 系統規格說明書 v3.1</h1>
+        <h1>Cocoya 系統規格說明書 v3.2</h1>
         <p><strong>Code, Compute, Yield AI</strong> - 專為 AI 教育設計的視覺化開發環境。</p>
     </header>
 
@@ -362,8 +363,27 @@ execSync(`"${pythonPath}" -c "import ${module}"`, { stdio: 'ignore' });</code></
         <p>產生器會在產出的代碼中自動維護 <code>cocoya_img_cache</code> 字典。當快取項次超過 20 個時會執行自動排空，防止長時間執行導致的記憶體溢出。</p>
     </section>
 
+    <section id="visual-style">
+        <h2>17. 積木視覺外觀雙軌制 (Visual Style)</h2>
+        <p>為了解決「學習程式碼」與「快速上手應用」之間的平衡，Cocoya 採用雙軌制外觀規範：</p>
+
+        <h3>A. 核心語法模組 (Source Code Style)</h3>
+        <ul>
+            <li><strong>適用模組:</strong> <code>structure</code>, <code>io</code>, <code>logic</code>, <code>loops</code>, <code>math</code>, <code>text</code>, <code>types</code>, <code>variables</code>, <code>functions</code>。</li>
+            <li><strong>設計原則:</strong> 盡量維持 Python 原始碼關鍵字與標點符號。例如 <code>import</code>, <code>if</code>, <code>for</code>, <code>print()</code>。</li>
+            <li><strong>目的:</strong> 建立學生對真實 Python 代碼的肌肉記憶與視覺聯繫。</li>
+        </ul>
+
+        <h3>B. 應用與硬體模組 (Friendly UI Style)</h3>
+        <ul>
+            <li><strong>適用模組:</strong> <code>mcu_car</code>, <code>ai_hand</code>, <code>cv_draw</code>, <code>hardware</code> 等。</li>
+            <li><strong>設計原則:</strong> 以自然語言（繁中/英文）描述功能。例如「控制小車 [前進] 速度 [50]」而非 <code>car.move(1, 50)</code>。</li>
+            <li><strong>目的:</strong> 降低特定硬體或複雜 AI 功能的操作門檻，讓學生專注於邏輯設計。</li>
+        </ul>
+    </section>
+
     <footer>
-        <p>© 2026 simfonia - Cocoya 專案組。文件更新日期：2026-02-28 (v3.1)</p>
+        <p>© 2026 simfonia - Cocoya 專案組。文件更新日期：2026-02-28 (v3.2)</p>
     </footer>
 </main>
 

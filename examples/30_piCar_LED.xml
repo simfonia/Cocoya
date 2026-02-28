@@ -1,0 +1,155 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="CircuitPython">
+  <variables>
+    <variable id=";o1_WMEGa/:3|glP7#yW">i</variable>
+  </variables>
+  <block type="py_definition_zone" id="p%o^qm1mE*.CEB!5%_(W" x="10" y="10"></block>
+  <block type="mcu_main" id="=NJ]emz+oNaL~f(Z,1Hj" x="10" y="90">
+    <statement name="DO">
+      <block type="py_io_print" id="P#3Kpzi^gf`)FU+}t2s#">
+        <value name="TEXT">
+          <shadow type="py_text" id="JxI[YY$DzxvidF_ueG7M">
+            <field name="TEXT">請按開始鍵繼續…</field>
+          </shadow>
+        </value>
+        <next>
+          <block type="py_loop_while" id="bz6vP6h+{.p;]^mwr5kU">
+            <value name="CONDITION">
+              <block type="py_logic_negate" id="ojVYB.!#!:X9y0x1O,*H">
+                <value name="BOOL">
+                  <block type="mcu_car_button_pressed" id="6oQVc*LC:w$0PgF_cmRg">
+                    <field name="PIN">board.GP20</field>
+                  </block>
+                </value>
+              </block>
+            </value>
+            <statement name="DO">
+              <block type="py_coding_comment" id=":c3kwGM.Gvldnw0ES$TB">
+                <field name="TEXT">等待按鈕事件</field>
+                <next>
+                  <block type="py_coding_raw_statement" id="/)IEE;LXZ1u+N#?eyX:`">
+                    <field name="TEXT">pass</field>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="py_coding_comment" id="|w|U|8gWgo#tln+H]^,?">
+                <field name="TEXT">等待0.5秒後才開始，讓手有時間離開。</field>
+                <next>
+                  <block type="py_io_sleep" id="yiW=4;Gw^{Z!v@D!:_OU">
+                    <value name="SECONDS">
+                      <shadow type="py_math_number" id="anLdOD[Y-Fqf/Uy*1`ma">
+                        <field name="NUM">0.5</field>
+                      </shadow>
+                    </value>
+                    <next>
+                      <block type="py_loop_while" id="aidq8mz90gL8IbvOaVs(">
+                        <value name="CONDITION">
+                          <block type="py_logic_boolean" id="oF@STv+vV@VU1oTGBd`~">
+                            <field name="BOOL">True</field>
+                          </block>
+                        </value>
+                        <statement name="DO">
+                          <block type="py_loop_for_range" id="SEa8sd9InEBST{,:%uQ@">
+                            <field name="VAR" id=";o1_WMEGa/:3|glP7#yW">i</field>
+                            <value name="START">
+                              <shadow type="py_math_number" id="r:k{b_s#y(BBM8zm|@UR">
+                                <field name="NUM">0</field>
+                              </shadow>
+                            </value>
+                            <value name="STOP">
+                              <shadow type="py_math_number" id="FC;LmVjOD,w,v@6%2ofs">
+                                <field name="NUM">8</field>
+                              </shadow>
+                            </value>
+                            <value name="STEP">
+                              <shadow type="py_math_number" id="3W.PG4)5Cc^|4RD(k8HO">
+                                <field name="NUM">1</field>
+                              </shadow>
+                            </value>
+                            <statement name="DO">
+                              <block type="mcu_car_set_led_io" id="SizeOVk;lhz]:w};p}IB">
+                                <value name="PIN">
+                                  <shadow type="math_number" id="K6V.43.JWnw`7Pt71NKg">
+                                    <field name="NUM">0</field>
+                                  </shadow>
+                                  <block type="py_variables_get" id="?-A75)@NL;xVmY3qdKG-">
+                                    <field name="VAR" id=";o1_WMEGa/:3|glP7#yW">i</field>
+                                  </block>
+                                </value>
+                                <value name="STATE">
+                                  <shadow type="logic_boolean" id="{lg8C7u9WJirt(2=m3UI">
+                                    <field name="BOOL">TRUE</field>
+                                  </shadow>
+                                </value>
+                                <next>
+                                  <block type="py_io_sleep" id="($}r#G`E4Z{Xr=z}E+9]">
+                                    <value name="SECONDS">
+                                      <shadow type="py_math_number" id="-cJEo!;f)7$|@%nj=!Ae">
+                                        <field name="NUM">0.2</field>
+                                      </shadow>
+                                    </value>
+                                  </block>
+                                </next>
+                              </block>
+                            </statement>
+                            <next>
+                              <block type="py_loop_for_range" id="YUk:FG|qoJvJBfo|5Gi8">
+                                <field name="VAR" id=";o1_WMEGa/:3|glP7#yW">i</field>
+                                <value name="START">
+                                  <shadow type="py_math_number" id="e2X_^.d[0C3y,(p8mEyC">
+                                    <field name="NUM">7</field>
+                                  </shadow>
+                                </value>
+                                <value name="STOP">
+                                  <shadow type="py_math_number" id="R2)`N!_D[:D+ckh{B5~0">
+                                    <field name="NUM">-1</field>
+                                  </shadow>
+                                </value>
+                                <value name="STEP">
+                                  <shadow type="py_math_number" id="lWS%Jem2zgJri#:2~v{T">
+                                    <field name="NUM">-1</field>
+                                  </shadow>
+                                </value>
+                                <statement name="DO">
+                                  <block type="mcu_car_set_led_io" id="-9k}qwXJ/cKM!n|+H2+C">
+                                    <value name="PIN">
+                                      <shadow type="math_number" id="K6V.43.JWnw`7Pt71NKg">
+                                        <field name="NUM">0</field>
+                                      </shadow>
+                                      <block type="py_variables_get" id="#{2y6=eR28+qZS?TJ#.0">
+                                        <field name="VAR" id=";o1_WMEGa/:3|glP7#yW">i</field>
+                                      </block>
+                                    </value>
+                                    <value name="STATE">
+                                      <shadow type="logic_boolean" id="qs7vh(/Yg4Br~VZi+h$C">
+                                        <field name="BOOL">FALSE</field>
+                                      </shadow>
+                                    </value>
+                                    <next>
+                                      <block type="py_io_sleep" id="%3kiHpG!85FJvS.@)SF@">
+                                        <value name="SECONDS">
+                                          <shadow type="py_math_number" id="stgP!CA-FBMuS`^HWeKv">
+                                            <field name="NUM">0.2</field>
+                                          </shadow>
+                                        </value>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </statement>
+                              </block>
+                            </next>
+                          </block>
+                        </statement>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

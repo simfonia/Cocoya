@@ -30,6 +30,21 @@
 - [ ] **PC-MCU 橋樑應用**：
     - [ ] 實作範例：AI 手勢遠端控制 Arduino LED (PC 轉發模式)。
 
+## [待辦] 里程碑 v3.2: πCar 功能全面移植 (#piBlockly 對齊版)
+- [x] **πCar 動作系統**：
+    - [x] 實作 `mcu_car_servo_setup` (脈衝校準 460-2400，內建安全約束)。
+    - [x] 實作 `mcu_car_servo_range` (活動範圍 0-180)。
+    - [x] 實作 `mcu_car_in_position` (雙手歸位)。
+    - [x] 實作 `mcu_car_move_hands` (0-100% 比例開合，支援速度控制與單/雙手)。
+- [x] **πCar 感測器系統**：
+    - [x] 實作 `mcu_car_ultrasonic` (讀取距離，腳位預設 GP28/7)。
+    - [x] 實作 `mcu_car_check_color/gray` (循跡偵測，預設 GP26/27)。
+- [x] **πCar 音樂引擎**：
+    - [x] 實作完整音樂積木群 (Tempo, Play Note, Melody String Parser, Stop Tone)。
+- [x] **πCar 聲光與安全**：
+    - [x] 實作 `mcu_car_set_np_color` (內建 2 顆 NeoPixel 控制，GP18)。
+    - [x] 實作 `mcu_car_wait_start` (按鈕啟動閘門，GP20)。
+
 ## [待辦] 里程碑 v4.0: 跨平台支援
 - [ ] **跨平台支援 (Linux/macOS Adapter)**：
     - [ ] 重構序列埠偵測邏輯（支援 `/dev/tty`）。

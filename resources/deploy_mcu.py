@@ -15,22 +15,45 @@ def get_drives():
         bitmask >>= 1
     return drives
 
-def monitor(ser):
-    """進入序列埠監看模式"""
+def monitor(port, baud=115200):
+    """進入序列埠監看模式，具備自動重連功能"""
     print("-" * 40)
-    print("--- Serial Monitor (Press Ctrl+C to stop) ---")
+    print(f"--- Serial Monitor on {port} (Press Ctrl+C to stop) ---")
     print("-" * 40)
-    try:
-        while True:
+    
+    ser = None
+    while True:
+        try:
+            if ser is None:
+                try:
+                    ser = serial.Serial(port, baud, timeout=0.1)
+                    print(f"\n[Connected to {port}]")
+                except:
+                    # 埠號不存在或被佔用 (可能正在拔插)，等待插回
+                    sys.stdout.write(".")
+                    sys.stdout.flush()
+                    time.sleep(1.0)
+                    continue
+
             if ser.in_waiting > 0:
                 data = ser.read(ser.in_waiting).decode('utf-8', errors='ignore')
                 sys.stdout.write(data)
                 sys.stdout.flush()
-            time.sleep(0.01)
-    except KeyboardInterrupt:
-        print("\n--- Monitor Stopped ---")
-    finally:
-        ser.close()
+            time.sleep(0.05)
+
+        except (serial.SerialException, PermissionError, OSError) as e:
+            print(f"\n[Disconnected: {e}] Waiting for device...")
+            if ser:
+                try: ser.close()
+                except: pass
+            ser = None
+            time.sleep(1.0)
+        except KeyboardInterrupt:
+            print("\n--- Monitor Stopped ---")
+            if ser:
+                try: ser.close()
+                except: pass
+            break
 
 def deploy(port, code_filename):
     """執行 MCU 部署邏輯"""
@@ -67,13 +90,16 @@ def deploy(port, code_filename):
                 f.write(code_content)
             print("Direct drive write successful! Triggering reboot...")
             
-            # 透過 Serial 觸發重啟並進入監看
+            # 透過 Serial 觸發重啟
             try:
-                ser = serial.Serial(port, 115200, timeout=0.1)
-                ser.write(b'\x03\x03\x04') # 中斷並重啟
-                monitor(ser)
-            except Exception as e:
-                print(f"Reboot/Monitor failed: {e}")
+                temp_ser = serial.Serial(port, 115200, timeout=0.1)
+                temp_ser.write(b'\x03\x03\x04') # 中斷並重啟
+                temp_ser.close()
+            except:
+                pass
+            
+            # 進入監控模式
+            monitor(port)
             return
         except Exception as e:
             print(f"Drive write failed: {e}. Falling back to Serial REPL...")
@@ -83,15 +109,22 @@ def deploy(port, code_filename):
         print(f"Connecting to {port} via Serial...")
         ser = serial.Serial(port, 115200, timeout=0.1)
         
-        # 中斷執行並進入 Raw REPL
-        ser.write(b'\x03\x03') 
+        # 強制中斷並進入 Raw REPL
+        print("Interrupting current state...")
+        ser.write(b'\r\n\x03\x03\x03') # Newline + 3x Ctrl-C
         time.sleep(0.5)
-        ser.write(b'\x01') # Ctrl-A
+        ser.write(b'\x04') # Ctrl-D (Soft Reset)
+        time.sleep(1.0) # 等待重啟完成
+        ser.write(b'\x03\x03') # 再次中斷以進入 REPL
+        time.sleep(0.2)
+        
+        ser.write(b'\x01') # Ctrl-A (Enter Raw REPL)
         time.sleep(0.5)
         
         response = ser.read_all().decode('utf-8', errors='ignore')
         if "raw REPL" not in response:
-            print("Failed to enter Raw REPL. Make sure the device is not in another mode.")
+            print("Failed to enter Raw REPL. Device response:")
+            print(response)
             sys.exit(1)
 
         print("Uploading code via REPL...")
@@ -106,10 +139,12 @@ def deploy(port, code_filename):
         if "OSError" in result:
             print("\n[ERROR] MCU 磁碟目前為唯讀狀態。")
             print("請嘗試直接存入 CIRCUITPY 磁碟，或在 boot.py 中開放寫入權限。")
+            ser.close()
             sys.exit(1)
             
         print("Serial deployment completed! Entering monitor...")
-        monitor(ser)
+        ser.close() # 關閉後重新進入 monitor 函式以啟用自動重連
+        monitor(port)
     except Exception as e:
         print(f"Error during Serial REPL deployment: {e}")
         sys.exit(1)

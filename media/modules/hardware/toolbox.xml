@@ -1,3 +1,5 @@
 <category name="%{BKY_CAT_HARDWARE}" colour="%{BKY_COLOUR_HARDWARE}">
     <block type="mcu_set_led"></block>
+    <block type="mcu_stop_program"></block>
+    <block type="mcu_reset"></block>
 </category>
