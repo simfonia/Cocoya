@@ -15,14 +15,14 @@ Blockly.Blocks['py_ai_face_init'] = {
     });
   },
   onchange: function(event) {
-    if (!this.workspace || this.workspace.isDragging() || this.workspace.isFlyout) return;
+    if (!this.workspace || this.workspace.isDragging || this.workspace.isFlyout) return;
     let parent = this.getSurroundParent();
     let inDefZone = false;
     while (parent) {
       if (parent.type === 'py_definition_zone') { inDefZone = true; break; }
       parent = parent.getSurroundParent();
     }
-    const svg = this.getSvgRoot();
+    const svg = (this.rendered && this.getSvgRoot) ? this.getSvgRoot() : null;
     if (!inDefZone) {
       this.setWarningText(Blockly.Msg["AI_FACE_INIT_WARNING"]);
       if (svg) svg.classList.add('blockly-conflict-glow');

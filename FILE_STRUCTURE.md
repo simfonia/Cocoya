@@ -9,6 +9,13 @@ C:\Workspace\cocoya\
 │   └── work/              # 每日工作紀錄
 ├── media/                 # Webview 前端資源
 │   ├── blockly/           # Blockly 核心庫與插件
+│   │   ├── core/          # 核心引擎與產生器
+│   │   └── plugins/       # 插件 (地圖、捲動、顏色、多行文字等)
+│   │       ├── blockly-modal.js
+│   │       ├── field-colour.js
+│   │       ├── field-multilineinput.js
+│   │       ├── scroll-options.js
+│   │       └── workspace-minimap.js
 │   ├── icons/             # 工具列與功能圖示
 │   ├── modules/           # 統一模組目錄
 │   │   ├── core/          # 基礎積木

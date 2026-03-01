@@ -48,6 +48,7 @@
     "CAT_HARDWARE": "硬體控制",
     "CAT_MCU_CAMERA": "AI 相機",
     "CAT_HUSKYLENS": "HuskyLens",
+    "CAT_SEARCH": "搜尋積木",
     "CAT_MCU_CAR": "πCar 小車",
 
     // Types 分組標籤

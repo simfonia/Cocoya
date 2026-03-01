@@ -192,3 +192,24 @@
 ### 8. 高精度感測器驅動 (Helper Injection)
 - **超音波**: 實作手動脈衝計時類別，利用 `time.monotonic_ns()` 進行微秒級的高電位時長測量，達成免依賴 adafruit 庫的距離偵測。
 - **Servo校準**: 實作狀態化 `PiCarServo` 類別，支援 `min_us` / `max_us` 校準，並內建漸進式流暢移動演算法。
+
+## 關鍵技術實作紀錄 (2026-03-01 更新)
+
+### 1. 全局 SVG 屬性安全攔截 (NaN Protection)
+- **問題**：插件（如 Minimap）在主工作區渲染未完成時嘗試計算位移，產生 	ranslate(NaN,NaN) 報錯導致控制台刷屏。
+- **解決**：在 main.js 最外層覆寫 Element.prototype.setAttribute。
+- **邏輯**：攔截所有包含 NaN 或 Infinity 的字串與數值。這從底層保障了不論哪種插件出錯，都不會影響瀏覽器渲染效能與報錯日誌。
+
+### 2. 自定義積木搜尋引擎 (Fuzzy Text Indexing)
+- **索引機制**：CocoyaUtils.BlockSearcher 會在啟動時建立一個 Map。
+- **文字提取**：透過 workspace.newBlock(type) 建立臨時積木，遍歷其所有 inputList 下的 fieldRow 獲取真實顯示文字（包含 i18n 標籤與下拉選單文字）。
+- **保護措施**：建立索引期間強制呼叫 Blockly.Events.disable()，解決了「積木剛建就被刪」導致地圖插件同步報錯的 Bug。
+
+### 3. 多舵機並行控制 (Sync Servo Movement)
+- **演算法**：在 PiCarServo 類別中新增 @staticmethod move_sync(servos, targets, speed)。
+- **並行機制**：使用單一 while 迴圈遍歷所有傳入的舵機物件，每輪循環各步進 1 度直到所有目標達成。這解決了原本「先右再左」的依序動作感。
+- **速度曲線**：將速度 10 定義為「不延遲定位」，其餘映射為 0.01s 至 0.1s 的平滑步進延遲。
+
+### 4. 嵌入式 UI 注入技術 (Toolbox Extension)
+- **技術**：使用 MutationObserver 監控 BlocklyToolboxDiv 的生成。
+- **佈局**：透過 insertBefore(container, firstChild) 將 HTML 搜尋框完美嵌入至 Blockly 的側邊欄分類清單頂端，實現與 Toolbox 的一體化滾動。

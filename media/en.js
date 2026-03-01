@@ -49,6 +49,7 @@
     "CAT_MCU_CAMERA": "AI Camera",
     "CAT_HUSKYLENS": "HuskyLens",
     "CAT_MCU_CAR": "πCar / Motor",
+    "CAT_SEARCH": "Search",
 
     // Types Group Labels
     "TYPE_LBL_DEF": "Definitions",

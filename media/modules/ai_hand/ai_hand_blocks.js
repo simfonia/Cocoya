@@ -15,7 +15,7 @@ Blockly.Blocks['py_ai_hand_init'] = {
     });
   },
   onchange: function(event) {
-    if (!this.workspace || this.workspace.isDragging() || this.workspace.isFlyout) return;
+    if (!this.workspace || this.workspace.isDragging || this.workspace.isFlyout) return;
     
     // 檢查祖先積木是否有 py_definition_zone
     let parent = this.getSurroundParent();
@@ -30,12 +30,16 @@ Blockly.Blocks['py_ai_hand_init'] = {
     
     if (!inDefZone) {
       this.setWarningText(Blockly.Msg["AI_HAND_INIT_WARNING"]);
-      const svg = this.getSvgRoot();
-      if (svg) svg.classList.add('blockly-conflict-glow');
+      if (this.rendered && this.getSvgRoot) {
+        const svg = this.getSvgRoot();
+        if (svg) svg.classList.add('blockly-conflict-glow');
+      }
     } else {
       this.setWarningText(null);
-      const svg = this.getSvgRoot();
-      if (svg) svg.classList.remove('blockly-conflict-glow');
+      if (this.rendered && this.getSvgRoot) {
+        const svg = this.getSvgRoot();
+        if (svg) svg.classList.remove('blockly-conflict-glow');
+      }
     }
   }
 };

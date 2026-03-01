@@ -97,5 +97,66 @@ window.CocoyaUtils = {
                 Blockly.Events.setGroup(false);
             }
         }
+    },
+
+    /**
+     * Cocoya 專屬積木搜尋引擎
+     */
+    BlockSearcher: {
+        _cache: new Map(), // 儲存積木類型與對應搜尋字串的映射
+
+        /**
+         * 建立搜尋索引
+         * @param {Blockly.Workspace} workspace 用於建立臨時積木以獲取文字內容
+         */
+        buildIndex: function(workspace) {
+            this._cache.clear();
+            const allTypes = Object.keys(Blockly.Blocks);
+            
+            // 暫時禁用事件，避免地圖或其它插件監聽到這些暫存積木
+            Blockly.Events.disable();
+            try {
+                allTypes.forEach(type => {
+                    try {
+                        let searchBlob = type.toLowerCase();
+                        const msgKey = type.toUpperCase();
+                        if (Blockly.Msg[msgKey]) searchBlob += ' ' + Blockly.Msg[msgKey].toLowerCase();
+
+                        const tempBlock = workspace.newBlock(type);
+                        if (tempBlock) {
+                            tempBlock.inputList.forEach(input => {
+                                input.fieldRow.forEach(field => {
+                                    const text = field.getText ? field.getText().toLowerCase() : '';
+                                    if (text && !text.includes('%')) searchBlob += ' ' + text;
+                                });
+                            });
+                            tempBlock.dispose();
+                        }
+                        this._cache.set(type, searchBlob);
+                    } catch (err) { }
+                });
+            } finally {
+                Blockly.Events.enable();
+            }
+            console.log(`BlockSearcher: Indexed ${this._cache.size} blocks.`);
+        },
+
+        /**
+         * 執行搜尋
+         * @param {string} query 關鍵字
+         * @returns {Array} 符合的積木 JSON 列表
+         */
+        search: function(query) {
+            const results = [];
+            const q = query.toLowerCase().trim();
+            if (!q) return results;
+
+            this._cache.forEach((blob, type) => {
+                if (blob.includes(q)) {
+                    results.push({ 'kind': 'block', 'type': type });
+                }
+            });
+            return results;
+        }
     }
 };
