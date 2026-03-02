@@ -39,11 +39,12 @@ C:\Workspace\cocoya\
 │   │   ├── mcu_huskylens/ # [New] HuskyLens AI 視覺感測器
 │   │   └── mcu_car/       # [New] πCar / 馬達與舵機控制
 │   ├── core_manifest.json # 模組載入清單 (含路徑與平台定義)
-│   ├── index.html         # 主介面
-│   ├── main.js            # Webview 進入點 (含平台過濾邏輯)
-│   ├── module_loader.js   # 動態模組載入器 (平行載入 & 分散 i18n)
-│   ├── ui_manager.js      # UI 渲染與互動管理器 (CocoyaUI)
-│   ├── utils.js           # 通用工具庫 (Mutator, ID Parser)
+├── index.html         # 主介面
+├── style.css          # [新增] 獨立樣式表 (由 index.html 抽離)
+├── main.js            # [優化] Webview 進入點 (專注於初始化與通訊)
+├── module_loader.js   # 動態模組載入器 (平行載入 & 分散 i18n)
+├── ui_manager.js      # UI 渲染與互動管理器 (CocoyaUI)
+├── utils.js           # [強化] 通用工具庫 (含 NaN 攔截、XML 過濾、產生器覆寫)
 │   ├── zh-hant.js         # 核心語系檔 (UI 文字)
 │   └── en.js              # 核心語系檔 (UI 文字)
 ├── resources/             # 延伸模組靜態資源

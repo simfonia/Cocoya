@@ -1,5 +1,51 @@
 <category name="%{BKY_CAT_HARDWARE}" colour="%{BKY_COLOUR_HARDWARE}">
-    <block type="mcu_set_led"></block>
-    <block type="mcu_stop_program"></block>
-    <block type="mcu_reset"></block>
+    <!-- 系統控制 (置頂) -->
+    <block type="mcu_stop_program" gap="12"></block>
+    <block type="mcu_reset" gap="24"></block>
+    
+    <!-- 基礎輸出 -->
+    <block type="mcu_set_led" gap="12"></block>
+    
+    <!-- 數位 I/O -->
+    <block type="mcu_digital_write" gap="12">
+        <value name="PIN">
+            <shadow type="mcu_pin_shadow">
+                <field name="PIN">board.GP0</field>
+            </shadow>
+        </value>
+    </block>
+    
+    <block type="mcu_digital_read" gap="12">
+        <value name="PIN">
+            <shadow type="mcu_pin_shadow">
+                <field name="PIN">board.GP1</field>
+            </shadow>
+        </value>
+    </block>
+    
+    <!-- PWM 輸出 -->
+    <block type="mcu_pwm_write" gap="12">
+        <value name="PIN">
+            <shadow type="mcu_pin_shadow">
+                <field name="PIN">board.GP2</field>
+            </shadow>
+        </value>
+        <value name="VALUE">
+            <shadow type="py_math_number">
+                <field name="NUM">50</field>
+            </shadow>
+        </value>
+    </block>
+
+    <!-- 類比讀入 -->
+    <block type="mcu_analog_read" gap="12">
+        <value name="PIN">
+            <shadow type="mcu_pin_shadow">
+                <field name="PIN">board.GP26</field>
+            </shadow>
+        </value>
+    </block>
+    
+    <!-- I2C 工具 -->
+    <block type="mcu_i2c_scan" gap="12"></block>
 </category>

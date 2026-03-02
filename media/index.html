@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <meta charset="UTF-8">
     <title>Cocoya Blockly Editor</title>
@@ -7,376 +8,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
-    <style>
-        html, body {
-            height: 100%;
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            background-color: #f0f0f0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        }
-        #container {
-            display: flex;
-            width: 100vw;
-            height: 100vh;
-        }
-        #blocklyArea {
-            flex: 1;
-            position: relative;
-            min-width: 300px;
-            display: flex;
-            flex-direction: column;
-        }
-        #toolbar {
-            height: 40px;
-            background-color: #ffffff;
-            border-bottom: 1px solid #ddd;
-            display: flex;
-            align-items: center;
-            padding: 0 10px;
-            user-select: none;
-        }
-        .toolbar-group {
-            display: flex;
-            align-items: center;
-            gap: 3px;
-        }
-        .toolbar-separator {
-            width: 1px;
-            height: 20px;
-            background-color: #ddd;
-            margin: 0 8px;
-        }
-        .toolbar-flex-spacer {
-            flex: 1;
-        }
-        .platform-select {
-            background-color: #f3f3f3;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 2px 8px;
-            font-size: 12px;
-            color: #333;
-            cursor: pointer;
-            outline: none;
-            height: 28px;
-            margin-right: 10px;
-        }
-        .platform-select:hover {
-            background-color: #e9e9e9;
-        }
-        .toolbar-btn {
-            width: 32px;
-            height: 32px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            border-radius: 4px;
-            transition: background-color 0.2s;
-            position: relative;
-        }
-        .toolbar-btn:hover {
-            background-color: #f0f0f0;
-        }
-        .toolbar-btn img {
-            width: 24px;
-            height: 24px;
-        }
-        .toolbar-btn .hover-icon {
-            display: none;
-        }
-        .toolbar-btn:hover .normal-icon {
-            display: none;
-        }
-        /* 預設 Hover 顯示 */
-        .toolbar-btn:hover .hover-icon {
-            display: block;
-        }
-        /* 更新按鈕專用：根據狀態切換粉紅或綠色圖示 */
-        .update-available:hover .green-hover {
-            display: none !important;
-        }
-        .update-latest:hover .pink-hover {
-            display: none !important;
-        }
-        
-        @keyframes blink-update {
-            0% { background-color: transparent; }
-            50% { background-color: #ffcdd2; }
-            100% { background-color: transparent; }
-        }
-        .update-blink {
-            animation: blink-update 1.5s infinite;
-        }
-        .update-available:hover {
-            background-color: #ffcdd2 !important; /* 紅色 */
-        }
-        .toolbar-spacer {
-            width: 20px;
-        }
-        #blocklyDiv {
-            flex: 1;
-            position: relative;
-        }
-        #codeArea {
-            width: 400px;
-            background-color: #ffffff;
-            color: #333333;
-            display: flex;
-            flex-direction: column;
-            border-left: 1px solid #ddd;
-            transition: width 0.2s;
-        }
-        #codeHeader {
-            height: 40px;
-            padding: 0 12px;
-            background-color: #f3f3f3;
-            color: #666;
-            font-size: 12px;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            border-bottom: 1px solid #ddd;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-sizing: border-box;
-        }
-        .indent-select {
-            background: transparent;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-            font-size: 10px;
-            color: #666;
-            cursor: pointer;
-            outline: none;
-            padding: 1px 4px;
-        }
-        .indent-select:hover {
-            border-color: #FE2F89;
-            color: #FE2F89;
-        }
-        #codeContent {
-            flex: 1;
-            margin: 0;
-            padding: 0;
-            overflow: auto;
-            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-            font-size: 13px;
-            line-height: 1.5;
-            counter-reset: line;
-            background-color: #fff;
-        }
-        .hljs {
-            background: transparent !important;
-            padding: 0 !important;
-        }
-        .code-line {
-            display: block;
-            padding: 0 12px;
-            white-space: pre;
-            min-height: 1.5em;
-        }
-        .code-line:before {
-            counter-increment: line;
-            content: counter(line);
-            display: inline-block;
-            width: 2em;
-            margin-right: 1em;
-            color: #999;
-            text-align: right;
-            user-select: none;
-            border-right: 1px solid #eee;
-            padding-right: 0.5em;
-        }
-        .highlight-line {
-            background-color: var(--highlight-bg, #fff59d) !important;
-            border-top: 1px solid var(--highlight-border, #ffe082);
-            border-bottom: 1px solid var(--highlight-border, #ffe082);
-        }
-        .color-picker-wrapper {
-            position: relative;
-            width: 18px;
-            height: 18px;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-            cursor: pointer;
-            overflow: hidden;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: #fff;
-        }
-        .color-picker-wrapper:hover {
-            border-color: #FE2F89;
-        }
-        #highlight-color-input {
-            position: absolute;
-            width: 200%;
-            height: 200%;
-            cursor: pointer;
-            opacity: 0;
-            padding: 0;
-            border: none;
-        }
-        .color-preview {
-            width: 12px;
-            height: 12px;
-            background-color: #fff59d;
-            border-radius: 1px;
-            border: 1px solid rgba(0,0,0,0.1);
-        }
-        /* 縮排對齊線 */
-        .indent-guide {
-            display: inline-block;
-            border-left: 1px solid #ccc;
-            width: 2ch;
-            height: 1.5em;
-            vertical-align: top;
-            box-sizing: border-box;
-            white-space: pre; /* 確保空格被保留 */
-        }
-        /* 當該行被高亮時，對齊線也稍微加深 */
-        .highlight-line .indent-guide {
-            border-left: 1px solid #999;
-        }
-        /* Blockly Warning Glow */
-        .blockly-conflict-glow > .blocklyPath {
-            stroke: #ff0000 !important;
-            stroke-width: 4px !important;
-            filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.8));
-        }
-        /* Minimap 樣式與防護 */
-        .blockly-minimap {
-            background-color: rgba(255, 255, 255, 0.9) !important;
-            border: 1px solid #FE2F89 !important;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3) !important;
-            z-index: 100 !important;
-            top: 60px !important;
-            right: 10px !important;
-            border-radius: 4px;
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s !important;
-        }
-        .blockly-minimap.collapsed {
-            transform: scale(0.01);
-            opacity: 0;
-            pointer-events: none;
-        }
-        #minimap-toggle {
-            position: absolute;
-            top: 60px;
-            right: 10px;
-            width: 24px;
-            height: 24px;
-            background: #FE2F89;
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            z-index: 101;
-            font-size: 14px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            transition: transform 0.3s;
-        }
-        #minimap-toggle.collapsed {
-            transform: translateX(5px);
-        }
-        /* 確保 Flyout 顯示在 Toolbox 之上 */
-        .blocklyFlyout {
-            z-index: 150 !important;
-        }
-        .blocklyToolboxDiv {
-            z-index: 140 !important;
-        }
-        /* 嵌入式搜尋框樣式 */
-        #block-search-container {
-            padding: 8px !important;
-            background: #ffffff !important;
-            border-bottom: 1px solid #ddd !important;
-            display: flex !important;
-            justify-content: center !important;
-            box-sizing: border-box !important;
-            position: relative !important;
-            z-index: 145 !important;
-            width: 100% !important;
-        }
-        #block-search:focus {
-            border-color: #FE2F89 !important;
-            box-shadow: 0 0 4px rgba(254, 47, 137, 0.2) !important;
-        }
-        /* 環境診斷視窗 */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1000;
-        }
-        .modal-content {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            width: 400px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-        }
-        .modal-header {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: #FE2F89;
-            display: flex;
-            justify-content: space-between;
-        }
-        .module-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        .module-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .module-status {
-            font-size: 12px;
-            font-weight: bold;
-        }
-        .status-ok { color: #2e7d32; }
-        .status-missing { color: #c62828; }
-        .btn-install {
-            background: #FE2F89;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 2px 8px;
-            font-size: 11px;
-            cursor: pointer;
-        }
-        .btn-install:hover { background: #d81b60; }
-        .modal-footer {
-            margin-top: 20px;
-            text-align: right;
-        }
-        .btn-close {
-            background: #eee;
-            border: 1px solid #ddd;
-            padding: 5px 15px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
     <div id="container">
         <div id="blocklyArea">
@@ -416,7 +50,7 @@
                 </div>
 
                 <div class="toolbar-flex-spacer"></div>
-                
+
                 <!-- 右側群組：Serial 與 執行 -->
                 <div class="toolbar-group">
                     <div class="toolbar-btn" id="btn-refresh-serial" title="%{BKY_TLB_SERIAL_REFRESH}">
@@ -453,8 +87,10 @@
                         <input type="color" id="highlight-color-input" value="#fff59d">
                     </div>
                     <div class="toolbar-btn" id="btn-copy-code" title="Copy Code" style="width: 24px; height: 24px;">
-                        <img src="icons/content_copy_24dp_1F1F1F.png" class="normal-icon" style="width: 18px; height: 18px;">
-                        <img src="icons/content_copy_24dp_FE2F89.png" class="hover-icon" style="width: 18px; height: 18px;">
+                        <img src="icons/content_copy_24dp_1F1F1F.png" class="normal-icon"
+                            style="width: 18px; height: 18px;">
+                        <img src="icons/content_copy_24dp_FE2F89.png" class="hover-icon"
+                            style="width: 18px; height: 18px;">
                     </div>
                     <div class="toolbar-separator" style="height: 16px; margin: 0;"></div>
                     <span style="font-size: 10px;">Indent:</span>
@@ -481,7 +117,8 @@
                 </ul>
             </div>
             <div class="modal-footer">
-                <button class="btn-close" onclick="document.getElementById('diagnose-modal').style.display='none'">%{BKY_MSG_CLOSE}</button>
+                <button class="btn-close"
+                    onclick="document.getElementById('diagnose-modal').style.display='none'">%{BKY_MSG_CLOSE}</button>
             </div>
         </div>
     </div>
@@ -489,7 +126,7 @@
     <!-- Blockly 核心 -->
     <script src="blockly/core/blockly.js"></script>
     <script src="blockly/core/python_compressed.js"></script>
-    
+
     <!-- 插件 -->
     <script src="blockly/plugins/field-colour.js"></script>
     <script src="blockly/plugins/field-multilineinput.js"></script>
@@ -503,4 +140,5 @@
     <script src="module_loader.js"></script>
     <script src="main.js"></script>
 </body>
+
 </html>

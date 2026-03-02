@@ -3,17 +3,6 @@
  * 負責初始化 Blockly 工作區、處理通訊與協調 UI 更新
  */
 (function() {
-    // --- 全局屬性安全攔截器 (徹底解決 NaN 報錯) ---
-    const originalSetAttribute = Element.prototype.setAttribute;
-    Element.prototype.setAttribute = function(name, value) {
-        if (typeof value === 'string' && (value.includes('NaN') || value.includes('Infinity'))) {
-            // console.warn(`Blocked invalid attribute: ${name}="${value}"`);
-            return;
-        }
-        if (typeof value === 'number' && isNaN(value)) return;
-        return originalSetAttribute.apply(this, arguments);
-    };
-
     let vscode;
     try {
         vscode = acquireVsCodeApi();
@@ -76,33 +65,42 @@
             const selector = document.getElementById('platform-selector');
             if (selector) selector.value = platform;
             if (Blockly.Python) Blockly.Python.PLATFORM = platform;
+            
             if (this.manifest) {
-                const toolboxes = await CocoyaLoader.loadModules(this.manifest, window.CocoyaMediaUri, platform, this.currentLang);
-                const coreXml = [];
-                const aiXml = [];
-                const otherXml = [];
-
-                toolboxes.forEach(mod => {
-                    const filteredXml = this.filterToolboxXML(mod.xml);
-                    if (mod.id.startsWith('core/')) coreXml.push(filteredXml);
-                    else if (mod.id.startsWith('cv_') || mod.id.startsWith('ai_')) aiXml.push(filteredXml);
-                    else otherXml.push(filteredXml);
-                });
-
-                let finalXml = `<xml>${coreXml.join('')}<sep></sep>`;
-                if (aiXml.length > 0) {
-                    finalXml += `<category name="%{BKY_CAT_AI}" colour="%{BKY_COLOUR_AI}">${aiXml.join('')}</category>`;
-                }
-                finalXml += `${otherXml.join('')}</xml>`;
-
+                const finalXml = await this.buildToolboxXml(this.manifest, window.CocoyaMediaUri, platform, this.currentLang);
                 this.workspace.updateToolbox(finalXml);
+                
                 // 平台切換後重新建立搜尋索引
                 setTimeout(() => {
                     CocoyaUtils.BlockSearcher.buildIndex(this.workspace);
-                    this.injectSearchBox();
+                    CocoyaUtils.BlockSearcher.inject(this.workspace);
                 }, 500);
             }
             window.CocoyaUI.updateRunTooltip(platform);
+        },
+
+        /**
+         * 建立並過濾 Toolbox XML
+         */
+        buildToolboxXml: async function(manifest, mediaUri, platform, lang) {
+            const toolboxes = await CocoyaLoader.loadModules(manifest, mediaUri, platform, lang);
+            const coreXml = [];
+            const aiXml = [];
+            const otherXml = [];
+
+            toolboxes.forEach(mod => {
+                const filteredXml = CocoyaUtils.filterToolboxXML(mod.xml, platform);
+                if (mod.id.startsWith('core/')) coreXml.push(filteredXml);
+                else if (mod.id.startsWith('cv_') || mod.id.startsWith('ai_')) aiXml.push(filteredXml);
+                else otherXml.push(filteredXml);
+            });
+
+            let finalXml = `<xml>${coreXml.join('')}<sep></sep>`;
+            if (aiXml.length > 0) {
+                finalXml += `<category name="%{BKY_CAT_AI}" colour="%{BKY_COLOUR_AI}">${aiXml.join('')}</category>`;
+            }
+            finalXml += `${otherXml.join('')}</xml>`;
+            return finalXml;
         },
 
         setupWindowListeners: function() {
@@ -124,16 +122,6 @@
             });
         },
 
-        filterToolboxXML: function(xmlString) {
-            const parser = new DOMParser();
-            const xmlDoc = parser.parseFromString(xmlString, "text/xml");
-            xmlDoc.querySelectorAll('block').forEach(block => {
-                const p = block.getAttribute('platform');
-                if (p && p !== this.currentPlatform) block.parentNode.removeChild(block);
-            });
-            return new XMLSerializer().serializeToString(xmlDoc);
-        },
-
         initializeCocoya: async function(manifest, mediaUri, lang) {
             this.manifest = manifest;
             this.currentLang = lang || 'en';
@@ -145,27 +133,10 @@
                 this.registerPlugins();
                 this.setupBlocklyPrompts();
 
-                const toolboxes = await CocoyaLoader.loadModules(manifest, mediaUri, this.currentPlatform, this.currentLang);
-                
-                const coreXml = [];
-                const aiXml = [];
-                const otherXml = [];
+                const finalToolboxXML = await this.buildToolboxXml(manifest, mediaUri, this.currentPlatform, this.currentLang);
 
-                toolboxes.forEach(mod => {
-                    const filteredXml = this.filterToolboxXML(mod.xml);
-                    if (mod.id.startsWith('core/')) coreXml.push(filteredXml);
-                    else if (mod.id.startsWith('cv_') || mod.id.startsWith('ai_')) aiXml.push(filteredXml);
-                    else otherXml.push(filteredXml);
-                });
-
-                let finalToolboxXML = `<xml>${coreXml.join('')}<sep></sep>`;
-                if (aiXml.length > 0) {
-                    finalToolboxXML += `<category name="%{BKY_CAT_AI}" colour="%{BKY_COLOUR_AI}">${aiXml.join('')}</category>`;
-                }
-                finalToolboxXML += `${otherXml.join('')}</xml>`;
-
-                let scrollDragger = window.ScrollBlockDragger || (window.ScrollOptions ? window.ScrollOptions.BlockDragger : undefined);
-                let scrollMetrics = window.ScrollMetricsManager || (window.ScrollOptions ? window.ScrollOptions.MetricsManager : undefined);
+                const scrollDragger = window.ScrollBlockDragger || (window.ScrollOptions ? window.ScrollOptions.BlockDragger : undefined);
+                const scrollMetrics = window.ScrollMetricsManager || (window.ScrollOptions ? window.ScrollOptions.MetricsManager : undefined);
 
                 this.workspace = Blockly.inject('blocklyDiv', {
                     toolbox: finalToolboxXML,
@@ -177,52 +148,12 @@
                 });
 
                 // --- Minimap 初始化 (全方位防護) ---
-                try {
-                    const MinimapClass = (window.workspaceMinimap && window.workspaceMinimap.PositionedMinimap) || (window.PositionedMinimap) || (Blockly.workspaceMinimap && Blockly.workspaceMinimap.PositionedMinimap);
-                    if (MinimapClass) {
-                        const originalUpdate = MinimapClass.prototype.update;
-                        MinimapClass.prototype.update = function() {
-                            try {
-                                if (!this.primaryWorkspace) return;
-                                const pm = this.primaryWorkspace.getMetricsManager().getContentMetrics(true);
-                                if (!pm || !pm.width || isNaN(pm.width)) return;
-                                if (this.minimapWorkspace) {
-                                    const mm = this.minimapWorkspace.getMetricsManager().getContentMetrics(true);
-                                    if (!mm || !mm.width || isNaN(mm.width)) return;
-                                }
-                                originalUpdate.apply(this, arguments);
-                            } catch (e) { }
-                        };
-                        this.minimap = new MinimapClass(this.workspace);
-                        this.minimap.init();
-                        const originalMirror = this.minimap.mirror.bind(this.minimap);
-                        this.minimap.mirror = (event) => {
-                            if (this.minimap._isPaused) return;
-                            try {
-                                if (event.type === Blockly.Events.BLOCK_CREATE && !this.workspace.getBlockById(event.blockId)) return;
-                                originalMirror(event);
-                            } catch (e) { }
-                        };
-                        const mWrapper = document.querySelector('.blockly-minimap');
-                        if (mWrapper) {
-                            const toggleBtn = document.createElement('div');
-                            toggleBtn.id = 'minimap-toggle';
-                            toggleBtn.innerHTML = '&#10005;';
-                            document.getElementById('blocklyArea').appendChild(toggleBtn);
-                            toggleBtn.onclick = () => {
-                                const isCollapsed = mWrapper.classList.toggle('collapsed');
-                                toggleBtn.innerHTML = isCollapsed ? '&#128506;' : '&#10005;';
-                                this.minimap._isPaused = isCollapsed;
-                                if (!isCollapsed) this.refreshMinimap();
-                            };
-                        }
-                    }
-                } catch (e) { }
+                this.initMinimap();
 
                 // --- 搜尋功能 ---
                 setTimeout(() => {
                     CocoyaUtils.BlockSearcher.buildIndex(this.workspace);
-                    this.injectSearchBox();
+                    CocoyaUtils.BlockSearcher.inject(this.workspace);
                 }, 1000);
 
                 if (Blockly.Python) Blockly.Python.PLATFORM = this.currentPlatform;
@@ -230,11 +161,63 @@
                 window.CocoyaUI.initToolbar((msg) => vscode.postMessage(msg));
                 vscode.postMessage({ command: 'setLocale', messages: Blockly.Msg });
                 this.registerVariablesCallback();
-                this.setupGeneratorOverrides();
+                CocoyaUtils.setupGeneratorOverrides();
                 this.setupWorkspaceListeners();
                 if (this.workspace.getTopBlocks(false).length === 0) this.createDefaultBlocks();
                 this.triggerCodeUpdate();
             } catch (error) { console.error('Initialization Failed:', error); }
+        },
+
+        /**
+         * 初始化 Minimap 插件
+         */
+        initMinimap: function() {
+            try {
+                const MinimapClass = (window.workspaceMinimap && window.workspaceMinimap.PositionedMinimap) || 
+                                   (window.PositionedMinimap) || 
+                                   (Blockly.workspaceMinimap && Blockly.workspaceMinimap.PositionedMinimap);
+                if (!MinimapClass) return;
+
+                const originalUpdate = MinimapClass.prototype.update;
+                MinimapClass.prototype.update = function() {
+                    try {
+                        if (!this.primaryWorkspace) return;
+                        const pm = this.primaryWorkspace.getMetricsManager().getContentMetrics(true);
+                        if (!pm || !pm.width || isNaN(pm.width)) return;
+                        if (this.minimapWorkspace) {
+                            const mm = this.minimapWorkspace.getMetricsManager().getContentMetrics(true);
+                            if (!mm || !mm.width || isNaN(mm.width)) return;
+                        }
+                        originalUpdate.apply(this, arguments);
+                    } catch (e) { }
+                };
+
+                this.minimap = new MinimapClass(this.workspace);
+                this.minimap.init();
+
+                const originalMirror = this.minimap.mirror.bind(this.minimap);
+                this.minimap.mirror = (event) => {
+                    if (this.minimap._isPaused) return;
+                    try {
+                        if (event.type === Blockly.Events.BLOCK_CREATE && !this.workspace.getBlockById(event.blockId)) return;
+                        originalMirror(event);
+                    } catch (e) { }
+                };
+
+                const mWrapper = document.querySelector('.blockly-minimap');
+                if (mWrapper) {
+                    const toggleBtn = document.createElement('div');
+                    toggleBtn.id = 'minimap-toggle';
+                    toggleBtn.innerHTML = '&#10005;';
+                    document.getElementById('blocklyArea').appendChild(toggleBtn);
+                    toggleBtn.onclick = () => {
+                        const isCollapsed = mWrapper.classList.toggle('collapsed');
+                        toggleBtn.innerHTML = isCollapsed ? '&#128506;' : '&#10005;';
+                        this.minimap._isPaused = isCollapsed;
+                        if (!isCollapsed) this.refreshMinimap();
+                    };
+                }
+            } catch (e) { }
         },
 
         injectSearchBox: function() {

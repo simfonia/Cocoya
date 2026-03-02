@@ -213,3 +213,19 @@
 ### 4. 嵌入式 UI 注入技術 (Toolbox Extension)
 - **技術**：使用 MutationObserver 監控 BlocklyToolboxDiv 的生成。
 - **佈局**：透過 insertBefore(container, firstChild) 將 HTML 搜尋框完美嵌入至 Blockly 的側邊欄分類清單頂端，實現與 Toolbox 的一體化滾動。
+
+## 關鍵技術實作紀錄 (2026-03-02 更新)
+
+### 1. Webview 資源加載與路徑轉換
+- **問題**：將內聯 CSS 抽離至獨立檔案後，Webview 無法透過相對路徑載入資源。
+- **解決**：在 `src/extension.ts` 的 `getWebviewContent` 中，新增對 `href` 屬性的正規表達式替換，統一呼叫 `webview.asWebviewUri` 進行轉換。
+- **CSP 優化**：同步更新 Content Security Policy，使用 `${cspSource}` 精確放行本地資源，並加入 `https:` 權限以支援 Blockly 核心圖示。
+
+### 2. 前端架構重構與註解保留
+- **策略**：將 `main.js` 中的通用邏輯（XML 過濾、產生器覆寫、搜尋注入）移至 `utils.js` 的 `CocoyaUtils` 物件中。
+- **挑戰**：在不使用 `write_file` 覆寫大檔案的前提下，透過精確的 `replace` 操作達成重構，並百分之百保留了原始開發註解。
+- **NaN 攔截器**：將 NaN 攔截器移至應用進入點的最頂層（IIFE 頂部），確保所有後續載入的插件均受其保護。
+
+### 3. 產生器物件管理自動化
+- **問題**：MCU 腳位控制積木若重複使用同一個腳位，會產生重複的初始化代碼。
+- **解決**：在 `hardware_generators.js` 中，利用 `generator.definitions_['init_' + pinVar]` 鍵值唯一性，將腳位初始化與 `import` 邏輯標籤化。這保證了代碼整潔，且即便多個積木操作同一腳位，初始化也只會執行一次。

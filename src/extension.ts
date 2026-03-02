@@ -520,9 +520,19 @@ function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri): s
     const htmlPath = vscode.Uri.joinPath(extensionUri, 'media', 'index.html');
     let html = fs.readFileSync(htmlPath.fsPath, 'utf8');
     const mediaPath = vscode.Uri.joinPath(extensionUri, 'media');
-    const csp = `<meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data: blob:; style-src * 'unsafe-inline';">`;
+
+    // 使用 webview.cspSource 建立更安全的策略
+    const cspSource = webview.cspSource;
+    const csp = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src ${cspSource} 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; connect-src ${cspSource} 'unsafe-inline' https://api.github.com; img-src ${cspSource} https: data: blob:; style-src ${cspSource} 'unsafe-inline' https://cdnjs.cloudflare.com; font-src ${cspSource};">`;
+    
     html = html.replace('<head>', `<head>${csp}`);
+    
+    // 轉換 src 屬性 (針對 <script> 等)
     html = html.replace(/src="(?!\/|http)(.*?)"/g, (match, p1) => `src="${webview.asWebviewUri(vscode.Uri.joinPath(mediaPath, p1))}"`);
+    
+    // 轉換 href 屬性 (針對 <link> 等)
+    html = html.replace(/href="(?!\/|http)(.*?)"/g, (match, p1) => `href="${webview.asWebviewUri(vscode.Uri.joinPath(mediaPath, p1))}"`);
+    
     return html;
 }
 
