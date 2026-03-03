@@ -123,12 +123,13 @@
         <li><a href="#block-searcher">18. 自定義積木搜尋引擎</a></li>
         <li><a href="#picar-spec">19. πCar 高精度控制與並行</a></li>
         <li><a href="#svg-protection">20. 全局 SVG 屬性安全攔截</a></li>
+        <li><a href="#help-system">21. 積木說明文件系統</a></li>
     </ul>
 </nav>
 
 <main id="content">
     <header>
-        <h1>Cocoya 系統規格說明書 v3.3</h1>
+        <h1>Cocoya系統規格說明書 v3.4</h1>
         <p><strong>Code, Compute, Yield AI</strong> - 專為 AI 教育設計的視覺化開發環境。</p>
     </header>
 
@@ -423,8 +424,19 @@ execSync(`"${pythonPath}" -c "import ${module}"`, { stdio: 'ignore' });</code></
         <p>在 <code>main.js</code> 入口處徹底覆寫 <code>Element.prototype.setAttribute</code>，攔截所有包含 <code>NaN</code> 或 <code>Infinity</code> 的字串或數值輸入。這從底層保障了不論哪種第三方積木或插件出錯，皆不會導致瀏覽器渲染異常或報錯刷屏。</p>
     </section>
 
+    <section id="#help-system">
+        <h2>21. 積木說明文件系統 (Block Help System)</h2>
+        <p>為了解決硬體腳位配置複雜導致的學習門檻，系統建立了整合式的圖形化說明機制。</p>
+        
+        <h3>A. 本地路徑解析橋樑</h3>
+        <p>由於 Webview 安全限制，系統在 <code>main.js</code> 攔截 <code>window.open</code> 請求，將相對路徑的 Help ID 傳送至 Host 端。Host 端透過 <code>vscode.env.openExternal</code> 與 <code>file://</code> 協定開啟 <code>media/docs/</code> 下的 HTML，確保圖片與超連結在外部瀏覽器中正常運作。</p>
+
+        <h3>B. 多語系自動匹配</h3>
+        <p>說明文件採用 <code>[id]_[lang].html</code> 命名規範（如 <code>hardware_pins_zh-hant.html</code>）。攔截器會根據當前 Webview 語言自動附加語系後綴，提供在地化的學習資源。</p>
+    </section>
+
     <footer>
-        <p>© 2026 simfonia - Cocoya 專案組。文件更新日期：2026-03-01 (v3.3)</p>
+        <p>© 2026 simfonia - Cocoya 專案組。文件更新日期：2026-03-03 (v3.4)</p>
     </footer>
 </main>
 

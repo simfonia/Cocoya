@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>開發板腳位說明 - Cocoya</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            color: #FE2F89;
+            border-left: 5px solid #FE2F89;
+            padding-left: 15px;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #444;
+            margin-top: 40px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .board-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
+        .pinout-img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 20px auto;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+        .note {
+            background-color: #fff3e0;
+            border-left: 4px solid #ff9800;
+            padding: 10px 15px;
+            margin: 20px 0;
+            font-size: 0.9em;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        code {
+            background-color: #eee;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>開發板腳位說明 (Pinout Reference)</h1>
+    
+    <p>歡迎使用 Cocoya 硬體控制積木！不同的開發板擁有不同的腳位配置，請參考下方的圖表與說明進行開發。</p>
+
+    <div class="board-section">
+        <h2>1. Maker Pi RP2040</h2>
+        <p>這款開發板最大的特色是<strong>板子表面的標註非常清晰</strong>。每個藍色 LED 與排針旁邊都直接印有對應的腳位名稱（例如 <code>GP0</code>, <code>GP1</code>...）。</p>
+        <div class="note">
+            <strong>提示：</strong> 在 Cocoya 中使用時，請選擇 <code>[Pico]</code> 開頭的選項。例如板子上的 <code>0</code> 號燈對應 <code>board.GP0</code>。
+        </div>
+        <ul>
+            <li><strong>數位輸出/入：</strong> GP0 ~ GP28。</li>
+            <li><strong>類比讀入 (ADC)：</strong> GP26, GP27, GP28。</li>
+            <li><strong>內建 NeoPixel：</strong> GP18。</li>
+            <li><strong>內建按鈕：</strong> GP20。</li>
+        </ul>
+    </div>
+
+    <div class="board-section">
+        <h2>2. Raspberry Pi Pico / Pico W</h2>
+        <p>如果您使用的是標準的 Pico W，請參考下方的腳位圖：</p>
+        <img src="pico-w_pinout.png" alt="Pico W Pinout" class="pinout-img">
+        <div class="note">
+            <strong>注意：</strong> Pico W 的內建 LED 通常對應 <code>board.LED</code>。
+        </div>
+    </div>
+
+    <div class="board-section">
+        <h2>3. XIAO ESP32-S3 Sense</h2>
+        <p>XIAO S3 體積精巧，腳位採用 D0, D1... 命名。請參考下方的複用功能對照表：</p>
+        <img src="XIAO-ESP32-S3_pinout.jpg" alt="XIAO ESP32-S3 Pinout" class="pinout-img">
+        
+        <table>
+            <tr>
+                <th>腳位 (Pin)</th>
+                <th>主要功能</th>
+                <th>備註 (Multiplexing)</th>
+            </tr>
+            <tr>
+                <td><code>D0 ~ D3</code></td>
+                <td>Digital, ADC, PWM</td>
+                <td>通用腳位，支援類比讀入。</td>
+            </tr>
+            <tr>
+                <td><code>D4 / D5</code></td>
+                <td>Digital, ADC, I2C</td>
+                <td>D4 為 SDA, D5 為 SCL。</td>
+            </tr>
+            <tr>
+                <td><code>D6 / D7</code></td>
+                <td>Digital, UART</td>
+                <td>D6 為 TX, D7 為 RX。</td>
+            </tr>
+            <tr>
+                <td><code>D8 ~ D10</code></td>
+                <td>Digital, ADC, PWM</td>
+                <td>通用腳位，支援類比讀入。</td>
+            </tr>
+        </table>
+        
+        <div class="note">
+            <strong>重要：</strong> ESP32-S3 幾乎所有腳位都支援 PWM，但請優先使用 D0~D3 與 D8~D10 進行一般感測器連接。更詳細的腳位複用資訊請參考 <a href="https://wiki.seeedstudio.com/xiao_esp32s3_pin_multiplexing/" target="_blank">Seeed Studio 官方 Wiki</a>。
+        </div>
+    </div>
+
+    <footer style="margin-top: 50px; text-align: center; font-size: 0.8em; color: #999;">
+        <p>© 2026 Cocoya AI Education. 資料參考自 Seeed Studio 官方 Wiki。</p>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Board Pinout Reference - Cocoya</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            color: #FE2F89;
+            border-left: 5px solid #FE2F89;
+            padding-left: 15px;
+            margin-bottom: 30px;
+        }
+        h2 {
+            color: #444;
+            margin-top: 40px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .board-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
+        }
+        .pinout-img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 20px auto;
+            border: 1px solid #eee;
+            border-radius: 4px;
+        }
+        .note {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 10px 15px;
+            margin: 20px 0;
+            font-size: 0.9em;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        code {
+            background-color: #eee;
+            padding: 2px 5px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>Board Pinout Reference</h1>
+    
+    <p>Welcome to Cocoya Hardware Control! Different development boards have different pin configurations. Please refer to the charts below for wiring.</p>
+
+    <div class="board-section">
+        <h2>1. Maker Pi RP2040</h2>
+        <p>The best feature of this board is that <strong>labels are clearly printed on the board surface</strong>. Each blue LED and header has its pin name (e.g., <code>GP0</code>, <code>GP1</code>...) printed right next to it.</p>
+        <div class="note">
+            <strong>Tip:</strong> In Cocoya, choose options starting with <code>[Pico]</code>. For example, LED <code>0</code> on the board corresponds to <code>board.GP0</code>.
+        </div>
+        <ul>
+            <li><strong>Digital I/O:</strong> GP0 ~ GP28.</li>
+            <li><strong>Analog In (ADC):</strong> GP26, GP27, GP28.</li>
+            <li><strong>Onboard NeoPixel:</strong> GP18.</li>
+            <li><strong>Onboard Button:</strong> GP20.</li>
+        </ul>
+    </div>
+
+    <div class="board-section">
+        <h2>2. Raspberry Pi Pico / Pico W</h2>
+        <p>If you are using a standard Pico W, please refer to the pinout below:</p>
+        <img src="pico-w_pinout.png" alt="Pico W Pinout" class="pinout-img">
+        <div class="note">
+            <strong>Note:</strong> On Pico W, the onboard LED is usually <code>board.LED</code>.
+        </div>
+    </div>
+
+    <div class="board-section">
+        <h2>3. XIAO ESP32-S3 Sense</h2>
+        <p>XIAO S3 is compact and uses D0, D1... as pin names. Please refer to the multiplexing table below:</p>
+        <img src="XIAO-ESP32-S3_pinout.jpg" alt="XIAO ESP32-S3 Pinout" class="pinout-img">
+        
+        <table>
+            <tr>
+                <th>Pin</th>
+                <th>Main Functions</th>
+                <th>Notes (Multiplexing)</th>
+            </tr>
+            <tr>
+                <td><code>D0 ~ D3</code></td>
+                <td>Digital, ADC, PWM</td>
+                <td>General purpose pins with Analog In.</td>
+            </tr>
+            <tr>
+                <td><code>D4 / D5</code></td>
+                <td>Digital, ADC, I2C</td>
+                <td>D4 is SDA, D5 is SCL.</td>
+            </tr>
+            <tr>
+                <td><code>D6 / D7</code></td>
+                <td>Digital, UART</td>
+                <td>D6 is TX, D7 is RX.</td>
+            </tr>
+            <tr>
+                <td><code>D8 ~ D10</code></td>
+                <td>Digital, ADC, PWM</td>
+                <td>General purpose pins with Analog In.</td>
+            </tr>
+        </table>
+        
+        <div class="note">
+            <strong>Important:</strong> Most pins on ESP32-S3 support PWM, but please prioritize D0~D3 and D8~D10 for general sensor connections. For more detailed pin multiplexing information, please refer to the <a href="https://wiki.seeedstudio.com/xiao_esp32s3_pin_multiplexing/" target="_blank">Seeed Studio Official Wiki</a>.
+        </div>
+    </div>
+
+    <footer style="margin-top: 50px; text-align: center; font-size: 0.8em; color: #999;">
+        <p>© 2026 Cocoya AI Education. Data based on Seeed Studio Wiki.</p>
+    </footer>
+</body>
+</html>

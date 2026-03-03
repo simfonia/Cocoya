@@ -1,6 +1,8 @@
 C:\Workspace\cocoya\
 ├── docs/                  # 專案文檔
-│   └── system_spec.html   # 系統規格說明書 (v3.1)
+│   ├── system_spec.html   # 系統規格說明書 (v3.4)
+│   ├── pico-w_pinout.png  # 原始腳位圖
+│   └── XIAO-ESP32-S3_pinout.jpg # 原始腳位圖
 ├── examples/              # 範例檔
 ├── log/                   # 專案日誌與任務追蹤
 │   ├── details.md         # 技術細節與 API 踩坑紀錄
@@ -8,6 +10,11 @@ C:\Workspace\cocoya\
 │   ├── todo.md            # 任務清單
 │   └── work/              # 每日工作紀錄
 ├── media/                 # Webview 前端資源
+│   ├── docs/              # [新增] 積木說明文件系統
+│   │   ├── hardware_pins_zh-hant.html
+│   │   ├── hardware_pins_en.html
+│   │   ├── pico-w_pinout.png
+│   │   └── XIAO-ESP32-S3_pinout.jpg
 │   ├── blockly/           # Blockly 核心庫與插件
 │   │   ├── core/          # 核心引擎與產生器
 │   │   └── plugins/       # 插件 (地圖、捲動、顏色、多行文字等)
@@ -50,7 +57,7 @@ C:\Workspace\cocoya\
 ├── resources/             # 延伸模組靜態資源
 │   └── deploy_mcu.py      # CircuitPython 部署與監控輔助腳本
 ├── src/                   # Extension 後端 (TypeScript)
-│   └── extension.ts       # 擴充功能管理器 (CocoyaManager 類別)
+│   └── extension.ts       # 擴充功能管理器 (含 openHelp 橋樑)
 ├── temp_scripts/          # 執行期間暫存目錄
 ├── LICENSE.md             # MIT License
 ├── README.md              # 專案說明文件

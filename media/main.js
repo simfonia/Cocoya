@@ -3,6 +3,18 @@
  * 負責初始化 Blockly 工作區、處理通訊與協調 UI 更新
  */
 (function() {
+    // --- 說明文件系統攔截器 ---
+    const originalOpen = window.open;
+    window.open = function(url, name, specs) {
+        if (url && !url.startsWith('http') && !url.startsWith('vscode-webview')) {
+            const langSuffix = (window.CocoyaApp && window.CocoyaApp.currentLang) ? `_${window.CocoyaApp.currentLang}` : '_zh-hant';
+            const helpId = `${url}${langSuffix}`;
+            window.vsCodeApi.postMessage({ command: 'openHelp', helpId: helpId });
+            return null;
+        }
+        return originalOpen.apply(this, arguments);
+    };
+
     let vscode;
     try {
         vscode = acquireVsCodeApi();

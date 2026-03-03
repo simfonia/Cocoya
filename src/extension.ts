@@ -125,11 +125,24 @@ export class CocoyaManager {
                 case 'installModule':
                     await this.handleInstallModule(message.module);
                     break;
+                case 'openHelp':
+                    this.handleOpenHelp(message.helpId);
+                    break;
             }
         }, undefined, this.context.subscriptions);
     }
 
     // --- 訊息處理方法 ---
+
+    /**
+     * 開啟本地積木說明文件
+     */
+    private handleOpenHelp(helpId: string) {
+        if (!helpId) return;
+        // 根據目前的 Webview 語言決定說明文件檔名
+        const helpUri = vscode.Uri.joinPath(this.context.extensionUri, 'media', 'docs', `${helpId}.html`);
+        vscode.env.openExternal(helpUri);
+    }
 
     /**
      * 檢查必要的 Python 模組是否已安裝
