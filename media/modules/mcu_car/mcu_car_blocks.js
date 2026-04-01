@@ -9,7 +9,7 @@ Blockly.Blocks['mcu_car_motor'] = {
       ],
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_MCU_CAR"],
+      "colour": Blockly.Msg["COLOUR_MCU_CAR_MOTOR"],
       "tooltip": Blockly.Msg["CAR_MOTOR_TOOLTIP"],
       "helpUrl": ""
     });
@@ -32,7 +32,7 @@ Blockly.Blocks['mcu_car_stop'] = {
       ],
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_MCU_CAR"],
+      "colour": Blockly.Msg["COLOUR_MCU_CAR_MOTOR"],
       "tooltip": Blockly.Msg["CAR_STOP_TOOLTIP"],
       "helpUrl": ""
     });
@@ -48,8 +48,8 @@ Blockly.Blocks['mcu_car_servo'] = {
           "type": "field_dropdown",
           "name": "PIN",
           "options": [
-            [Blockly.Msg["CAR_HAND_RIGHT"] || "Right Hand (GP12)", "board.GP12"],
-            [Blockly.Msg["CAR_HAND_LEFT"] || "Left Hand (GP13)", "board.GP13"],
+            [Blockly.Msg["CAR_HAND_LEFT"] || "Left Hand (GP12)", "board.GP12"],
+            [Blockly.Msg["CAR_HAND_RIGHT"] || "Right Hand (GP13)", "board.GP13"],
             ["GP14", "board.GP14"],
             ["GP15", "board.GP15"],
             ["D0 (GP0)", "board.GP0"],
@@ -60,7 +60,7 @@ Blockly.Blocks['mcu_car_servo'] = {
       ],
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_MCU_CAR"],
+      "colour": Blockly.Msg["COLOUR_MCU_CAR_SERVO"],
       "tooltip": Blockly.Msg["CAR_SERVO_TOOLTIP"],
       "helpUrl": ""
     });
@@ -82,7 +82,7 @@ Blockly.Blocks['mcu_car_button_pressed'] = {
         }
       ],
       "output": "Boolean",
-      "colour": Blockly.Msg["COLOUR_MCU_CAR"],
+      "colour": Blockly.Msg["COLOUR_MCU_CAR_BUTTON"],
       "tooltip": Blockly.Msg["CAR_BUTTON_TOOLTIP"]
     });
   }
@@ -98,8 +98,8 @@ Blockly.Blocks['mcu_car_servo_setup'] = {
           "type": "field_dropdown",
           "name": "HAND",
           "options": [
-            [Blockly.Msg["CAR_HAND_RIGHT"] || "Right Hand (GP12)", "board.GP12"],
-            [Blockly.Msg["CAR_HAND_LEFT"] || "Left Hand (GP13)", "board.GP13"],
+            [Blockly.Msg["CAR_HAND_LEFT"] || "Left Hand (GP12)", "board.GP12"],
+            [Blockly.Msg["CAR_HAND_RIGHT"] || "Right Hand (GP13)", "board.GP13"],
             ["GP14", "board.GP14"],
             ["GP15", "board.GP15"],
             ["D0 (GP0)", "board.GP0"],
@@ -111,7 +111,7 @@ Blockly.Blocks['mcu_car_servo_setup'] = {
       ],
       "inputsInline": true,
       "previousStatement": null, "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_MCU_CAR"],
+      "colour": Blockly.Msg["COLOUR_MCU_CAR_SERVO"],
       "tooltip": Blockly.Msg["CAR_SERVO_SETUP_TOOLTIP"]
     });
   }
@@ -125,7 +125,7 @@ Blockly.Blocks['mcu_car_hand_range'] = {
       "args0": [{ "type": "input_value", "name": "RANGE", "check": "Number" }],
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_MCU_CAR"],
+      "colour": Blockly.Msg["COLOUR_MCU_CAR_SERVO"],
       "tooltip": Blockly.Msg["CAR_HAND_RANGE_TOOLTIP"]
     });
   }
@@ -138,7 +138,7 @@ Blockly.Blocks['mcu_car_in_position'] = {
       "message0": Blockly.Msg["CAR_IN_POSITION"],
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_MCU_CAR"],
+      "colour": Blockly.Msg["COLOUR_MCU_CAR_SERVO"],
       "tooltip": Blockly.Msg["CAR_IN_POSITION_TOOLTIP"]
     });
   }
@@ -155,8 +155,8 @@ Blockly.Blocks['mcu_car_move_hands'] = {
           "name": "HAND",
           "options": [
             [Blockly.Msg["CAR_HAND_BOTH"] || "Both Hands", "BOTH"],
-            [Blockly.Msg["CAR_HAND_LEFT"] || "Left Hand (GP13)", "LEFT"],
-            [Blockly.Msg["CAR_HAND_RIGHT"] || "Right Hand (GP12)", "RIGHT"]
+            [Blockly.Msg["CAR_HAND_LEFT"] || "Left Hand (GP12)", "LEFT"],
+            [Blockly.Msg["CAR_HAND_RIGHT"] || "Right Hand (GP13)", "RIGHT"]
           ]
         },
         { "type": "input_value", "name": "PERCENT", "check": "Number" },
@@ -165,7 +165,7 @@ Blockly.Blocks['mcu_car_move_hands'] = {
       "inputsInline": true,
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_MCU_CAR"],
+      "colour": Blockly.Msg["COLOUR_MCU_CAR_SERVO"],
       "tooltip": Blockly.Msg["CAR_MOVE_HANDS_TOOLTIP"]
     });
   }
@@ -181,7 +181,7 @@ Blockly.Blocks['mcu_car_ultrasonic'] = {
         { "type": "field_input", "name": "ECHO", "text": "board.GP7" }
       ],
       "output": "Number",
-      "colour": Blockly.Msg["COLOUR_MCU_CAR"],
+      "colour": Blockly.Msg["COLOUR_MCU_CAR_SENSOR"],
       "tooltip": Blockly.Msg["CAR_ULTRASONIC_TOOLTIP"]
     });
   }
@@ -196,7 +196,7 @@ Blockly.Blocks['mcu_car_check_color'] = {
         { "type": "field_input", "name": "PIN", "text": "board.GP26" }
       ],
       "output": "Number",
-      "colour": Blockly.Msg["COLOUR_MCU_CAR"],
+      "colour": Blockly.Msg["COLOUR_MCU_CAR_SENSOR"],
       "tooltip": Blockly.Msg["CAR_CHECK_COLOR_TOOLTIP"]
     });
   }
@@ -211,7 +211,7 @@ Blockly.Blocks['mcu_car_check_gray'] = {
         { "type": "field_input", "name": "PIN", "text": "board.GP27" }
       ],
       "output": "Number",
-      "colour": Blockly.Msg["COLOUR_MCU_CAR"],
+      "colour": Blockly.Msg["COLOUR_MCU_CAR_SENSOR"],
       "tooltip": Blockly.Msg["CAR_CHECK_GRAY_TOOLTIP"]
     });
   }
@@ -224,7 +224,7 @@ Blockly.Blocks['mcu_car_set_tempo'] = {
       "message0": Blockly.Msg["CAR_SET_TEMPO"],
       "args0": [{ "type": "input_value", "name": "BPM", "check": "Number" }],
       "previousStatement": null, "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_MCU_CAR"],
+      "colour": Blockly.Msg["COLOUR_MCU_CAR_MUSIC"],
       "tooltip": Blockly.Msg["CAR_SET_TEMPO_TOOLTIP"]
     });
   }
@@ -237,7 +237,7 @@ Blockly.Blocks['mcu_car_set_volume'] = {
       "message0": Blockly.Msg["CAR_SET_VOLUME"],
       "args0": [{ "type": "input_value", "name": "VOL", "check": "Number" }],
       "previousStatement": null, "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_MCU_CAR"],
+      "colour": Blockly.Msg["COLOUR_MCU_CAR_MUSIC"],
       "tooltip": Blockly.Msg["CAR_SET_VOLUME_TOOLTIP"]
     });
   }
@@ -266,7 +266,7 @@ Blockly.Blocks['mcu_car_play_note'] = {
         { "type": "field_checkbox", "name": "TRIPLET", "checked": false }
       ],
       "inputsInline": true, "previousStatement": null, "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_MCU_CAR"],
+      "colour": Blockly.Msg["COLOUR_MCU_CAR_MUSIC"],
       "tooltip": Blockly.Msg["CAR_PLAY_NOTE_TOOLTIP"]
     });
     this.getField('OCTAVE').setValue('4');
@@ -280,7 +280,7 @@ Blockly.Blocks['mcu_car_play_melody'] = {
       "message0": Blockly.Msg["CAR_PLAY_MELODY"],
       "args0": [{ "type": "field_multilinetext", "name": "MELODY", "text": "D4Q. D4E B3Q D4Q\nE4Q+E E4E G4Q B4Q\nA4Q. B4E A4Q. G4E\nF#4E_T RE_T F#4E_T D4E_T RE_T D4E_T G4E RE G5Q" }],
       "previousStatement": null, "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_MCU_CAR"],
+      "colour": Blockly.Msg["COLOUR_MCU_CAR_MUSIC"],
       "tooltip": Blockly.Msg["CAR_PLAY_MELODY_TOOLTIP"]
     });
   }
@@ -296,7 +296,7 @@ Blockly.Blocks['mcu_car_tone'] = {
         { "type": "input_value", "name": "MS", "check": "Number" }
       ],
       "inputsInline": true, "previousStatement": null, "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_MCU_CAR"]
+      "colour": Blockly.Msg["COLOUR_MCU_CAR_MUSIC"],
     });
   }
 };
@@ -307,7 +307,7 @@ Blockly.Blocks['mcu_car_no_tone'] = {
     this.jsonInit({
       "message0": Blockly.Msg["CAR_NO_TONE"],
       "previousStatement": null, "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_MCU_CAR"]
+      "colour": Blockly.Msg["COLOUR_MCU_CAR_MUSIC"]
     });
   }
 };
@@ -325,7 +325,7 @@ Blockly.Blocks['mcu_car_note_freq'] = {
           "options": [["0","0"],["1","1"],["2","2"],["3","3"],["4","4"],["5","5"],["6","6"],["7","7"],["8","8"]]
         }
       ],
-      "output": "Number", "colour": Blockly.Msg["COLOUR_MCU_CAR"]
+      "output": "Number", "colour": Blockly.Msg["COLOUR_MCU_CAR_MUSIC"]
     });
     this.getField('OCTAVE').setValue('4');
   }
@@ -344,7 +344,7 @@ Blockly.Blocks['mcu_car_set_led_color'] = {
         { "type": "field_colour", "name": "COLOR", "colour": "#ff0000" }
       ],
       "previousStatement": null, "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_MCU_CAR"]
+      "colour": Blockly.Msg["COLOUR_MCU_CAR_LED"]
     });
   }
 };
@@ -361,7 +361,7 @@ Blockly.Blocks['mcu_car_set_led_io'] = {
       "inputsInline": true,
       "previousStatement": null,
       "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_MCU_CAR"],
+      "colour": Blockly.Msg["COLOUR_MCU_CAR_LED"],
       "tooltip": "控制 Maker Pi 上的藍色指示燈 (GP0-GP7)。支援變數控制腳位。"
     });
   }
@@ -379,7 +379,7 @@ Blockly.Blocks['mcu_car_wait_start'] = {
         }
       ],
       "previousStatement": null, "nextStatement": null,
-      "colour": Blockly.Msg["COLOUR_MCU_CAR"],
+      "colour": Blockly.Msg["COLOUR_MCU_CAR_BUTTON"],
       "tooltip": Blockly.Msg["CAR_WAIT_START_TOOLTIP"]
     });
   }

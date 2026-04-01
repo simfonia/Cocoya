@@ -14,13 +14,6 @@
             </shadow>
         </value>
     </block>
-    <block type="py_io_sleep">
-        <value name="SECONDS">
-            <shadow type="py_math_number">
-                <field name="NUM">1</field>
-            </shadow>
-        </value>
-    </block>
 
     <sep gap="24"></sep>
     <label text="%{BKY_IO_LBL_SERIAL}"></label>

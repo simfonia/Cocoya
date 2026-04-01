@@ -14,7 +14,5 @@
   "IO_SERIAL_TOOLTIP": "Handle serial communication with Arduino or other hardware devices.",
   "IO_SERIAL_AVAILABLE_TOOLTIP": "Check if there is incoming data waiting in the serial buffer. Returns True if data exists, False otherwise.",
   "IO_SERIAL_READ_TOOLTIP": "Read data from the serial port until a newline character.",
-  "IO_SLEEP": "time.sleep( %1 )",
-  "IO_SLEEP_TOOLTIP": "Pause the program for a specified number of seconds."
 });
 })(Blockly);

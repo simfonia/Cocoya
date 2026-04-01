@@ -14,7 +14,5 @@
   "IO_SERIAL_TOOLTIP": "處理與 Arduino 或其他硬體裝置的序列埠通訊。",
   "IO_SERIAL_AVAILABLE_TOOLTIP": "判斷目前序列埠是否有新資料傳入。如果有資料正在「緩衝區」排隊等候讀取，則傳回 True；否則傳回 False。常用於配合 if 判斷式使用。",
   "IO_SERIAL_READ_TOOLTIP": "讀取序列埠資料直到換行符。此積木會自動排空緩衝區，僅取得最新進入緩衝區的一行資料。",
-  "IO_SLEEP": "time.sleep( %1 )",
-  "IO_SLEEP_TOOLTIP": "暫停程式執行指定的秒數 (s)。"
 });
 })(Blockly);

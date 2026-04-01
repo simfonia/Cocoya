@@ -174,8 +174,8 @@ Blockly.Python.forBlock['mcu_car_in_position'] = function(block, generator) {
   var code = `
 if 'servo_GP12' not in globals(): servo_GP12 = PiCarServo(board.GP12)
 if 'servo_GP13' not in globals(): servo_GP13 = PiCarServo(board.GP13)
-servo_GP12.set_angle(0)
-servo_GP13.set_angle(180)
+servo_GP12.set_angle(180)
+servo_GP13.set_angle(0)
 `;
   return code;
 };
@@ -196,15 +196,15 @@ if 'servo_GP13' not in globals(): servo_GP13 = PiCarServo(board.GP13)
 _p = max(min(${percent}, 100), 0) / 100.0
 _s = max(min(${speed}, 10), 1)
 # Dynamic target based on hand_range: Right (0 -> range), Left (180 -> 180-range)
-_target_R = int(_p * servo_GP12.hand_range)
-_target_L = 180 - int(_p * servo_GP13.hand_range)
+_target_R = int(_p * servo_GP13.hand_range)
+_target_L = 180 - int(_p * servo_GP12.hand_range)
 `;
   if (hand === 'BOTH') {
-    code += `PiCarServo.move_sync([servo_GP12, servo_GP13], [_target_R, _target_L], _s)\n`;
+    code += `PiCarServo.move_sync([servo_GP12, servo_GP13], [_target_L, _target_R], _s)\n`;
   } else if (hand === 'RIGHT') {
-    code += `servo_GP12.move_smooth(_target_R, _s)\n`;
+    code += `servo_GP13.move_smooth(_target_R, _s)\n`;
   } else if (hand === 'LEFT') {
-    code += `servo_GP13.move_smooth(_target_L, _s)\n`;
+    code += `servo_GP12.move_smooth(_target_L, _s)\n`;
   }
   
   return code;

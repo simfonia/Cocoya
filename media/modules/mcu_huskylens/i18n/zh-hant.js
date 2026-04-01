@@ -10,4 +10,3 @@ Blockly.Msg["HUSKY_GET_BOX_W"] = "寬度";
 Blockly.Msg["HUSKY_GET_BOX_H"] = "高度";
 Blockly.Msg["HUSKY_IS_LEARNED"] = "HuskyLens 是否偵測到 ID %1 ?";
 
-Blockly.Msg["COLOUR_HUSKYLENS"] = "#00A8E8"; // 使用專業的藍色

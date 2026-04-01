@@ -10,4 +10,3 @@ Blockly.Msg["HUSKY_GET_BOX_W"] = "Width";
 Blockly.Msg["HUSKY_GET_BOX_H"] = "Height";
 Blockly.Msg["HUSKY_IS_LEARNED"] = "Is HuskyLens ID %1 detected?";
 
-Blockly.Msg["COLOUR_HUSKYLENS"] = "#00A8E8";

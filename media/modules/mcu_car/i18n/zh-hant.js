@@ -19,20 +19,19 @@ Blockly.Msg["CAR_LBL_DRIVE"] = "--- 運動控制 (Driving) ---";
 Blockly.Msg["CAR_LBL_ACTION"] = "--- 動作系統 (Actions) ---";
 Blockly.Msg["CAR_LBL_SENSOR"] = "--- 感測器 (Sensors) ---";
 Blockly.Msg["CAR_LBL_SOUND"] = "--- 聲光效果 (Sound & Light) ---";
-Blockly.Msg["CAR_LBL_OTHER"] = "--- 其他設定 (Others) ---";
 
 // πCar Action System
 Blockly.Msg["CAR_SERVO_SETUP"] = "設定 %1 脈衝範圍 最小 %2 最大 %3 微秒";
 Blockly.Msg["CAR_SERVO_SETUP_TOOLTIP"] = "校準特定 servo 的訊號範圍 (極限值 400-2600 微秒)。預設 460-2400。可用於修正左右手動作不一致的問題。";
 Blockly.Msg["CAR_HAND_RANGE"] = "設定雙手活動範圍 %1 度";
 Blockly.Msg["CAR_HAND_RANGE_TOOLTIP"] = "設定雙手張開的最大角度（通常為 180）。";
-Blockly.Msg["CAR_IN_POSITION"] = "雙手歸位 (右手 0, 左手 180)";
+Blockly.Msg["CAR_IN_POSITION"] = "雙手歸位 (左手 180, 右手 0)";
 Blockly.Msg["CAR_IN_POSITION_TOOLTIP"] = "將雙手 servo 旋轉到初始位置。注意：此積木不等待動作完成。";
 Blockly.Msg["CAR_MOVE_HANDS"] = "控制 %1 旋出比例 %2 %% 速度 %3";
 Blockly.Msg["CAR_MOVE_HANDS_TOOLTIP"] = "以平滑方式控制手的旋出比例。此積木會等待動作完成。速度範圍 1-10 (1 為最慢，10 為最快)。";
 Blockly.Msg["CAR_HAND_BOTH"] = "雙手";
-Blockly.Msg["CAR_HAND_LEFT"] = "左手 (GP13)";
-Blockly.Msg["CAR_HAND_RIGHT"] = "右手 (GP12)";
+Blockly.Msg["CAR_HAND_LEFT"] = "左手 (GP12)";
+Blockly.Msg["CAR_HAND_RIGHT"] = "右手 (GP13)";
 
 // πCar Sensor System
 Blockly.Msg["CAR_ULTRASONIC"] = "讀取超音波距離 (公分) Trig %1 Echo %2";
@@ -56,7 +55,7 @@ Blockly.Msg["CAR_PLAY_MELODY_TOOLTIP"] = "解析並播放旋律。時值：W(全
 Blockly.Msg["CAR_TONE"] = "播放頻率 %1 Hz 持續 %2 毫秒";
 Blockly.Msg["CAR_NO_TONE"] = "停止發聲";
 Blockly.Msg["CAR_NOTE_TO_FREQ"] = "取得音符 %1 %2 的頻率";
-Blockly.Msg["CAR_WAIT_START"] = "等待按鈕 %1 按下，以往下執行程式";
+Blockly.Msg["CAR_WAIT_START"] = "等待按鈕 %1 按下，再往下執行程式";
 Blockly.Msg["CAR_WAIT_KEY_MSG"] = "等待按鍵中...";
 Blockly.Msg["CAR_DEBOUNCE_COMMENT"] = "# 防彈跳並避免空迴圈高速運轉讓CPU滿載";
 Blockly.Msg["CAR_HAND_OFF_COMMENT"] = "# 讓手離開";
@@ -69,4 +68,3 @@ Blockly.Msg["CAR_LED_RIGHT"] = "右 (1)";
 Blockly.Msg["CAR_LED_ON"] = "亮";
 Blockly.Msg["CAR_LED_OFF"] = "滅";
 
-Blockly.Msg["COLOUR_MCU_CAR"] = "#4CAF50"; // 使用活力綠色

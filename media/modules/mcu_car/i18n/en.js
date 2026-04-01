@@ -19,19 +19,18 @@ Blockly.Msg["CAR_LBL_DRIVE"] = "--- Driving Control ---";
 Blockly.Msg["CAR_LBL_ACTION"] = "--- Action System ---";
 Blockly.Msg["CAR_LBL_SENSOR"] = "--- Sensors ---";
 Blockly.Msg["CAR_LBL_SOUND"] = "--- Sound & Light ---";
-Blockly.Msg["CAR_LBL_OTHER"] = "--- Settings ---";
 
 // πCar Action System
 Blockly.Msg["CAR_SERVO_SETUP"] = "set %1 pulse range min %2 max %3 us";
 Blockly.Msg["CAR_SERVO_SETUP_TOOLTIP"] = "Calibrate pulse range for specific servo (Limit 400-2600 us). Default 460-2400. Helps fix inconsistencies between hands.";
 Blockly.Msg["CAR_HAND_RANGE"] = "set hands activity range %1 degrees";
 Blockly.Msg["CAR_HAND_RANGE_TOOLTIP"] = "Set the maximum angle for hands (usually 180).";
-Blockly.Msg["CAR_IN_POSITION"] = "hands in position (Right 0, Left 180)";
+Blockly.Msg["CAR_IN_POSITION"] = "hands in position (Left 180, Right 0)";
 Blockly.Msg["CAR_IN_POSITION_TOOLTIP"] = "Reset hands to initial position. Note: Does NOT wait for completion.";
 Blockly.Msg["CAR_MOVE_HANDS"] = "set %1 swing ratio %2 %% at speed %3";
 Blockly.Msg["CAR_MOVE_HANDS_TOOLTIP"] = "Smoothly control hand swing ratio. This block WAITS until finished. Speed range 1-10 (1 slowest, 10 fastest).";
-Blockly.Msg["CAR_HAND_LEFT"] = "left hand (GP13)";
-Blockly.Msg["CAR_HAND_RIGHT"] = "right hand (GP12)";
+Blockly.Msg["CAR_HAND_LEFT"] = "left hand (GP12)";
+Blockly.Msg["CAR_HAND_RIGHT"] = "right hand (GP13)";
 
 // πCar Sensor System
 Blockly.Msg["CAR_ULTRASONIC"] = "get ultrasonic distance (cm) Trig %1 Echo %2";
@@ -68,4 +67,3 @@ Blockly.Msg["CAR_LED_RIGHT"] = "Right (1)";
 Blockly.Msg["CAR_LED_ON"] = "ON";
 Blockly.Msg["CAR_LED_OFF"] = "OFF";
 
-Blockly.Msg["COLOUR_MCU_CAR"] = "#4CAF50";

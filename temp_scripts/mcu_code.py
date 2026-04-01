@@ -65,20 +65,16 @@ if 'btn_GP20' not in globals():
 
 
 # --- MCU Main Program ---  # S_ID:=NJ]emz+oNaL~f(Z,1Hj
-PiCarServo._TRIM["GP12"] = (420, 2470)  # S_ID:{pi/Ag/fvG8rBoD-JVj)
-if 'servo_GP12' in globals(): servo_GP12.min_us, servo_GP12.max_us = 420, 2470  # E_ID:{pi/Ag/fvG8rBoD-JVj)
-PiCarServo._TRIM["GP12"] = (460, 2410)  # S_ID:]#tGU:@Mq_dbKq@@CKYG
-if 'servo_GP12' in globals(): servo_GP12.min_us, servo_GP12.max_us = 460, 2410  # E_ID:]#tGU:@Mq_dbKq@@CKYG
   # S_ID:$;z.SSr-/a8]y-@WBX}h
 if 'servo_GP12' not in globals(): servo_GP12 = PiCarServo(board.GP12)
 if 'servo_GP13' not in globals(): servo_GP13 = PiCarServo(board.GP13)
-servo_GP12.hand_range = 90
-servo_GP13.hand_range = 90  # E_ID:$;z.SSr-/a8]y-@WBX}h
+servo_GP12.hand_range = 180
+servo_GP13.hand_range = 180  # E_ID:$;z.SSr-/a8]y-@WBX}h
   # S_ID:O4:;`]})dce3H*y{v0!c
 if 'servo_GP12' not in globals(): servo_GP12 = PiCarServo(board.GP12)
 if 'servo_GP13' not in globals(): servo_GP13 = PiCarServo(board.GP13)
-servo_GP12.set_angle(0)
-servo_GP13.set_angle(180)  # E_ID:O4:;`]})dce3H*y{v0!c
+servo_GP12.set_angle(180)
+servo_GP13.set_angle(0)  # E_ID:O4:;`]})dce3H*y{v0!c
 time.sleep(1)  # S_ID:qJc2)bb{5(m),hd;M5l[  # E_ID:qJc2)bb{5(m),hd;M5l[
 print("等待按鍵中...")  # S_ID:i2mz=+#bFA9+kZEdSU4{
 while btn_GP20.value:
@@ -87,19 +83,21 @@ time.sleep(0.5) # 讓手離開  # E_ID:i2mz=+#bFA9+kZEdSU4{
   # S_ID:/QTJJqqx?$87zRmx:4un
 if 'servo_GP12' not in globals(): servo_GP12 = PiCarServo(board.GP12)
 if 'servo_GP13' not in globals(): servo_GP13 = PiCarServo(board.GP13)
-_p = max(min(50, 100), 0) / 100.0
+_p = max(min(100, 100), 0) / 100.0
 _s = max(min(10, 10), 1)
 # Dynamic target based on hand_range: Right (0 -> range), Left (180 -> 180-range)
-_target_R = int(_p * servo_GP12.hand_range)
-_target_L = 180 - int(_p * servo_GP13.hand_range)
-PiCarServo.move_sync([servo_GP12, servo_GP13], [_target_R, _target_L], _s)  # E_ID:/QTJJqqx?$87zRmx:4un
+_target_R = int(_p * servo_GP13.hand_range)
+_target_L = 180 - int(_p * servo_GP12.hand_range)
+PiCarServo.move_sync([servo_GP12, servo_GP13], [_target_L, _target_R], _s)  # E_ID:/QTJJqqx?$87zRmx:4un
+time.sleep(1)  # S_ID:[$A6y@-sUV?Fl2HyBhfS  # E_ID:[$A6y@-sUV?Fl2HyBhfS
   # S_ID:4Mml;_i/wf-n_Db4m*3`
 if 'servo_GP12' not in globals(): servo_GP12 = PiCarServo(board.GP12)
 if 'servo_GP13' not in globals(): servo_GP13 = PiCarServo(board.GP13)
 _p = max(min(0, 100), 0) / 100.0
-_s = max(min(5, 10), 1)
+_s = max(min(10, 10), 1)
 # Dynamic target based on hand_range: Right (0 -> range), Left (180 -> 180-range)
-_target_R = int(_p * servo_GP12.hand_range)
-_target_L = 180 - int(_p * servo_GP13.hand_range)
-PiCarServo.move_sync([servo_GP12, servo_GP13], [_target_R, _target_L], _s)  # E_ID:4Mml;_i/wf-n_Db4m*3`
+_target_R = int(_p * servo_GP13.hand_range)
+_target_L = 180 - int(_p * servo_GP12.hand_range)
+PiCarServo.move_sync([servo_GP12, servo_GP13], [_target_L, _target_R], _s)  # E_ID:4Mml;_i/wf-n_Db4m*3`
+time.sleep(1)  # S_ID:hHNJO[_!~)4-b(i8DzcM  # E_ID:hHNJO[_!~)4-b(i8DzcM
 microcontroller.reset()  # S_ID:tc)0K~4N+CbLxmPqWA^f  # E_ID:tc)0K~4N+CbLxmPqWA^f  # E_ID:=NJ]emz+oNaL~f(Z,1Hj

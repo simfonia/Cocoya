@@ -1,0 +1,32 @@
+<category name="%{BKY_CAT_TIME}" colour="%{BKY_COLOUR_TIME}">
+    <block type="py_time_sleep">
+        <value name="SECONDS">
+            <shadow type="py_math_number">
+                <field name="NUM">1</field>
+            </shadow>
+        </value>
+    </block>
+    <block type="py_time_now"></block>
+    <block type="py_time_monotonic"></block>
+    <block type="py_time_localtime">
+        <value name="SECONDS">
+            <shadow type="py_math_number">
+                <field name="NUM">0</field>
+            </shadow>
+        </value>
+    </block>
+    <block type="py_time_strftime">
+        <value name="FORMAT">
+            <shadow type="py_text">
+                <field name="TEXT">%Y-%m-%d %H:%M:%S</field>
+            </shadow>
+        </value>
+        <value name="TIME">
+            <shadow type="py_time_localtime">
+                <value name="SECONDS">
+                    <shadow type="py_math_number"><field name="NUM">0</field></shadow>
+                </value>
+            </shadow>
+        </value>
+    </block>
+</category>

@@ -68,12 +68,6 @@ Blockly.Python.forBlock['py_io_serial_available'] = function(block, generator) {
   return ["(time.sleep(0.001) or ser.in_waiting > 0)", Blockly.Python.ORDER_RELATIONAL];
 };
 
-Blockly.Python.forBlock['py_io_sleep'] = function(block, generator) {
-  generator.definitions_['import_time'] = 'import time';
-  var sec = generator.valueToCode(block, 'SECONDS', Blockly.Python.ORDER_NONE) || "1";
-  return 'time.sleep(' + sec + ')\n';
-};
-
 Blockly.Python.forBlock['py_io_serial_flush'] = function(block, generator) {
   return 'ser.reset_input_buffer()\n';
 };

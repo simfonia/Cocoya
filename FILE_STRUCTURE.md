@@ -10,7 +10,7 @@ C:\Workspace\cocoya\
 │   ├── todo.md            # 任務清單
 │   └── work/              # 每日工作紀錄
 ├── media/                 # Webview 前端資源
-│   ├── docs/              # [新增] 積木說明文件系統
+│   ├── docs/              # 積木說明文件系統
 │   │   ├── hardware_pins_zh-hant.html
 │   │   ├── hardware_pins_en.html
 │   │   ├── pico-w_pinout.png
@@ -27,7 +27,8 @@ C:\Workspace\cocoya\
 │   ├── modules/           # 統一模組目錄
 │   │   ├── core/          # 基礎積木
 │   │   │   ├── structure/ (入口與定義區)
-│   │   │   ├── io/        (標準 IO、Serial、Sleep)
+│   │   │   ├── io/        (標準 IO、Serial)
+│   │   │   ├── time/      (時間相關)
 │   │   │   ├── logic/     (邏輯判斷)
 │   │   │   ├── loops/     (迴圈控制)
 │   │   │   ├── math/      (數學運算)
@@ -42,16 +43,16 @@ C:\Workspace\cocoya\
 │   │   ├── ai_face/       # MediaPipe 臉部網格偵測
 │   │   ├── ai_pose/       # MediaPipe 姿勢偵測模組
 │   │   ├── hardware/      # 基礎硬體控制
-│   │   ├── mcu_camera/    # [New] XIAO S3 相機與資料採集
-│   │   ├── mcu_huskylens/ # [New] HuskyLens AI 視覺感測器
-│   │   └── mcu_car/       # [New] πCar / 馬達與舵機控制
+│   │   ├── mcu_camera/    # XIAO S3 相機與資料採集
+│   │   ├── mcu_huskylens/ # HuskyLens AI 視覺感測器
+│   │   └── mcu_car/       # πCar / 馬達與舵機控制
 │   ├── core_manifest.json # 模組載入清單 (含路徑與平台定義)
 ├── index.html         # 主介面
-├── style.css          # [新增] 獨立樣式表 (由 index.html 抽離)
-├── main.js            # [優化] Webview 進入點 (專注於初始化與通訊)
+├── style.css          # 獨立樣式表 (由 index.html 抽離)
+├── main.js            # Webview 進入點 (專注於初始化與通訊)
 ├── module_loader.js   # 動態模組載入器 (平行載入 & 分散 i18n)
 ├── ui_manager.js      # UI 渲染與互動管理器 (CocoyaUI)
-├── utils.js           # [強化] 通用工具庫 (含 NaN 攔截、XML 過濾、產生器覆寫)
+├── utils.js           # 通用工具庫 (含 NaN 攔截、XML 過濾、產生器覆寫)
 │   ├── zh-hant.js         # 核心語系檔 (UI 文字)
 │   └── en.js              # 核心語系檔 (UI 文字)
 ├── resources/             # 延伸模組靜態資源

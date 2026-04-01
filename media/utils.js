@@ -244,6 +244,12 @@
                         toolboxDiv.appendChild(container);
                     }
 
+                    // Stop all possible events from reaching the Blockly Toolbox to prevent selection errors
+                    const stopEvents = ['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'touchend'];
+                    stopEvents.forEach(eventName => {
+                        container.addEventListener(eventName, (e) => e.stopPropagation());
+                    });
+
                     const searchInput = document.getElementById('block-search');
                     searchInput.addEventListener('input', (e) => {
                         const query = e.target.value.toLowerCase().trim();

@@ -159,6 +159,26 @@
                     plugins: { 'blockDragger': scrollDragger, 'metricsManager': scrollMetrics }
                 });
 
+                // --- Scroll Options 設定 (調低捲動速度) ---
+                const ScrollOptionsPlugin = window.ScrollOptions || (window.ScrollOptionsPlugin && window.ScrollOptionsPlugin.ScrollOptions);
+                if (ScrollOptionsPlugin) {
+                    try {
+                        const scrollOptions = new ScrollOptionsPlugin(this.workspace);
+                        scrollOptions.init({
+                            enableWheelScroll: true,
+                            enableEdgeScroll: true,
+                            edgeScrollOptions: {
+                                slowBlockSpeed: 0.15,    // 預設: 0.28
+                                fastBlockSpeed: 0.5,     // 預設: 1.4
+                                slowMouseSpeed: 0.25,    // 預設: 0.5
+                                fastMouseSpeed: 1.0,     // 預設: 1.6
+                                fastBlockStartDistance: 80,
+                                fastMouseStartDistance: 60
+                            }
+                        });
+                    } catch (e) { console.error('ScrollOptions init failed:', e); }
+                }
+
                 // --- Minimap 初始化 (全方位防護) ---
                 this.initMinimap();
 
@@ -224,7 +244,14 @@
                     document.getElementById('blocklyArea').appendChild(toggleBtn);
                     toggleBtn.onclick = () => {
                         const isCollapsed = mWrapper.classList.toggle('collapsed');
-                        toggleBtn.innerHTML = isCollapsed ? '&#128506;' : '&#10005;';
+                        if (isCollapsed) {
+                            const iconUri = `${window.CocoyaMediaUri}/icons/public_24dp_FE2F89.png`;
+                            toggleBtn.style.background = 'white';
+                            toggleBtn.innerHTML = `<img src="${iconUri}" style="width: 18px; height: 18px; vertical-align: middle;">`;
+                        } else {
+                            toggleBtn.style.background = '#FE2F89';
+                            toggleBtn.innerHTML = '&#10005;';
+                        }
                         this.minimap._isPaused = isCollapsed;
                         if (!isCollapsed) this.refreshMinimap();
                     };
@@ -332,24 +359,52 @@
         createDefaultBlocks: function() {
             if (this.minimap) this.minimap._isPaused = true;
             try {
+                // 直接查詢 DOM 元素來獲取 Toolbox 寬度，這是最保險的做法
+                let offsetX = 100; 
+                const toolboxDiv = document.querySelector('.blocklyToolboxDiv');
+                if (toolboxDiv && toolboxDiv.offsetWidth > 0) {
+                    offsetX = toolboxDiv.offsetWidth + 20;
+                }
+
+                // 強制將 offsetX 限制在 20 到 350 之間
+                if (isNaN(offsetX) || offsetX < 20) offsetX = 100;
+                if (offsetX > 350) offsetX = 100;
+
+                console.log(`Creating default blocks at offsetX: ${offsetX}, Platform: ${this.currentPlatform}`);
+
+                // 先清理一次工作區
+                this.workspace.clear();
+
                 const defBlock = this.workspace.newBlock('py_definition_zone');
-                defBlock.initSvg(); defBlock.render(); defBlock.moveBy(20, 20);
+                defBlock.initSvg(); defBlock.render(); 
+                defBlock.moveTo(new Blockly.utils.Coordinate(offsetX, 20));
+                
                 if (this.currentPlatform === 'CircuitPython') {
                     const mcuMain = this.workspace.newBlock('mcu_main');
-                    mcuMain.initSvg(); mcuMain.render(); mcuMain.moveBy(20, 200);
+                    mcuMain.initSvg(); mcuMain.render(); 
+                    mcuMain.moveTo(new Blockly.utils.Coordinate(offsetX, 200));
+                    
                     const loopBlock = this.workspace.newBlock('py_loop_while');
                     loopBlock.initSvg(); loopBlock.render();
                     const trueBlock = this.workspace.newBlock('py_logic_boolean');
                     trueBlock.setFieldValue('True', 'BOOL');
                     trueBlock.initSvg(); trueBlock.render();
+                    
                     loopBlock.getInput('CONDITION').connection.connect(trueBlock.outputConnection);
                     mcuMain.getInput('DO').connection.connect(loopBlock.previousConnection);
                 } else {
                     const mainBlock = this.workspace.newBlock('py_main');
-                    mainBlock.initSvg(); mainBlock.render(); mainBlock.moveBy(20, 140);
+                    mainBlock.initSvg(); mainBlock.render(); 
+                    mainBlock.moveTo(new Blockly.utils.Coordinate(offsetX, 140));
                 }
-                setTimeout(() => { if (this.minimap) { this.minimap._isPaused = false; this.refreshMinimap(); } this.workspace.clearUndo(); }, 400); 
-            } catch (e) { }
+                
+                setTimeout(() => { 
+                    if (this.minimap) { this.minimap._isPaused = false; this.refreshMinimap(); } 
+                    this.workspace.clearUndo(); 
+                }, 400); 
+            } catch (e) {
+                console.error('CRITICAL: Failed to create default blocks:', e);
+            }
         },
 
         setupGeneratorOverrides: function() {

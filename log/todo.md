@@ -38,5 +38,12 @@
     - [ ] 重構序列埠偵測邏輯（支援 `/dev/tty`）。
     - [ ] 適應 Linux 磁碟掛載路徑以支援 MCU 部署。
 
+## [未來遠景] 里程碑 v5.0: 獨立 IDE 轉型 (Cocoya Native)
+- [ ] **架構遷移評估 (Standalone App)**：
+    - [ ] 仿照 #WaveCode 使用 Tauri + Rust 作為外殼。
+    - [ ] 實作 Python Sidecar 機制，將 MediaPipe 與 OpenCV 環境封裝進獨立 App。
+    - [ ] 將 Serial 通訊邏輯從 TypeScript 遷移至 Rust 原生實作以提升穩定性。
+    - [ ] 設計自定義專案檔格式 (.cocoya)，整合積木 XML 與 AI 模型設定。
+
 ---
-*更新日期：2026-03-03 (腳位優化與說明系統完成版)*
+*更新日期：2026-03-08 (新增獨立程式轉型規畫)*

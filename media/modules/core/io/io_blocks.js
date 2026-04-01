@@ -88,21 +88,6 @@ Blockly.Blocks['py_io_serial_available'] = {
   }
 };
 
-// --- Sleep ---
-Blockly.Blocks['py_io_sleep'] = {
-  init: function() {
-    this.jsonInit({
-      "message0": "%{BKY_IO_SLEEP}",
-      "args0": [{ "type": "input_value", "name": "SECONDS", "check": "Number" }],
-      "previousStatement": null,
-      "nextStatement": null,
-      "inputsInline": true,
-      "colour": Blockly.Msg["COLOUR_IO"],
-      "tooltip": "%{BKY_IO_SLEEP_TOOLTIP}"
-    });
-  }
-};
-
 // --- Serial Flush ---
 Blockly.Blocks['py_io_serial_flush'] = {
   init: function() {
