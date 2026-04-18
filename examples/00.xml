@@ -37,7 +37,7 @@
     <field name="PIN">board.GP7</field>
     <field name="STATE">True</field>
     <next>
-      <block type="py_io_sleep" id="?xf#{csM{K-PAVL_5LJr" disabled-reasons="orphan">
+      <block type="py_time_sleep" id="?xf#{csM{K-PAVL_5LJr" disabled-reasons="orphan">
         <value name="SECONDS">
           <shadow type="py_math_number" id="i)B*2qiF=]^ODuz9P@Xd" disabled-reasons="orphan">
             <field name="NUM">1</field>
@@ -48,7 +48,7 @@
             <field name="PIN">board.GP7</field>
             <field name="STATE">False</field>
             <next>
-              <block type="py_io_sleep" id="}M3}_7I7=+0;2D28ztL+" disabled-reasons="orphan">
+              <block type="py_time_sleep" id="}M3}_7I7=+0;2D28ztL+" disabled-reasons="orphan">
                 <value name="SECONDS">
                   <shadow type="py_math_number" id="8r|7)AMYMv[|Hz57]8]n" disabled-reasons="orphan">
                     <field name="NUM">1</field>

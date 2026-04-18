@@ -47,7 +47,7 @@ def monitor(port, baud=115200):
                 try: ser.close()
                 except: pass
             ser = None
-            time.sleep(1.0)
+            time.sleep(0.2)
         except KeyboardInterrupt:
             print("\n--- Monitor Stopped ---")
             if ser:
@@ -55,7 +55,7 @@ def monitor(port, baud=115200):
                 except: pass
             break
 
-def deploy(port, code_filename):
+def deploy(port, code_filename, use_monitor=True):
     """執行 MCU 部署邏輯"""
     print("--- Cocoya MCU Deployer ---")
     
@@ -83,74 +83,110 @@ def deploy(port, code_filename):
         print(f"Drive scan error: {e}")
 
     if target_drive:
-        print(f"Found CIRCUITPY at {target_drive}. Writing directly...")
-        try:
-            target_path = os.path.join(target_drive, "code.py")
-            with open(target_path, "w", encoding="utf-8") as f:
-                f.write(code_content)
-            print("Direct drive write successful! Triggering reboot...")
+        target_path = os.path.normpath(os.path.join(target_drive, "code.py"))
+        
+        print("\n>>> 上傳中，請勿斷開 USB 連線 <<<")
+        success = False
+        import subprocess
+        for attempt in range(3):
+            try:
+                # 方案 A: 呼叫 Windows 系統原生的 copy 指令
+                temp_file = os.path.normpath(code_filename + ".tmp")
+                with open(temp_file, "wb") as f:
+                    f.write(code_content.encode("utf-8"))
+                
+                cmd = f'copy /Y "{temp_file}" "{target_path}"'
+                result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
+                
+                if result.returncode == 0:
+                    time.sleep(0.2)
+                    with open(target_path, "rb") as f_check:
+                        written_content = f_check.read().decode('utf-8', errors='ignore')
+                        if written_content.strip() == code_content.strip():
+                            success = True
+                            if os.path.exists(temp_file): os.remove(temp_file)
+                            break
+                
+                if os.path.exists(temp_file): os.remove(temp_file)
+                time.sleep(0.5)
+            except Exception as e:
+                time.sleep(0.5)
+
+        if success:
+            print("\n" + "="*40)
+            print("上傳完畢，可斷開 USB 連線")
+            print("="*40 + "\n")
             
-            # 透過 Serial 觸發重啟
+            # 透過 Serial 觸發重啟 (Ctrl-D)
             try:
                 temp_ser = serial.Serial(port, 115200, timeout=0.1)
-                temp_ser.write(b'\x03\x03\x04') # 中斷並重啟
+                temp_ser.write(b'\x03\x03\x04') 
                 temp_ser.close()
             except:
                 pass
             
-            # 進入監控模式
-            monitor(port)
+            if use_monitor:
+                monitor(port)
             return
-        except Exception as e:
-            print(f"Drive write failed: {e}. Falling back to Serial REPL...")
+        else:
+            print(f"Drive write failed after retries. Falling back to Serial REPL...")
 
     # --- 方案 B: 透過 Serial REPL 寫入 ---
     try:
         print(f"Connecting to {port} via Serial...")
         ser = serial.Serial(port, 115200, timeout=0.1)
         
+        print("\n>>> 上傳中，請勿斷開 USB 連線 <<<")
+        
         # 強制中斷並進入 Raw REPL
-        print("Interrupting current state...")
-        ser.write(b'\r\n\x03\x03\x03') # Newline + 3x Ctrl-C
+        ser.write(b'\r\n\x03\x03\x03') 
         time.sleep(0.5)
-        ser.write(b'\x04') # Ctrl-D (Soft Reset)
-        time.sleep(1.0) # 等待重啟完成
-        ser.write(b'\x03\x03') # 再次中斷以進入 REPL
+        ser.write(b'\x04') 
+        time.sleep(1.0) 
+        ser.write(b'\x03\x03') 
         time.sleep(0.2)
         
-        ser.write(b'\x01') # Ctrl-A (Enter Raw REPL)
+        ser.write(b'\x01') 
         time.sleep(0.5)
         
         response = ser.read_all().decode('utf-8', errors='ignore')
         if "raw REPL" not in response:
-            print("Failed to enter Raw REPL. Device response:")
-            print(response)
+            print("Failed to enter Raw REPL.")
             sys.exit(1)
 
         print("Uploading code via REPL...")
-        # 建立寫入指令並發送到 REPL
         write_cmd = f'f = open("code.py", "w"); f.write({repr(code_content)}); f.close()\n'
         ser.write(write_cmd.encode('utf-8'))
-        ser.write(b'\x04') # Ctrl-D 執行
+        ser.write(b'\x04') 
         
         time.sleep(0.5)
         result = ser.read_all().decode('utf-8', errors='ignore')
         
         if "OSError" in result:
             print("\n[ERROR] MCU 磁碟目前為唯讀狀態。")
-            print("請嘗試直接存入 CIRCUITPY 磁碟，或在 boot.py 中開放寫入權限。")
             ser.close()
             sys.exit(1)
             
-        print("Serial deployment completed! Entering monitor...")
-        ser.close() # 關閉後重新進入 monitor 函式以啟用自動重連
-        monitor(port)
+        print("\n" + "="*40)
+        print("上傳完畢，可斷開 USB 連線")
+        print("="*40 + "\n")
+        
+        ser.close() 
+        if use_monitor:
+            monitor(port)
     except Exception as e:
         print(f"Error during Serial REPL deployment: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":
     if len(sys.argv) < 3:
-        print("Usage: python deploy_mcu.py <PORT> <CODE_FILE>")
+        print("Usage: python deploy_mcu.py <PORT> <CODE_FILE> [--no-monitor]")
         sys.exit(1)
-    deploy(sys.argv[1], sys.argv[2])
+    
+    _port = sys.argv[1]
+    _code_file = sys.argv[2]
+    _use_monitor = True
+    if len(sys.argv) > 3 and sys.argv[3] == "--no-monitor":
+        _use_monitor = False
+
+    deploy(_port, _code_file, _use_monitor)

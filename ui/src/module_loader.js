@@ -17,9 +17,9 @@ window.CocoyaXMLRequests = new Map();
 async function fetchXMLViaHost(moduleId) {
     return new Promise((resolve) => {
         const requestId = Date.now() + Math.random();
+        if (!window.CocoyaXMLRequests) window.CocoyaXMLRequests = new Map();
         window.CocoyaXMLRequests.set(requestId, resolve);
-        window.vsCodeApi.postMessage({ 
-            command: 'getModuleToolbox', 
+        window.CocoyaBridge.send('getModuleToolbox', { 
             moduleId: moduleId,
             requestId: requestId
         });

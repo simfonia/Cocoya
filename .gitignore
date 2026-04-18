@@ -5,3 +5,14 @@ out/
 backup/
 .DS_Store
 GEMINI.md
+
+# Vite (UI)
+ui/node_modules/
+ui/dist/
+ui/.env*
+
+# Tauri (Rust)
+src-tauri/target/
+src-tauri/bin/
+src-tauri/gen/
+src-tauri/.env*

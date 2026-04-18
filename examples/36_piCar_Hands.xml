@@ -4,13 +4,13 @@
     <statement name="DO">
       <block type="mcu_car_servo_setup" id="]#tGU:@Mq_dbKq@@CKYG" disabled-reasons="MANUALLY_DISABLED">
         <field name="HAND">board.GP12</field>
-        <field name="MIN">420</field>
-        <field name="MAX">2440</field>
+        <field name="MIN">460</field>
+        <field name="MAX">2400</field>
         <next>
           <block type="mcu_car_servo_setup" id="{pi/Ag/fvG8rBoD-JVj)" disabled-reasons="MANUALLY_DISABLED">
             <field name="HAND">board.GP13</field>
-            <field name="MIN">460</field>
-            <field name="MAX">2410</field>
+            <field name="MIN">410</field>
+            <field name="MAX">2480</field>
             <next>
               <block type="mcu_car_hand_range" id="$;z.SSr-/a8]y-@WBX}h">
                 <value name="RANGE">
@@ -21,57 +21,63 @@
                 <next>
                   <block type="mcu_car_in_position" id="O4:;`]})dce3H*y{v0!c">
                     <next>
-                      <block type="py_io_sleep" id="qJc2)bb{5(m),hd;M5l[">
+                      <block type="py_time_sleep" id="qJc2)bb{5(m),hd;M5l[">
                         <value name="SECONDS">
                           <shadow type="py_math_number" id="NqLZU6o;NGW;7Tr1DKcQ">
                             <field name="NUM">1</field>
                           </shadow>
                         </value>
                         <next>
-                          <block type="mcu_car_wait_start" id="i2mz=+#bFA9+kZEdSU4{">
-                            <field name="PIN">board.GP20</field>
-                            <next>
-                              <block type="mcu_car_move_hands" id="/QTJJqqx?$87zRmx:4un">
-                                <field name="HAND">BOTH</field>
-                                <value name="PERCENT">
-                                  <shadow type="math_number" id="X=f,Vf.jdPSPc[o9QsU4">
-                                    <field name="NUM">100</field>
-                                  </shadow>
-                                </value>
-                                <value name="SPEED">
-                                  <shadow type="math_number" id="F|Itju|7ZJ`l:M-#H?|F">
-                                    <field name="NUM">10</field>
-                                  </shadow>
-                                </value>
+                          <block type="py_loop_while" id="],=ED]b2j3B+i$1f[IA0">
+                            <value name="CONDITION">
+                              <block type="py_logic_boolean" id="!2+!u?%chVct}]ey*Cf?">
+                                <field name="BOOL">True</field>
+                              </block>
+                            </value>
+                            <statement name="DO">
+                              <block type="mcu_car_wait_start" id="i2mz=+#bFA9+kZEdSU4{">
+                                <field name="PIN">board.GP20</field>
                                 <next>
-                                  <block type="py_io_sleep" id="[$A6y@-sUV?Fl2HyBhfS">
-                                    <value name="SECONDS">
-                                      <shadow type="py_math_number" id="~xD|xELqP3vQ4.WN5rq%">
-                                        <field name="NUM">1</field>
+                                  <block type="mcu_car_move_hands" id="/QTJJqqx?$87zRmx:4un">
+                                    <field name="HAND">BOTH</field>
+                                    <value name="PERCENT">
+                                      <shadow type="math_number" id="X=f,Vf.jdPSPc[o9QsU4">
+                                        <field name="NUM">100</field>
+                                      </shadow>
+                                    </value>
+                                    <value name="SPEED">
+                                      <shadow type="math_number" id="F|Itju|7ZJ`l:M-#H?|F">
+                                        <field name="NUM">10</field>
                                       </shadow>
                                     </value>
                                     <next>
-                                      <block type="mcu_car_move_hands" id="4Mml;_i/wf-n_Db4m*3`">
-                                        <field name="HAND">BOTH</field>
-                                        <value name="PERCENT">
-                                          <shadow type="math_number" id="wVdal_3x-HlQQ7vwJKH9">
-                                            <field name="NUM">0</field>
-                                          </shadow>
-                                        </value>
-                                        <value name="SPEED">
-                                          <shadow type="math_number" id="ws7*F+e7aN$Bl1t?XfMT">
-                                            <field name="NUM">10</field>
+                                      <block type="py_time_sleep" id="[$A6y@-sUV?Fl2HyBhfS">
+                                        <value name="SECONDS">
+                                          <shadow type="py_math_number" id="~xD|xELqP3vQ4.WN5rq%">
+                                            <field name="NUM">1</field>
                                           </shadow>
                                         </value>
                                         <next>
-                                          <block type="py_io_sleep" id="hHNJO[_!~)4-b(i8DzcM">
-                                            <value name="SECONDS">
-                                              <shadow type="py_math_number" id="c,E@bQ`LEe*trY=Y1fR#">
-                                                <field name="NUM">1</field>
+                                          <block type="mcu_car_move_hands" id="4Mml;_i/wf-n_Db4m*3`">
+                                            <field name="HAND">BOTH</field>
+                                            <value name="PERCENT">
+                                              <shadow type="math_number" id="wVdal_3x-HlQQ7vwJKH9">
+                                                <field name="NUM">0</field>
+                                              </shadow>
+                                            </value>
+                                            <value name="SPEED">
+                                              <shadow type="math_number" id="ws7*F+e7aN$Bl1t?XfMT">
+                                                <field name="NUM">10</field>
                                               </shadow>
                                             </value>
                                             <next>
-                                              <block type="mcu_reset" id="tc)0K~4N+CbLxmPqWA^f"></block>
+                                              <block type="py_time_sleep" id="hHNJO[_!~)4-b(i8DzcM">
+                                                <value name="SECONDS">
+                                                  <shadow type="py_math_number" id="c,E@bQ`LEe*trY=Y1fR#">
+                                                    <field name="NUM">1</field>
+                                                  </shadow>
+                                                </value>
+                                              </block>
                                             </next>
                                           </block>
                                         </next>
@@ -80,7 +86,7 @@
                                   </block>
                                 </next>
                               </block>
-                            </next>
+                            </statement>
                           </block>
                         </next>
                       </block>

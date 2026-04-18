@@ -110,8 +110,10 @@
     "MSG_CANCEL": "取消",
     "MSG_SELECT_PATH": "選取路徑",
     "MSG_SELECT_PORT": "請先選擇序列埠！",
-    "MSG_PYSERIAL_MISSING": "找不到 pyserial 模組，請先執行 'pip install pyserial' 以支援硬體部署。",
+    "MSG_PYSERIAL_MISSING": "找不到 pyserial module，請先執行 'pip install pyserial' 以支援硬體部署。",
     "MSG_DEPLOYING_MCU": "正在部署程式至 MCU (%1)...",
+    "MSG_DEPLOY_UPLOADING": "上傳中，請勿斷開 USB 連線...",
+    "MSG_DEPLOY_COMPLETED": "上傳完畢，可斷開 USB 連線。",
     "MSG_PYTHON_NOT_FOUND": "無法執行 Python (目前設定: %1)。請指定正確的 python.exe 路徑。",
     "MSG_PYTHON_UPDATED": "Python 路徑已更新: %1",
 

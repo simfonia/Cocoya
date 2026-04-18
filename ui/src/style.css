@@ -308,10 +308,11 @@ body {
     position: absolute;
     top: 60px;
     right: 10px;
-    width: 24px;
-    height: 24px;
-    background: #FE2F89;
-    color: white;
+    width: 32px;
+    height: 32px;
+    background: white;
+    border: 1px solid #FE2F89;
+    color: #FE2F89;
     border-radius: 50%;
     display: flex;
     justify-content: center;
@@ -319,12 +320,12 @@ body {
     cursor: pointer;
     z-index: 101;
     font-size: 14px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    transition: transform 0.3s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s, background-color 0.2s;
 }
 
-#minimap-toggle.collapsed {
-    transform: translateX(5px);
+#minimap-toggle:hover {
+    background-color: #fce4ec;
 }
 
 /* 確保 Flyout 顯示在 Toolbox 之上 */
@@ -338,7 +339,7 @@ body {
 
 /* 嵌入式搜尋框樣式 */
 #block-search-container {
-    padding: 8px !important;
+    padding: 6px 0 !important;
     background: #ffffff !important;
     border-bottom: 1px solid #ddd !important;
     display: flex !important;
@@ -349,9 +350,49 @@ body {
     width: 100% !important;
 }
 
+.search-input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100px; /* 調整搜尋框寬度 */
+}
+
+#block-search {
+    width: 100% !important;
+    height: 24px !important;
+    padding: 0 24px 0 8px !important;
+    border: 1px solid #ddd !important;
+    border-radius: 12px !important;
+    font-size: 11px !important;
+    outline: none !important;
+    background: #ffd0fc !important;
+    box-sizing: border-box !important;
+}
+
 #block-search:focus {
     border-color: #FE2F89 !important;
+    background: #ffffff !important;
     box-shadow: 0 0 4px rgba(254, 47, 137, 0.2) !important;
+}
+
+#block-search-clear {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+    z-index: 2;
+}
+
+#block-search-clear:hover {
+    background-color: #fce4ec;
 }
 
 /* 環境診斷視窗 */

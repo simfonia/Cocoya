@@ -424,10 +424,10 @@ execSync(`"${pythonPath}" -c "import ${module}"`, { stdio: 'ignore' });</code></
         <p>在 <code>main.js</code> 入口處徹底覆寫 <code>Element.prototype.setAttribute</code>，攔截所有包含 <code>NaN</code> 或 <code>Infinity</code> 的字串或數值輸入。這從底層保障了不論哪種第三方積木或插件出錯，皆不會導致瀏覽器渲染異常或報錯刷屏。</p>
     </section>
 
-    <section id="#help-system">
+    <section id="help-system">
         <h2>21. 積木說明文件系統 (Block Help System)</h2>
         <p>為了解決硬體腳位配置複雜導致的學習門檻，系統建立了整合式的圖形化說明機制。</p>
-        
+
         <h3>A. 本地路徑解析橋樑</h3>
         <p>由於 Webview 安全限制，系統在 <code>main.js</code> 攔截 <code>window.open</code> 請求，將相對路徑的 Help ID 傳送至 Host 端。Host 端透過 <code>vscode.env.openExternal</code> 與 <code>file://</code> 協定開啟 <code>media/docs/</code> 下的 HTML，確保圖片與超連結在外部瀏覽器中正常運作。</p>
 
@@ -435,8 +435,26 @@ execSync(`"${pythonPath}" -c "import ${module}"`, { stdio: 'ignore' });</code></
         <p>說明文件採用 <code>[id]_[lang].html</code> 命名規範（如 <code>hardware_pins_zh-hant.html</code>）。攔截器會根據當前 Webview 語言自動附加語系後綴，提供在地化的學習資源。</p>
     </section>
 
+    <section id="dual-mode">
+        <h2>22. 雙模開發架構 (Dual-Mode Architecture)</h2>
+        <p>為了兼顧開發者環境與終端教學現場，Cocoya 採用一套 UI、兩套 Host 的雙模架構。</p>
+
+        <h3>A. 統一前端 (Shared UI)</h3>
+        <p>前端 UI 代碼統一存放在 <code>ui/src</code> 中，並使用 Vite 進行建置。不論是 VSIX 還是 Tauri，載入的積木模組 (<code>modules/</code>) 皆為同一套代碼，達成「更動一次，雙模同步」。</p>
+
+        <h3>B. 通訊橋樑 (CocoyaBridge)</h3>
+        <p>系統透過 <code>bridge.js</code> 抽象化底層通訊。前端邏輯呼叫 <code>Bridge.saveFile()</code> 時，內部會自動判別環境：</p>
+        <ul>
+            <li><strong>VSIX 模式:</strong> 呼叫 <code>vscode.postMessage({ command: 'saveFile' })</code>。</li>
+            <li><strong>Tauri 模式:</strong> 呼叫 <code>invoke('save_file')</code> (Rust backend)。</li>
+        </ul>
+
+        <h3>C. 功能鏡像 (Feature Mirroring)</h3>
+        <p>Rust 後端會實作與 VS Code Extension Host 完全對等的功能（如：序列埠掃描、Python 代碼執行、磁碟部署），確保教學體驗的一致性。</p>
+    </section>
+
     <footer>
-        <p>© 2026 simfonia - Cocoya 專案組。文件更新日期：2026-03-03 (v3.4)</p>
+        <p>© 2026 simfonia - Cocoya 專案組。文件更新日期：2026-04-09 (v5.0)</p>
     </footer>
 </main>
 

@@ -1,17 +1,18 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="zh-Hant">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cocoya Blockly Editor</title>
-    <!-- Highlight.js 語法高亮 -->
+    <!-- Highlight.js 語法高亮 (CDN) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
-    <link rel="stylesheet" href="style.css">
+    
+    <!-- 樣式表 (Vite 會處理) -->
+    <link rel="stylesheet" href="/src/style.css">
 </head>
-
-<body>
+<body class="cocoya-editor">
     <div id="container">
         <div id="blocklyArea">
             <div id="toolbar">
@@ -23,29 +24,29 @@
                     </select>
                     <div class="toolbar-separator"></div>
                     <div class="toolbar-btn" id="btn-new" title="%{BKY_TLB_NEW}">
-                        <img src="icons/new_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="icons/new_24dp_FE2F89.png" class="hover-icon">
+                        <img src="/src/icons/new_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="/src/icons/new_24dp_FE2F89.png" class="hover-icon">
                     </div>
                     <div class="toolbar-btn" id="btn-open" title="%{BKY_TLB_OPEN}">
-                        <img src="icons/load_project_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="icons/load_project_24dp_FE2F89.png" class="hover-icon">
+                        <img src="/src/icons/load_project_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="/src/icons/load_project_24dp_FE2F89.png" class="hover-icon">
                     </div>
                     <div class="toolbar-btn" id="btn-save" title="%{BKY_TLB_SAVE}">
-                        <img src="icons/save_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="icons/save_24dp_FE2F89.png" class="hover-icon">
+                        <img src="/src/icons/save_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="/src/icons/save_24dp_FE2F89.png" class="hover-icon">
                     </div>
                     <div class="toolbar-btn" id="btn-save-as" title="%{BKY_TLB_SAVE_AS}">
-                        <img src="icons/save_as_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="icons/save_as_24dp_FE2F89.png" class="hover-icon">
+                        <img src="/src/icons/save_as_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="/src/icons/save_as_24dp_FE2F89.png" class="hover-icon">
                     </div>
                     <div class="toolbar-separator"></div>
                     <div class="toolbar-btn" id="btn-settings" title="%{BKY_TLB_SETTINGS}">
-                        <img src="icons/settings_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="icons/settings_24dp_FE2F89.png" class="hover-icon">
+                        <img src="/src/icons/settings_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="/src/icons/settings_24dp_FE2F89.png" class="hover-icon">
                     </div>
                     <div class="toolbar-btn" id="btn-diagnose" title="%{BKY_TLB_DIAGNOSE}">
-                        <img src="icons/dashboard_customize_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="icons/dashboard_customize_24dp_FE2F89.png" class="hover-icon">
+                        <img src="/src/icons/dashboard_customize_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="/src/icons/dashboard_customize_24dp_FE2F89.png" class="hover-icon">
                     </div>
                 </div>
 
@@ -54,25 +55,25 @@
                 <!-- 右側群組：Serial 與 執行 -->
                 <div class="toolbar-group">
                     <div class="toolbar-btn" id="btn-refresh-serial" title="%{BKY_TLB_SERIAL_REFRESH}">
-                        <img src="icons/connect_serial_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="icons/connect_serial_24dp_FE2F89.png" class="hover-icon">
+                        <img src="/src/icons/connect_serial_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="/src/icons/connect_serial_24dp_FE2F89.png" class="hover-icon">
                     </div>
                     <select id="serial-selector" class="serial-select" title="%{BKY_TLB_SERIAL_PORT}">
                         <option value="">(No Port)</option>
                     </select>
                     <div class="toolbar-separator"></div>
                     <div class="toolbar-btn" id="btn-run" title="%{BKY_TLB_RUN}">
-                        <img src="icons/run_blocks_24dp_75FB4C.png" class="normal-icon">
-                        <img src="icons/run_blocks_24dp_FE2F89.png" class="hover-icon">
+                        <img src="/src/icons/run_blocks_24dp_75FB4C.png" class="normal-icon">
+                        <img src="/src/icons/run_blocks_24dp_FE2F89.png" class="hover-icon">
                     </div>
                     <div class="toolbar-btn" id="btn-update" title="%{BKY_TLB_UPDATE}">
-                        <img src="icons/published_with_changes_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="icons/published_with_changes_24dp_FE2F89.png" class="hover-icon pink-hover">
-                        <img src="icons/published_with_changes_24dp_75FB4C.png" class="hover-icon green-hover">
+                        <img src="/src/icons/published_with_changes_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="/src/icons/published_with_changes_24dp_FE2F89.png" class="hover-icon pink-hover">
+                        <img src="/src/icons/published_with_changes_24dp_75FB4C.png" class="hover-icon green-hover">
                     </div>
                     <div class="toolbar-btn" id="btn-stop" title="%{BKY_TLB_STOP}">
-                        <img src="icons/dangerous_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="icons/dangerous_24dp_FE2F89.png" class="hover-icon">
+                        <img src="/src/icons/dangerous_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="/src/icons/dangerous_24dp_FE2F89.png" class="hover-icon">
                     </div>
                 </div>
             </div>
@@ -82,15 +83,9 @@
             <div id="codeHeader">
                 <span>%{BKY_TLB_PYTHON_PREVIEW}</span>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <div class="color-picker-wrapper" title="Highlight Color">
-                        <div id="highlight-color-preview" class="color-preview"></div>
-                        <input type="color" id="highlight-color-input" value="#fff59d">
-                    </div>
                     <div class="toolbar-btn" id="btn-copy-code" title="Copy Code" style="width: 24px; height: 24px;">
-                        <img src="icons/content_copy_24dp_1F1F1F.png" class="normal-icon"
-                            style="width: 18px; height: 18px;">
-                        <img src="icons/content_copy_24dp_FE2F89.png" class="hover-icon"
-                            style="width: 18px; height: 18px;">
+                        <img src="/src/icons/content_copy_24dp_1F1F1F.png" class="normal-icon" style="width: 18px; height: 18px;">
+                        <img src="/src/icons/content_copy_24dp_FE2F89.png" class="hover-icon" style="width: 18px; height: 18px;">
                     </div>
                     <div class="toolbar-separator" style="height: 16px; margin: 0;"></div>
                     <span style="font-size: 10px;">Indent:</span>
@@ -117,28 +112,29 @@
                 </ul>
             </div>
             <div class="modal-footer">
-                <button class="btn-close"
-                    onclick="document.getElementById('diagnose-modal').style.display='none'">%{BKY_MSG_CLOSE}</button>
+                <button class="btn-close" onclick="document.getElementById('diagnose-modal').style.display='none'">%{BKY_MSG_CLOSE}</button>
             </div>
         </div>
     </div>
 
     <!-- Blockly 核心 -->
-    <script src="blockly/core/blockly.js"></script>
-    <script src="blockly/core/python_compressed.js"></script>
+    <script src="/blockly/core/blockly.js"></script>
+    <script src="/blockly/core/python_compressed.js"></script>
 
     <!-- 插件 -->
-    <script src="blockly/plugins/field-colour.js"></script>
-    <script src="blockly/plugins/field-multilineinput.js"></script>
-    <script src="blockly/plugins/scroll-options.js"></script>
-    <script src="blockly/plugins/workspace-minimap.js"></script>
-    <script src="blockly/plugins/blockly-modal.js"></script>
+    <script src="/blockly/plugins/field-colour.js"></script>
+    <script src="/blockly/plugins/field-multilineinput.js"></script>
+    <script src="/blockly/plugins/scroll-options.js"></script>
+    <script src="/blockly/plugins/workspace-minimap.js"></script>
+    <script src="/blockly/plugins/blockly-modal.js"></script>
 
-    <!-- 主程式邏輯 -->
-    <script src="utils.js"></script>
-    <script src="ui_manager.js"></script>
-    <script src="module_loader.js"></script>
-    <script src="main.js"></script>
+    <!-- 主程式核心邏輯 (重要: 必須在 main.js 之前載入) -->
+    <script src="/src/utils.js"></script>
+    <script src="/src/ui_manager.js"></script>
+    <script src="/src/module_loader.js"></script>
+
+    <!-- 啟動橋樑與主程式 (ESM) -->
+    <script type="module" src="/src/bridge.js"></script>
+    <script type="module" src="/src/main.js"></script>
 </body>
-
 </html>

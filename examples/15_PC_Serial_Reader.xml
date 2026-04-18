@@ -67,7 +67,7 @@
                   </block>
                 </statement>
                 <next>
-                  <block type="py_io_sleep" id="N]D/t0?W}X|QO8SjM]cU">
+                  <block type="py_time_sleep" id="N]D/t0?W}X|QO8SjM]cU">
                     <value name="SECONDS">
                       <shadow type="py_math_number" id="8kRl=5aOE4BI.|Z3Pl-9">
                         <field name="NUM">1</field>

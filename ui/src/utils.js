@@ -233,9 +233,17 @@
 
                     console.log('Found toolbox container, injecting search box...');
                     
+                    const mediaUri = window.CocoyaMediaUri || '/src';
                     const container = document.createElement('div');
                     container.id = 'block-search-container';
-                    container.innerHTML = `<input type="text" id="block-search" placeholder="${Blockly.Msg['BKY_CAT_SEARCH'] || '搜尋積木...'}" autocomplete="off">`;
+                    container.innerHTML = `
+                        <div class="search-input-wrapper">
+                            <input type="text" id="block-search" placeholder="${Blockly.Msg['BKY_CAT_SEARCH'] || '搜尋積木...'}" autocomplete="off">
+                            <div id="block-search-clear" style="display: none;">
+                                <img src="${mediaUri}/icons/cancel_24dp_FE2F89.png" style="width: 16px; height: 16px; cursor: pointer;">
+                            </div>
+                        </div>
+                    `;
                     
                     // 確保搜尋框被插入到 Toolbox 最頂部
                     if (toolboxDiv.firstChild) {
@@ -244,20 +252,51 @@
                         toolboxDiv.appendChild(container);
                     }
 
-                    // Stop all possible events from reaching the Blockly Toolbox to prevent selection errors
+                    const searchInput = document.getElementById('block-search');
+                    const clearBtn = document.getElementById('block-search-clear');
+
+                    // Stop all possible events from reaching the Blockly Toolbox
                     const stopEvents = ['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'touchend'];
                     stopEvents.forEach(eventName => {
                         container.addEventListener(eventName, (e) => e.stopPropagation());
                     });
 
-                    const searchInput = document.getElementById('block-search');
-                    searchInput.addEventListener('input', (e) => {
-                        const query = e.target.value.toLowerCase().trim();
-                        if (!query) { workspace.getFlyout().hide(); return; }
-                        const results = this.search(query);
-                        if (results.length > 0) workspace.getFlyout().show(results.slice(0, 30));
-                        else workspace.getFlyout().hide();
+                    const doSearch = (query) => {
+                        const q = query.toLowerCase().trim();
+                        const flyout = workspace.getFlyout();
+                        if (!q) { 
+                            flyout.hide(); 
+                            clearBtn.style.display = 'none';
+                            return; 
+                        }
+                        clearBtn.style.display = 'flex';
+                        const results = this.search(q);
+                        if (results.length > 0) {
+                            flyout.show(results.slice(0, 30));
+                            // --- 關鍵修正: 獲取實體寬度並強制校正 Flyout 位置 ---
+                            const toolboxEl = document.querySelector('.blocklyToolboxDiv');
+                            const toolboxWidth = toolboxEl ? toolboxEl.offsetWidth : workspace.getToolbox().getWidth();
+                            if (flyout.setX) flyout.setX(toolboxWidth);
+                        } else {
+                            flyout.hide();
+                        }
+                    };
+
+                    searchInput.addEventListener('input', (e) => doSearch(e.target.value));
+
+                    searchInput.addEventListener('keydown', (e) => {
+                        if (e.key === 'Escape') {
+                            searchInput.value = '';
+                            doSearch('');
+                            searchInput.blur();
+                        }
                     });
+
+                    clearBtn.onclick = () => {
+                        searchInput.value = '';
+                        doSearch('');
+                        searchInput.focus();
+                    };
                     return true;
                 };
 

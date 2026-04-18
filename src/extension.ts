@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as https from 'https';
+import { exec } from 'child_process';
 
 /**
  * Cocoya Extension 主管理器
@@ -207,9 +208,12 @@ export class CocoyaManager {
     }
 
     private handleGetManifest() {
-        const manifestPath = path.join(this.context.extensionPath, 'media', 'core_manifest.json');
+        // 核心 manifest 現在位於 ui/src 下
+        const manifestPath = path.join(this.context.extensionPath, 'ui', 'src', 'core_manifest.json');
         const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
-        const mediaUri = this.panel.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'media')).toString();
+        
+        // mediaUri 指向 ui 目錄
+        const mediaUri = this.panel.webview.asWebviewUri(vscode.Uri.joinPath(this.context.extensionUri, 'ui', 'src')).toString();
         
         // 取得 VS Code 語系並映射
         let lang = vscode.env.language.toLowerCase();
@@ -221,8 +225,8 @@ export class CocoyaManager {
     }
 
     private handleGetModuleToolbox(message: any) {
-        // 模組現在統一放在 media/modules 下
-        const toolboxPath = path.join(this.context.extensionPath, 'media', 'modules', message.moduleId, 'toolbox.xml');
+        // 模組現在統一放在 ui/src/modules 下
+        const toolboxPath = path.join(this.context.extensionPath, 'ui', 'src', 'modules', message.moduleId, 'toolbox.xml');
 
         if (fs.existsSync(toolboxPath)) {
             const xml = fs.readFileSync(toolboxPath, 'utf8');
@@ -391,9 +395,16 @@ export class CocoyaManager {
             // 檢查 Python 與 pyserial 效力
             let pythonPath = this.context.globalState.get<string>('pythonPath', 'python');
             if (!await this.validatePythonPath(pythonPath)) {
-                vscode.window.showErrorMessage(this.t('MSG_PYTHON_NOT_FOUND', pythonPath));
-                return;
+                const pick = await vscode.window.showErrorMessage(this.t('MSG_PYTHON_NOT_FOUND', pythonPath), this.t('MSG_SELECT_PATH'));
+                if (pick === this.t('MSG_SELECT_PATH')) {
+                    const uris = await vscode.window.showOpenDialog({ canSelectMany: false, filters: { 'Executables': ['exe'] } });
+                    if (uris && uris[0]) {
+                        pythonPath = uris[0].fsPath;
+                        await this.context.globalState.update('pythonPath', pythonPath);
+                    } else return;
+                } else return;
             }
+
             if (!await this.validatePySerial(pythonPath)) {
                 vscode.window.showErrorMessage(this.t('MSG_PYSERIAL_MISSING'));
                 return;
@@ -406,18 +417,37 @@ export class CocoyaManager {
             // 獲取靜態部署腳本路徑
             const deployScriptPath = path.join(this.context.extensionPath, 'resources', 'deploy_mcu.py');
 
-            vscode.window.showInformationMessage(this.t('MSG_DEPLOYING_MCU', port));
+            // 使用 VS Code 原生進度條顯示「上傳中」
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: this.t('MSG_DEPLOY_UPLOADING'),
+                cancellable: false
+            }, async (progress) => {
+                return new Promise<void>((resolve, reject) => {
+                    const cmd = `"${pythonPath}" "${deployScriptPath}" "${port}" "${mcuCodePath}" --no-monitor`;
+                    exec(cmd, (error, stdout, stderr) => {
+                        if (error) {
+                            vscode.window.showErrorMessage(`Deploy failed: ${stderr || stdout}`);
+                            reject(error);
+                        } else {
+                            vscode.window.showInformationMessage(this.t('MSG_DEPLOY_COMPLETED'));
+                            resolve();
+                        }
+                    });
+                });
+            });
 
+            // 上傳完畢後，開啟終端機執行 Monitor 模式
             let terminal = vscode.window.terminals.find(t => t.name === 'Cocoya Execution');
             if (!terminal) {
                 terminal = vscode.window.createTerminal('Cocoya Execution');
             } else {
-                // 強制中斷舊的部署或監控程序，釋放序列埠
                 terminal.sendText('\u0003'); 
                 await new Promise(resolve => setTimeout(resolve, 500));
             }
             
             terminal.show();
+            // 注意這裡不帶 --no-monitor，讓腳本進入 monitor 模式
             terminal.sendText(`& "${pythonPath}" "${deployScriptPath}" "${port}" "${mcuCodePath}"`);
             
             this.panel.webview.postMessage({ command: 'runCompleted' });
@@ -523,28 +553,41 @@ export class CocoyaManager {
 
 export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('cocoya.openWorkspace', () => {
-        const panel = vscode.window.createWebviewPanel('cocoyaEditor', 'Cocoya Editor', vscode.ViewColumn.One, { enableScripts: true, retainContextWhenHidden: true, localResourceRoots: [vscode.Uri.joinPath(context.extensionUri, 'media')] });
+        const panel = vscode.window.createWebviewPanel(
+            'cocoyaEditor', 
+            'Cocoya Editor', 
+            vscode.ViewColumn.One, 
+            { 
+                enableScripts: true, 
+                retainContextWhenHidden: true, 
+                localResourceRoots: [
+                    vscode.Uri.joinPath(context.extensionUri, 'ui')
+                ] 
+            }
+        );
         new CocoyaManager(context, panel);
         panel.webview.html = getWebviewContent(panel.webview, context.extensionUri);
     }));
 }
 
 function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri): string {
-    const htmlPath = vscode.Uri.joinPath(extensionUri, 'media', 'index.html');
+    const htmlPath = vscode.Uri.joinPath(extensionUri, 'ui', 'index.html');
     let html = fs.readFileSync(htmlPath.fsPath, 'utf8');
-    const mediaPath = vscode.Uri.joinPath(extensionUri, 'media');
+    const uiPath = vscode.Uri.joinPath(extensionUri, 'ui');
 
-    // 使用 webview.cspSource 建立更安全的策略
     const cspSource = webview.cspSource;
+    // 修正 csp 策略中的 cdnjs 路徑
     const csp = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src ${cspSource} 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; connect-src ${cspSource} 'unsafe-inline' https://api.github.com; img-src ${cspSource} https: data: blob:; style-src ${cspSource} 'unsafe-inline' https://cdnjs.cloudflare.com; font-src ${cspSource};">`;
     
     html = html.replace('<head>', `<head>${csp}`);
     
-    // 轉換 src 屬性 (針對 <script> 等)
-    html = html.replace(/src="(?!\/|http)(.*?)"/g, (match, p1) => `src="${webview.asWebviewUri(vscode.Uri.joinPath(mediaPath, p1))}"`);
-    
-    // 轉換 href 屬性 (針對 <link> 等)
-    html = html.replace(/href="(?!\/|http)(.*?)"/g, (match, p1) => `href="${webview.asWebviewUri(vscode.Uri.joinPath(mediaPath, p1))}"`);
+    // --- 強化版路徑轉換邏輯 ---
+    // 匹配 src="/path" 或 src="path"
+    html = html.replace(/(src|href)="(\/)?(?!\/|http)(.*?)"/g, (match, attr, slash, pathStr) => {
+        // 不論有沒有領頭斜槓，都對齊到 ui/ 路徑下
+        const uri = webview.asWebviewUri(vscode.Uri.joinPath(uiPath, pathStr));
+        return `${attr}="${uri}"`;
+    });
     
     return html;
 }

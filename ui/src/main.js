@@ -9,19 +9,11 @@
         if (url && !url.startsWith('http') && !url.startsWith('vscode-webview')) {
             const langSuffix = (window.CocoyaApp && window.CocoyaApp.currentLang) ? `_${window.CocoyaApp.currentLang}` : '_zh-hant';
             const helpId = `${url}${langSuffix}`;
-            window.vsCodeApi.postMessage({ command: 'openHelp', helpId: helpId });
+            window.CocoyaBridge.send('openHelp', { helpId: helpId });
             return null;
         }
         return originalOpen.apply(this, arguments);
     };
-
-    let vscode;
-    try {
-        vscode = acquireVsCodeApi();
-        window.vsCodeApi = vscode;
-    } catch (e) {
-        vscode = window.vsCodeApi;
-    }
 
     const CocoyaApp = {
         workspace: null,
@@ -32,15 +24,15 @@
         currentPlatform: 'PC',
         manifest: null,
         lastCleanCode: '',
+        currentLang: 'zh-hant',
 
         init: function() {
             if (!window.CocoyaXMLRequests) window.CocoyaXMLRequests = new Map();
-            this.registerPlugins();
-            this.setupBlocklyPrompts();
-            this.setupWindowListeners();
-            this.setupPlatformSelector();
-            this.setupIndentSelector();
-            vscode.postMessage({ command: 'getManifest' });
+            CocoyaApp.setupBlocklyPrompts();
+            CocoyaApp.setupWindowListeners();
+            CocoyaApp.setupPlatformSelector();
+            CocoyaApp.setupIndentSelector();
+            window.CocoyaBridge.send('getManifest');
         },
 
         setupIndentSelector: function() {
@@ -48,7 +40,9 @@
             if (!selector) return;
             selector.onchange = () => {
                 if (Blockly.Python) {
-                    Blockly.Python.INDENT = ' '.repeat(parseInt(selector.value, 10));
+                    const indentSize = parseInt(selector.value, 10);
+                    // 核心: 除了修改屬性，還要確保產生器重新初始化其內部狀態
+                    Blockly.Python.INDENT = ' '.repeat(indentSize);
                     this.triggerCodeUpdate();
                 }
             };
@@ -62,7 +56,11 @@
                 const newPlatform = selector.value;
                 if (newPlatform === this.currentPlatform) return;
                 const confirmMsg = (Blockly.Msg['MSG_SWITCH_CONFIRM'] || 'Switch to %1 mode?').replace('%1', newPlatform);
-                vscode.postMessage({ command: 'confirmSwitch', message: confirmMsg, newPlatform: newPlatform, xml: Blockly.Xml.domToPrettyText(Blockly.Xml.workspaceToDom(this.workspace)) });
+                window.CocoyaBridge.send('confirmSwitch', { 
+                    message: confirmMsg, 
+                    newPlatform: newPlatform, 
+                    xml: Blockly.Xml.domToPrettyText(Blockly.Xml.workspaceToDom(this.workspace)) 
+                });
                 selector.value = this.currentPlatform;
             };
         },
@@ -82,7 +80,6 @@
                 const finalXml = await this.buildToolboxXml(this.manifest, window.CocoyaMediaUri, platform, this.currentLang);
                 this.workspace.updateToolbox(finalXml);
                 
-                // 平台切換後重新建立搜尋索引
                 setTimeout(() => {
                     CocoyaUtils.BlockSearcher.buildIndex(this.workspace);
                     CocoyaUtils.BlockSearcher.inject(this.workspace);
@@ -91,9 +88,6 @@
             window.CocoyaUI.updateRunTooltip(platform);
         },
 
-        /**
-         * 建立並過濾 Toolbox XML
-         */
         buildToolboxXml: async function(manifest, mediaUri, platform, lang) {
             const toolboxes = await CocoyaLoader.loadModules(manifest, mediaUri, platform, lang);
             const coreXml = [];
@@ -116,8 +110,7 @@
         },
 
         setupWindowListeners: function() {
-            window.addEventListener('message', async (event) => {
-                const message = event.data;
+            window.CocoyaBridge.onMessage(async (message) => {
                 switch (message.command) {
                     case 'manifestData': await this.initializeCocoya(message.data, message.mediaUri, message.lang); break;
                     case 'loadWorkspace': await this.loadWorkspace(message.xml, message.filename, message.platform); break;
@@ -132,11 +125,15 @@
                     case 'toolboxData': this.handleToolboxData(message); break;
                 }
             });
+
+            window.addEventListener('resize', () => {
+                if (this.workspace) Blockly.svgResize(this.workspace);
+            });
         },
 
         initializeCocoya: async function(manifest, mediaUri, lang) {
             this.manifest = manifest;
-            this.currentLang = lang || 'en';
+            this.currentLang = lang || 'zh-hant';
             window.CocoyaMediaUri = mediaUri;
             window.CocoyaUI.mediaUri = mediaUri;
 
@@ -159,30 +156,8 @@
                     plugins: { 'blockDragger': scrollDragger, 'metricsManager': scrollMetrics }
                 });
 
-                // --- Scroll Options 設定 (調低捲動速度) ---
-                const ScrollOptionsPlugin = window.ScrollOptions || (window.ScrollOptionsPlugin && window.ScrollOptionsPlugin.ScrollOptions);
-                if (ScrollOptionsPlugin) {
-                    try {
-                        const scrollOptions = new ScrollOptionsPlugin(this.workspace);
-                        scrollOptions.init({
-                            enableWheelScroll: true,
-                            enableEdgeScroll: true,
-                            edgeScrollOptions: {
-                                slowBlockSpeed: 0.15,    // 預設: 0.28
-                                fastBlockSpeed: 0.5,     // 預設: 1.4
-                                slowMouseSpeed: 0.25,    // 預設: 0.5
-                                fastMouseSpeed: 1.0,     // 預設: 1.6
-                                fastBlockStartDistance: 80,
-                                fastMouseStartDistance: 60
-                            }
-                        });
-                    } catch (e) { console.error('ScrollOptions init failed:', e); }
-                }
-
-                // --- Minimap 初始化 (全方位防護) ---
                 this.initMinimap();
 
-                // --- 搜尋功能 ---
                 setTimeout(() => {
                     CocoyaUtils.BlockSearcher.buildIndex(this.workspace);
                     CocoyaUtils.BlockSearcher.inject(this.workspace);
@@ -190,8 +165,8 @@
 
                 if (Blockly.Python) Blockly.Python.PLATFORM = this.currentPlatform;
                 window.CocoyaUI.applyI18n();
-                window.CocoyaUI.initToolbar((msg) => vscode.postMessage(msg));
-                vscode.postMessage({ command: 'setLocale', messages: Blockly.Msg });
+                window.CocoyaUI.initToolbar((msg) => window.CocoyaBridge.send(msg.command, msg));
+                window.CocoyaBridge.send('setLocale', { messages: Blockly.Msg });
                 this.registerVariablesCallback();
                 CocoyaUtils.setupGeneratorOverrides();
                 this.setupWorkspaceListeners();
@@ -200,9 +175,20 @@
             } catch (error) { console.error('Initialization Failed:', error); }
         },
 
-        /**
-         * 初始化 Minimap 插件
-         */
+        registerPlugins: function() {
+            if (typeof Blockly === 'undefined') return;
+            try {
+                if (window.FieldMultilineInput) {
+                    try { Blockly.fieldRegistry.unregister('field_multilinetext'); } catch(e){}
+                    Blockly.fieldRegistry.register('field_multilinetext', window.FieldMultilineInput);
+                }
+                if (window.FieldColour) {
+                    try { Blockly.fieldRegistry.unregister('field_colour'); } catch(e){}
+                    Blockly.fieldRegistry.register('field_colour', window.FieldColour);
+                }
+            } catch (e) { console.warn('Plugin registration warning:', e); }
+        },
+
         initMinimap: function() {
             try {
                 const MinimapClass = (window.workspaceMinimap && window.workspaceMinimap.PositionedMinimap) || 
@@ -231,27 +217,37 @@
                 this.minimap.mirror = (event) => {
                     if (this.minimap._isPaused) return;
                     try {
-                        if (event.type === Blockly.Events.BLOCK_CREATE && !this.workspace.getBlockById(event.blockId)) return;
+                        if (event.blockId && !this.workspace.getBlockById(event.blockId)) return;
                         originalMirror(event);
                     } catch (e) { }
                 };
 
+                // --- Minimap 切換按鈕實作 ---
                 const mWrapper = document.querySelector('.blockly-minimap');
                 if (mWrapper) {
                     const toggleBtn = document.createElement('div');
                     toggleBtn.id = 'minimap-toggle';
-                    toggleBtn.innerHTML = '&#10005;';
+                    toggleBtn.innerHTML = '&#10005;'; // 預設 X
                     document.getElementById('blocklyArea').appendChild(toggleBtn);
-                    toggleBtn.onclick = () => {
-                        const isCollapsed = mWrapper.classList.toggle('collapsed');
-                        if (isCollapsed) {
-                            const iconUri = `${window.CocoyaMediaUri}/icons/public_24dp_FE2F89.png`;
+                    
+                    const mediaUri = window.CocoyaMediaUri || '/src';
+                    const updateBtnUI = (collapsed) => {
+                        if (collapsed) {
+                            const iconUri = `${mediaUri}/icons/public_24dp_FE2F89.png`;
                             toggleBtn.style.background = 'white';
                             toggleBtn.innerHTML = `<img src="${iconUri}" style="width: 18px; height: 18px; vertical-align: middle;">`;
                         } else {
-                            toggleBtn.style.background = '#FE2F89';
-                            toggleBtn.innerHTML = '&#10005;';
+                            const iconUri = `${mediaUri}/icons/cancel_24dp_FE2F89.png`;
+                            toggleBtn.style.background = 'white';
+                            toggleBtn.innerHTML = `<img src="${iconUri}" style="width: 18px; height: 18px; vertical-align: middle;">`;
                         }
+                    };
+
+                    updateBtnUI(false); // 初始狀態
+
+                    toggleBtn.onclick = () => {
+                        const isCollapsed = mWrapper.classList.toggle('collapsed');
+                        updateBtnUI(isCollapsed);
                         this.minimap._isPaused = isCollapsed;
                         if (!isCollapsed) this.refreshMinimap();
                     };
@@ -259,73 +255,38 @@
             } catch (e) { }
         },
 
-        injectSearchBox: function() {
-            const tryInject = () => {
-                // 嘗試多種可能的 Toolbox 容器選擇器
-                const toolboxDiv = document.querySelector('.blocklyToolboxDiv') || 
-                                 document.querySelector('.blocklyTreeRoot') ||
-                                 document.querySelector('[role="tree"]');
-                
-                if (!toolboxDiv) return false;
-                if (document.getElementById('block-search-container')) return true;
-
-                console.log('Found toolbox container, injecting search box...');
-                
-                const container = document.createElement('div');
-                container.id = 'block-search-container';
-                container.innerHTML = `<input type="text" id="block-search" placeholder="${Blockly.Msg['BKY_CAT_SEARCH'] || '搜尋積木...'}" autocomplete="off">`;
-                
-                // 確保搜尋框被插入到 Toolbox 最頂部
-                if (toolboxDiv.firstChild) {
-                    toolboxDiv.insertBefore(container, toolboxDiv.firstChild);
-                } else {
-                    toolboxDiv.appendChild(container);
-                }
-
-                const searchInput = document.getElementById('block-search');
-                searchInput.addEventListener('input', (e) => {
-                    const query = e.target.value.toLowerCase().trim();
-                    if (!query) { this.workspace.getFlyout().hide(); return; }
-                    const results = CocoyaUtils.BlockSearcher.search(query);
-                    if (results.length > 0) this.workspace.getFlyout().show(results.slice(0, 30));
-                    else this.workspace.getFlyout().hide();
-                });
-                return true;
-            };
-
-            // 執行多重時機點嘗試
-            if (!tryInject()) {
-                const observer = new MutationObserver((mutations, obs) => {
-                    if (tryInject()) obs.disconnect();
-                });
-                observer.observe(document.body, { childList: true, subtree: true });
-                
-                let retry = 0;
-                const timer = setInterval(() => {
-                    if (tryInject() || retry++ > 20) clearInterval(timer);
-                }, 500);
+        refreshMinimap: function() {
+            if (this.minimap && this.minimap.minimapWorkspace) {
+                try {
+                    const dom = Blockly.Xml.workspaceToDom(this.workspace);
+                    this.minimap.minimapWorkspace.clear();
+                    Blockly.Xml.domToWorkspace(dom, this.minimap.minimapWorkspace);
+                    setTimeout(() => { 
+                        if (this.minimap && this.minimap.minimapWorkspace) { 
+                            this.minimap.minimapWorkspace.zoomToFit(); 
+                            Blockly.svgResize(this.minimap.minimapWorkspace); 
+                        } 
+                    }, 50);
+                } catch (e) { }
             }
-        },
-
-        registerPlugins: function() {
-            if (typeof Blockly === 'undefined') return;
-            if (window.FieldMultilineInput) Blockly.fieldRegistry.register('field_multilinetext', window.FieldMultilineInput);
-            if (window.FieldColour) Blockly.fieldRegistry.register('field_colour', window.FieldColour);
         },
 
         setupBlocklyPrompts: function() {
             const self = this;
             Blockly.dialog.setPrompt((msg, def, cb) => {
-                const id = Date.now() + Math.random();
+                const id = 'prompt_' + Date.now();
                 if (cb) self.promptRequests.set(id, cb);
-                vscode.postMessage({ command: 'prompt', message: msg, defaultValue: def || '', requestId: id });
+                window.CocoyaBridge.send('prompt', { message: msg, defaultValue: def || '', requestId: id });
             });
             Blockly.dialog.setConfirm((msg, cb) => {
-                const id = Date.now() + Math.random();
+                const id = 'confirm_' + Date.now();
                 if (cb) self.promptRequests.set(id, cb);
-                vscode.postMessage({ command: 'confirm', message: msg, requestId: id });
+                window.CocoyaBridge.send('confirm', { message: msg, requestId: id });
             });
-            Blockly.dialog.setAlert((msg, cb) => { vscode.postMessage({ command: 'alert', message: msg }); if (cb) cb(); });
+            Blockly.dialog.setAlert((msg, cb) => { 
+                window.CocoyaBridge.send('alert', { message: msg }); 
+                if (cb) cb(); 
+            });
         },
 
         registerVariablesCallback: function() {
@@ -343,83 +304,6 @@
                     if (input) input.split(/[，,]/).forEach(name => ws.createVariable(name.trim()));
                 });
             });
-        },
-
-        refreshMinimap: function() {
-            if (this.minimap && this.minimap.minimapWorkspace) {
-                try {
-                    const dom = Blockly.Xml.workspaceToDom(this.workspace);
-                    this.minimap.minimapWorkspace.clear();
-                    Blockly.Xml.domToWorkspace(dom, this.minimap.minimapWorkspace);
-                    setTimeout(() => { if (this.minimap && this.minimap.minimapWorkspace) { this.minimap.minimapWorkspace.zoomToFit(); Blockly.svgResize(this.minimap.minimapWorkspace); } }, 50);
-                } catch (e) { }
-            }
-        },
-
-        createDefaultBlocks: function() {
-            if (this.minimap) this.minimap._isPaused = true;
-            try {
-                // 直接查詢 DOM 元素來獲取 Toolbox 寬度，這是最保險的做法
-                let offsetX = 100; 
-                const toolboxDiv = document.querySelector('.blocklyToolboxDiv');
-                if (toolboxDiv && toolboxDiv.offsetWidth > 0) {
-                    offsetX = toolboxDiv.offsetWidth + 20;
-                }
-
-                // 強制將 offsetX 限制在 20 到 350 之間
-                if (isNaN(offsetX) || offsetX < 20) offsetX = 100;
-                if (offsetX > 350) offsetX = 100;
-
-                console.log(`Creating default blocks at offsetX: ${offsetX}, Platform: ${this.currentPlatform}`);
-
-                // 先清理一次工作區
-                this.workspace.clear();
-
-                const defBlock = this.workspace.newBlock('py_definition_zone');
-                defBlock.initSvg(); defBlock.render(); 
-                defBlock.moveTo(new Blockly.utils.Coordinate(offsetX, 20));
-                
-                if (this.currentPlatform === 'CircuitPython') {
-                    const mcuMain = this.workspace.newBlock('mcu_main');
-                    mcuMain.initSvg(); mcuMain.render(); 
-                    mcuMain.moveTo(new Blockly.utils.Coordinate(offsetX, 200));
-                    
-                    const loopBlock = this.workspace.newBlock('py_loop_while');
-                    loopBlock.initSvg(); loopBlock.render();
-                    const trueBlock = this.workspace.newBlock('py_logic_boolean');
-                    trueBlock.setFieldValue('True', 'BOOL');
-                    trueBlock.initSvg(); trueBlock.render();
-                    
-                    loopBlock.getInput('CONDITION').connection.connect(trueBlock.outputConnection);
-                    mcuMain.getInput('DO').connection.connect(loopBlock.previousConnection);
-                } else {
-                    const mainBlock = this.workspace.newBlock('py_main');
-                    mainBlock.initSvg(); mainBlock.render(); 
-                    mainBlock.moveTo(new Blockly.utils.Coordinate(offsetX, 140));
-                }
-                
-                setTimeout(() => { 
-                    if (this.minimap) { this.minimap._isPaused = false; this.refreshMinimap(); } 
-                    this.workspace.clearUndo(); 
-                }, 400); 
-            } catch (e) {
-                console.error('CRITICAL: Failed to create default blocks:', e);
-            }
-        },
-
-        setupGeneratorOverrides: function() {
-            Blockly.Python.scrub_ = function(block, code, opt_thisOnly) {
-                const nextBlock = (block.nextConnection && !opt_thisOnly) ? block.nextConnection.targetBlock() : null;
-                if (!block.isEnabled()) return nextBlock ? Blockly.Python.blockToCode(nextBlock) : '';
-                const s = window.CocoyaUtils.TAG_START;
-                const e = window.CocoyaUtils.TAG_END;
-                if (block.outputConnection) return `${s}ID:${block.id}${e}${code}`;
-                const nextCode = nextBlock ? Blockly.Python.blockToCode(nextBlock) : '';
-                let lines = code.split('\n');
-                if (lines.length > 0 && lines[lines.length - 1] === '') lines.pop();
-                if (lines.length > 0) { lines[0] += `  # S_ID:${block.id}`; lines[lines.length - 1] += `  # E_ID:${block.id}`; }
-                return lines.join('\n') + '\n' + nextCode;
-            };
         },
 
         setupWorkspaceListeners: function() {
@@ -462,22 +346,96 @@
             }, 300);
         },
 
-        setDirty: function(dirty) { this.isDirty = dirty; window.CocoyaUI.setDirty(dirty); vscode.postMessage({ command: 'setDirty', isDirty: dirty }); },
-        handleToolboxData: function(message) { const resolve = window.CocoyaXMLRequests.get(message.requestId); if (resolve) { resolve(message.data); window.CocoyaXMLRequests.delete(message.requestId); } },
-        handlePromptResponse: function(message) { const cb = this.promptRequests.get(message.requestId); if (cb) { cb(message.result); this.promptRequests.delete(message.requestId); this.refreshToolboxSelection(); } },
-        refreshToolboxSelection: function() { if (this.workspace && this.workspace.getToolbox()) { const toolbox = this.workspace.getToolbox(); const selected = toolbox.getSelectedItem(); if (selected && selected.getContents() === 'VARIABLE') toolbox.setSelectedItem(selected); } },
+        setDirty: function(dirty) { 
+            this.isDirty = dirty; 
+            window.CocoyaUI.setDirty(dirty); 
+            window.CocoyaBridge.send('setDirty', { isDirty: dirty }); 
+        },
+
+        handlePromptResponse: function(message) { 
+            const cb = this.promptRequests.get(message.requestId); 
+            if (cb) { 
+                cb(message.result); 
+                this.promptRequests.delete(message.requestId); 
+            } 
+        },
+
+        handleToolboxData: function(message) { 
+            const resolve = window.CocoyaXMLRequests.get(message.requestId); 
+            if (resolve) { 
+                resolve(message.data); 
+                window.CocoyaXMLRequests.delete(message.requestId); 
+            } 
+        },
 
         loadWorkspace: async function(xml, filename, platform) {
             if (this.minimap) this.minimap._isPaused = true;
             if (platform && platform !== this.currentPlatform) await this.setPlatformUI(platform);
             Blockly.Events.disable();
-            try { this.workspace.clear(); Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(xml), this.workspace); } finally { Blockly.Events.enable(); }
-            window.CocoyaUI.updateFileStatus(filename); this.setDirty(false); this.triggerCodeUpdate();
+            try { 
+                this.workspace.clear(); 
+                Blockly.Xml.domToWorkspace(Blockly.utils.xml.textToDom(xml), this.workspace); 
+            } finally { 
+                Blockly.Events.enable(); 
+            }
+            window.CocoyaUI.updateFileStatus(filename); 
+            this.setDirty(false); 
+            this.triggerCodeUpdate();
             setTimeout(() => { if (this.minimap) { this.minimap._isPaused = false; this.refreshMinimap(); } }, 300);
         },
 
-        resetWorkspace: function() { this.workspace.clear(); this.createDefaultBlocks(); window.CocoyaUI.updateFileStatus(''); this.setDirty(false); this.triggerCodeUpdate(); },
-        onSaveCompleted: function(filename) { if (filename) window.CocoyaUI.updateFileStatus(filename); this.setDirty(false); window.CocoyaUI.flashButton('btn-save', '#e3f2fd'); }
+        resetWorkspace: function() { 
+            this.workspace.clear(); 
+            this.createDefaultBlocks(); 
+            window.CocoyaUI.updateFileStatus(''); 
+            this.setDirty(false); 
+            this.triggerCodeUpdate(); 
+        },
+
+        onSaveCompleted: function(filename) { 
+            if (filename) window.CocoyaUI.updateFileStatus(filename); 
+            this.isDirty = false; 
+            window.CocoyaUI.setDirty(false);
+            window.CocoyaUI.flashButton('btn-save', '#e3f2fd'); 
+        },
+
+        createDefaultBlocks: function() {
+            if (this.minimap) this.minimap._isPaused = true;
+            try {
+                let offsetX = 100; 
+                const toolboxDiv = document.querySelector('.blocklyToolboxDiv');
+                if (toolboxDiv && toolboxDiv.offsetWidth > 0) offsetX = toolboxDiv.offsetWidth + 20;
+                if (isNaN(offsetX) || offsetX < 20 || offsetX > 350) offsetX = 100;
+
+                this.workspace.clear();
+                const defBlock = this.workspace.newBlock('py_definition_zone');
+                defBlock.initSvg(); defBlock.render(); 
+                defBlock.moveTo(new Blockly.utils.Coordinate(offsetX, 20));
+                
+                if (this.currentPlatform === 'CircuitPython') {
+                    const mcuMain = this.workspace.newBlock('mcu_main');
+                    mcuMain.initSvg(); mcuMain.render(); 
+                    mcuMain.moveTo(new Blockly.utils.Coordinate(offsetX, 200));
+                    
+                    const loopBlock = this.workspace.newBlock('py_loop_while');
+                    loopBlock.initSvg(); loopBlock.render();
+                    const trueBlock = this.workspace.newBlock('py_logic_boolean');
+                    trueBlock.setFieldValue('True', 'BOOL');
+                    trueBlock.initSvg(); trueBlock.render();
+                    
+                    loopBlock.getInput('CONDITION').connection.connect(trueBlock.outputConnection);
+                    mcuMain.getInput('DO').connection.connect(loopBlock.previousConnection);
+                } else {
+                    const mainBlock = this.workspace.newBlock('py_main');
+                    mainBlock.initSvg(); mainBlock.render(); 
+                    mainBlock.moveTo(new Blockly.utils.Coordinate(offsetX, 140));
+                }
+                setTimeout(() => { 
+                    if (this.minimap) { this.minimap._isPaused = false; this.refreshMinimap(); }
+                    this.workspace.clearUndo(); 
+                }, 400); 
+            } catch (e) { console.error('Failed to create default blocks:', e); }
+        }
     };
 
     window.CocoyaApp = CocoyaApp;
