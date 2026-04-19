@@ -7,15 +7,19 @@ Blockly.Python.forBlock['py_main'] = function(block, generator) {
 
 Blockly.Python.forBlock['mcu_main'] = function(block, generator) {
   var branch = generator.statementToCode(block, 'DO') || generator.INDENT + 'pass\n';
-  // 移除所有行首縮排，對齊到全域
-  var cleanBranch = branch.split('\n').map(line => line.replace(/^\s+/, '')).join('\n');
+  // 核心修正：只移除開頭的一個縮排單位，保留內部的相對縮排
+  var indent = generator.INDENT || '    ';
+  var reg = new RegExp('^' + indent, 'mg');
+  var cleanBranch = branch.replace(reg, '');
   return '# --- MCU Main Program ---\n' + cleanBranch;
 };
 
 Blockly.Python.forBlock['py_definition_zone'] = function(block, generator) {
   var defs = generator.statementToCode(block, 'DEFS') || '';
-  // 移除所有行首縮排，對齊到全域
-  var cleanDefs = defs.split('\n').map(line => line.replace(/^\s+/, '')).join('\n');
+  // 核心修正：只移除開頭的一個縮排單位
+  var indent = generator.INDENT || '    ';
+  var reg = new RegExp('^' + indent, 'mg');
+  var cleanDefs = defs.replace(reg, '');
   return cleanDefs;
 };
 

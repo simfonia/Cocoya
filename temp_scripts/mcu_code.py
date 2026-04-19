@@ -3,6 +3,7 @@ import pwmio
 import time
 import digitalio
 
+
 class PiCarServo:
     _TRIM = {} # Store per-pin min_us/max_us
 
@@ -55,48 +56,50 @@ class PiCarServo:
                     moving = True
             if moving: time.sleep(delay)
 
-if 'btn_GP20' not in globals():
-    btn_GP20 = digitalio.DigitalInOut(board.GP20)
-    btn_GP20.direction = digitalio.Direction.INPUT
-    btn_GP20.pull = digitalio.Pull.UP
+class UltrasonicHelper:
+    def __init__(self, trig_pin, echo_pin):
+        self.trig = digitalio.DigitalInOut(trig_pin)
+        self.trig.direction = digitalio.Direction.OUTPUT
+        self.echo = digitalio.DigitalInOut(echo_pin)
+        self.echo.direction = digitalio.Direction.INPUT
+
+    def get_distance(self):
+        self.trig.value = False
+        time.sleep(0.000002)
+        self.trig.value = True
+        time.sleep(0.00001)
+        self.trig.value = False
+
+        # Timeout after 30ms (approx 5 meters)
+        timeout = time.monotonic() + 0.03
+        while not self.echo.value:
+            if time.monotonic() > timeout: return -1.0
+
+        start = time.monotonic_ns()
+        while self.echo.value:
+            if time.monotonic() > timeout: return -1.0
+        end = time.monotonic_ns()
+
+        return round((end - start) / 1000000 * 34.3 / 2, 2)
+
+if 'ultrasonic_GP28_GP7' not in globals():
+    ultrasonic_GP28_GP7 = UltrasonicHelper(board.GP28, board.GP7)
+
+if 'ir_d_GP26' not in globals():
+    ir_d_GP26 = digitalio.DigitalInOut(board.GP26)
+    ir_d_GP26.direction = digitalio.Direction.INPUT
 
 
 
 
 # --- MCU Main Program ---  # S_ID:=NJ]emz+oNaL~f(Z,1Hj
-  # S_ID:$;z.SSr-/a8]y-@WBX}h
-if 'servo_GP12' not in globals(): servo_GP12 = PiCarServo(board.GP12)
-if 'servo_GP13' not in globals(): servo_GP13 = PiCarServo(board.GP13)
-servo_GP12.hand_range = 180
-servo_GP13.hand_range = 180  # E_ID:$;z.SSr-/a8]y-@WBX}h
-  # S_ID:O4:;`]})dce3H*y{v0!c
+  # S_ID:D{b|^se.o]*`7][7Na%K
 if 'servo_GP12' not in globals(): servo_GP12 = PiCarServo(board.GP12)
 if 'servo_GP13' not in globals(): servo_GP13 = PiCarServo(board.GP13)
 servo_GP12.set_angle(180)
-servo_GP13.set_angle(0)  # E_ID:O4:;`]})dce3H*y{v0!c
-time.sleep(1)  # S_ID:qJc2)bb{5(m),hd;M5l[  # E_ID:qJc2)bb{5(m),hd;M5l[
-while True:  # S_ID:],=ED]b2j3B+i$1f[IA0
-    print("等待按鍵中...")  # S_ID:i2mz=+#bFA9+kZEdSU4{
-    while btn_GP20.value:
-        time.sleep(0.01) # 防彈跳並避免空迴圈高速運轉讓CPU滿載
-    time.sleep(0.5) # 讓手離開  # E_ID:i2mz=+#bFA9+kZEdSU4{
-      # S_ID:/QTJJqqx?$87zRmx:4un
-    if 'servo_GP12' not in globals(): servo_GP12 = PiCarServo(board.GP12)
-    if 'servo_GP13' not in globals(): servo_GP13 = PiCarServo(board.GP13)
-    _p = max(min(100, 100), 0) / 100.0
-    _s = max(min(10, 10), 1)
-    # Dynamic target based on hand_range: Right (0 -> range), Left (180 -> 180-range)
-    _target_R = int(_p * servo_GP13.hand_range)
-    _target_L = 180 - int(_p * servo_GP12.hand_range)
-    PiCarServo.move_sync([servo_GP12, servo_GP13], [_target_L, _target_R], _s)  # E_ID:/QTJJqqx?$87zRmx:4un
-    time.sleep(1)  # S_ID:[$A6y@-sUV?Fl2HyBhfS  # E_ID:[$A6y@-sUV?Fl2HyBhfS
-      # S_ID:4Mml;_i/wf-n_Db4m*3`
-    if 'servo_GP12' not in globals(): servo_GP12 = PiCarServo(board.GP12)
-    if 'servo_GP13' not in globals(): servo_GP13 = PiCarServo(board.GP13)
-    _p = max(min(0, 100), 0) / 100.0
-    _s = max(min(10, 10), 1)
-    # Dynamic target based on hand_range: Right (0 -> range), Left (180 -> 180-range)
-    _target_R = int(_p * servo_GP13.hand_range)
-    _target_L = 180 - int(_p * servo_GP12.hand_range)
-    PiCarServo.move_sync([servo_GP12, servo_GP13], [_target_L, _target_R], _s)  # E_ID:4Mml;_i/wf-n_Db4m*3`
-    time.sleep(1)  # S_ID:hHNJO[_!~)4-b(i8DzcM  # E_ID:hHNJO[_!~)4-b(i8DzcM  # E_ID:],=ED]b2j3B+i$1f[IA0  # E_ID:=NJ]emz+oNaL~f(Z,1Hj
+servo_GP13.set_angle(0)  # E_ID:D{b|^se.o]*`7][7Na%K
+while True:  # S_ID:sC#.Ys4+3Gw9PzA1Q1{{
+    distance = ultrasonic_GP28_GP7.get_distance()  # S_ID:Z]Cso1]/AiWm5N9LjJ^+  # E_ID:Z]Cso1]/AiWm5N9LjJ^+
+    color = '白色' if 1 == ((0 if ir_d_GP26.value else 1)) else '黑色'  # S_ID:A7^f#3c~*gCZ+=5HMZN)  # E_ID:A7^f#3c~*gCZ+=5HMZN)
+    print(f"""距離: {distance}cm   地面顏色: {color}""")  # S_ID:R#BWujC#QAIBwBrEUp^#  # E_ID:R#BWujC#QAIBwBrEUp^#
+    time.sleep(0.5)  # S_ID:nO8yR@jc}8MZlXgIGXvt  # E_ID:nO8yR@jc}8MZlXgIGXvt  # E_ID:sC#.Ys4+3Gw9PzA1Q1{{  # E_ID:=NJ]emz+oNaL~f(Z,1Hj
