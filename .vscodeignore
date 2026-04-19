@@ -1,0 +1,26 @@
+.git/
+.vscode/
+.vscode-test/
+.gitignore
+.gitattributes
+node_modules/
+ui/node_modules/
+src-tauri/
+backup/
+log/
+out/test/
+tsconfig.json
+package-lock.json
+ui/package-lock.json
+ui/package.json
+ui/.gitignore
+cocoya-*.vsix
+*.code-workspace
+FILE_STRUCTURE.md
+GEMINI.md
+temp_scripts/
+src/
+# 雖然 Vite (UI) 需要 src, 但我們只需要 ui/ 目錄下的運行時資源
+# 如果有 ui/dist 則排除 src，但目前我們是直接引用 ui/src 中的 ESM
+# 所以 ui/src 不能排除。
+# 但 ui/node_modules 絕對要排除。

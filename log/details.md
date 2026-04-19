@@ -229,3 +229,23 @@
 ### 3. 產生器物件管理自動化
 - **問題**：MCU 腳位控制積木若重複使用同一個腳位，會產生重複的初始化代碼。
 - **解決**：在 `hardware_generators.js` 中，利用 `generator.definitions_['init_' + pinVar]` 鍵值唯一性，將腳位初始化與 `import` 邏輯標籤化。這保證了代碼整潔，且即便多個積木操作同一腳位，初始化也只會執行一次。
+
+## 關鍵技術實作紀錄 (2026-04-19 更新)
+
+### 1. 搜尋引擎影子積木修復 (Search Shadow Fix)
+- **問題**：原先 BlockSearcher 只回傳積木類型 (type)，導致搜尋結果產出的積木遺失了 toolbox.xml 中定義的影子積木 (<shadow>) 或預設欄位值。
+- **解決**：參考 #WaveCode 實作，改為直接從 workspace.options.languageTree (Toolbox 原始定義樹) 遞迴提取完整的 XML/JSON 定義並進行快取。
+- **優點**：搜尋結果現在與側邊欄拖出的積木完全一致。同時加入 IME (中文輸入法) 狀態偵測，避免在輸入中文時頻繁觸發搜尋導致的輸入卡頓。
+
+### 2. 全域縮排比例縮放器 (Global Indent Scaler)
+- **背景**：Blockly 產生器的 statementToCode 能自動處理動態縮排，但靜態注入 definitions_ 的程式碼字串是寫死的，導致切換 2/4 縮排時，全域函式定義區會發生對齊位移。
+- **機制**：在 Blockly.Python.finish 階段實作攔截器，自動偵測行首的 4 空白倍數，並根據 generator.INDENT 進行比例縮放。
+- **規範**：建立「基準 4 空白 (Base 4-Space)」開發約定，要求所有產生器中的靜態模板統一以 4 空白撰寫，由系統自動處理轉譯。
+
+### 3. MCU 部署狀態與進度整合
+- **UI 強化**：將「上傳中」與「上傳完畢」的提示從終端機文字提升至 VS Code 原生訊息通知欄位。
+- **技術**：使用 vscode.window.withProgress 結合 child_process.exec。為了精確獲取結束回調，為 deploy_mcu.py 新增 --no-monitor 參數，將部署與監控流程拆分執行。
+
+### 4. VSIX 體積優化 (.vscodeignore)
+- **修正**：針對雙模式開發導致的體積膨脹，新增 .vscodeignore 排除 ui/node_modules、src-tauri、backup 與 log 等非執行期必要檔案。
+- **結果**：VSIX 檔案大小從 50MB 回降至 1MB 左右。

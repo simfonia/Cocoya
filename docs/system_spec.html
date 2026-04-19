@@ -291,17 +291,18 @@ Blockly.Python.scrub_ = function(block, code, opt_thisOnly) {
     <section id="indent-spec">
         <h2>11. 縮排與代碼產生規範</h2>
         <p>為了解決不同開發環境下的縮排位移問題，系統建立了嚴格的產生器標準：</p>
-        
+
         <h3>A. 動態縮排 (Dynamic Indentation)</h3>
         <p>嚴禁在產生器中寫死空格（如 <code>'  pass\n'</code>）。必須使用 <code>generator.INDENT</code> 以對齊 UI 設定。</p>
         <pre><code class="language-javascript">// 正確做法
-var branch = generator.statementToCode(block, 'DO') || generator.INDENT + 'pass\n';</code></pre>
+    var branch = generator.statementToCode(block, 'DO') || generator.INDENT + 'pass\n';</code></pre>
 
-        <h3>B. 全域定義區行為 (Definition Zone)</h3>
-        <p><code>py_definition_zone</code> 積木具備<strong>自動移除縮排</strong>機制。它會根據當前系統的 <code>INDENT</code> 設定，自動裁切內部積木產出的縮排，使 <code>import</code> 與全域初始化代碼能正確靠左對齊。</p>
+        <h3>B. 基準縮排與自動縮放 (Base 4-Space & Scaler)</h3>
+        <p><strong>強制規範:</strong> 所有在產生器 (.js) 中以靜態字串形式編寫的 Python 程式碼，必須統一使用 <strong>4 個空白 (4 spaces)</strong> 作為基準縮排。</p>
+        <p>系統在 <code>ui/src/utils.js</code> 的 <code>finish</code> 階段實作了<strong>全域縮排縮放器</strong>。它會掃描所有 <code>definitions_</code>，將基準 4 空白按比例縮放為目前的縮排長度。這確保了無論縮排設定為何，全域區的程式碼都能正確對齊。</p>
 
-        <h3>C. 避免隱式注入</h3>
-        <p>儘量避免使用 <code>generator.definitions_</code> 來注入長篇初始化代碼。這類代碼應透過「初始化積木」顯式產出，並建議使用者放置於「全域定義區」中，以維持 Preview 視窗中的代碼順序與可讀性。</p>
+        <h3>C. 全域定義區行為 (Definition Zone)</h3>
+        <p><code>py_definition_zone</code> 積木具備<strong>自動移除縮排</strong>機制。它會移除內部積木產出的所有行首縮排，使 <code>import</code> 與全域初始化代碼能正確靠左對齊。</p>
     </section>
 
     <section id="async-dialogs">

@@ -340,8 +340,8 @@ body {
 /* 嵌入式搜尋框樣式 */
 #block-search-container {
     padding: 6px 0 !important;
-    background: #ffffff !important;
-    border-bottom: 1px solid #ddd !important;
+    background: transparent;
+    border-bottom: none;
     display: flex !important;
     justify-content: center !important;
     box-sizing: border-box !important;

@@ -41,8 +41,10 @@
             selector.onchange = () => {
                 if (Blockly.Python) {
                     const indentSize = parseInt(selector.value, 10);
-                    // 核心: 除了修改屬性，還要確保產生器重新初始化其內部狀態
+                    // 核心: 修改屬性
                     Blockly.Python.INDENT = ' '.repeat(indentSize);
+                    // 強制清除產生器內部的快取 (部分版本 Blockly 需要)
+                    if (Blockly.Python.init) Blockly.Python.init(this.workspace);
                     this.triggerCodeUpdate();
                 }
             };
@@ -217,7 +219,8 @@
                 this.minimap.mirror = (event) => {
                     if (this.minimap._isPaused) return;
                     try {
-                        if (event.blockId && !this.workspace.getBlockById(event.blockId)) return;
+                        // 修正：刪除事件時 getBlockById 本來就會是 null，不應攔截
+                        if (event.type !== Blockly.Events.BLOCK_DELETE && event.blockId && !this.workspace.getBlockById(event.blockId)) return;
                         originalMirror(event);
                     } catch (e) { }
                 };
@@ -329,7 +332,11 @@
                             else block.setEnabled(isAllowed);
                         });
                     });
-                } finally { Blockly.Events.enable(); }
+                } finally { 
+                    Blockly.Events.enable(); 
+                    // 修正：由於是在 Events.disable 下修改狀態，必須手動通知 Minimap 刷新
+                    if (this.minimap && !this.minimap._isPaused) this.refreshMinimap();
+                }
             }, 150);
         },
 

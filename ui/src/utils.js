@@ -83,10 +83,60 @@
         /**
          * 配置 Blockly 產生器修補程式
          */
-        setupGeneratorOverrides: function() {
+        // --- 程式碼產生輔助 ---
+    
+    /**
+     * 修復靜態注入程式碼的縮排
+     * 將寫死的 4 空白縮排轉換為當前設定的縮排
+     */
+    fixIndent: function(code, indent) {
+        if (!code) return '';
+        const lines = code.split('\n');
+        // 判斷是否需要轉換 (如果當前縮排不是 4，則將開頭為 4 的倍數的空白進行轉換)
+        if (indent === '    ') return code;
+        
+        return lines.map(line => {
+            // 匹配行首的 4 個空白，並替換為目標縮排
+            return line.replace(/^(    )+/g, (match) => {
+                const depth = match.length / 4;
+                return indent.repeat(depth);
+            });
+        }).join('\n');
+    },
+
+    setupGeneratorOverrides: function() {
             if (!Blockly.Python) return;
             
             const self = this;
+
+            // --- 1. 全域縮排比例縮放器 (Global Indent Scaler) ---
+            const originalFinish = Blockly.Python.finish;
+            Blockly.Python.finish = function(code) {
+                // 獲取當前使用者設定的縮排 (目標)
+                const targetIndent = this.INDENT || '    ';
+                const targetLen = targetIndent.length;
+                
+                // 遍歷全域定義，將「基準 4 空白」轉換為「目標長度」
+                for (let name in this.definitions_) {
+                    let defCode = this.definitions_[name];
+                    if (typeof defCode === 'string') {
+                        // 只有在縮排不是 4 的時候才需要轉換，節省效能
+                        if (targetLen !== 4) {
+                            this.definitions_[name] = defCode.split('\n').map(line => {
+                                // 匹配行首所有的 4 空白組合
+                                return line.replace(/^(    )+/g, (match) => {
+                                    const depth = match.length / 4; // 計算縮排深度
+                                    return targetIndent.repeat(depth); // 套用新縮排
+                                });
+                            }).join('\n');
+                        }
+                    }
+                }
+                
+                return originalFinish.call(this, code);
+            };
+
+            // --- 2. 區塊代碼標記攔截器 (用於高亮同步) ---
             Blockly.Python.scrub_ = function(block, code, opt_thisOnly) {
                 const nextBlock = (block.nextConnection && !opt_thisOnly) ? block.nextConnection.targetBlock() : null;
                 if (!block.isEnabled()) return nextBlock ? Blockly.Python.blockToCode(nextBlock) : '';
@@ -161,7 +211,30 @@
          * Cocoya 專屬積木搜尋引擎
          */
         BlockSearcher: {
-            _cache: new Map(), // 儲存積木類型與對應搜尋字串的映射
+            _cache: new Map(),    // 儲存積木類型與對應搜尋字串的映射
+            _defCache: new Map(), // 儲存來自 Toolbox XML 的原始定義 (含影子積木)
+            _isComposing: false,  // IME 中文輸入法狀態
+
+            /**
+             * 遞迴提取 XML 中的積木定義
+             */
+            _extractXmlDefs: function(xml) {
+                if (!xml) return;
+                // 處理單個積木
+                if (xml.tagName === 'BLOCK' || xml.tagName === 'block') {
+                    const type = xml.getAttribute('type');
+                    if (type && !this._defCache.has(type)) {
+                        // 儲存完整的 XML 節點
+                        this._defCache.set(type, xml);
+                    }
+                }
+                // 遞迴處理子節點 (如 Category 或內部的 Shadow)
+                for (let child of xml.childNodes) {
+                    if (child.nodeType === 1) { // Element Node
+                        this._extractXmlDefs(child);
+                    }
+                }
+            },
 
             /**
              * 建立搜尋索引
@@ -169,6 +242,30 @@
              */
             buildIndex: function(workspace) {
                 this._cache.clear();
+                this._defCache.clear();
+
+                // 1. 從原始語言樹 (Language Tree) 提取 XML 定義
+                const tree = workspace.options.languageTree;
+                if (tree) {
+                    // 如果是 XML (舊版或相容模式)
+                    if (tree.tagName === 'XML' || tree.tagName === 'xml') {
+                        this._extractXmlDefs(tree);
+                    } else if (tree.contents) {
+                        // 如果是 JSON (新版格式)，遞迴提取
+                        const collectJson = (items) => {
+                            items.forEach(item => {
+                                if (item.kind === 'BLOCK' || item.kind === 'block') {
+                                    if (item.type) this._defCache.set(item.type, item);
+                                } else if (item.contents) {
+                                    collectJson(item.contents);
+                                }
+                            });
+                        };
+                        collectJson(tree.contents);
+                    }
+                }
+
+                // 2. 建立文字搜尋索引
                 const allTypes = Object.keys(Blockly.Blocks);
                 
                 // 暫時禁用事件，避免地圖或其它插件監聽到這些暫存積木
@@ -177,9 +274,18 @@
                     allTypes.forEach(type => {
                         try {
                             let searchBlob = type.toLowerCase();
-                            const msgKey = type.toUpperCase();
-                            if (Blockly.Msg[msgKey]) searchBlob += ' ' + Blockly.Msg[msgKey].toLowerCase();
+                            // 獲取積木定義中的 message0, message1...
+                            const blockDef = Blockly.Blocks[type];
+                            if (blockDef) {
+                                for (let i = 0; i < 5; i++) {
+                                    const msg = blockDef['message' + i];
+                                    if (typeof msg === 'string') {
+                                        searchBlob += ' ' + Blockly.utils.parsing.replaceMessageReferences(msg).toLowerCase();
+                                    }
+                                }
+                            }
 
+                            // 透過建立臨時積木獲取真實顯示文字
                             const tempBlock = workspace.newBlock(type);
                             if (tempBlock) {
                                 tempBlock.inputList.forEach(input => {
@@ -196,22 +302,31 @@
                 } finally {
                     Blockly.Events.enable();
                 }
-                console.log(`BlockSearcher: Indexed ${this._cache.size} blocks.`);
+                console.log(`BlockSearcher: Indexed ${this._cache.size} blocks, Cached ${this._defCache.size} definitions.`);
             },
 
             /**
              * 執行搜尋
              * @param {string} query 關鍵字
-             * @returns {Array} 符合的積木 JSON 列表
+             * @returns {Array} 符合的積木 JSON/XML 列表
              */
             search: function(query) {
                 const results = [];
                 const q = query.toLowerCase().trim();
                 if (!q) return results;
 
+                const keywords = q.split(/\s+/).filter(k => k.length > 0);
+
                 this._cache.forEach((blob, type) => {
-                    if (blob.includes(q)) {
-                        results.push({ 'kind': 'block', 'type': type });
+                    // 支援多關鍵字搜尋 (AND 邏輯)
+                    const isMatch = keywords.every(k => blob.includes(k));
+                    if (isMatch) {
+                        // 優先回傳快取的原始定義 (含影子積木)
+                        if (this._defCache.has(type)) {
+                            results.push(this._defCache.get(type));
+                        } else {
+                            results.push({ 'kind': 'block', 'type': type });
+                        }
                     }
                 });
                 return results;
@@ -254,6 +369,19 @@
 
                     const searchInput = document.getElementById('block-search');
                     const clearBtn = document.getElementById('block-search-clear');
+
+                    // --- 自動清除邏輯 ---
+                    workspace.addChangeListener((e) => {
+                        // 當積木被建立 (拖出來) 且目前有搜尋文字時
+                        if (e.type === Blockly.Events.BLOCK_CREATE && searchInput.value !== '') {
+                            // 延遲一下確保拖拽動作完成
+                            setTimeout(() => {
+                                searchInput.value = '';
+                                doSearch('');
+                                searchInput.blur();
+                            }, 100);
+                        }
+                    });
 
                     // Stop all possible events from reaching the Blockly Toolbox
                     const stopEvents = ['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'touchend'];
