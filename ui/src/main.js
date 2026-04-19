@@ -180,13 +180,20 @@
         registerPlugins: function() {
             if (typeof Blockly === 'undefined') return;
             try {
+                // Blockly v12 欄位註冊保護
                 if (window.FieldMultilineInput) {
-                    try { Blockly.fieldRegistry.unregister('field_multilinetext'); } catch(e){}
-                    Blockly.fieldRegistry.register('field_multilinetext', window.FieldMultilineInput);
+                    try { 
+                        if (!Blockly.registry.hasItem(Blockly.registry.Type.FIELD, 'field_multilinetext')) {
+                            Blockly.fieldRegistry.register('field_multilinetext', window.FieldMultilineInput); 
+                        }
+                    } catch(e){}
                 }
                 if (window.FieldColour) {
-                    try { Blockly.fieldRegistry.unregister('field_colour'); } catch(e){}
-                    Blockly.fieldRegistry.register('field_colour', window.FieldColour);
+                    try { 
+                        if (!Blockly.registry.hasItem(Blockly.registry.Type.FIELD, 'field_colour')) {
+                            Blockly.fieldRegistry.register('field_colour', window.FieldColour); 
+                        }
+                    } catch(e){}
                 }
             } catch (e) { console.warn('Plugin registration warning:', e); }
         },

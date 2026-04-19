@@ -249,3 +249,14 @@
 ### 4. VSIX 體積優化 (.vscodeignore)
 - **修正**：針對雙模式開發導致的體積膨脹，新增 .vscodeignore 排除 ui/node_modules、src-tauri、backup 與 log 等非執行期必要檔案。
 - **結果**：VSIX 檔案大小從 50MB 回降至 1MB 左右。
+
+### 5. Tauri v2 後端集成與環境適配
+- **API 權限 (Capabilities)**：Tauri v2 引入了嚴格的權限系統。必須在 src-tauri/capabilities/default.json 中明確宣告 core:event:default、core:event:allow-listen 等標籤，否則前端 event.listen 會報錯。
+- **開發路徑適配**：在 cargo tauri dev 模式下，Rust 進程的工作目錄位於 src-tauri 內。實作資源讀取指令時，需檢查當前目錄並動態回退至父目錄，才能正確存取 ui/src/modules 下的 XML 檔案。
+- **非同步橋樑 (Async Bridge)**：由於 Tauri API 加載是非同步的 (await import)，bridge.js 實作了 
+eady Promise 機制，確保所有指令都會等到 API 就緒後才發出，解決了啟動時 Toolbox 載入失敗的競態問題。
+
+### 6. Minimap 狀態同步修正
+- **刪除殘影修復**：原本的事件攔截器在積木被刪除時會因為 getBlockById 回傳 null 而誤跳過更新。修正為特別放行 BLOCK_DELETE 事件。
+- **停用狀態連動**：由於孤兒積木檢查是在 Events.disable() 下執行，Minimap 無法透過事件自動更新顏色。修正為在狀態變更完成後手動觸發 
+efreshMinimap 進行強制同步。

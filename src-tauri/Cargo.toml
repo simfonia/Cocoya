@@ -1,0 +1,25 @@
+[package]
+name = "cocoya"
+version = "0.7.0"
+description = "Cocoya Visual Python IDE"
+authors = ["simfonia"]
+edition = "2021"
+
+[lib]
+name = "cocoya_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "cocoya"
+path = "src/main.rs"
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }

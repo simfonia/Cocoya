@@ -1,26 +1,39 @@
+# Source Control & Configuration
 .git/
 .vscode/
 .vscode-test/
 .gitignore
 .gitattributes
+.DS_Store
+
+# Dev dependencies
 node_modules/
 ui/node_modules/
+
+# Standalone App Source (Tauri)
 src-tauri/
+
+# Project Management
 backup/
 log/
-out/test/
+docs/
+FILE_STRUCTURE.md
+GEMINI.md
+*.code-workspace
+
+# Build / Config files
 tsconfig.json
 package-lock.json
 ui/package-lock.json
 ui/package.json
+ui/vite.config.js
 ui/.gitignore
-cocoya-*.vsix
-*.code-workspace
-FILE_STRUCTURE.md
-GEMINI.md
+
+# Temp artifacts
 temp_scripts/
-src/
-# 雖然 Vite (UI) 需要 src, 但我們只需要 ui/ 目錄下的運行時資源
-# 如果有 ui/dist 則排除 src，但目前我們是直接引用 ui/src 中的 ESM
-# 所以 ui/src 不能排除。
-# 但 ui/node_modules 絕對要排除。
+out/test/
+cocoya-*.vsix
+
+# Note: We KEEP ui/src/ because VSIX currently references ESM scripts directly.
+# Note: We KEEP resources/ because it contains deploy_mcu.py needed by VSIX.
+# Note: We KEEP out/ because it contains compiled extension.js.

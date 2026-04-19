@@ -162,18 +162,45 @@
     </section>
 
     <section id="structure">
-        <h2>3. 檔案架構 (v1.5 統整版)</h2>
-        <p>為了簡化路徑邏輯，所有積木模組統一放置於 <code>media/modules/</code> 目錄下。</p>
+        <h2>3. 檔案架構 (v5.0 雙模 SSOT 版)</h2>
+        <p>為達成 VS Code 與獨立桌面應用程式 (Tauri) 的邏輯共享，所有積木模組、產生器與 UI 邏輯統一存放於 <code>ui/src/</code> 下。這被稱為 <strong>SSOT (單一事實來源)</strong> 架構。</p>
         <div class="file-tree">
-            cocoya/media/modules/<br>
-            ├── core/ (基礎核心模組)<br>
-            │   ├── logic/ (blocks.js, generators.js, toolbox.xml, i18n/)<br>
-            │   ├── coding/ (註解與原生代碼)<br>
-            │   └── ...<br>
-            ├── cv_basic/ (OpenCV 基礎操作)<br>
-            ├── cv_draw/ (OpenCV 繪圖標註)<br>
-            └── hardware/ (硬體控制模組)
+            cocoya/ui/src/<br>
+            ├── bridge.js (通訊抽象層)<br>
+            ├── main.js (UI 進入點)<br>
+            ├── modules/ (雙模共用模組)<br>
+            │   ├── core/ (基礎積木)<br>
+            │   ├── cv_*/ (AI 視覺積木)<br>
+            │   └── hardware/ (硬體控制)<br>
+            ├── zh-hant.js (核心語系)<br>
+            └── style.css (全域樣式)
         </div>
+    </section>
+
+    <section id="dual-mode">
+        <h2>13. 雙模架構開發規範 (Dual-Mode Guidelines)</h2>
+        <p>Cocoya 具備 VSIX 與 Tauri 雙重引擎。為防止兩者在開發過程中互相干涉或功能脫節，必須嚴格遵守以下準則：</p>
+
+        <h3>A. 後端功能對齊 (Feature Parity)</h3>
+        <p>開發任何涉及「系統層級」的功能（如：檔案存取、代碼執行、硬體通訊）時，必須確保 <strong>VS Code (TypeScript)</strong> 與 <strong>Tauri (Rust)</strong> 兩端皆有對等的指令實作。</p>
+        <ul>
+            <li><strong>規範:</strong> 前端一律透過 <code>CocoyaBridge</code> 發送指令，禁止在 UI 邏輯中直接撰寫環境專屬 API。</li>
+            <li><strong>連動性:</strong> 修改完 <code>extension.ts</code> 的 Command 後，應立即在 <code>src-tauri/src/lib.rs</code> 補齊對應的 Rust 指令。</li>
+        </ul>
+
+        <h3>B. 檔案路徑與權限處理</h3>
+        <p>VS Code 受限於 Webview 沙盒與插件權限，而 Tauri 具備完整系統權限。為確保相容性：</p>
+        <ul>
+            <li><strong>路徑規範:</strong> 儘量避免使用絕對路徑。若需儲存暫存檔，應優先使用系統提供的 <code>temp</code> 或 <code>appData</code> 目錄。</li>
+            <li><strong>校驗機制:</strong> 在 Tauri 模式下成功的路徑操作，必須同步在 VS Code 模式下進行回歸測試。</li>
+        </ul>
+
+        <h3>C. 編譯產物與隔離 (.vscodeignore)</h3>
+        <p>為了防止不同模式的編譯廢料互相干涉，系統實作了嚴格的排除機制：</p>
+        <ul>
+            <li><strong>VSIX 打包:</strong> 透過 <code>.vscodeignore</code> 強制排除 <code>src-tauri/</code> 與 <code>node_modules/</code>，維持插件輕量化 (~1MB)。</li>
+            <li><strong>Tauri 打包:</strong> Rust 編譯產物 (<code>target/</code>) 嚴禁進入 VSIX 封裝；VSIX 的 TypeScript 編譯產物 (<code>out/</code>) 亦不應影響 Tauri 運行。</li>
+        </ul>
     </section>
 
     <section id="module-system">

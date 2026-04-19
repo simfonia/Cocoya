@@ -4,37 +4,28 @@
 
 ## [核心開發原則]
 - **SSOT (單一事實來源)**：所有積木、產生器與前端邏輯必須統一存放在 `ui/src` 下，由 VSIX 與 Tauri 共享。
-- **通訊抽象化**：前端必須透過 `CocoyaBridge` 與後端通訊，禁止在 UI 層直接使用環境專屬 API (如 `vscode.postMessage`)。
+- **通訊抽象化**：前端必須透過 `CocoyaBridge` 與後端通訊，禁止在 UI 層直接使用環境專屬 API。
 
-## [已完成] 里程碑 v1.0 ~ v3.4 (核心架構、視覺 AI、硬體對齊)
-- [x] UI 佈局、積木定位、硬體部署基礎。
-- [x] MediaPipe 手勢/臉部/姿勢偵測模組。
-- [x] AR 濾鏡 (Overlay PNG) 與中文顯示支援。
-- [x] 環境診斷與一鍵安裝助手。
-- [x] **πCar 功能全面移植**與 MCU 基礎腳位控制。
-- [x] **積木說明文件系統 (Help System)**。
+## [已完成] 里程碑 v1.0 ~ v4.9 (功能對齊與 Bug 修復)
+- [x] MediaPipe AI 視覺模組、πCar 硬體控制與 MCU 部署基礎。
+- [x] **[重大修復]** 解決 VSIX 模式下搜尋影子積木遺失、Minimap 不同步、Python 縮排位移等 Bug。
+- [x] **[重大修復]** 強化 MCU 部署韌性，解決 Windows 磁碟鎖定 (Errno 22) 並整合 VS Code 進度通知。
 
 ## [進行中] 里程碑 v5.0: 雙模架構轉型 (VSIX + Tauri)
-- [x] **資源遷移與目錄重構**：
-    - [x] 建立 `ui/` 目錄並初始化結構。
-    - [x] 遷移所有資源至 `ui/src` (含圖示、語系、積木、插件)。
-    - [x] 徹底移除舊有的 `media/` 目錄。
-- [x] **通訊抽象層實作**：
-    - [x] 建立 `ui/src/bridge.js` 並完成 `CocoyaBridge` 實作。
-    - [x] 重構 `main.js` 與 `module_loader.js` 對接橋樑。
-- [x] **VSIX 模式穩定化**：
-    - [x] 更新 `extension.ts` 資源映射邏輯，支援 Vite 風格的路徑。
-    - [x] 修復積木搜尋、Minimap 切換、Python 縮排等 UI 功能。
+- [x] **資源遷移與目錄重構**：建立 `ui/` SSOT 結構，徹底移除 `media/`。
+- [x] **通訊抽象層實作**：建立 `CocoyaBridge` 並支援非同步 API 加載機制。
+- [x] **VSIX 模式穩定化**：完成路徑適配與體備優化 (.vscodeignore)。
 - [ ] **Tauri 獨立 App 開發**：
-    - [ ] 初始化 `src-tauri` 專案。
-    - [ ] 實現 Rust 後端指令鏡像（檔案開檔/存檔、序列埠掃描、代碼執行）。
-    - [ ] 實作 Sidecar 整合 `deploy_mcu.py`。
-- [ ] **建置自動化**：
-    - [ ] 配置 Vite Build 流程，確保產出物能同時被 VSIX 與 Tauri 打包。
+    - [x] 建立 `src-tauri` 核心架構 (Rust, Capabilities, tauri.conf.json)。
+    - [x] 實現部分指令鏡像：`run_python` (含串流日誌)、`get_manifest`、`get_module_toolbox`。
+    - [ ] 實現檔案系統指令：`save_file` (含 dialog)、`open_file`。
+    - [ ] 實現序列埠硬體指令：`get_serial_ports`、`deploy_mcu`。
+    - [ ] 整合 `deploy_mcu.py` 作為 Tauri Sidecar。
+- [ ] **建置自動化**：配置 Vite Build，產出 VSIX 運行時資源。
 
-## [待辦] 里程碑 v5.1: 功能同步與優化
-- [ ] **跨平台支援 (Linux/macOS)**：在 Tauri 模式下實現自動適配。
-- [ ] **TinyML 資料採集強化**：在獨立應用程式模式下提供更高效的影像儲存介面。
+## [待辦] 里程碑 v5.1: 跨平台與 TinyML
+- [ ] **跨平台支援 (Linux/macOS)**：實作 Rust 路徑與部署腳本的自動適配。
+- [ ] **TinyML 工具整合**：在獨立應用程式模式下提供影像標註與資料採集面板。
 
 ---
-*最後更新日期：2026-04-09 (雙模架構 VSIX 穩定版達成)*
+*最後更新日期：2026-04-19 (Tauri 模式成功啟動)*

@@ -1,18 +1,30 @@
+# Dependency directories
 node_modules/
+ui/node_modules/
 out/
 .vscode-test/
+
+# Build artifacts
 *.vsix
-backup/
-.DS_Store
-GEMINI.md
-
-# Vite (UI)
-ui/node_modules/
 ui/dist/
-ui/.env*
-
-# Tauri (Rust)
 src-tauri/target/
 src-tauri/bin/
 src-tauri/gen/
+
+# Cocoya Runtime / Temp
+temp_scripts/
+*.tmp
+*.log
+
+# Project specific
+backup/
+GEMINI.md
+.DS_Store
+
+# Environments
+.env*
+ui/.env*
 src-tauri/.env*
+
+# Rust specific
+# Cargo.lock # 建議保留以確保編譯一致性，若想完全純淨可開啟此行

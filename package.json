@@ -37,6 +37,9 @@
         }
     },
     "scripts": {
+        "dev": "npm run dev --prefix ui",
+        "build": "npm run build --prefix ui",
+        "tauri": "tauri",
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
