@@ -21,8 +21,10 @@
     - [x] 實現檔案系統指令：`save_file` (含 dialog)、`open_file`.
     - [x] 實現序列埠硬體指令：`get_serial_ports`、`deploy_mcu`.
     - [ ] 整合 `deploy_mcu.py` 作為 Tauri Sidecar 以利打包發布。
-    - [ ] 實現 Tauri 模式下的 **環境診斷** (check_environment)。
-- [ ] **建置自動化**：配置 Vite Build，產出 VSIX 運行時資源。
+    - [ ] 實作重置韌體功能 (Reset Firmware)：
+        - [ ] 策略 A：UF2 複製模式 (適用於 RP2040)。
+        - [ ] 策略 B：Serial 模式 (適用於 ESP32-S3，需整合 esptool Sidecar)。
+    - [ ] 實現 Tauri 模式下的 **環境診斷** (check_environment)。- [ ] **建置自動化**：配置 Vite Build，產出 VSIX 運行時資源。
 
 ## [待辦] 里程碑 v5.1: 跨平台與 TinyML
 - [ ] **跨平台支援 (Linux/macOS)**：實作 Rust 路徑與部署腳本的自動適配。

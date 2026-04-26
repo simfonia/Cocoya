@@ -39,7 +39,11 @@ C:\Workspace\cocoya\
 │   └── resources/         # [NEW] Tauri 運行時資源
 │       └── core_manifest.json # 從前端同步的模組清單
 ├── resources/             # 延伸模組靜態資源
-│   └── deploy_mcu.py      # CircuitPython 部署輔助腳本 (對齊最新 copy 邏輯)
+│   ├── deploy_mcu.py      # CircuitPython 部署輔助腳本
+│   └── firmware/          # [NEW] 各型號 CircuitPython 韌體庫 (.uf2)
+│       └── CircuitPython/
+│           ├── MakerPi_RP2040/
+│           └── XIAO_ESP32_S3/
 ├── temp_scripts/          # 執行期間暫存目錄
 ├── package.json           # 根目錄設定 (含 dev/build/tauri 代理指令)
 └── tsconfig.json          # TS 編譯設定

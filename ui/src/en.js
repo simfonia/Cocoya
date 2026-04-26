@@ -121,6 +121,11 @@
     "MSG_PYTHON_UPDATED": "Python path updated: %1",
     "MSG_RECOVER_BACKUP": "Unsaved changes detected. Do you want to recover them?",
     "MSG_RECOVER_IGNORE": "Ignore and start new project",
+    "MSG_RESET_FIRMWARE_CONFIRM": "Resetting firmware will clear all content on the MCU. Please ensure the MCU is in BOOTSEL / Flashing mode.\nContinue?",
+    "MSG_ASK_CLEAR_CODE": "Do you want to clear the code (code.py) on the MCU after burning?",
+    "MSG_SELECT_MCU_MODEL": "Please select your MCU model:",
+    "MSG_FIRMWARE_BURN_SUCCESS": "Firmware burned successfully! The MCU will restart.",
+    "MSG_FIRMWARE_BURN_FAILED": "Burning failed: ",
 
     // Syntax (Basic)
     "PY_DEF": "def",

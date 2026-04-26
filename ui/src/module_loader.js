@@ -4,6 +4,11 @@
 
 async function loadScript(url) {
     return new Promise((resolve, reject) => {
+        // --- 檢查是否已載入過此腳本 ---
+        if (document.querySelector(`script[src="${url}"]`)) {
+            resolve();
+            return;
+        }
         const script = document.createElement('script');
         script.src = url;
         script.onload = resolve;
