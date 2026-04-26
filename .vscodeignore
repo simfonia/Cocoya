@@ -12,6 +12,7 @@ ui/node_modules/
 
 # Standalone App Source (Tauri)
 src-tauri/
+!src-tauri/icons/128x128.png # VSIX icon
 
 # Project Management
 backup/

@@ -1,6 +1,6 @@
 {
   "productName": "Cocoya",
-  "version": "0.7.0",
+  "version": "0.7.5",
   "identifier": "com.cocoya.app",
   "build": {
     "beforeDevCommand": "npm run dev",

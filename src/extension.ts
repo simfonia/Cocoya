@@ -129,11 +129,80 @@ export class CocoyaManager {
                 case 'openHelp':
                     this.handleOpenHelp(message.helpId);
                     break;
+                case 'autoBackup':
+                    this.handleAutoBackup(message.xml);
+                    break;
+                case 'clearBackup':
+                    this.handleClearBackup();
+                    break;
+                case 'rejectRecovery':
+                    this.handleRejectRecovery();
+                    break;
             }
         }, undefined, this.context.subscriptions);
     }
 
     // --- 訊息處理方法 ---
+
+    /**
+     * 處理拒絕恢復：封存目前的備份檔，以免被覆蓋
+     */
+    private handleRejectRecovery() {
+        try {
+            let backupPath: string | undefined;
+            if (this.currentFilePath) {
+                backupPath = path.join(path.dirname(this.currentFilePath), `.${path.basename(this.currentFilePath)}.bak`);
+            } else {
+                backupPath = path.join(this.context.extensionPath, 'temp_scripts', 'untitled_backup.xml');
+            }
+
+            if (backupPath && fs.existsSync(backupPath)) {
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const archivePath = `${backupPath}.old_${timestamp}`;
+                fs.renameSync(backupPath, archivePath);
+            }
+        } catch (e) {
+            console.error('[Extension] Reject recovery (archive) failed', e);
+        }
+    }
+
+    /**
+     * 處理自動備份實體化
+     */
+    private handleAutoBackup(xml: string) {
+        try {
+            let backupPath: string;
+            if (this.currentFilePath) {
+                // 情境 A：已存檔專案 -> 存放在專案旁 (隱藏檔)
+                const dir = path.dirname(this.currentFilePath);
+                const name = path.basename(this.currentFilePath);
+                backupPath = path.join(dir, `.${name}.bak`);
+            } else {
+                // 情境 B：未存檔專案 -> 存放在擴充功能暫存區
+                const tempDir = path.join(this.context.extensionPath, 'temp_scripts');
+                if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+                backupPath = path.join(tempDir, 'untitled_backup.xml');
+            }
+            fs.writeFileSync(backupPath, xml, 'utf8');
+        } catch (e) {
+            console.error('[Extension] Auto-backup failed', e);
+        }
+    }
+
+    /**
+     * 清理自動備份
+     */
+    private handleClearBackup() {
+        try {
+            // 嘗試清理兩種可能的備份位置
+            if (this.currentFilePath) {
+                const bPath = path.join(path.dirname(this.currentFilePath), `.${path.basename(this.currentFilePath)}.bak`);
+                if (fs.existsSync(bPath)) fs.unlinkSync(bPath);
+            }
+            const tempBPath = path.join(this.context.extensionPath, 'temp_scripts', 'untitled_backup.xml');
+            if (fs.existsSync(tempBPath)) fs.unlinkSync(tempBPath);
+        } catch (e) {}
+    }
 
     /**
      * 開啟本地積木說明文件
@@ -222,6 +291,13 @@ export class CocoyaManager {
         else lang = 'en'; // 預設英文
 
         this.panel.webview.postMessage({ command: 'manifestData', data: manifest, mediaUri, lang: lang });
+
+        // --- 新增：啟動時檢查未存檔備份 ---
+        const tempBPath = path.join(this.context.extensionPath, 'temp_scripts', 'untitled_backup.xml');
+        if (fs.existsSync(tempBPath)) {
+            const xml = fs.readFileSync(tempBPath, 'utf8');
+            this.panel.webview.postMessage({ command: 'recoveryData', xml: xml });
+        }
     }
 
     private handleGetModuleToolbox(message: any) {
@@ -243,8 +319,8 @@ export class CocoyaManager {
 
     private async handleConfirm(message: any) {
         const ok = this.t('MSG_OK') || 'OK';
-        const cancel = this.t('MSG_CANCEL') || 'Cancel';
-        const choice = await vscode.window.showInformationMessage(message.message, { modal: true }, ok, cancel);
+        // 在 modal 模式下，VS Code 會自動提供取消/關閉機制，不需手動添加 cancel 按鈕以免重複
+        const choice = await vscode.window.showInformationMessage(message.message, { modal: true }, ok);
         this.panel.webview.postMessage({ command: 'promptResponse', requestId: message.requestId, result: choice === ok });
     }
 
@@ -258,6 +334,7 @@ export class CocoyaManager {
     private async performSave(xml: string): Promise<boolean> {
         if (this.currentFilePath) {
             fs.writeFileSync(this.currentFilePath, xml, 'utf8');
+            this.handleClearBackup(); // 儲存成功，清理備份
             return true;
         } else {
             const lastPath = this.context.globalState.get<string>('lastWorkspacePath');
@@ -272,6 +349,7 @@ export class CocoyaManager {
                 this.currentFilePath = uri.fsPath;
                 await this.context.globalState.update('lastWorkspacePath', path.dirname(this.currentFilePath));
                 fs.writeFileSync(this.currentFilePath, xml, 'utf8');
+                this.handleClearBackup(); // 儲存成功，清理備份
                 this.updateTitle();
                 return true;
             }
@@ -299,6 +377,7 @@ export class CocoyaManager {
         if (await this.checkDirtyAndConfirm(message)) {
             this.currentFilePath = undefined;
             this.lastDirtyState = false;
+            this.handleClearBackup(); // 開新檔案也清理舊的未命名備份
             this.updateTitle();
             this.panel.webview.postMessage({ command: 'resetWorkspace' });
         }
@@ -336,6 +415,16 @@ export class CocoyaManager {
                 this.lastDirtyState = false;
                 this.updateTitle();
                 this.panel.webview.postMessage({ command: 'loadWorkspace', xml: content, filename, platform });
+
+                // --- 新增：開啟檔案後檢查實體備份 ---
+                const bPath = path.join(path.dirname(this.currentFilePath), `.${path.basename(this.currentFilePath)}.bak`);
+                if (fs.existsSync(bPath)) {
+                    const backupXml = fs.readFileSync(bPath, 'utf8');
+                    // 只有當備份內容與磁碟原始檔不一致時，才提示恢復
+                    if (backupXml.trim() !== content.trim()) {
+                        this.panel.webview.postMessage({ command: 'recoveryData', xml: backupXml });
+                    }
+                }
             }
         }
     }

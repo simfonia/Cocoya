@@ -321,7 +321,7 @@ window.CocoyaUI = {
         bind('btn-save-as', 'saveFileAs', { includeXml: true });
         
         // 綁定設定與功能按鈕
-        bind('btn-settings', 'setPythonPath');
+        bind('btn-set-python-path', 'setPythonPath');
         bind('btn-refresh-serial', 'refreshSerialPorts');
         bind('btn-run', 'runCode');
         bind('btn-update', 'checkUpdate');

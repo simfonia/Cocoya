@@ -40,9 +40,17 @@
                         <img src="/src/icons/save_as_24dp_FE2F89.png" class="hover-icon">
                     </div>
                     <div class="toolbar-separator"></div>
-                    <div class="toolbar-btn" id="btn-settings" title="%{BKY_TLB_SETTINGS}">
-                        <img src="/src/icons/settings_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="/src/icons/settings_24dp_FE2F89.png" class="hover-icon">
+                    <div class="toolbar-dropdown">
+                        <div class="toolbar-btn" id="btn-settings-root" title="%{BKY_TLB_SETTINGS}">
+                            <img src="/src/icons/settings_24dp_1F1F1F.png" class="normal-icon">
+                            <img src="/src/icons/settings_24dp_FE2F89.png" class="hover-icon">
+                        </div>
+                        <div class="dropdown-content">
+                            <div class="dropdown-item" id="btn-set-python-path">
+                                <img src="/src/icons/python.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                <span>%{BKY_TLB_SETTINGS_PYTHON_PATH}</span>
+                            </div>
+                        </div>
                     </div>
                     <div class="toolbar-btn" id="btn-diagnose" title="%{BKY_TLB_DIAGNOSE}">
                         <img src="/src/icons/dashboard_customize_24dp_1F1F1F.png" class="normal-icon">

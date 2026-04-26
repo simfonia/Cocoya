@@ -171,3 +171,18 @@
   - 實作 Tauri 模式下的 **序列埠偵測與部署** 指令。
   - 整合 deploy_mcu.py 作為 Tauri 的 Sidecar 以利打包發布。
 
+## 2026-04-26 實體自動備份系統與 Tauri 核心功能補完
+- **核心進度**：
+    - **[里程碑] 實體化自動備份系統**：
+        - 徹底解決學校 PC 還原系統導致的資料遺失問題，棄用 `localStorage` 改採實體備份。
+        - **分叉保護 (Forking)**：實作拒絕恢復時自動改名封存（`.bak.old_[timestamp]`），防止舊進度覆蓋心血。
+        - **雙模式適配**：同步完成 VS Code Extension 與 Tauri 獨立版的備份對接。
+    - **Tauri 後端強化**：
+        - 實作 `get_serial_ports`, `deploy_mcu`, `auto_backup`, `clear_backup`, `reject_recovery` 等 Rust 指令。
+        - 智慧偵測：啟動時自動掃描系統 `temp` 下的未命名備份並推播至前端。
+    - **UI/UX 精進**：
+        - 設定按鈕升級為下拉選單，引入 Python Logo 圖示與深色主題適配。
+        - 修正 VS Code 模式下對話框重複取消按鈕與語系同步 Bug。
+- **關鍵維護**：
+    - 更新 `variables_blocks.js` 棄用 API，對齊 Blockly 最新版本。
+- **目前狀態**：系統已具備極高的資料安全性，Tauri 獨立版功能已接近 VSIX 版，準備進入封裝測試階段。

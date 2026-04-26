@@ -2,7 +2,8 @@
     "name": "cocoya",
     "displayName": "Cocoya: Code, Compute, Yield AI",
     "description": "Visual Python programming for AI and Hardware education",
-    "version": "0.7.0",
+    "version": "0.7.5",
+    "icon": "src-tauri/icons/128x128.png",
     "publisher": "simfonia",
     "engines": {
         "vscode": "^1.75.0"

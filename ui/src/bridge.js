@@ -81,17 +81,99 @@ const CocoyaBridge = {
                         }
                         break;
                     case 'runCode':
-                        await tauriInvoke('run_python', { 
-                            code: data.code, 
-                            pythonPath: localStorage.getItem('pythonPath') || 'python' 
-                        });
+                        if (data.platform === 'CircuitPython') {
+                            // MCU 模式：執行部署
+                            try {
+                                await tauriInvoke('deploy_mcu', {
+                                    pythonPath: localStorage.getItem('pythonPath') || 'python',
+                                    port: data.serialPort,
+                                    code: data.code
+                                });
+                                this._dispatchToFrontend({ command: 'deployCompleted' });
+                            } catch (e) {
+                                this._dispatchToFrontend({ command: 'deployFailed', error: e });
+                            }
+                        } else {
+                            // PC 模式：執行本地 Python
+                            await tauriInvoke('run_python', { 
+                                code: data.code, 
+                                pythonPath: localStorage.getItem('pythonPath') || 'python' 
+                            });
+                        }
                         break;
                     case 'stopCode':
                         await tauriInvoke('stop_python');
                         break;
+                    case 'refreshSerialPorts':
+                        try {
+                            result = await tauriInvoke('get_serial_ports');
+                            this._dispatchToFrontend({ command: 'serialPortsData', ports: result });
+                        } catch (e) {
+                            console.error('[Bridge] Failed to refresh serial ports:', e);
+                        }
+                        break;
+                    case 'getSerialPorts':
+                        try {
+                            result = await tauriInvoke('get_serial_ports');
+                            this._dispatchToFrontend({ command: 'serialPortsData', ports: result });
+                        } catch (e) {
+                            console.error('[Bridge] Failed to get serial ports:', e);
+                        }
+                        break;
+                    case 'deployMcu':
+                        try {
+                            await tauriInvoke('deploy_mcu', {
+                                pythonPath: localStorage.getItem('pythonPath') || 'python',
+                                port: data.port,
+                                code: data.code
+                            });
+                            this._dispatchToFrontend({ command: 'deployCompleted' });
+                        } catch (e) {
+                            this._dispatchToFrontend({ command: 'deployFailed', error: e });
+                        }
+                        break;
+                    case 'saveFile':
+                    case 'saveFileAs':
+                        try {
+                            const isSaveAs = (command === 'saveFileAs');
+                            const filename = await tauriInvoke('save_file', { xml: data.xml, saveAs: isSaveAs });
+                            this._dispatchToFrontend({ command: 'saveCompleted', filename: filename });
+                        } catch (e) {
+                            if (e !== 'Canceled') console.error('[Bridge] Save failed:', e);
+                        }
+                        break;
+                    case 'openFile':
+                        try {
+                            const result = await tauriInvoke('open_file');
+                            this._dispatchToFrontend({ 
+                                command: 'loadWorkspace', 
+                                xml: result.xml, 
+                                filename: result.filename, 
+                                platform: result.platform 
+                            });
+                            // 若後端偵測到備份，觸發恢復詢問
+                            if (result.backup_xml) {
+                                this._dispatchToFrontend({ command: 'recoveryData', xml: result.backup_xml });
+                            }
+                        } catch (e) {
+                            if (e !== 'Canceled') console.error('[Bridge] Open failed:', e);
+                        }
+                        break;
                     case 'setLocale':
                         // Tauri 暫不需要處理語系同步，僅記錄
                         console.log('[Bridge] Locale set to:', data.messages ? 'Received' : 'Empty');
+                        break;
+                    case 'autoBackup':
+                        if (this.isVsCode) this.vscode.postMessage({ command, ...data });
+                        else if (this.isTauri) await tauriInvoke('auto_backup', { xml: data.xml });
+                        break;
+                    case 'clearBackup':
+                        if (this.isVsCode) this.vscode.postMessage({ command, ...data });
+                        else if (this.isTauri) await tauriInvoke('clear_backup');
+                        break;
+                    case 'rejectRecovery':
+                        if (this.isVsCode) this.vscode.postMessage({ command, ...data });
+                        else if (this.isTauri) await tauriInvoke('reject_recovery');
                         break;
                     case 'setDirty':
                         // Tauri 模式下動態更新視窗標題
@@ -105,6 +187,40 @@ const CocoyaBridge = {
                                 await appWindow.setTitle(title.replace(' *', ''));
                             }
                         } catch (e) {}
+                        break;
+                    case 'prompt':
+                        if (this.isVsCode) {
+                            this.vscode.postMessage({ command, ...data });
+                        } else if (this.isTauri) {
+                            try {
+                                const { ask } = await import('@tauri-apps/api/plugin-dialog');
+                                const ok = await ask(data.message, { title: 'Cocoya', kind: 'info' });
+                                this._dispatchToFrontend({ command: 'promptResponse', requestId: data.requestId, result: ok ? data.defaultValue : null });
+                            } catch (e) {}
+                        }
+                        break;
+                    case 'confirm':
+                        if (this.isVsCode) {
+                            this.vscode.postMessage({ command: 'confirm', message: data.message, requestId: data.requestId });
+                        } else if (this.isTauri) {
+                            try {
+                                const { ask } = await import('@tauri-apps/api/plugin-dialog');
+                                const okLabel = (window.Blockly && (Blockly.Msg['MSG_OK'] || Blockly.Msg['MSG_SAVE'])) || 'OK';
+                                const cancelLabel = (window.Blockly && Blockly.Msg['MSG_CANCEL']) || 'Cancel';
+                                const ok = await ask(data.message, { title: 'Cocoya', kind: 'warning', okLabel, cancelLabel });
+                                this._dispatchToFrontend({ command: 'promptResponse', requestId: data.requestId, result: ok });
+                            } catch (e) { console.error('[Bridge] Confirm error:', e); }
+                        }
+                        break;
+                    case 'alert':
+                        if (this.isVsCode) {
+                            this.vscode.postMessage({ command, ...data });
+                        } else if (this.isTauri) {
+                            try {
+                                const { message } = await import('@tauri-apps/api/plugin-dialog');
+                                await message(data.message, { title: 'Cocoya', kind: 'info' });
+                            } catch (e) {}
+                        }
                         break;
                     default:
                         console.warn(`[Bridge] Tauri command "${command}" not implemented yet`);
