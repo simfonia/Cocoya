@@ -20,6 +20,9 @@ const CocoyaBridge = {
     _resolveReady: null,
     ready: null,
 
+    // 監聽器列表 (Set 確保唯一性)
+    _listeners: new Set(),
+
     /**
      * 初始化 Bridge
      */
@@ -32,6 +35,9 @@ const CocoyaBridge = {
         if (this.isVsCode) {
             this.vscode = acquireVsCodeApi();
             console.log('[Bridge] Running in VS Code mode');
+            window.addEventListener('message', (event) => {
+                this._dispatchToFrontend(event.data);
+            });
             this._resolveReady();
         } else if (this.isTauri) {
             console.log('[Bridge] Running in Tauri mode');
@@ -42,10 +48,10 @@ const CocoyaBridge = {
                 tauriInvoke = invoke;
                 tauriListen = listen;
                 console.log('[Bridge] Tauri API loaded successfully');
+                this._setupTauriListeners();
                 this._resolveReady();
             } catch (e) {
                 console.error('[Bridge] Failed to load Tauri API:', e);
-                // 即使失敗也 resolve，避免前端永遠卡住，改走 Mock 模式
                 this._resolveReady();
             }
         } else {
@@ -55,212 +61,305 @@ const CocoyaBridge = {
     },
 
     /**
-     * 發送指令至後端 (增加等待機制)
+     * 發送指令至後端
      */
     async send(command, data = {}) {
-        // 確保初始化完成後才執行
         await this.ready;
 
-        if (this.isVsCode && this.vscode) {
-            this.vscode.postMessage({ command, ...data });
-        } else if (this.isTauri && tauriInvoke) {
-            try {
-                let result;
-                switch (command) {
-                    case 'getManifest': 
+        // --- 核心分發邏輯 ---
+        try {
+            let result;
+            switch (command) {
+                case 'getManifest':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
                         result = await tauriInvoke('get_manifest'); 
                         this._dispatchToFrontend({ command: 'manifestData', data: result, mediaUri: '/src', lang: 'zh-hant' });
-                        break;
-                    case 'getModuleToolbox':
-                        // 修正：前端傳來的是 moduleId，我們需要將其轉為 path
+                    }
+                    break;
+
+                case 'getModuleToolbox':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
                         const toolboxPath = `${data.moduleId}/toolbox.xml`;
                         result = await tauriInvoke('get_module_toolbox', { path: toolboxPath });
-                        // 直接將結果回傳給發起者 (若有 requestId)
                         if (data.requestId) {
                             this._dispatchToFrontend({ command: 'toolboxData', data: result, requestId: data.requestId });
                         }
-                        break;
-                    case 'runCode':
+                    }
+                    break;
+
+                case 'runCode':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
                         if (data.platform === 'CircuitPython') {
-                            // MCU 模式：執行部署
-                            try {
-                                await tauriInvoke('deploy_mcu', {
-                                    pythonPath: localStorage.getItem('pythonPath') || 'python',
-                                    port: data.serialPort,
-                                    code: data.code
-                                });
-                                this._dispatchToFrontend({ command: 'deployCompleted' });
-                            } catch (e) {
-                                this._dispatchToFrontend({ command: 'deployFailed', error: e });
-                            }
+                            await tauriInvoke('deploy_mcu', {
+                                pythonPath: localStorage.getItem('pythonPath') || 'python',
+                                port: data.serialPort,
+                                code: data.code
+                            });
+                            this._dispatchToFrontend({ command: 'deployCompleted' });
                         } else {
-                            // PC 模式：執行本地 Python
                             await tauriInvoke('run_python', { 
                                 code: data.code, 
                                 pythonPath: localStorage.getItem('pythonPath') || 'python' 
                             });
                         }
-                        break;
-                    case 'stopCode':
-                        await tauriInvoke('stop_python');
-                        break;
-                    case 'refreshSerialPorts':
-                        try {
-                            result = await tauriInvoke('get_serial_ports');
-                            this._dispatchToFrontend({ command: 'serialPortsData', ports: result });
-                        } catch (e) {
-                            console.error('[Bridge] Failed to refresh serial ports:', e);
+                    }
+                    break;
+
+                case 'stopCode':
+                    if (this.isVsCode) this.vscode.postMessage({ command, ...data });
+                    else if (this.isTauri) await tauriInvoke('stop_python');
+                    break;
+
+                case 'refreshSerialPorts':
+                case 'getSerialPorts':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
+                        result = await tauriInvoke('get_serial_ports');
+                        this._dispatchToFrontend({ command: 'serialPortsData', ports: result });
+                    }
+                    break;
+
+                case 'deployMcu':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
+                        await tauriInvoke('deploy_mcu', {
+                            pythonPath: localStorage.getItem('pythonPath') || 'python',
+                            port: data.port,
+                            code: data.code
+                        });
+                        this._dispatchToFrontend({ command: 'deployCompleted' });
+                    }
+                    break;
+
+                case 'saveFile':
+                case 'saveFileAs':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
+                        const isSaveAs = (command === 'saveFileAs');
+                        const filename = await tauriInvoke('save_file', { xml: data.xml, saveAs: isSaveAs });
+                        this._dispatchToFrontend({ command: 'saveCompleted', filename: filename });
+                    }
+                    break;
+
+                case 'openFile':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
+                        const res = await tauriInvoke('open_file');
+                        this._dispatchToFrontend({ 
+                            command: 'loadWorkspace', 
+                            xml: res.xml, 
+                            filename: res.filename, 
+                            platform: res.platform 
+                        });
+                        if (res.backup_xml) {
+                            this._dispatchToFrontend({ command: 'recoveryData', xml: res.backup_xml });
                         }
-                        break;
-                    case 'getSerialPorts':
-                        try {
-                            result = await tauriInvoke('get_serial_ports');
-                            this._dispatchToFrontend({ command: 'serialPortsData', ports: result });
-                        } catch (e) {
-                            console.error('[Bridge] Failed to get serial ports:', e);
+                    }
+                    break;
+
+                case 'autoBackup':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
+                        await tauriInvoke('auto_backup', { xml: data.xml });
+                    }
+                    break;
+
+                case 'clearBackup':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
+                        await tauriInvoke('clear_backup');
+                    }
+                    break;
+
+                case 'rejectRecovery':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
+                        await tauriInvoke('reject_recovery');
+                    }
+                    break;
+
+                case 'setDirty':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
+                        const { getCurrentWindow } = await import('@tauri-apps/api/window');
+                        const appWindow = getCurrentWindow();
+                        const title = await appWindow.title();
+                        if (data.isDirty && !title.includes('*')) {
+                            await appWindow.setTitle(title + ' *');
+                        } else if (!data.isDirty && title.includes('*')) {
+                            await appWindow.setTitle(title.replace(' *', ''));
                         }
-                        break;
-                    case 'deployMcu':
-                        try {
-                            await tauriInvoke('deploy_mcu', {
-                                pythonPath: localStorage.getItem('pythonPath') || 'python',
-                                port: data.port,
-                                code: data.code
-                            });
-                            this._dispatchToFrontend({ command: 'deployCompleted' });
-                        } catch (e) {
-                            this._dispatchToFrontend({ command: 'deployFailed', error: e });
-                        }
-                        break;
-                    case 'saveFile':
-                    case 'saveFileAs':
-                        try {
-                            const isSaveAs = (command === 'saveFileAs');
-                            const filename = await tauriInvoke('save_file', { xml: data.xml, saveAs: isSaveAs });
-                            this._dispatchToFrontend({ command: 'saveCompleted', filename: filename });
-                        } catch (e) {
-                            if (e !== 'Canceled') console.error('[Bridge] Save failed:', e);
-                        }
-                        break;
-                    case 'openFile':
-                        try {
-                            const result = await tauriInvoke('open_file');
+                    }
+                    break;
+
+                case 'resetFirmware':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
+                        await tauriInvoke('reset_firmware', { model: data.model, shouldClear: data.shouldClear });
+                        this.alert(window.Blockly?.Msg['MSG_FIRMWARE_BURN_SUCCESS'] || 'Burn success!');
+                    }
+                    break;
+
+                case 'prompt':
+                case 'confirm':
+                case 'alert':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
+                        const { ask, message } = await import('@tauri-apps/api/plugin-dialog');
+                        if (command === 'alert') {
+                            await message(data.message, { title: 'Cocoya', kind: 'info' });
+                        } else {
+                            const okLabel = (window.Blockly && (Blockly.Msg['MSG_OK'] || Blockly.Msg['MSG_SAVE'])) || 'OK';
+                            const cancelLabel = (window.Blockly && Blockly.Msg['MSG_CANCEL']) || 'Cancel';
+                            const ok = await ask(data.message, { title: 'Cocoya', kind: 'warning', okLabel, cancelLabel });
                             this._dispatchToFrontend({ 
-                                command: 'loadWorkspace', 
-                                xml: result.xml, 
-                                filename: result.filename, 
-                                platform: result.platform 
+                                command: 'promptResponse', 
+                                requestId: data.requestId, 
+                                result: (command === 'prompt' && ok) ? data.defaultValue : ok 
                             });
-                            // 若後端偵測到備份，觸發恢復詢問
-                            if (result.backup_xml) {
-                                this._dispatchToFrontend({ command: 'recoveryData', xml: result.backup_xml });
-                            }
-                        } catch (e) {
-                            if (e !== 'Canceled') console.error('[Bridge] Open failed:', e);
                         }
-                        break;
-                    case 'setLocale':
-                        // Tauri 暫不需要處理語系同步，僅記錄
-                        console.log('[Bridge] Locale set to:', data.messages ? 'Received' : 'Empty');
-                        break;
-                    case 'autoBackup':
-                        if (this.isVsCode) this.vscode.postMessage({ command, ...data });
-                        else if (this.isTauri) await tauriInvoke('auto_backup', { xml: data.xml });
-                        break;
-                    case 'clearBackup':
-                        if (this.isVsCode) this.vscode.postMessage({ command, ...data });
-                        else if (this.isTauri) await tauriInvoke('clear_backup');
-                        break;
-                    case 'rejectRecovery':
-                        if (this.isVsCode) this.vscode.postMessage({ command, ...data });
-                        else if (this.isTauri) await tauriInvoke('reject_recovery');
-                        break;
-                    case 'setDirty':
-                        // Tauri 模式下動態更新視窗標題
-                        try {
-                            const { getCurrentWindow } = await import('@tauri-apps/api/window');
-                            const appWindow = getCurrentWindow();
-                            const title = await appWindow.title();
-                            if (data.isDirty && !title.includes('*')) {
-                                await appWindow.setTitle(title + ' *');
-                            } else if (!data.isDirty && title.includes('*')) {
-                                await appWindow.setTitle(title.replace(' *', ''));
-                            }
-                        } catch (e) {}
-                        break;
-                    case 'prompt':
-                        if (this.isVsCode) {
-                            this.vscode.postMessage({ command, ...data });
-                        } else if (this.isTauri) {
-                            try {
-                                const { ask } = await import('@tauri-apps/api/plugin-dialog');
-                                const ok = await ask(data.message, { title: 'Cocoya', kind: 'info' });
-                                this._dispatchToFrontend({ command: 'promptResponse', requestId: data.requestId, result: ok ? data.defaultValue : null });
-                            } catch (e) {}
-                        }
-                        break;
-                    case 'confirm':
-                        if (this.isVsCode) {
-                            this.vscode.postMessage({ command: 'confirm', message: data.message, requestId: data.requestId });
-                        } else if (this.isTauri) {
-                            try {
-                                const { ask } = await import('@tauri-apps/api/plugin-dialog');
-                                const okLabel = (window.Blockly && (Blockly.Msg['MSG_OK'] || Blockly.Msg['MSG_SAVE'])) || 'OK';
-                                const cancelLabel = (window.Blockly && Blockly.Msg['MSG_CANCEL']) || 'Cancel';
-                                const ok = await ask(data.message, { title: 'Cocoya', kind: 'warning', okLabel, cancelLabel });
-                                this._dispatchToFrontend({ command: 'promptResponse', requestId: data.requestId, result: ok });
-                            } catch (e) { console.error('[Bridge] Confirm error:', e); }
-                        }
-                        break;
-                    case 'alert':
-                        if (this.isVsCode) {
-                            this.vscode.postMessage({ command, ...data });
-                        } else if (this.isTauri) {
-                            try {
-                                const { message } = await import('@tauri-apps/api/plugin-dialog');
-                                await message(data.message, { title: 'Cocoya', kind: 'info' });
-                            } catch (e) {}
-                        }
-                        break;
-                    default:
-                        console.warn(`[Bridge] Tauri command "${command}" not implemented yet`);
-                }
-            } catch (e) {
-                console.error(`[Bridge] Tauri invoke error (${command}):`, e);
+                    }
+                    break;
+
+                case 'pickMcuModel':
+                    // 此指令僅用於 VS Code QuickPick
+                    if (this.isVsCode) this.vscode.postMessage({ command, ...data });
+                    break;
+
+                case 'setLocale':
+                    if (this.isVsCode) this.vscode.postMessage({ command, ...data });
+                    else console.log('[Bridge] Locale sync ignored in Tauri mode');
+                    break;
+
+                default:
+                    if (this.isVsCode) this.vscode.postMessage({ command, ...data });
+                    else console.warn(`[Bridge] Command "${command}" not handled in current mode`);
+                    break;
             }
-        } else {
-            console.log(`[Bridge-Mock] Sending: ${command}`, data);
+        } catch (e) {
+            console.error(`[Bridge] Error processing command "${command}":`, e);
+            if (this.isTauri && command === 'resetFirmware') {
+                this.alert((window.Blockly?.Msg['MSG_FIRMWARE_BURN_FAILED'] || 'Failed: ') + e);
+            }
         }
     },
 
     /**
-     * 監聽後端回傳的訊息
+     * 註冊監聽器 (支援多重註冊)
      */
     onMessage(callback) {
-        this.messageCallback = callback;
-        if (this.isVsCode) {
-            window.addEventListener('message', (event) => {
-                callback(event.data);
-            });
-        } else if (this.isTauri) {
-            this._setupTauriListeners();
-        }
+        this._listeners.add(callback);
+    },
+
+    /**
+     * 移除監聽器
+     */
+    offMessage(callback) {
+        this._listeners.delete(callback);
     },
 
     _dispatchToFrontend(message) {
-        if (this.messageCallback) this.messageCallback(message);
+        this._listeners.forEach(cb => cb(message));
     },
 
     async _setupTauriListeners() {
-        await this.ready;
         if (!tauriListen) return;
-        
         await tauriListen('python-log', (event) => {
             console.log('%c[Python]', 'color: #4caf50; font-weight: bold;', event.payload);
         });
         await tauriListen('python-error', (event) => {
             console.error('[Python Error]', event.payload);
         });
+        await tauriListen('recoveryData', (event) => {
+            this._dispatchToFrontend({ command: 'recoveryData', xml: event.payload.xml });
+        });
+    },
+
+    /**
+     * 彈出型號選取視窗 (回傳 Promise<string|null>)
+     * @param {Array<{id:string, label:string}>} options 
+     */
+    pickMcuModel(options) {
+        const requestId = 'pick_' + Date.now();
+        return new Promise((resolve) => {
+            const handler = (msg) => {
+                if (msg.command === 'promptResponse' && msg.requestId === requestId) {
+                    this.offMessage(handler);
+                    resolve(msg.result);
+                }
+            };
+            this.onMessage(handler);
+
+            if (this.isVsCode) {
+                this.send('pickMcuModel', { options, requestId });
+            } else {
+                // Tauri 模式目前簡化為使用 prompt (未來可實作自定義選單)
+                const msg = (window.Blockly?.Msg['MSG_SELECT_MCU_MODEL'] || 'Select MCU:') + '\n' + 
+                            options.map((m, i) => `${i+1}. ${m.label}`).join('\n');
+                this.prompt(msg, '1').then(res => {
+                    if (!res) { resolve(null); return; }
+                    const idx = parseInt(res, 10) - 1;
+                    resolve(options[idx]?.id || null);
+                });
+            }
+        });
+    },
+
+    /**
+     * 彈出確認視窗 (Promise)
+     */
+    confirm(message) {
+        const requestId = 'confirm_' + Date.now();
+        return new Promise((resolve) => {
+            const handler = (msg) => {
+                if (msg.command === 'promptResponse' && msg.requestId === requestId) {
+                    this.offMessage(handler);
+                    resolve(msg.result);
+                }
+            };
+            this.onMessage(handler);
+            this.send('confirm', { message, requestId });
+        });
+    },
+
+    /**
+     * 彈出輸入視窗 (Promise)
+     */
+    prompt(message, defaultValue = '') {
+        const requestId = 'prompt_' + Date.now();
+        return new Promise((resolve) => {
+            const handler = (msg) => {
+                if (msg.command === 'promptResponse' && msg.requestId === requestId) {
+                    this.offMessage(handler);
+                    resolve(msg.result);
+                }
+            };
+            this.onMessage(handler);
+            this.send('prompt', { message, defaultValue, requestId });
+        });
+    },
+
+    /**
+     * 彈出警告視窗
+     */
+    alert(message) {
+        this.send('alert', { message });
     },
 
     getManifest() { this.send('getManifest'); },

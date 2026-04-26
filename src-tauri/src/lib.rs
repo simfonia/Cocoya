@@ -241,6 +241,74 @@ fn reject_recovery(state: State<'_, AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
+async fn reset_firmware(handle: tauri::AppHandle, model: String, should_clear: bool) -> Result<(), String> {
+    // 1. 定位韌體源檔案
+    let uf2_file = if model == "custom" {
+        handle.dialog().file()
+            .add_filter("UF2 Firmware", &["uf2"])
+            .blocking_pick_file()
+            .ok_or_else(|| "Canceled".to_string())?
+    } else {
+        let firmware_dir = handle.path().resolve(
+            format!("resources/firmware/CircuitPython/{}", model),
+            tauri::path::BaseDirectory::Resource
+        ).map_err(|e| e.to_string())?;
+
+        fs::read_dir(&firmware_dir)
+            .map_err(|e| format!("Firmware directory not found: {}", e))?
+            .filter_map(|entry| entry.ok())
+            .find(|entry| entry.path().extension().map_or(false, |ext| ext == "uf2"))
+            .ok_or_else(|| "No .uf2 file found in firmware directory".to_string())?
+            .path()
+    };
+
+    // 2. 尋找 RPI-RP2 磁碟
+    #[cfg(target_os = "windows")]
+    let burn_target = {
+        let mut target = None;
+        for letter in b'D'..=b'Z' {
+            let drive = format!("{}:\\", letter as char);
+            let path = std::path::Path::new(&drive);
+            if path.exists() && path.join("INFO_UF2.TXT").exists() {
+                target = Some(path.to_path_buf());
+                break;
+            }
+        }
+        target.ok_or_else(|| "Please put MCU into BOOTSEL mode (RPI-RP2 drive not found)".to_string())?
+    };
+
+    // 3. 執行燒錄 (複製 UF2)
+    let dest_uf2 = burn_target.join(uf2_file.file_name().unwrap());
+    fs::copy(&uf2_file, &dest_uf2).map_err(|e| format!("Failed to burn UF2: {}", e))?;
+
+    if !should_clear { return Ok(()); }
+
+    // 4. 輪詢等待 CIRCUITPY 磁碟重啟 (最多等 15 秒)
+    let mut circuit_py_drive = None;
+    for _ in 0..15 {
+        std::thread::sleep(std::time::Duration::from_secs(1));
+        for letter in b'D'..=b'Z' {
+            let drive = format!("{}:\\", letter as char);
+            let path = std::path::Path::new(&drive);
+            if path.exists() && (path.join("boot_out.txt").exists() || path.join("code.txt").exists()) {
+                circuit_py_drive = Some(path.to_path_buf());
+                break;
+            }
+        }
+        if circuit_py_drive.is_some() { break; }
+    }
+
+    // 5. 自動寫入空的 code.py
+    if let Some(drive) = circuit_py_drive {
+        let code_path = drive.join("code.py");
+        let default_content = "# Empty project\nprint(\"Cocoya Firmware Reset Done!\")\n";
+        let _ = fs::write(code_path, default_content);
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 async fn save_file(handle: tauri::AppHandle, state: State<'_, AppState>, xml: String, save_as: bool) -> Result<String, String> {
     let mut path_to_save = {
         let current = state.current_path.lock().unwrap();
@@ -349,7 +417,8 @@ pub fn run() {
             deploy_mcu,
             auto_backup,
             clear_backup,
-            reject_recovery
+            reject_recovery,
+            reset_firmware
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

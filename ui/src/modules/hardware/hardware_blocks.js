@@ -3,7 +3,7 @@
 /**
  * 定義常用腳位清單 (依開發板分組)
  */
-const MCU_PIN_OPTIONS = [
+var MCU_PIN_OPTIONS = [
   ["內建 LED", "board.LED"],
   // --- Maker Pi RP2040 / Pico W 常用腳位 ---
   ["[Pico] GP0 (Digital/PWM)", "board.GP0"],

@@ -126,6 +126,12 @@ export class CocoyaManager {
                 case 'installModule':
                     await this.handleInstallModule(message.module);
                     break;
+                case 'pickMcuModel':
+                    await this.handlePickMcuModel(message);
+                    break;
+                case 'resetFirmware':
+                    await this.handleResetFirmware(message.model, message.shouldClear);
+                    break;
                 case 'openHelp':
                     this.handleOpenHelp(message.helpId);
                     break;
@@ -627,6 +633,113 @@ export class CocoyaManager {
                 } catch (e) {}
             });
         }).on('error', () => {});
+    }
+
+    private async handlePickMcuModel(message: any) {
+        interface McuPickItem extends vscode.QuickPickItem {
+            id: string;
+        }
+        const items: McuPickItem[] = message.options.map((opt: any) => ({
+            label: opt.label,
+            id: opt.id
+        }));
+        const selection = await vscode.window.showQuickPick(items, {
+            placeHolder: this.localeMessages['MSG_SELECT_MCU_MODEL'] || 'Select MCU model'
+        });
+        this.panel.webview.postMessage({ 
+            command: 'promptResponse', 
+            requestId: message.requestId, 
+            result: selection ? selection.id : null 
+        });
+    }
+
+    /**
+     * 執行韌體重置 (UF2 燒錄 + 自動清空 code.py)
+     */
+    private async handleResetFirmware(model: string, shouldClear: boolean = true) {
+        let srcPath: string | undefined;
+        let uf2FileName: string | undefined;
+
+        if (model === 'custom') {
+            const uris = await vscode.window.showOpenDialog({
+                canSelectMany: false,
+                filters: { 'UF2 Firmware': ['uf2'] },
+                title: 'Select Custom UF2 Firmware'
+            });
+            if (uris && uris[0]) {
+                srcPath = uris[0].fsPath;
+                uf2FileName = path.basename(srcPath);
+            } else return;
+        } else {
+            const firmwareDir = path.join(this.context.extensionPath, 'resources', 'firmware', 'CircuitPython', model);
+            if (!fs.existsSync(firmwareDir)) {
+                vscode.window.showErrorMessage(`Firmware directory not found: ${firmwareDir}`);
+                return;
+            }
+            const files = fs.readdirSync(firmwareDir);
+            const uf2File = files.find(f => f.endsWith('.uf2'));
+            if (!uf2File) {
+                vscode.window.showErrorMessage('No .uf2 file found in firmware directory.');
+                return;
+            }
+            srcPath = path.join(firmwareDir, uf2File);
+            uf2FileName = uf2File;
+        }
+
+        let burnTarget: string | null = null;
+        const findDisk = (label: string) => {
+            try {
+                const { execSync } = require('child_process');
+                const output = execSync('wmic logicaldisk get name, volumename').toString();
+                const lines = output.split('\n');
+                for (const line of lines) {
+                    if (line.includes(label)) {
+                        const match = line.match(/[A-Z]:/);
+                        if (match) return match[0] + path.sep;
+                    }
+                }
+            } catch (e) {}
+            return null;
+        };
+
+        burnTarget = findDisk('RPI-RP2');
+        if (!burnTarget) {
+            vscode.window.showErrorMessage('Please put MCU into BOOTSEL mode (RPI-RP2 drive not found).');
+            return;
+        }
+
+        try {
+            await vscode.window.withProgress({
+                location: vscode.ProgressLocation.Notification,
+                title: `Burning firmware...`,
+                cancellable: false
+            }, async (progress) => {
+                const destPath = path.join(burnTarget!, uf2FileName!);
+                fs.copyFileSync(srcPath!, destPath);
+                
+                if (!shouldClear) {
+                    progress.report({ message: "Done. Skip clearing code.py." });
+                    return;
+                }
+
+                progress.report({ message: "Success! Waiting for MCU to reboot as CIRCUITPY..." });
+
+                let circuitPyDrive: string | null = null;
+                for (let i = 0; i < 15; i++) {
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    circuitPyDrive = findDisk('CIRCUITPY');
+                    if (circuitPyDrive) break;
+                }
+
+                if (circuitPyDrive) {
+                    progress.report({ message: "Clearing code.py..." });
+                    fs.writeFileSync(path.join(circuitPyDrive, 'code.py'), '# Empty project\nprint("Cocoya Firmware Reset Done!")\n', 'utf8');
+                }
+            });
+            vscode.window.showInformationMessage(this.localeMessages['MSG_FIRMWARE_BURN_SUCCESS'] || 'Firmware burned and initialized!');
+        } catch (e: any) {
+            vscode.window.showErrorMessage(`Burning failed: ${e.message}`);
+        }
     }
 
     private isNewerVersion(curr: string, late: string): boolean {

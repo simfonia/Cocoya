@@ -68,7 +68,7 @@ Blockly.Python.forBlock['mcu_car_stop'] = function(block, generator) {
 };
 
 // --- Servo Helper Injection ---
-const SERVO_CLASS_INJECT = `
+var SERVO_CLASS_INJECT = `
 class PiCarServo:
     _TRIM = {} # Store per-pin min_us/max_us
 

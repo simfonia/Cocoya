@@ -322,6 +322,34 @@ window.CocoyaUI = {
         
         // 綁定設定與功能按鈕
         bind('btn-set-python-path', 'setPythonPath');
+        
+        const resetFirmwareBtn = document.getElementById('btn-reset-firmware');
+        if (resetFirmwareBtn) {
+            resetFirmwareBtn.onclick = async () => {
+                const confirmMsg = Blockly.Msg['MSG_RESET_FIRMWARE_CONFIRM'] || 'Reset firmware?';
+                const ok = await window.CocoyaBridge.confirm(confirmMsg);
+                if (!ok) return;
+
+                // 改用專用的 pick 指令，在 VS Code 會呈現漂亮的 QuickPick
+                const model = await window.CocoyaBridge.pickMcuModel([
+                    { id: 'MakerPi_RP2040', label: 'Maker Pi RP2040 (UF2 Mode)' },
+                    { id: 'XIAO_ESP32_S3', label: 'XIAO ESP32-S3 (UF2 Mode)' },
+                    { id: 'custom', label: '⚡ 自訂韌體 / Custom UF2' }
+                ]);
+                
+                if (model) {
+                    let shouldClear = true;
+                    if (model === 'custom') {
+                        // 自訂模式下，詢問是否要清空 code.py
+                        shouldClear = await window.CocoyaBridge.confirm(
+                            (Blockly.Msg['MSG_ASK_CLEAR_CODE'] || 'Do you want to clear code.py after burning?')
+                        );
+                    }
+                    window.CocoyaBridge.send('resetFirmware', { model, shouldClear });
+                }
+            };
+        }
+
         bind('btn-refresh-serial', 'refreshSerialPorts');
         bind('btn-run', 'runCode');
         bind('btn-update', 'checkUpdate');

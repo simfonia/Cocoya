@@ -47,7 +47,9 @@
          */
         setupThemeSync: function() {
             const self = this;
-            const applyTheme = () => {
+            let lastIsDark = null; // 主題快取
+
+            const applyTheme = (force = false) => {
                 if (!self.workspace) return;
 
                 // 1. 偵測是否為深色模式
@@ -56,11 +58,14 @@
                 const isDark = isVSCodeDark || 
                                (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-                // 2. 建立深色主題實例 (若尚未建立)
-                // 必須使用 new Blockly.Theme 確保它具備 getComponentStyle 等方法
+                // 2. 只有在主題真的改變時才執行 (避免無窮迴圈與效能浪費)
+                if (!force && isDark === lastIsDark) return;
+                lastIsDark = isDark;
+
+                // 3. 建立深色主題實例 (若尚未建立，用於自定義顏色)
                 if (isDark && !self.darkThemeInstance && typeof Blockly.Theme === 'function') {
                     try {
-                        self.darkThemeInstance = new Blockly.Theme('dark', {}, {}, {
+                        self.darkThemeInstance = new Blockly.Theme('cocoya_dark', {}, {}, {
                             'workspaceBackgroundColour': '#1e1e1e',
                             'toolboxBackgroundColour': '#2d2d2d',
                             'toolboxTextColour': '#e0e0e0',
@@ -77,51 +82,41 @@
                     }
                 }
 
-                // 3. 套用 Blockly 主題
-                if (typeof Blockly !== 'undefined') {
-                    // 優先使用建立好的實例，若失敗則嘗試字串，最後回到 Classic
-                    const theme = isDark ? (self.darkThemeInstance || 'dark') : (Blockly.Themes.Classic || 'classic');
-                    try {
-                        self.workspace.setTheme(theme);
-                    } catch (e) {
-                        console.error('[Cocoya] setTheme failed:', e);
-                    }
-                }
-
-                // 4. 同步格點視覺
+                // 4. 套用 Blockly 主題
                 try {
+                    // 優先使用自定義實體，其次嘗試字串，最後回到 Classic
+                    const theme = isDark ? (self.darkThemeInstance || 'dark') : (Blockly.Themes.Classic || 'classic');
+                    self.workspace.setTheme(theme);
+                    
+                    // 同步格點
                     const grid = self.workspace.getGrid();
-                    if (grid && typeof grid.setVisible === 'function') {
-                        grid.setVisible(!isDark);
-                    }
-                } catch (e) {}
+                    if (grid && typeof grid.setVisible === 'function') grid.setVisible(!isDark);
 
-                // 5. 同步 Minimap
-                if (self.minimap && self.minimap.minimapWorkspace) {
-                    const mTheme = isDark ? (self.darkThemeInstance || 'dark') : (Blockly.Themes.Classic || 'classic');
-                    try {
-                        // setTheme 會自動觸發 workspace 的重繪，不需要額外 refreshMinimap
-                        self.minimap.minimapWorkspace.setTheme(mTheme);
-                    } catch (e) {}
+                    // 同步 Minimap
+                    if (self.minimap && self.minimap.minimapWorkspace) {
+                        self.minimap.minimapWorkspace.setTheme(theme);
+                    }
+                } catch (e) {
+                    console.error('[Cocoya] Theme switch failed:', e);
                 }
             };
 
-            // 監聽 VS Code 類別變動 (VS Code 切換主題時會觸發)
+            // 監聽 VS Code 類別變動
             const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
+                for (const mutation of mutations) {
                     if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
                         applyTheme();
+                        break;
                     }
-                });
+                }
             });
             observer.observe(document.body, { attributes: true });
 
-            // 監聽系統偏好變動 (Tauri / 獨立 App 模式)
+            // 監聽系統偏好變動
             if (window.matchMedia) {
-                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme());
             }
 
-            // 儲存引用以便在 initializeCocoya 結束後進行首次同步
             this.applyAutoTheme = applyTheme;
         },
 
@@ -280,6 +275,7 @@
                     toolbox: finalToolboxXML,
                     grid: { spacing: 20, length: 3, colour: '#ccc', snap: true },
                     trashcan: true, sounds: false, scrollbars: true,
+                    contextMenu: true,
                     move: { scrollbars: true, drag: true, wheel: true },
                     zoom: { controls: true, wheel: false, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 },
                     plugins: { 'blockDragger': scrollDragger, 'metricsManager': scrollMetrics }
@@ -362,6 +358,12 @@
                             if (platform) this.setPlatformUI(platform);
                             this.triggerCodeUpdate();
                             this.setDirty(true);
+                            
+                            // 強制重新整理 Minimap 以反映恢復的積木
+                            if (this.minimap) {
+                                this.minimap._isPaused = false;
+                                this.refreshMinimap();
+                            }
                             
                             // 只有在成功恢復後，才通知後端清理備份檔
                             window.CocoyaBridge.send('clearBackup');

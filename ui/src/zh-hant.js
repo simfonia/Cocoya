@@ -79,6 +79,7 @@
     "TLB_SAVE_AS": "另存專案",
     "TLB_SETTINGS": "設定",
     "TLB_SETTINGS_PYTHON_PATH": "設定 Python 路徑",
+    "TLB_SETTINGS_RESET_FIRMWARE": "重置韌體",
     "TLB_RUN": "執行程式",
     "TLB_RUN_PC": "執行 PC 端程式",
     "TLB_RUN_MCU": "上傳至 MCU",
@@ -126,6 +127,11 @@
     "MSG_PYTHON_UPDATED": "Python 路徑已更新: %1",
     "MSG_RECOVER_BACKUP": "偵測到上次未儲存的變更，是否要恢復？",
     "MSG_RECOVER_IGNORE": "忽略並建立新專案",
+    "MSG_RESET_FIRMWARE_CONFIRM": "重置韌體將清除 MCU 上的所有內容。請確保 MCU 已進入 BOOTSEL / 燒錄模式。\n是否繼續？",
+    "MSG_ASK_CLEAR_CODE": "燒錄完成後，是否要清空 MCU 上的程式碼 (code.py)？",
+    "MSG_SELECT_MCU_MODEL": "請選擇您的 MCU 型號：",
+    "MSG_FIRMWARE_BURN_SUCCESS": "韌體燒錄成功！MCU 將重新啟動。",
+    "MSG_FIRMWARE_BURN_FAILED": "燒錄失敗：",
 
     // Python 核心關鍵字 (保留在核心或分散皆可，目前先移除已分散部分)
     "PY_DEF": "def",
