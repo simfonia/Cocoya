@@ -261,38 +261,46 @@ if '${instance_name}' not in globals():
 Blockly.Python.forBlock['mcu_car_check_color'] = function(block, generator) {
   generator.definitions_['import_board'] = 'import board';
   generator.definitions_['import_digitalio'] = 'import digitalio';
-  
+  generator.definitions_['import_time'] = 'import time';
+
   var pin = block.getFieldValue('PIN');
   var pin_id = pin.replace('board.', '');
+  var irVar = 'ir_d_' + pin_id;
 
-  generator.definitions_['init_ir_d_' + pin_id] = `
-if 'ir_d_${pin_id}' not in globals():
-    ir_d_${pin_id} = digitalio.DigitalInOut(${pin})
-    ir_d_${pin_id}.direction = digitalio.Direction.INPUT
-`;
 
+  generator.definitions_['init_' + irVar] = 
+    "if '" + irVar + "' not in globals():\n" +
+    "    " + irVar + " = digitalio.DigitalInOut(" + pin + ")\n" +
+    "    " + irVar + ".direction = digitalio.Direction.INPUT";
+
+  var comment = " # sleep 傳回 None，故必執行 or 後方讀取邏輯";
   // Maker Pi IR is 1 when Black, 0 when White.
   // We want to return 0 for Black, 1 for White to match the block label.
-  return ["(0 if ir_d_" + pin_id + ".value else 1)", Blockly.Python.ORDER_CONDITIONAL];
+  var code = "(time.sleep(0.001) or (0 if " + irVar + ".value else 1))" + comment;
+  return [code, 6]; 
 };
 
 Blockly.Python.forBlock['mcu_car_check_gray'] = function(block, generator) {
   generator.definitions_['import_board'] = 'import board';
   generator.definitions_['import_analogio'] = 'import analogio';
-  
+  generator.definitions_['import_time'] = 'import time';
+
   var pin = block.getFieldValue('PIN');
   var pin_id = pin.replace('board.', '');
+  var irVar = 'ir_a_' + pin_id;
 
-  generator.definitions_['init_ir_a_' + pin_id] = `
-if 'ir_a_${pin_id}' not in globals():
-    ir_a_${pin_id} = analogio.AnalogIn(${pin})
-`;
+  generator.definitions_['init_' + irVar] = 
+    "if '" + irVar + "' not in globals():\n" +
+    "    " + irVar + " = analogio.AnalogIn(" + pin + ")";
 
+  // 註解說明：sleep 傳回 None (Falsy)，故必執行 or 後方的讀取邏輯
+  var comment = " # sleep 傳回 None，故必執行 or 後方讀取邏輯";
   // CircuitPython 0-65535 map to 0-1023
   // piBlockly return (1023 - IR_A) where 0 is black.
-  return ["(1023 - int(ir_a_" + pin_id + ".value * 1023 / 65535))", Blockly.Python.ORDER_MULTIPLICATIVE];
+  return
+  var code = "(time.sleep(0.001) or (1023 - int(" + irVar + ".value * 1023 / 65535)))" + comment;
+  return [code, 6];
 };
-
 // --- Music Engine ---
 const MUSIC_ENGINE_INJECT = `
 class MusicEngine:

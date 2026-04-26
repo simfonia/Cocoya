@@ -16,11 +16,12 @@
 - [x] **通訊抽象層實作**：建立 `CocoyaBridge` 並支援非同步 API 加載機制。
 - [x] **VSIX 模式穩定化**：完成路徑適配與體備優化 (.vscodeignore)。
 - [ ] **Tauri 獨立 App 開發**：
-    - [x] 建立 `src-tauri` 核心架構 (Rust, Capabilities, tauri.conf.json)。
-    - [x] 實現部分指令鏡像：`run_python` (含串流日誌)、`get_manifest`、`get_module_toolbox`。
-    - [ ] 實現檔案系統指令：`save_file` (含 dialog)、`open_file`。
-    - [ ] 實現序列埠硬體指令：`get_serial_ports`、`deploy_mcu`。
-    - [ ] 整合 `deploy_mcu.py` 作為 Tauri Sidecar。
+    - [x] 建立 `src-tauri` 核心架構 (Rust, Capabilities, tauri.conf.json).
+    - [x] 實現部分指令鏡像：`run_python` (含串流日誌)、`get_manifest`、`get_module_toolbox`.
+    - [x] 實現檔案系統指令：`save_file` (含 dialog)、`open_file`.
+    - [x] 實現序列埠硬體指令：`get_serial_ports`、`deploy_mcu`.
+    - [ ] 整合 `deploy_mcu.py` 作為 Tauri Sidecar 以利打包發布。
+    - [ ] 實現 Tauri 模式下的 **環境診斷** (check_environment)。
 - [ ] **建置自動化**：配置 Vite Build，產出 VSIX 運行時資源。
 
 ## [待辦] 里程碑 v5.1: 跨平台與 TinyML
@@ -28,4 +29,4 @@
 - [ ] **TinyML 工具整合**：在獨立應用程式模式下提供影像標註與資料採集面板。
 
 ---
-*最後更新日期：2026-04-19 (Tauri 模式成功啟動)*
+*最後更新日期：2026-04-25 (Tauri 核心指令補完)*

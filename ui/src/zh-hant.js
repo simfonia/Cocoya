@@ -5,6 +5,12 @@
     "BKY_HELP_HINT": "右鍵點擊查看說明",
     "BKY_SAVE_SUCCESS": "儲存成功！",
     "BKY_NEW_VARIABLE_HINT": "請輸入變數名稱（可使用逗號分隔建立多個）。\n注意：名稱不可由數字開頭，且不可包含底線以外的特殊符號。",
+    "BKY_NEW_VARIABLE": "建立變數...",
+    "BKY_RENAME_VARIABLE": "重新命名變數...",
+    "BKY_DELETE_VARIABLE": "刪除變數 '%1'",
+    "BKY_DELETE_VARIABLE_CONFIRMATION": "確定要刪除 %1 個 '%2' 變數嗎？",
+    "BKY_VARIABLE_ALREADY_EXISTS": "已存在名為 '%1' 的變數。",
+    "BKY_RENAME_VARIABLE_TITLE": "將所有 '%1' 變數重新命名為:",
 
     // 分類顏色 (Hex Palette)
     "COLOUR_STRUCTURE": "#585858",
@@ -71,7 +77,8 @@
     "TLB_OPEN": "開啟專案",
     "TLB_SAVE": "儲存專案",
     "TLB_SAVE_AS": "另存專案",
-    "TLB_SETTINGS": "設定 Python 路徑",
+    "TLB_SETTINGS": "設定",
+    "TLB_SETTINGS_PYTHON_PATH": "設定 Python 路徑",
     "TLB_RUN": "執行程式",
     "TLB_RUN_PC": "執行 PC 端程式",
     "TLB_RUN_MCU": "上傳至 MCU",
@@ -107,6 +114,7 @@
     "MSG_SWITCH_CONFIRM": "切換模式將會清除目前的工作區並建立新專案。確定要切換到 %1 模式嗎？",
     "MSG_SAVE": "儲存",
     "MSG_DONT_SAVE": "不儲存",
+    "MSG_OK": "確定",
     "MSG_CANCEL": "取消",
     "MSG_SELECT_PATH": "選取路徑",
     "MSG_SELECT_PORT": "請先選擇序列埠！",
@@ -116,6 +124,8 @@
     "MSG_DEPLOY_COMPLETED": "上傳完畢，可斷開 USB 連線。",
     "MSG_PYTHON_NOT_FOUND": "無法執行 Python (目前設定: %1)。請指定正確的 python.exe 路徑。",
     "MSG_PYTHON_UPDATED": "Python 路徑已更新: %1",
+    "MSG_RECOVER_BACKUP": "偵測到上次未儲存的變更，是否要恢復？",
+    "MSG_RECOVER_IGNORE": "忽略並建立新專案",
 
     // Python 核心關鍵字 (保留在核心或分散皆可，目前先移除已分散部分)
     "PY_DEF": "def",

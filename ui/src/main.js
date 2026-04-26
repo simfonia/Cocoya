@@ -21,7 +21,8 @@
         isDirty: false,
         updateTimer: null,
         promptRequests: new Map(),
-        currentPlatform: 'PC',
+        currentPlatform: localStorage.getItem('cocoya_platform') || 'CircuitPython',
+        autoBackupTimer: null,
         manifest: null,
         lastCleanCode: '',
         currentLang: 'zh-hant',
@@ -31,12 +32,97 @@
          */
         init: function() {
             if (!window.CocoyaXMLRequests) window.CocoyaXMLRequests = new Map();
+            this.setupThemeSync(); // 啟動自動主題同步偵測
             this.setupBlocklyPrompts();
             this.setupWindowListeners();
             this.setupPlatformSelector();
             this.setupIndentSelector();
             // 向後端請求模組清單
             window.CocoyaBridge.send('getManifest');
+        },
+
+        /**
+         * 設定自動主題同步
+         * 偵測 VS Code (body class) 與 Tauri (matchMedia) 主題狀態
+         */
+        setupThemeSync: function() {
+            const self = this;
+            const applyTheme = () => {
+                if (!self.workspace) return;
+
+                // 1. 偵測是否為深色模式
+                const isVSCodeDark = document.body.classList.contains('vscode-dark') || 
+                                     document.body.classList.contains('vscode-high-contrast');
+                const isDark = isVSCodeDark || 
+                               (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+                // 2. 建立深色主題實例 (若尚未建立)
+                // 必須使用 new Blockly.Theme 確保它具備 getComponentStyle 等方法
+                if (isDark && !self.darkThemeInstance && typeof Blockly.Theme === 'function') {
+                    try {
+                        self.darkThemeInstance = new Blockly.Theme('dark', {}, {}, {
+                            'workspaceBackgroundColour': '#1e1e1e',
+                            'toolboxBackgroundColour': '#2d2d2d',
+                            'toolboxTextColour': '#e0e0e0',
+                            'flyoutBackgroundColour': '#252526',
+                            'flyoutTextColour': '#ccc',
+                            'scrollbarColour': '#797979',
+                            'insertionMarkerColour': '#fff',
+                            'insertionMarkerOpacity': 0.3,
+                            'scrollbarOpacity': 0.4,
+                            'cursorColour': '#d0d0d0'
+                        });
+                    } catch (e) {
+                        console.warn('[Cocoya] Theme instantiation failed:', e);
+                    }
+                }
+
+                // 3. 套用 Blockly 主題
+                if (typeof Blockly !== 'undefined') {
+                    // 優先使用建立好的實例，若失敗則嘗試字串，最後回到 Classic
+                    const theme = isDark ? (self.darkThemeInstance || 'dark') : (Blockly.Themes.Classic || 'classic');
+                    try {
+                        self.workspace.setTheme(theme);
+                    } catch (e) {
+                        console.error('[Cocoya] setTheme failed:', e);
+                    }
+                }
+
+                // 4. 同步格點視覺
+                try {
+                    const grid = self.workspace.getGrid();
+                    if (grid && typeof grid.setVisible === 'function') {
+                        grid.setVisible(!isDark);
+                    }
+                } catch (e) {}
+
+                // 5. 同步 Minimap
+                if (self.minimap && self.minimap.minimapWorkspace) {
+                    const mTheme = isDark ? (self.darkThemeInstance || 'dark') : (Blockly.Themes.Classic || 'classic');
+                    try {
+                        // setTheme 會自動觸發 workspace 的重繪，不需要額外 refreshMinimap
+                        self.minimap.minimapWorkspace.setTheme(mTheme);
+                    } catch (e) {}
+                }
+            };
+
+            // 監聽 VS Code 類別變動 (VS Code 切換主題時會觸發)
+            const observer = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        applyTheme();
+                    }
+                });
+            });
+            observer.observe(document.body, { attributes: true });
+
+            // 監聽系統偏好變動 (Tauri / 獨立 App 模式)
+            if (window.matchMedia) {
+                window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+            }
+
+            // 儲存引用以便在 initializeCocoya 結束後進行首次同步
+            this.applyAutoTheme = applyTheme;
         },
 
         /**
@@ -93,6 +179,7 @@
          */
         setPlatformUI: async function(platform) {
             this.currentPlatform = platform;
+            localStorage.setItem('cocoya_platform', platform);
             const selector = document.getElementById('platform-selector');
             if (selector) selector.value = platform;
             if (Blockly.Python) Blockly.Python.PLATFORM = platform;
@@ -149,6 +236,7 @@
                     case 'serialPortsData': if (window.CocoyaUI) window.CocoyaUI.updateSerialPorts(message.ports); break;
                     case 'environmentStatus': if (window.CocoyaUI) window.CocoyaUI.updateEnvironmentStatus(message.results); break;
                     case 'switchPlatform': await this.switchPlatform(message.platform); break;
+                    case 'recoveryData': await this.checkAutoBackup(message.xml); break;
                     case 'promptResponse': this.handlePromptResponse(message); break;
                     case 'toolboxData': this.handleToolboxData(message); break;
                 }
@@ -208,6 +296,9 @@
 
                 // 8. 設定產生器與監聽器
                 if (Blockly.Python) Blockly.Python.PLATFORM = this.currentPlatform;
+                const selector = document.getElementById('platform-selector');
+                if (selector) selector.value = this.currentPlatform;
+                
                 if (window.CocoyaUI) window.CocoyaUI.applyI18n();
                 if (window.CocoyaUI) window.CocoyaUI.initToolbar((msg) => window.CocoyaBridge.send(msg.command, msg));
                 
@@ -222,10 +313,69 @@
                     this.createDefaultBlocks();
                 }
                 
+                // 10. 執行首次自動主題同步
+                if (this.applyAutoTheme) this.applyAutoTheme();
+                
+                // 11. 檢查是否有未儲存的自動備份
+                await this.checkAutoBackup();
+
                 this.triggerCodeUpdate();
             } catch (error) {
                 console.error('[Cocoya] Initialization Failed:', error);
             }
+        },
+
+        /**
+         * 觸發自動備份 (Debounced)
+         */
+        triggerAutoBackup: function() {
+            if (this.autoBackupTimer) clearTimeout(this.autoBackupTimer);
+            this.autoBackupTimer = setTimeout(() => {
+                if (!this.workspace) return;
+                try {
+                    const dom = Blockly.Xml.workspaceToDom(this.workspace);
+                    dom.setAttribute('platform', this.currentPlatform);
+                    const xml = Blockly.Xml.domToPrettyText(dom);
+                    // 改為發送至後端存為實體檔案
+                    window.CocoyaBridge.send('autoBackup', { xml: xml });
+                } catch (e) { }
+            }, 2000); // 2秒後觸發
+        },
+
+        /**
+         * 檢查並恢復自動備份
+         */
+        checkAutoBackup: async function(backupXml) {
+            if (!backupXml || backupXml.trim().length === 0) return;
+            
+            // 延遲確保 UI 穩定
+            setTimeout(() => {
+                const msg = Blockly.Msg['MSG_RECOVER_BACKUP'] || '偵測到上次未儲存的變更，是否要恢復？';
+                Blockly.dialog.confirm(msg, (ok) => {
+                    if (ok) {
+                        Blockly.Events.disable();
+                        try {
+                            this.workspace.clear();
+                            const dom = Blockly.utils.xml.textToDom(backupXml);
+                            Blockly.Xml.domToWorkspace(dom, this.workspace);
+                            const platform = dom.getAttribute('platform');
+                            if (platform) this.setPlatformUI(platform);
+                            this.triggerCodeUpdate();
+                            this.setDirty(true);
+                            
+                            // 只有在成功恢復後，才通知後端清理備份檔
+                            window.CocoyaBridge.send('clearBackup');
+                        } catch (e) {
+                            console.error('[Cocoya] Recovery failed:', e);
+                        } finally {
+                            Blockly.Events.enable();
+                        }
+                    } else {
+                        // 使用者選擇不恢復，通知後端封存舊備份，以免被接下來的自動備份覆蓋
+                        window.CocoyaBridge.send('rejectRecovery');
+                    }
+                });
+            }, 800);
         },
 
         /**
@@ -372,8 +522,15 @@
             });
             this.workspace.registerButtonCallback('CREATE_VARIABLE', (btn) => {
                 const ws = btn.getTargetWorkspace();
-                window.prompt(Blockly.Msg['BKY_NEW_VARIABLE_HINT'] || '請輸入變數名稱:', '', (input) => {
-                    if (input) input.split(/[，,]/).forEach(name => ws.createVariable(name.trim()));
+                const msg = Blockly.Msg['BKY_NEW_VARIABLE_HINT'] || '請輸入變數名稱:';
+                Blockly.dialog.prompt(msg, '', (input) => {
+                    if (input) {
+                        const names = input.split(/[，,]/);
+                        names.forEach(name => {
+                            const trimmedName = name.trim();
+                            if (trimmedName) ws.createVariable(trimmedName);
+                        });
+                    }
                 });
             });
         },
@@ -407,6 +564,7 @@
                 // 處理程式碼即時預覽
                 if (!event.isUiEvent || isBlockChange) {
                     this.triggerCodeUpdate();
+                    this.triggerAutoBackup(); // 每當變動時啟動自動備份
                 }
             });
         },
@@ -424,14 +582,30 @@
                     topBlocks.forEach(root => {
                         const isAllowed = allowedTypes.includes(root.type) || root.type.startsWith('procedures_def');
                         root.getDescendants(false).forEach(block => {
-                            if (typeof block.setDisabledReason === 'function') block.setDisabledReason(!isAllowed, 'orphan');
-                            else block.setEnabled(isAllowed);
+                            const targetState = !isAllowed;
+                            
+                            // 1. 更新主工作區積木狀態
+                            if (typeof block.setDisabledReason === 'function') {
+                                block.setDisabledReason(targetState, 'orphan');
+                            } else {
+                                block.setEnabled(!targetState);
+                            }
+
+                            // 2. 同步更新 Minimap 積木狀態
+                            if (this.minimap && this.minimap.minimapWorkspace) {
+                                const mBlock = this.minimap.minimapWorkspace.getBlockById(block.id);
+                                if (mBlock) {
+                                    if (typeof mBlock.setDisabledReason === 'function') {
+                                        mBlock.setDisabledReason(targetState, 'orphan');
+                                    } else {
+                                        mBlock.setEnabled(!targetState);
+                                    }
+                                }
+                            }
                         });
                     });
                 } finally { 
                     Blockly.Events.enable(); 
-                    // 手動通知 Minimap 刷新
-                    if (this.minimap && !this.minimap._isPaused) this.refreshMinimap();
                 }
             }, 150);
         },

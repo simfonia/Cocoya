@@ -50,7 +50,7 @@ Blockly.Blocks['py_variables_global'] = {
     const input = this.appendDummyInput('MAIN');
     input.appendField(Blockly.Msg["PY_GLOBAL"]);
     
-    const allVars = (this.workspace && !this.workspace.isFlyout) ? this.workspace.getAllVariables() : [];
+    const allVars = (this.workspace && !this.workspace.isFlyout) ? this.workspace.getVariableMap().getAllVariables() : [];
     const existingVarName = allVars.length > 0 ? allVars[0].name : 'item';
 
     for (let i = 0; i < this.itemCount_; i++) {

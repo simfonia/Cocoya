@@ -71,7 +71,8 @@
     "TLB_OPEN": "Open Project",
     "TLB_SAVE": "Save Project",
     "TLB_SAVE_AS": "Save As...",
-    "TLB_SETTINGS": "Set Python Path",
+    "TLB_SETTINGS": "Settings",
+    "TLB_SETTINGS_PYTHON_PATH": "Set Python Path",
     "TLB_RUN": "Run Program",
     "TLB_RUN_PC": "Run PC Program",
     "TLB_RUN_MCU": "Upload to MCU",
@@ -107,6 +108,7 @@
     "MSG_SWITCH_CONFIRM": "Switching modes will clear the workspace and start a new project. Are you sure you want to switch to %1 mode?",
     "MSG_SAVE": "Save",
     "MSG_DONT_SAVE": "Don't Save",
+    "MSG_OK": "OK",
     "MSG_CANCEL": "Cancel",
     "MSG_SELECT_PATH": "Select Path",
     "MSG_SELECT_PORT": "Please select a serial port first!",
@@ -117,6 +119,8 @@
     "MSG_UPDATE_LATEST": "You are already using the latest version.",
     "MSG_PYTHON_NOT_FOUND": "Could not execute Python (Current: %1). Please specify the correct python.exe path.",
     "MSG_PYTHON_UPDATED": "Python path updated: %1",
+    "MSG_RECOVER_BACKUP": "Unsaved changes detected. Do you want to recover them?",
+    "MSG_RECOVER_IGNORE": "Ignore and start new project",
 
     // Syntax (Basic)
     "PY_DEF": "def",
