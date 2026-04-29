@@ -21,7 +21,8 @@
         isDirty: false,
         updateTimer: null,
         promptRequests: new Map(),
-        currentPlatform: localStorage.getItem('cocoya_platform') || 'CircuitPython',
+        currentPlatform: localStorage.getItem('cocoya_platform') || 'MicroPython',
+        useScrollPlugin: localStorage.getItem('cocoya_use_scroll_plugin') !== 'false', // 預設開啟，除非明確設為 false
         autoBackupTimer: null,
         manifest: null,
         lastCleanCode: '',
@@ -189,7 +190,10 @@
                     CocoyaUtils.BlockSearcher.inject(this.workspace);
                 }, 500);
             }
-            if (window.CocoyaUI) window.CocoyaUI.updateRunTooltip(platform);
+            if (window.CocoyaUI) {
+                window.CocoyaUI.updateRunTooltip(platform);
+                window.CocoyaUI.updateSettingsMenu(platform); // 同步選單狀態
+            }
         },
 
         /**
@@ -271,15 +275,22 @@
                 const scrollDragger = window.ScrollBlockDragger || (window.ScrollOptions ? window.ScrollOptions.BlockDragger : undefined);
                 const scrollMetrics = window.ScrollMetricsManager || (window.ScrollOptions ? window.ScrollOptions.MetricsManager : undefined);
 
-                this.workspace = Blockly.inject('blocklyDiv', {
+                const injectOptions = {
                     toolbox: finalToolboxXML,
+                    media: mediaUri + '/media/',
                     grid: { spacing: 20, length: 3, colour: '#ccc', snap: true },
                     trashcan: true, sounds: false, scrollbars: true,
                     contextMenu: true,
                     move: { scrollbars: true, drag: true, wheel: true },
-                    zoom: { controls: true, wheel: false, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 },
-                    plugins: { 'blockDragger': scrollDragger, 'metricsManager': scrollMetrics }
-                });
+                    zoom: { controls: true, wheel: false, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 }
+                };
+
+                // 只有在使用者設定啟用時才載入插件
+                if (this.useScrollPlugin) {
+                    injectOptions.plugins = { 'blockDragger': scrollDragger, 'metricsManager': scrollMetrics };
+                }
+
+                this.workspace = Blockly.inject('blocklyDiv', injectOptions);
 
                 // 6. 初始化 Minimap
                 this.initMinimap();
@@ -720,7 +731,7 @@
                 defBlock.initSvg(); defBlock.render(); 
                 defBlock.moveTo(new Blockly.utils.Coordinate(offsetX, 20));
                 
-                if (this.currentPlatform === 'CircuitPython') {
+                if (this.currentPlatform === 'MicroPython') {
                     const mcuMain = this.workspace.newBlock('mcu_main');
                     mcuMain.initSvg(); mcuMain.render(); 
                     mcuMain.moveTo(new Blockly.utils.Coordinate(offsetX, 200));

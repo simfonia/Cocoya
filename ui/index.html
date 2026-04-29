@@ -20,7 +20,7 @@
                 <div class="toolbar-group">
                     <select id="platform-selector" class="platform-select">
                         <option value="PC">%{BKY_TLB_MODE_PC}</option>
-                        <option value="CircuitPython">%{BKY_TLB_MODE_MCU}</option>
+                        <option value="MicroPython">%{BKY_TLB_MODE_MCU}</option>
                     </select>
                     <div class="toolbar-separator"></div>
                     <div class="toolbar-btn" id="btn-new" title="%{BKY_TLB_NEW}">
@@ -50,9 +50,27 @@
                                 <img src="/src/icons/python.png" style="width: 16px; height: 16px; margin-right: 8px;">
                                 <span>%{BKY_TLB_SETTINGS_PYTHON_PATH}</span>
                             </div>
-                            <div class="dropdown-item" id="btn-reset-firmware">
-                                <img src="/src/icons/hr_resting_24dp_FE2F89.png" style="width: 16px; height: 16px; margin-right: 8px;">
-                                <span>%{BKY_TLB_SETTINGS_RESET_FIRMWARE}</span>
+                            <div class="dropdown-item" id="btn-toggle-scroll-options">
+                                <span id="scroll-options-check" style="width: 16px; margin-right: 8px; display: inline-block;"></span>
+                                <span>%{BKY_TLB_SETTINGS_SCROLL_OPTIONS}</span>
+                            </div>
+                            <div class="dropdown-separator"></div>
+                            <div class="dropdown-submenu">
+                                <div class="dropdown-item submenu-title">
+                                    <img src="/src/icons/hr_resting_24dp_FE2F89.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                    <span>%{BKY_TLB_SETTINGS_FIRMWARE_GROUP}</span>
+                                    <span style="margin-left: auto; font-size: 10px;">▶</span>
+                                </div>
+                                <div class="submenu-content">
+                                    <div class="dropdown-item" id="btn-erase-filesystem">
+                                        <img src="/src/icons/dangerous_24dp_FE2F89.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                        <span>%{BKY_TLB_SETTINGS_ERASE_FS}</span>
+                                    </div>
+                                    <div class="dropdown-item" id="btn-reset-firmware">
+                                        <img src="/src/icons/hr_resting_24dp_FE2F89.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                        <span>%{BKY_TLB_SETTINGS_RESET_FIRMWARE}</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -79,9 +97,7 @@
                         <img src="/src/icons/run_blocks_24dp_FE2F89.png" class="hover-icon">
                     </div>
                     <div class="toolbar-btn" id="btn-update" title="%{BKY_TLB_UPDATE}">
-                        <img src="/src/icons/published_with_changes_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="/src/icons/published_with_changes_24dp_FE2F89.png" class="hover-icon pink-hover">
-                        <img src="/src/icons/published_with_changes_24dp_75FB4C.png" class="hover-icon green-hover">
+                        <img src="/src/icons/published_with_changes_24dp_1F1F1F.png" class="update-icon">
                     </div>
                     <div class="toolbar-btn" id="btn-stop" title="%{BKY_TLB_STOP}">
                         <img src="/src/icons/dangerous_24dp_1F1F1F.png" class="normal-icon">

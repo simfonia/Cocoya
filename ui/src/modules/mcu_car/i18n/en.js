@@ -34,7 +34,7 @@ Blockly.Msg["CAR_HAND_RIGHT"] = "right hand (GP13)";
 
 // πCar Sensor System
 Blockly.Msg["CAR_ULTRASONIC"] = "get ultrasonic distance (cm) Trig %1 Echo %2";
-Blockly.Msg["CAR_ULTRASONIC_TOOLTIP"] = "Measure distance using HC-SR04 ultrasonic sensor.";
+Blockly.Msg["CAR_ULTRASONIC_TOOLTIP"] = "Measure distance using HC-SR04 ultrasonic sensor. Approximately 420 cm or more will return 10000.";
 Blockly.Msg["CAR_CHECK_COLOR"] = "detect line color (Pin %1) [0:Black, 1:White]";
 Blockly.Msg["CAR_CHECK_COLOR_TOOLTIP"] = "Read digital signal from IR sensor. Returns 0 for black, 1 for white.";
 Blockly.Msg["CAR_CHECK_GRAY"] = "detect line grayscale (Pin %1) [0-1023]";

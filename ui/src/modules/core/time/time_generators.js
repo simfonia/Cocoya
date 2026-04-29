@@ -33,12 +33,12 @@ Blockly.Python.forBlock['py_time_strftime'] = function(block, generator) {
   var format_str = generator.valueToCode(block, 'FORMAT', Blockly.Python.ORDER_NONE) || "'%Y-%m-%d %H:%M:%S'";
   var time_obj = generator.valueToCode(block, 'TIME', Blockly.Python.ORDER_NONE) || 'time.localtime()';
 
-  if (generator.PLATFORM === 'CircuitPython') {
-    // CircuitPython's time module doesn't have strftime.
+  if (generator.PLATFORM === 'CircuitPython' || generator.PLATFORM === 'MicroPython') {
+    // CircuitPython/MicroPython's time module doesn't have strftime.
     // We inject a small helper that handles the most common format.
     generator.definitions_['func_cocoya_strftime'] = `
 def cocoya_strftime(fmt, t):
-    # Basic strftime fallback for CircuitPython (only %Y, %m, %d, %H, %M, %S)
+    # Basic strftime fallback (only %Y, %m, %d, %H, %M, %S)
     res = fmt.replace('%Y', '{:04d}').replace('%m', '{:02d}').replace('%d', '{:02d}')
     res = res.replace('%H', '{:02d}').replace('%M', '{:02d}').replace('%S', '{:02d}')
     # t is a struct_time or a tuple

@@ -11,6 +11,17 @@
 - [x] **[重大修復]** 解決 VSIX 模式下搜尋影子積木遺失、Minimap 不同步、Python 縮排位移等 Bug。
 - [x] **[重大修復]** 強化 MCU 部署韌性，解決 Windows 磁碟鎖定 (Errno 22) 並整合 VS Code 進度通知。
 
+## [已完成] 里程碑 v6.0: 全面轉向 MicroPython
+- [x] **[核心] 底層通訊重構**：重寫 `deploy_mcu.py`，改採全序列埠 (Raw REPL) 傳輸，解決磁碟鎖定問題。
+- [x] **[核心] 硬體產生器 (HAL) 遷移**：重寫馬達、舵機、超音波、音樂引擎與 Camera 驅動邏輯 (使用 `machine` 庫)。
+- [x] **[UI] 介面清理與環境優化**：重新設計設定選單，移除過時的 USB 鎖定功能，實作「深度修復磁碟」。
+
+## [進行中] 里程碑 v6.0: MicroPython 模式補完
+- [x] **[核心] 基礎硬體產生器遷移**：將 `hardware_generators.js` 中的 `board`, `digitalio`, `pwmio` 替換為 MicroPython 的 `machine` 庫。
+- [x] **[核心] 數學模組 MicroPython 相容性**：修正 `math_generators.js` 中的隨機種子初始化。
+- [ ] **[範例] 範例專案更新**：補完並測試 MicroPython 模式下的所有範例專案。
+- [ ] **[韌體] 資源包準備**：準備各型號板子的 MicroPython 韌體資源包 (.uf2 / .bin)。
+
 ## [進行中] 里程碑 v5.0: 雙模架構轉型 (VSIX + Tauri)
 - [x] **資源遷移與目錄重構**：建立 `ui/` SSOT 結構，徹底移除 `media/`。
 - [x] **通訊抽象層實作**：建立 `CocoyaBridge` 並支援非同步 API 加載機制。
@@ -24,11 +35,13 @@
     - [ ] 實作重置韌體功能 (Reset Firmware)：
         - [ ] 策略 A：UF2 複製模式 (適用於 RP2040)。
         - [ ] 策略 B：Serial 模式 (適用於 ESP32-S3，需整合 esptool Sidecar)。
-    - [ ] 實現 Tauri 模式下的 **環境診斷** (check_environment)。- [ ] **建置自動化**：配置 Vite Build，產出 VSIX 運行時資源。
+    - [ ] 實現 Tauri 模式下的 **環境診斷** (check_environment)。
+- [ ] **建置自動化**：配置 Vite Build，產出 VSIX 運行時資源。
 
 ## [待辦] 里程碑 v5.1: 跨平台與 TinyML
 - [ ] **跨平台支援 (Linux/macOS)**：實作 Rust 路徑與部署腳本的自動適配。
 - [ ] **TinyML 工具整合**：在獨立應用程式模式下提供影像標註與資料採集面板。
 
 ---
-*最後更新日期：2026-04-25 (Tauri 核心指令補完)*
+*最後更新日期：2026-04-29 (全面遷移至 MicroPython)*
+

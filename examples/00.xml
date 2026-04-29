@@ -1,4 +1,4 @@
-<xml xmlns="https://developers.google.com/blockly/xml" platform="CircuitPython">
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
   <block type="py_definition_zone" id="QYUB(9Bvq#eXfL~?;JQS" x="20" y="20"></block>
   <block type="mcu_main" id="07d8Sv7H#]Xn0mF~D}.b" x="10" y="110">
     <statement name="DO">

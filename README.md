@@ -6,7 +6,7 @@ Cocoya 是一個專為 AI 教育設計的視覺化程式設計工具。它結合
 
 - **雙欄即時預覽**：積木與 Python 程式碼即時同步，支援語法高亮與雙向點擊定位。
 - **AI 視覺整合**：預計整合 MediaPipe (Face Mesh, Hand Tracking) 與 OpenCV。
-- **硬體橋樑**：支援 PC 與 MCU (CircuitPython) 之間的 Serial 通訊與部署。
+- **硬體橋樑**：支援 PC 與 MCU (MicroPython) 之間的 Serial 通訊與部署。
 - **精確定位技術**：讓積木與產生出的程式碼行號精確對齊。
 
 ## 🛠 技術架構

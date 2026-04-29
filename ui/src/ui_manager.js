@@ -212,11 +212,27 @@ window.CocoyaUI = {
         const btn = document.getElementById('btn-run');
         if (!btn || typeof Blockly === 'undefined') return;
         
-        // 修正判定條件：選單的值是 CircuitPython
-        const isMCU = (platform === 'MCU' || platform === 'CircuitPython');
+        // 修正判定條件：選單的值是 MicroPython
+        const isMCU = (platform === 'MCU' || platform === 'MicroPython');
         const key = isMCU ? 'TLB_RUN_MCU' : 'TLB_RUN_PC';
         const tip = Blockly.Msg[key] || (isMCU ? 'Upload to MCU' : 'Run PC Program');
         btn.setAttribute('title', tip);
+        
+        // 同步更新設定選單中的「重置韌體」顯示狀態
+        this.updateSettingsMenu(platform);
+    },
+
+    /**
+     * 根據平台顯示或隱藏特定的設定選項
+     * @param {string} platform 
+     */
+    updateSettingsMenu: function(platform) {
+        const resetBtn = document.getElementById('btn-reset-firmware');
+        if (!resetBtn) return;
+        
+        const isMCU = (platform === 'MCU' || platform === 'MicroPython');
+        // 只有 MCU 模式才顯示重置韌體選項
+        resetBtn.style.display = isMCU ? 'flex' : 'none';
     },
 
     /**
@@ -236,7 +252,7 @@ window.CocoyaUI = {
     },
 
     /**
-     * 設定更新狀態 UI (包含按鈕閃爍、顏色與 Tooltip)
+     * 設定更新狀態 UI (對齊 #wavecode)
      * @param {Object} data 更新資訊
      * @param {boolean} data.hasUpdate 是否有新版本
      * @param {string} data.currentVersion 目前版本
@@ -245,22 +261,32 @@ window.CocoyaUI = {
      */
     setUpdateStatus: function(data) {
         const btn = document.getElementById('btn-update');
-        if (!btn || typeof Blockly === 'undefined') return;
+        const img = btn?.querySelector('img');
+        if (!btn || !img || typeof Blockly === 'undefined') return;
 
         this.updateUrl = data.url;
-        const hoverIcon = btn.querySelector('.hover-icon');
-        const base = this.mediaUri || '';
+        const base = window.CocoyaMediaUri || '/src';
+        
+        // 清除舊狀態
+        btn.classList.remove('update-hidden', 'update-blink', 'update-spin-ccw', 'update-bounce-pulse', 'update-available', 'update-latest');
         
         if (data.hasUpdate) {
-            btn.classList.add('update-blink', 'update-available');
-            btn.classList.remove('update-latest');
+            // --- 發現新版本 (對齊 wavecode 'available' 狀態) ---
+            btn.classList.add('update-available', 'update-bounce-pulse');
+            img.src = `${base}/icons/cloud_download_24dp_FE2F89.png`;
             const template = Blockly.Msg['MSG_UPDATE_AVAILABLE_TOOLTIP'] || 'New version (%1). Click to download.';
             btn.setAttribute('title', template.replace('%1', 'v' + data.latestVersion));
         } else {
-            btn.classList.remove('update-blink', 'update-available');
+            // --- 目前已是最新 (對齊 wavecode 'latest' 狀態) ---
             btn.classList.add('update-latest');
+            img.src = `${base}/icons/published_with_changes_24dp_75FB4C.png`;
             const template = Blockly.Msg['MSG_UPDATE_LATEST_TOOLTIP'] || 'Already up to date (%1)';
             btn.setAttribute('title', template.replace('%1', 'v' + data.currentVersion));
+            
+            // 3秒後自動隱藏 (對齊 wavecode 邏輯)
+            setTimeout(() => {
+                btn.classList.add('update-hidden');
+            }, 3000);
         }
     },
 
@@ -294,7 +320,7 @@ window.CocoyaUI = {
                 // 3. 若需要 XML (檔案操作)
                 if (options.includeXml && typeof Blockly !== 'undefined') {
                     const dom = Blockly.Xml.workspaceToDom(Blockly.getMainWorkspace());
-                    // 注入平台屬性標記 (PC 或 CircuitPython)
+                    // 注入平台屬性標記 (PC 或 MicroPython)
                     const platform = document.getElementById('platform-selector')?.value || 'PC';
                     dom.setAttribute('platform', platform);
                     
@@ -307,6 +333,7 @@ window.CocoyaUI = {
                     msg.code = window.CocoyaApp.lastCleanCode || Blockly.Python.workspaceToCode(Blockly.getMainWorkspace());
                     msg.platform = document.getElementById('platform-selector')?.value || 'PC';
                     msg.serialPort = document.getElementById('serial-selector')?.value || '';
+                    msg.serialUploadOnly = localStorage.getItem('cocoya_serial_upload_only') === 'true';
                     self.flashButton(id, '#e8f5e9'); // 綠色回饋
                 }
 
@@ -322,6 +349,79 @@ window.CocoyaUI = {
         
         // 綁定設定與功能按鈕
         bind('btn-set-python-path', 'setPythonPath');
+        
+        // 綁定捲軸優化插件切換
+        const scrollOptionsBtn = document.getElementById('btn-toggle-scroll-options');
+        const scrollCheck = document.getElementById('scroll-options-check');
+        if (scrollOptionsBtn && scrollCheck) {
+            const updateCheckUI = () => {
+                const isEnabled = localStorage.getItem('cocoya_use_scroll_plugin') !== 'false'; // 預設開啟
+                scrollCheck.textContent = isEnabled ? '✔' : '';
+            };
+            updateCheckUI();
+            
+            scrollOptionsBtn.onclick = async () => {
+                const current = localStorage.getItem('cocoya_use_scroll_plugin') !== 'false';
+                const nextValue = !current;
+                localStorage.setItem('cocoya_use_scroll_plugin', nextValue);
+                updateCheckUI();
+                
+                // 僅提示，不自動重啟以保護進度
+                window.CocoyaBridge.alert(
+                    Blockly.Msg['MSG_RELOAD_TO_APPLY'] || 'Settings saved. Please restart the application to apply changes.'
+                );
+            };
+        }
+
+        // --- 穩定教學模式：切換開關 ---
+        const serialUploadBtn = document.getElementById('btn-toggle-serial-upload');
+        const serialUploadCheck = document.getElementById('serial-upload-check');
+        if (serialUploadBtn && serialUploadCheck) {
+            const updateUI = () => {
+                const isEnabled = localStorage.getItem('cocoya_serial_upload_only') === 'true';
+                serialUploadCheck.textContent = isEnabled ? '✔' : '';
+            };
+            updateUI();
+            serialUploadBtn.onclick = () => {
+                const current = localStorage.getItem('cocoya_serial_upload_only') === 'true';
+                localStorage.setItem('cocoya_serial_upload_only', !current);
+                updateUI();
+            };
+        }
+
+        // --- 穩定教學模式：初始化 MCU (寫入 boot.py) ---
+        const setupStableBtn = document.getElementById('btn-setup-stable-mcu');
+        if (setupStableBtn) {
+            setupStableBtn.onclick = async () => {
+                const port = document.getElementById('serial-selector')?.value;
+                if (!port) {
+                    window.CocoyaBridge.alert(Blockly.Msg['MSG_SELECT_PORT'] || 'Please select a port first.');
+                    return;
+                }
+                const confirmMsg = Blockly.Msg['MSG_SETUP_STABLE_CONFIRM'] || 
+                    'This will write boot.py to MCU to enable Stable Mode. Windows will become Read-Only for this drive. Continue?';
+                if (await window.CocoyaBridge.confirm(confirmMsg)) {
+                    window.CocoyaBridge.send('setupStableMode', { serialPort: port });
+                }
+            };
+        }
+
+        // --- 穩定教學模式：深度修復磁碟 (Erase Filesystem) ---
+        const eraseFsBtn = document.getElementById('btn-erase-filesystem');
+        if (eraseFsBtn) {
+            eraseFsBtn.onclick = async () => {
+                const port = document.getElementById('serial-selector')?.value;
+                if (!port) {
+                    window.CocoyaBridge.alert(Blockly.Msg['MSG_SELECT_PORT'] || 'Please select a port first.');
+                    return;
+                }
+                const confirmMsg = Blockly.Msg['MSG_ERASE_FS_CONFIRM'] || 
+                    'WARNING: This will ERASE ALL FILES on the MCU and rebuild the partition. This cannot be undone! Continue?';
+                if (await window.CocoyaBridge.confirm(confirmMsg)) {
+                    window.CocoyaBridge.send('eraseFilesystem', { serialPort: port });
+                }
+            };
+        }
         
         const resetFirmwareBtn = document.getElementById('btn-reset-firmware');
         if (resetFirmwareBtn) {
@@ -350,7 +450,20 @@ window.CocoyaUI = {
             };
         }
 
-        bind('btn-refresh-serial', 'refreshSerialPorts');
+        const refreshBtn = document.getElementById('btn-refresh-serial');
+        if (refreshBtn) {
+            refreshBtn.onclick = () => {
+                const port = document.getElementById('serial-selector')?.value;
+                // 1. 執行原本的整理清單
+                postMessageFunc({ command: 'refreshSerialPorts' });
+                // 2. 如果有選埠，則嘗試開啟監控器 (對齊使用者想重新進入的需求)
+                if (port) {
+                    postMessageFunc({ command: 'openSerialMonitor', serialPort: port });
+                }
+                self.flashButton('btn-refresh-serial', '#e3f2fd');
+            };
+        }
+
         bind('btn-run', 'runCode');
         bind('btn-update', 'checkUpdate');
 

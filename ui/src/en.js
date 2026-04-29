@@ -73,6 +73,13 @@
     "TLB_SAVE_AS": "Save As...",
     "TLB_SETTINGS": "Settings",
     "TLB_SETTINGS_PYTHON_PATH": "Set Python Path",
+    "TLB_SETTINGS_SCROLL_OPTIONS": "Enable Scroll Options (Restart required)",
+    "TLB_SETTINGS_SERIAL_UPLOAD": "Stable Mode (Serial Upload Only)",
+    "TLB_SETTINGS_FIRMWARE_GROUP": "Firmware Settings",
+    "TLB_SETTINGS_SETUP_STABLE": "Lock USB Disk (Stable Mode)",
+    "TLB_SETTINGS_ERASE_FS": "Reset USB Disk (Erase All Files)",
+    "TLB_SETTINGS_RESET_FIRMWARE": "Reset Firmware (Flash UF2)",
+
     "TLB_RUN": "Run Program",
     "TLB_RUN_PC": "Run PC Program",
     "TLB_RUN_MCU": "Upload to MCU",
@@ -85,7 +92,7 @@
     "TLB_FILE_NEW": "Untitled Project",
     "TLB_PYTHON_PREVIEW": "Code Preview",
     "TLB_MODE_PC": "💻 Python (PC)",
-    "TLB_MODE_MCU": "📟 CircuitPython (MCU)",
+    "TLB_MODE_MCU": "📟 MicroPython (MCU)",
     "TLB_DIAGNOSE": "Check Python Package Requirements",
 
     // Environment Diagnosis
@@ -126,6 +133,8 @@
     "MSG_SELECT_MCU_MODEL": "Please select your MCU model:",
     "MSG_FIRMWARE_BURN_SUCCESS": "Firmware burned successfully! The MCU will restart.",
     "MSG_FIRMWARE_BURN_FAILED": "Burning failed: ",
+    "MSG_RELOAD_TO_APPLY": "Settings saved. Please restart the application to apply changes.",
+    "MSG_SETUP_STABLE_CONFIRM": "This will write boot.py to MCU to enable Stable Mode.\n\n[Effect]: Windows will become Read-Only for this drive (preventing damage), and Cocoya will upload code via Serial.\n[Escape]: To restore Windows write access later, hold \"GP20 button (Button 1)\" while plugging in the USB cable.\n\nAre you sure you want to continue?",
 
     // Syntax (Basic)
     "PY_DEF": "def",

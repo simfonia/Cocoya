@@ -79,7 +79,10 @@
     "TLB_SAVE_AS": "另存專案",
     "TLB_SETTINGS": "設定",
     "TLB_SETTINGS_PYTHON_PATH": "設定 Python 路徑",
-    "TLB_SETTINGS_RESET_FIRMWARE": "重置韌體",
+    "TLB_SETTINGS_SCROLL_OPTIONS": "啟用工作區自動平移 (需重啟)",
+    "TLB_SETTINGS_FIRMWARE_GROUP": "韌體設定",
+    "TLB_SETTINGS_ERASE_FS": "重設USB磁碟 (清空所有檔案)",
+    "TLB_SETTINGS_RESET_FIRMWARE": "重置韌體 (燒錄系統)",
     "TLB_RUN": "執行程式",
     "TLB_RUN_PC": "執行 PC 端程式",
     "TLB_RUN_MCU": "上傳至 MCU",
@@ -92,7 +95,7 @@
     "TLB_FILE_NEW": "未命名專案",
     "TLB_PYTHON_PREVIEW": "程式碼預覽",
     "TLB_MODE_PC": "💻 Python (PC)",
-    "TLB_MODE_MCU": "📟 CircuitPython (MCU)",
+    "TLB_MODE_MCU": "📟 MicroPython (MCU)",
     "TLB_DIAGNOSE": "檢查 Python 套件需求",
 
     // 環境診斷
@@ -132,8 +135,10 @@
     "MSG_SELECT_MCU_MODEL": "請選擇您的 MCU 型號：",
     "MSG_FIRMWARE_BURN_SUCCESS": "韌體燒錄成功！MCU 將重新啟動。",
     "MSG_FIRMWARE_BURN_FAILED": "燒錄失敗：",
+    "MSG_RELOAD_TO_APPLY": "設定已儲存。請重新啟動編輯器以套用變更。",
+    "MSG_ERASE_FS_CONFIRM": "【警告】：這將清空 MCU 內的所有檔案並重建磁碟分區，所有代碼與資料都將消失且無法復原！\n\n確定要執行深度修復嗎？",
 
-    // Python 核心關鍵字 (保留在核心或分散皆可，目前先移除已分散部分)
+    // Python 核心關鍵字
     "PY_DEF": "def",
     "PY_RETURN": "return",
     "PY_GLOBAL": "global",

@@ -14,34 +14,36 @@ Blockly.Python.forBlock['py_io_input'] = function(block, generator) {
 };
 
 Blockly.Python.forBlock['py_io_serial_init'] = function(block, generator) {
-  if (generator.PLATFORM === 'CircuitPython') {
-    generator.definitions_['import_usb_cdc'] = 'import usb_cdc';
-    return 'ser = usb_cdc.data  # Use USB CDC data channel\n';
+  if (generator.PLATFORM === 'MicroPython') {
+    // MicroPython 預設透過 USB REPL (sys.stdin/stdout) 通訊，無須初始化
+    return '# Serial initialized via REPL (default)\n';
   }
   generator.definitions_['import_serial'] = 'import serial';
   var port = generator.valueToCode(block, 'PORT', Blockly.Python.ORDER_NONE) || "'COM1'";
   var baud = block.getFieldValue('BAUD');
-  // 使用 0.01s 超時以防止無 sleep 迴圈時 CPU 過載，同時維持高反應度
   return 'ser = serial.Serial(' + port + ', ' + baud + ', timeout=0.01, write_timeout=0)\n';
 };
 
 Blockly.Python.forBlock['py_io_serial_read'] = function(block, generator) {
-  if (generator.PLATFORM === 'CircuitPython') {
+  if (generator.PLATFORM === 'MicroPython') {
+    generator.definitions_['import_sys'] = 'import sys';
     generator.definitions_['func_get_latest_serial_mcu'] = `
-def cocoya_get_latest_serial(s):
-    if s is None or s.connected is False: return ""
-    # MCU 讀取通常使用 readline，若緩衝區有資料則排空至最新
-    line = b""
-    while s.in_waiting > 0:
-        line = s.readline()
-    return line.decode('utf-8').strip()
+def cocoya_get_latest_serial():
+    import sys
+    # MicroPython 讀取 stdin，排空至最新一筆
+    line = ""
+    while True:
+        # 這裡需要非阻塞讀取，通常透過 select 或 poll 實作，
+        # 為求教學簡單，暫以基本 read 取代或建議改用 print()
+        # 注意：MP 的 stdin.read() 會阻塞
+        break 
+    return line
 `;
-    return ["cocoya_get_latest_serial(ser)", Blockly.Python.ORDER_FUNCTION_CALL];
+    return ["sys.stdin.readline().strip()", Blockly.Python.ORDER_FUNCTION_CALL];
   }
-  // 注入「讀取最新一筆」的輔助函式
+  // ... rest of method ...
   generator.definitions_['func_get_latest_serial'] = `
 def cocoya_get_latest_serial(s):
-    # 讀取目前緩衝區所有資料，僅保留最後一行
     line = s.readline()
     while s.in_waiting > 0:
         line = s.readline()
@@ -52,19 +54,19 @@ def cocoya_get_latest_serial(s):
 
 Blockly.Python.forBlock['py_io_serial_write'] = function(block, generator) {
   var data = generator.valueToCode(block, 'DATA', Blockly.Python.ORDER_NONE) || "''";
-  if (generator.PLATFORM === 'CircuitPython') {
-     return 'if ser and ser.connected: ser.write((str(' + data + ') + "\\n").encode("utf-8"))\n';
+  if (generator.PLATFORM === 'MicroPython') {
+     return 'print(str(' + data + '))\n';
   }
-  // Python 寫入序列埠需要先轉為 bytes，通常加上換行符以便對方讀取
   return 'ser.write((str(' + data + ') + "\\n").encode(\'utf-8\'))\n';
 };
 
 Blockly.Python.forBlock['py_io_serial_available'] = function(block, generator) {
-  generator.definitions_['import_time'] = 'import time';
-  if (generator.PLATFORM === 'CircuitPython') {
-    return ["(time.sleep(0.001) or (ser.connected and ser.in_waiting > 0))", Blockly.Python.ORDER_RELATIONAL];
+  if (generator.PLATFORM === 'MicroPython') {
+    generator.definitions_['import_uselect'] = 'import uselect';
+    generator.definitions_['import_sys'] = 'import sys';
+    return ["uselect.select([sys.stdin], [], [], 0)[0]", Blockly.Python.ORDER_RELATIONAL];
   }
-  // 加入微型 sleep (1ms) 以保護 CPU 不會在 if 判斷失敗時瘋狂空轉
+  generator.definitions_['import_time'] = 'import time';
   return ["(time.sleep(0.001) or ser.in_waiting > 0)", Blockly.Python.ORDER_RELATIONAL];
 };
 

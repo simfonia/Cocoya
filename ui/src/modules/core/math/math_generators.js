@@ -34,12 +34,27 @@ Blockly.Python.forBlock['py_math_round'] = function(block, generator) {
 };
 
 Blockly.Python.forBlock['py_math_random'] = function(block, generator) {
+  generator.definitions_['import_random'] = 'import random';
+  generator.definitions_['import_time'] = 'import time';
+  
+  // 自動注入隨機種子初始化 (僅執行一次)
+  // 利用啟動時的單調時間(納秒)作為種子來源，增加每次開機的隨機性
+  generator.definitions_['init_random_seed'] = `
+if '_random_initialized' not in globals():
+    try:
+        random.seed(time.ticks_us())
+    except AttributeError:
+        random.seed(time.monotonic_ns())
+    _random_initialized = True
+`;
+
   var from = generator.valueToCode(block, 'FROM', Blockly.Python.ORDER_NONE) || '1';
   var to = generator.valueToCode(block, 'TO', Blockly.Python.ORDER_NONE) || '10';
   return ['random.randint(' + from + ', ' + to + ')', Blockly.Python.ORDER_FUNCTION_CALL];
 };
 
 Blockly.Python.forBlock['py_math_atan2'] = function(block, generator) {
+  generator.definitions_['import_math'] = 'import math';
   var y = generator.valueToCode(block, 'Y', Blockly.Python.ORDER_NONE) || '0';
   var x = generator.valueToCode(block, 'X', Blockly.Python.ORDER_NONE) || '1';
   return ['math.atan2(' + y + ', ' + x + ')', Blockly.Python.ORDER_FUNCTION_CALL];

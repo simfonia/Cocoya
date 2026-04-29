@@ -67,7 +67,7 @@
         /**
          * 根據平台過濾 Toolbox XML
          * @param {string} xmlString 原始 XML 字串
-         * @param {string} currentPlatform 當前平台 (PC/CircuitPython)
+         * @param {string} currentPlatform 當前平台 (PC/MicroPython)
          * @returns {string} 過濾後的 XML 字串
          */
         filterToolboxXML: function(xmlString, currentPlatform) {

@@ -2,191 +2,201 @@ import serial
 import sys
 import time
 import os
-import ctypes
-from ctypes import windll
+import argparse
 
-def get_drives():
-    """獲取 Windows 上的所有磁碟機路徑"""
-    drives = []
-    bitmask = windll.kernel32.GetLogicalDrives()
-    for letter in "ABCDEFGHIJKLMNOPQRSTUVWXYZ":
-        if bitmask & 1:
-            drives.append(letter + ":\\")
-        bitmask >>= 1
-    return drives
+# --- 語系字典 (MicroPython 專用) ---
+MESSAGES = {
+    "zh-hant": {
+        "title": "--- Cocoya MicroPython 部署工具 ---",
+        "connect_serial": "正在透過序列埠連接 %s...",
+        "uploading": "\n>>> 正在透過序列埠推送程式碼... <<<",
+        "repl_failed": "無法進入 Raw REPL 模式。請確認韌體為 MicroPython 並嘗試 Reset。",
+        "deploy_err": "部署過程中發生錯誤: %s",
+        "complete_banner": "\n" + "="*40 + "\n[上傳成功] 您可以斷開序列埠連線。\n" + "="*40 + "\n",
+        "monitor_title": "-"*40 + "\n--- 序列埠監控: %s (按 Ctrl+C 停止) ---\n" + "-"*40,
+        "connected": "\n[已連接至 %s]",
+        "disconnected": "\n[連線中斷: %s] 正在等待裝置重新插入...",
+        "stopped": "\n--- 監控已停止 ---"
+    },
+    "en": {
+        "title": "--- Cocoya MicroPython Deployer ---",
+        "connect_serial": "Connecting to %s via Serial...",
+        "uploading": "\n>>> Pushing code via Raw REPL... <<<",
+        "repl_failed": "Failed to enter Raw REPL. Please ensure MicroPython is running.",
+        "deploy_err": "Error during deployment: %s",
+        "complete_banner": "\n" + "="*40 + "\n[SUCCESS] Code saved to Flash and Running!\n" + "="*40 + "\n",
+        "monitor_title": "-"*40 + "\n--- Serial Monitor: %s (Press Ctrl+C to stop) ---\n" + "-"*40,
+        "connected": "\n[Connected to %s]",
+        "disconnected": "\n[Disconnected: %s] Waiting for device...",
+        "stopped": "\n--- Monitor Stopped ---"
+    }
+}
 
-def monitor(port, baud=115200):
+def get_msg(key, lang="en"):
+    return MESSAGES.get(lang, MESSAGES["en"]).get(key, key)
+
+def monitor(port, lang="en", baud=115200, welcome_msg=None, existing_ser=None):
     """進入序列埠監看模式，具備自動重連功能"""
-    print("-" * 40)
-    print(f"--- Serial Monitor on {port} (Press Ctrl+C to stop) ---")
-    print("-" * 40)
+    print(get_msg("monitor_title", lang) % port)
     
-    ser = None
+    ser = existing_ser
+    banner_pending = True if welcome_msg else False
+    banner_timer = time.time()
+
     while True:
         try:
-            if ser is None:
+            if ser is None or not ser.is_open:
                 try:
                     ser = serial.Serial(port, baud, timeout=0.1)
-                    print(f"\n[Connected to {port}]")
+                    print(get_msg("connected", lang) % port)
+                    banner_timer = time.time()
                 except:
-                    # 埠號不存在或被佔用 (可能正在拔插)，等待插回
-                    sys.stdout.write(".")
-                    sys.stdout.flush()
-                    time.sleep(1.0)
-                    continue
+                    sys.stdout.write("."); sys.stdout.flush()
+                    time.sleep(1.0); continue
 
             if ser.in_waiting > 0:
-                data = ser.read(ser.in_waiting).decode('utf-8', errors='ignore')
-                sys.stdout.write(data)
+                data_raw = ser.read(ser.in_waiting)
+                data_str = data_raw.decode('utf-8', errors='ignore')
+                
+                if banner_pending:
+                    # 嘗試在 "soft reboot" 出現時注入歡迎訊息
+                    if "soft reboot" in data_str:
+                        parts = data_str.split("soft reboot", 1)
+                        sys.stdout.write(parts[0] + "soft reboot")
+                        sys.stdout.write(welcome_msg)
+                        sys.stdout.write(parts[1])
+                        banner_pending = False
+                    elif (time.time() - banner_timer > 2.0):
+                        # 超時備份：如果 2 秒內沒抓到 soft reboot，直接印出
+                        sys.stdout.write(data_str)
+                        print(welcome_msg)
+                        banner_pending = False
+                    else:
+                        sys.stdout.write(data_str)
+                else:
+                    sys.stdout.write(data_str)
+                
                 sys.stdout.flush()
-            time.sleep(0.05)
+
+            time.sleep(0.01)
 
         except (serial.SerialException, PermissionError, OSError) as e:
-            print(f"\n[Disconnected: {e}] Waiting for device...")
+            print(get_msg("disconnected", lang) % e)
             if ser:
                 try: ser.close()
                 except: pass
-            ser = None
-            time.sleep(0.2)
+            ser = None; time.sleep(0.5)
         except KeyboardInterrupt:
-            print("\n--- Monitor Stopped ---")
+            print(get_msg("stopped", lang))
             if ser:
                 try: ser.close()
                 except: pass
             break
 
-def deploy(port, code_filename, use_monitor=True):
-    """執行 MCU 部署邏輯"""
-    print("--- Cocoya MCU Deployer ---")
+def deploy(port, code_filename, lang="en", use_monitor=True):
+    """執行 MicroPython 全序列埠部署"""
+    print(get_msg("title", lang))
     
     if not os.path.exists(code_filename):
-        print(f"Error: Source code file not found: {code_filename}")
+        print(f"Error: {code_filename} not found")
         sys.exit(1)
 
     with open(code_filename, 'r', encoding='utf-8') as f:
         code_content = f.read()
 
-    # --- 方案 A: 嘗試尋找 CIRCUITPY 磁碟 (Windows 優先) ---
-    print("Checking for CIRCUITPY drive...")
-    target_drive = None
+    print(get_msg("connect_serial", lang) % port)
+    ser = None
     try:
-        for drive in get_drives():
-            try:
-                label = ctypes.create_unicode_buffer(1024)
-                windll.kernel32.GetVolumeInformationW(drive, label, 1024, None, None, None, None, 0)
-                if label.value == "CIRCUITPY":
-                    target_drive = drive
-                    break
-            except:
-                continue
-    except Exception as e:
-        print(f"Drive scan error: {e}")
-
-    if target_drive:
-        target_path = os.path.normpath(os.path.join(target_drive, "code.py"))
+        # 1. 奪取控制權
+        ser = serial.Serial(port, 115200, timeout=1.0)
+        ser.reset_input_buffer()
         
-        print("\n>>> 上傳中，請勿斷開 USB 連線 <<<")
-        success = False
-        import subprocess
-        for attempt in range(3):
-            try:
-                # 方案 A: 呼叫 Windows 系統原生的 copy 指令
-                temp_file = os.path.normpath(code_filename + ".tmp")
-                with open(temp_file, "wb") as f:
-                    f.write(code_content.encode("utf-8"))
-                
-                cmd = f'copy /Y "{temp_file}" "{target_path}"'
-                result = subprocess.run(cmd, capture_output=True, text=True, shell=True)
-                
-                if result.returncode == 0:
-                    time.sleep(0.2)
-                    with open(target_path, "rb") as f_check:
-                        written_content = f_check.read().decode('utf-8', errors='ignore')
-                        if written_content.strip() == code_content.strip():
-                            success = True
-                            if os.path.exists(temp_file): os.remove(temp_file)
-                            break
-                
-                if os.path.exists(temp_file): os.remove(temp_file)
-                time.sleep(0.5)
-            except Exception as e:
-                time.sleep(0.5)
-
-        if success:
-            print("\n" + "="*40)
-            print("上傳完畢，可斷開 USB 連線")
-            print("="*40 + "\n")
-            
-            # 透過 Serial 觸發重啟 (Ctrl-D)
-            try:
-                temp_ser = serial.Serial(port, 115200, timeout=0.1)
-                temp_ser.write(b'\x03\x03\x04') 
-                temp_ser.close()
-            except:
-                pass
-            
-            if use_monitor:
-                monitor(port)
-            return
-        else:
-            print(f"Drive write failed after retries. Falling back to Serial REPL...")
-
-    # --- 方案 B: 透過 Serial REPL 寫入 ---
-    try:
-        print(f"Connecting to {port} via Serial...")
-        ser = serial.Serial(port, 115200, timeout=0.1)
-        
-        print("\n>>> 上傳中，請勿斷開 USB 連線 <<<")
-        
-        # 強制中斷並進入 Raw REPL
-        ser.write(b'\r\n\x03\x03\x03') 
-        time.sleep(0.5)
-        ser.write(b'\x04') 
-        time.sleep(1.0) 
-        ser.write(b'\x03\x03') 
+        # 2. 強力煞車並進入 Raw REPL
+        ser.write(b'\x03\x03') # Ctrl+C twice
+        time.sleep(0.2)
+        ser.write(b'\x01')    # Ctrl+A: Enter Raw REPL
         time.sleep(0.2)
         
-        ser.write(b'\x01') 
-        time.sleep(0.5)
-        
-        response = ser.read_all().decode('utf-8', errors='ignore')
-        if "raw REPL" not in response:
-            print("Failed to enter Raw REPL.")
-            sys.exit(1)
+        res = ser.read_all().decode('utf-8', errors='ignore')
+        if "raw REPL" not in res:
+            # 嘗試第二次：軟重啟後再進
+            ser.write(b'\x04')
+            time.sleep(0.5)
+            ser.write(b'\x03\x03\x01')
+            time.sleep(0.3)
+            res = ser.read_all().decode('utf-8', errors='ignore')
 
-        print("Uploading code via REPL...")
-        write_cmd = f'f = open("code.py", "w"); f.write({repr(code_content)}); f.close()\n'
+        if "raw REPL" not in res:
+            print(get_msg("repl_failed", lang))
+            ser.close(); sys.exit(1)
+
+        # 3. 執行檔案寫入 (MicroPython 預設檔名為 main.py)
+        print(get_msg("uploading", lang))
+        # 先清空緩衝，防止干擾
+        ser.read_all()
+        
+        # 構建寫入指令。使用 repr 確保字串轉義正確 (處理換行與引號)
+        write_cmd = f'f=open("main.py","w");f.write({repr(code_content)});f.close()\n'
         ser.write(write_cmd.encode('utf-8'))
-        ser.write(b'\x04') 
+        ser.write(b'\x04') # 執行該指令
         
+        # 等待寫入完成 (對於大型檔案可能需要循環檢查)
         time.sleep(0.5)
-        result = ser.read_all().decode('utf-8', errors='ignore')
+        res_write = ser.read_all().decode('utf-8', errors='ignore')
         
-        if "OSError" in result:
-            print("\n[ERROR] MCU 磁碟目前為唯讀狀態。")
-            ser.close()
-            sys.exit(1)
-            
-        print("\n" + "="*40)
-        print("上傳完畢，可斷開 USB 連線")
-        print("="*40 + "\n")
+        # 4. 準備啟動並顯示橫幅 (橫幅將由 monitor 負責在適當時機印出)
+        completion_msg = get_msg("complete_banner", lang)
         
-        ser.close() 
+        # 5. 退出 Raw REPL 並軟重啟執行程式
+        ser.write(b'\x02\x04') # \x02=Exit Raw REPL, \x04=Soft Reboot
+        ser.flush()
+        
         if use_monitor:
-            monitor(port)
+            monitor(port, lang, welcome_msg=completion_msg, existing_ser=ser)
+        else:
+            print(completion_msg)
+            ser.close()
+
     except Exception as e:
-        print(f"Error during Serial REPL deployment: {e}")
+        print(get_msg("deploy_err", lang) % e)
+        if ser: ser.close()
         sys.exit(1)
+
+def setup_stable_mode(port, lang="en"):
+    """MicroPython 不需要此功能，改為提示訊息"""
+    print("\n[Notice] MicroPython does not need 'Stable Mode'. It's already stable by design!")
+
+def erase_filesystem(port, lang="en"):
+    """MicroPython 的 Flash 格式化"""
+    print(get_msg("erase_fs", lang) if "erase_fs" in MESSAGES[lang] else "Erasing Flash...")
+    try:
+        with serial.Serial(port, 115200, timeout=1.0) as ser:
+            ser.write(b'\x03\x03\x01')
+            time.sleep(0.5); ser.read_all()
+            # 不同的晶片格式化方式不同，這裡使用通用指令：刪除 main.py 與 boot.py
+            cmd = 'import os; [os.remove(f) for f in os.listdir() if f in ("main.py", "boot.py")]\n'
+            ser.write(cmd.encode('utf-8'))
+            ser.write(b'\x04')
+            print("\n[Done] All user files removed. System rebooting...")
+            ser.write(b'\x02\x04')
+    except Exception as e:
+        print(f"Error: {e}")
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: python deploy_mcu.py <PORT> <CODE_FILE> [--no-monitor]")
-        sys.exit(1)
-    
-    _port = sys.argv[1]
-    _code_file = sys.argv[2]
-    _use_monitor = True
-    if len(sys.argv) > 3 and sys.argv[3] == "--no-monitor":
-        _use_monitor = False
+    parser = argparse.ArgumentParser()
+    parser.add_argument("port")
+    parser.add_argument("code_file", nargs='?')
+    parser.add_argument("--no-monitor", action="store_true")
+    parser.add_argument("--monitor-only", action="store_true")
+    parser.add_argument("--serial-only", action="store_true")
+    parser.add_argument("--setup-stable", action="store_true")
+    parser.add_argument("--erase-filesystem", action="store_true")
+    parser.add_argument("--lang", default="en")
+    args = parser.parse_args()
 
-    deploy(_port, _code_file, _use_monitor)
+    if args.monitor_only: monitor(args.port, lang=args.lang)
+    elif args.erase_filesystem: erase_filesystem(args.port, lang=args.lang)
+    elif args.setup_stable: setup_stable_mode(args.port, lang=args.lang)
+    else:
+        if not args.code_file: sys.exit(1)
+        deploy(args.port, args.code_file, lang=args.lang, use_monitor=not args.no_monitor)

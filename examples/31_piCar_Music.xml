@@ -1,4 +1,4 @@
-<xml xmlns="https://developers.google.com/blockly/xml" platform="CircuitPython">
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
   <block type="py_definition_zone" id="p%o^qm1mE*.CEB!5%_(W" x="10" y="10"></block>
   <block type="mcu_main" id="=NJ]emz+oNaL~f(Z,1Hj" x="10" y="90">
     <statement name="DO">
@@ -39,6 +39,9 @@
                         <next>
                           <block type="mcu_car_play_melody" id="gcc(UIzY{rO)X;AX%^hm">
                             <field name="MELODY">D4Q. D4E B3Q D4Q&amp;#10;E4Q+E E4E G4Q B4Q&amp;#10;A4Q. B4E A4Q. G4E&amp;#10;F#4E_T RE_T F#4E_T D4E_T RE_T D4E_T G4E RE G5Q</field>
+                            <next>
+                              <block type="mcu_reset" id="$}p8}PQnuoyWoTSnnV=#"></block>
+                            </next>
                           </block>
                         </next>
                       </block>

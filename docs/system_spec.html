@@ -135,7 +135,7 @@
 
     <section id="overview">
         <h2>1. 專案概述</h2>
-        <p>Cocoya 是一個整合了 Blockly 與 Python (OpenCV/MediaPipe) 的 VS Code 擴充功能。它具備跨平台支援能力，可開發 PC 端 AI 程式或 CircuitPython 硬體程式。</p>
+        <p>Cocoya 是一個整合了 Blockly 與 Python (OpenCV/MediaPipe) 的 VS Code 擴充功能。它具備跨平台支援能力，可開發 PC 端 AI 程式或 MicroPython 硬體程式。</p>
         <h3>核心技術</h3>
         <ul>
             <li><strong>Extension Host:</strong> TypeScript 4.9+ (VS Code API)</li>
@@ -156,7 +156,7 @@
                 <tr><td>變數與函式</td><td><code>camelCase</code></td><td><code>isDirty</code>, <code>handleRunCode()</code></td></tr>
                 <tr><td>轉義字元</td><td><code>JS String</code></td><td>磁碟 JS 呈現 <code>\n</code>，工具寫入時使用 <code>\\n</code></td></tr>
                 <tr><td>模組 ID</td><td><code>path/pure_id</code></td><td><code>core/logic</code>, <code>cv_basic</code></td></tr>
-                <tr><td>跨平台相容性</td><td><code>Core Principle</code></td><td>核心積木 (core/*) 必須兼顧 PC 與 CircuitPython 語法。</td></tr>
+                <tr><td>跨平台相容性</td><td><code>Core Principle</code></td><td>核心積木 (core/*) 必須兼顧 PC 與 MicroPython 語法。</td></tr>
             </tbody>
         </table>
     </section>
@@ -222,7 +222,7 @@
 
     <section id="platform">
         <h2>6. 平台模式與自動偵測</h2>
-        <p>Cocoya 支援 <strong>PC (Python)</strong> 與 <strong>CircuitPython (MCU)</strong> 雙模式隔離。</p>
+        <p>Cocoya 支援 <strong>PC (Python)</strong> 與 <strong>MicroPython (MCU)</strong> 雙模式隔離。</p>
         <p>模式資訊會自動注入 XML 屬性中，實現「開檔即鎖定模式」的功能。</p>
         <h3>積木級別平台過濾 (Platform Filtering)</h3>
         <p>透過在 <code>toolbox.xml</code> 的 <code>&lt;block&gt;</code> 標籤中加入 <code>platform="PC"</code> 或 <code>platform="MCU"</code> 屬性，系統在切換平台時會自動過濾並重新載入 Toolbox，確保當前模式下僅顯示適配的積木。</p>

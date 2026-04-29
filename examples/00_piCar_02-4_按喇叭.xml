@@ -1,0 +1,340 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
+  <variables>
+    <variable id="V]^w!P(!Qn~KnlwW{iOZ">distance</variable>
+  </variables>
+  <block type="py_definition_zone" id="p%o^qm1mE*.CEB!5%_(W" x="10" y="10"></block>
+  <block type="mcu_main" id="=NJ]emz+oNaL~f(Z,1Hj" x="10" y="90">
+    <statement name="DO">
+      <block type="mcu_car_set_tempo" id=";%$_`|AnT+zm23`.[f.Y">
+        <value name="BPM">
+          <shadow type="math_number" id="+G]G=V,yfp8v,:;%`Gb*">
+            <field name="NUM">120</field>
+          </shadow>
+        </value>
+        <next>
+          <block type="mcu_car_tone" id="L`4%Z%ua9ZHZOW;?#heL">
+            <value name="FREQ">
+              <shadow type="math_number" id="Y2;5?H({?kEV[xBJ(vkE">
+                <field name="NUM">440</field>
+              </shadow>
+            </value>
+            <value name="MS">
+              <shadow type="math_number" id="Kak0PjdLQ~6-lIgdE72j">
+                <field name="NUM">200</field>
+              </shadow>
+            </value>
+            <next>
+              <block type="mcu_car_wait_start" id="E])L?x{ob~G+(v(VJQ8(">
+                <field name="PIN">board.GP20</field>
+                <next>
+                  <block type="py_coding_comment" id="8^%.X~h3zX5Fd(d%1vF^">
+                    <field name="TEXT">偵測距離</field>
+                    <next>
+                      <block type="py_loop_while" id="jWxqT?]:4t;~#xxsXgjg">
+                        <value name="CONDITION">
+                          <block type="py_logic_boolean" id="{oyu?_nD!yCWSI7f3go{">
+                            <field name="BOOL">True</field>
+                          </block>
+                        </value>
+                        <statement name="DO">
+                          <block type="py_variables_set" id="fpeuTS]n6iSfS*:Q!s`)">
+                            <field name="VAR" id="V]^w!P(!Qn~KnlwW{iOZ">distance</field>
+                            <value name="VALUE">
+                              <shadow type="py_math_number" id="x*x|apcjhZx}PL1y@V^a">
+                                <field name="NUM">0</field>
+                              </shadow>
+                              <block type="mcu_car_ultrasonic" id="WnD8{wceU$v,pI9T`{Dn">
+                                <field name="TRIG">board.GP28</field>
+                                <field name="ECHO">board.GP7</field>
+                              </block>
+                            </value>
+                            <next>
+                              <block type="py_logic_if" id="N?=7w;-d]nQ_Ty:xdVxB">
+                                <mutation elif="2" else="0"></mutation>
+                                <value name="IF0">
+                                  <block type="py_logic_operation" id="__VU#R!:cO4%w0W0oamD">
+                                    <field name="OP">and</field>
+                                    <value name="A">
+                                      <block type="py_logic_compare" id="x3I/D%iF!$t?h~iU04|^">
+                                        <field name="OP">&lt;=</field>
+                                        <value name="A">
+                                          <shadow type="py_math_number" id="p5]P6Hvi2{lRk;TA/eaP">
+                                            <field name="NUM">0</field>
+                                          </shadow>
+                                          <block type="py_variables_get" id="Mf6tWWFBWQAKcgst/+Y}">
+                                            <field name="VAR" id="V]^w!P(!Qn~KnlwW{iOZ">distance</field>
+                                          </block>
+                                        </value>
+                                        <value name="B">
+                                          <shadow type="py_math_number" id="AHAkHxJRz(A(+-Y!Ne:z">
+                                            <field name="NUM">100</field>
+                                          </shadow>
+                                        </value>
+                                      </block>
+                                    </value>
+                                    <value name="B">
+                                      <block type="py_logic_compare" id="htK4~~B3m}+S2oPyg8,7">
+                                        <field name="OP">&gt;</field>
+                                        <value name="A">
+                                          <shadow type="py_math_number" id="p5]P6Hvi2{lRk;TA/eaP">
+                                            <field name="NUM">0</field>
+                                          </shadow>
+                                          <block type="py_variables_get" id="avp8}t76-q9c}DRImL78">
+                                            <field name="VAR" id="V]^w!P(!Qn~KnlwW{iOZ">distance</field>
+                                          </block>
+                                        </value>
+                                        <value name="B">
+                                          <shadow type="py_math_number" id="|s:S_:#RDP=5au7q^R-.">
+                                            <field name="NUM">70</field>
+                                          </shadow>
+                                        </value>
+                                      </block>
+                                    </value>
+                                  </block>
+                                </value>
+                                <statement name="DO0">
+                                  <block type="mcu_car_play_note" id="8D$a|:cCOOj;E]G)kZr)">
+                                    <field name="NOTE">C</field>
+                                    <field name="OCTAVE">3</field>
+                                    <field name="DURATION">1.0</field>
+                                    <field name="DOTTED">FALSE</field>
+                                    <field name="TRIPLET">FALSE</field>
+                                  </block>
+                                </statement>
+                                <value name="IF1">
+                                  <block type="py_logic_operation" id="Pf]$ucp1UN?hQ[zzpapV">
+                                    <field name="OP">and</field>
+                                    <value name="A">
+                                      <block type="py_logic_compare" id="seBD}ey5TWmmsFN!jbt:">
+                                        <field name="OP">&lt;=</field>
+                                        <value name="A">
+                                          <shadow type="py_math_number" id="p5]P6Hvi2{lRk;TA/eaP">
+                                            <field name="NUM">0</field>
+                                          </shadow>
+                                          <block type="py_variables_get" id="=j^gV{/x3.8i2Ra+P5pc">
+                                            <field name="VAR" id="V]^w!P(!Qn~KnlwW{iOZ">distance</field>
+                                          </block>
+                                        </value>
+                                        <value name="B">
+                                          <shadow type="py_math_number" id="J~A47p%K8=_d9Gcmh*Ry">
+                                            <field name="NUM">70</field>
+                                          </shadow>
+                                        </value>
+                                      </block>
+                                    </value>
+                                    <value name="B">
+                                      <block type="py_logic_compare" id="R89+HacLNOp7xd|sKGI8">
+                                        <field name="OP">&gt;</field>
+                                        <value name="A">
+                                          <shadow type="py_math_number" id="p5]P6Hvi2{lRk;TA/eaP">
+                                            <field name="NUM">0</field>
+                                          </shadow>
+                                          <block type="py_variables_get" id="fBb4YCgN[?c?/_Eb3~^%">
+                                            <field name="VAR" id="V]^w!P(!Qn~KnlwW{iOZ">distance</field>
+                                          </block>
+                                        </value>
+                                        <value name="B">
+                                          <shadow type="py_math_number" id="[UiYsG=_WJ3]!1B8,[H2">
+                                            <field name="NUM">40</field>
+                                          </shadow>
+                                        </value>
+                                      </block>
+                                    </value>
+                                  </block>
+                                </value>
+                                <statement name="DO1">
+                                  <block type="mcu_car_play_note" id="|ipU{D`8vtj:db=+=Q*L">
+                                    <field name="NOTE">C</field>
+                                    <field name="OCTAVE">4</field>
+                                    <field name="DURATION">0.5</field>
+                                    <field name="DOTTED">FALSE</field>
+                                    <field name="TRIPLET">FALSE</field>
+                                  </block>
+                                </statement>
+                                <value name="IF2">
+                                  <block type="py_logic_operation" id="r,@D1jfj)B$k2uXd@+#{">
+                                    <field name="OP">and</field>
+                                    <value name="A">
+                                      <block type="py_logic_compare" id="U~gI~/hU+uDYxvBvng@H">
+                                        <field name="OP">&lt;=</field>
+                                        <value name="A">
+                                          <shadow type="py_math_number" id="p5]P6Hvi2{lRk;TA/eaP">
+                                            <field name="NUM">0</field>
+                                          </shadow>
+                                          <block type="py_variables_get" id="(zW[!/@YNRGB4w$RQdYP">
+                                            <field name="VAR" id="V]^w!P(!Qn~KnlwW{iOZ">distance</field>
+                                          </block>
+                                        </value>
+                                        <value name="B">
+                                          <shadow type="py_math_number" id="_^L`+iZ8,x3`C_esx,]0">
+                                            <field name="NUM">40</field>
+                                          </shadow>
+                                        </value>
+                                      </block>
+                                    </value>
+                                    <value name="B">
+                                      <block type="py_logic_compare" id="^CpkP|Qu!PIv*Y]4lbTa">
+                                        <field name="OP">&gt;</field>
+                                        <value name="A">
+                                          <shadow type="py_math_number" id="p5]P6Hvi2{lRk;TA/eaP">
+                                            <field name="NUM">0</field>
+                                          </shadow>
+                                          <block type="py_variables_get" id=";WJU933URRZ_7~Su{4#G">
+                                            <field name="VAR" id="V]^w!P(!Qn~KnlwW{iOZ">distance</field>
+                                          </block>
+                                        </value>
+                                        <value name="B">
+                                          <shadow type="py_math_number" id="+#~2+f3.CC@21~~wk)6P">
+                                            <field name="NUM">20</field>
+                                          </shadow>
+                                        </value>
+                                      </block>
+                                    </value>
+                                  </block>
+                                </value>
+                                <statement name="DO2">
+                                  <block type="mcu_car_play_note" id="V3VXT~V9p%)DkV9!d:d%">
+                                    <field name="NOTE">C</field>
+                                    <field name="OCTAVE">5</field>
+                                    <field name="DURATION">0.25</field>
+                                    <field name="DOTTED">FALSE</field>
+                                    <field name="TRIPLET">FALSE</field>
+                                  </block>
+                                </statement>
+                                <next>
+                                  <block type="py_logic_if" id="40@YJO^qx#BT?By!~bbp">
+                                    <mutation elif="0" else="1"></mutation>
+                                    <value name="IF0">
+                                      <block type="py_logic_compare" id="W;m]_s[Fl*b]gi8]NP8+">
+                                        <field name="OP">&lt;=</field>
+                                        <value name="A">
+                                          <shadow type="py_math_number" id="p5]P6Hvi2{lRk;TA/eaP">
+                                            <field name="NUM">0</field>
+                                          </shadow>
+                                          <block type="py_variables_get" id="QAyNf`Nqe7T^XBXa8cYI">
+                                            <field name="VAR" id="V]^w!P(!Qn~KnlwW{iOZ">distance</field>
+                                          </block>
+                                        </value>
+                                        <value name="B">
+                                          <shadow type="py_math_number" id="4J/i?3spu2H1eaBT(SRC">
+                                            <field name="NUM">20</field>
+                                          </shadow>
+                                        </value>
+                                      </block>
+                                    </value>
+                                    <statement name="DO0">
+                                      <block type="py_coding_comment" id="}y^I.ZIa3Z8PRL=r+D,3">
+                                        <field name="TEXT">避障</field>
+                                        <next>
+                                          <block type="mcu_car_stop" id="Pe6FpA;z}(R;1_0+%.Zr">
+                                            <field name="MODE">BRAKE</field>
+                                            <next>
+                                              <block type="py_logic_if" id="):LkP]?3G5xL3L!v|!Ai">
+                                                <mutation elif="0" else="1"></mutation>
+                                                <value name="IF0">
+                                                  <block type="py_logic_compare" id=";W$7tSrAFJ,%vE9?FDVF">
+                                                    <field name="OP">&gt;</field>
+                                                    <value name="A">
+                                                      <shadow type="py_math_number" id="p5]P6Hvi2{lRk;TA/eaP">
+                                                        <field name="NUM">0</field>
+                                                      </shadow>
+                                                      <block type="py_math_random" id="4e}OC!_v(glu`K(*V0=!">
+                                                        <value name="FROM">
+                                                          <shadow type="py_math_number" id="[$i9H}EE:S5lvyq7%NA/">
+                                                            <field name="NUM">1</field>
+                                                          </shadow>
+                                                        </value>
+                                                        <value name="TO">
+                                                          <shadow type="py_math_number" id="zEv^(Ez:CJ@vilKs.XsP">
+                                                            <field name="NUM">100</field>
+                                                          </shadow>
+                                                        </value>
+                                                      </block>
+                                                    </value>
+                                                    <value name="B">
+                                                      <shadow type="py_math_number" id="m(ugV~FY0c))KQ1GtH!`">
+                                                        <field name="NUM">70</field>
+                                                      </shadow>
+                                                    </value>
+                                                  </block>
+                                                </value>
+                                                <statement name="DO0">
+                                                  <block type="mcu_car_motor" id="o/L-jy(RbOm!S==)XogW">
+                                                    <value name="LEFT">
+                                                      <shadow type="math_number" id="2;`3LFjx0O:GW(~EMBkg">
+                                                        <field name="NUM">0</field>
+                                                      </shadow>
+                                                    </value>
+                                                    <value name="RIGHT">
+                                                      <shadow type="math_number" id="FWLF:mzo:eCDYf5~n-bk">
+                                                        <field name="NUM">-50</field>
+                                                      </shadow>
+                                                    </value>
+                                                  </block>
+                                                </statement>
+                                                <statement name="ELSE">
+                                                  <block type="mcu_car_motor" id="`!Y(C)!?7C{|i71N*T|a">
+                                                    <value name="LEFT">
+                                                      <shadow type="math_number" id="k3^+[OGfz[MOJJ.7:O1D">
+                                                        <field name="NUM">-50</field>
+                                                      </shadow>
+                                                    </value>
+                                                    <value name="RIGHT">
+                                                      <shadow type="math_number" id="tv93?oOO~%8gf0qwDJA*">
+                                                        <field name="NUM">0</field>
+                                                      </shadow>
+                                                    </value>
+                                                  </block>
+                                                </statement>
+                                                <next>
+                                                  <block type="py_time_sleep" id="`g1oU//EBWbDnm!0;U|c">
+                                                    <value name="SECONDS">
+                                                      <shadow type="py_math_number" id="ULgXg{ig4/oq`%5Si/6M">
+                                                        <field name="NUM">0.5</field>
+                                                      </shadow>
+                                                    </value>
+                                                    <next>
+                                                      <block type="mcu_car_stop" id="EXxfrVQVe5uNP%~uj{rI">
+                                                        <field name="MODE">BRAKE</field>
+                                                      </block>
+                                                    </next>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </statement>
+                                    <statement name="ELSE">
+                                      <block type="mcu_car_motor" id="6nb,i{r0*uW]_@dXLe^i">
+                                        <value name="LEFT">
+                                          <shadow type="math_number" id="fDXyO.p;VnkPc|HQs4$g">
+                                            <field name="NUM">50</field>
+                                          </shadow>
+                                        </value>
+                                        <value name="RIGHT">
+                                          <shadow type="math_number" id="VjU`8:-BYzO.Cc{::Dyt">
+                                            <field name="NUM">50</field>
+                                          </shadow>
+                                        </value>
+                                      </block>
+                                    </statement>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </statement>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

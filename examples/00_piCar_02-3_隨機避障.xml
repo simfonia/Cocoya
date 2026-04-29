@@ -1,0 +1,175 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
+  <block type="py_definition_zone" id="p%o^qm1mE*.CEB!5%_(W" x="10" y="10"></block>
+  <block type="mcu_main" id="=NJ]emz+oNaL~f(Z,1Hj" x="10" y="90">
+    <statement name="DO">
+      <block type="mcu_car_tone" id="L`4%Z%ua9ZHZOW;?#heL">
+        <value name="FREQ">
+          <shadow type="math_number" id="Y2;5?H({?kEV[xBJ(vkE">
+            <field name="NUM">440</field>
+          </shadow>
+        </value>
+        <value name="MS">
+          <shadow type="math_number" id="Kak0PjdLQ~6-lIgdE72j">
+            <field name="NUM">200</field>
+          </shadow>
+        </value>
+        <next>
+          <block type="mcu_car_wait_start" id="E])L?x{ob~G+(v(VJQ8(">
+            <field name="PIN">board.GP20</field>
+            <next>
+              <block type="py_coding_comment" id="8^%.X~h3zX5Fd(d%1vF^">
+                <field name="TEXT">偵測距離</field>
+                <next>
+                  <block type="py_loop_while" id="jWxqT?]:4t;~#xxsXgjg">
+                    <value name="CONDITION">
+                      <block type="py_logic_boolean" id="{oyu?_nD!yCWSI7f3go{">
+                        <field name="BOOL">True</field>
+                      </block>
+                    </value>
+                    <statement name="DO">
+                      <block type="py_logic_if" id="N?=7w;-d]nQ_Ty:xdVxB">
+                        <mutation elif="0" else="1"></mutation>
+                        <value name="IF0">
+                          <block type="py_logic_compare" id="x3I/D%iF!$t?h~iU04|^">
+                            <field name="OP">&lt;</field>
+                            <value name="A">
+                              <shadow type="py_math_number" id="p5]P6Hvi2{lRk;TA/eaP">
+                                <field name="NUM">0</field>
+                              </shadow>
+                              <block type="mcu_car_ultrasonic" id="WnD8{wceU$v,pI9T`{Dn">
+                                <field name="TRIG">board.GP28</field>
+                                <field name="ECHO">board.GP7</field>
+                              </block>
+                            </value>
+                            <value name="B">
+                              <shadow type="py_math_number" id="AHAkHxJRz(A(+-Y!Ne:z">
+                                <field name="NUM">20</field>
+                              </shadow>
+                            </value>
+                          </block>
+                        </value>
+                        <statement name="DO0">
+                          <block type="py_coding_comment" id="$Np:cV#^#ffdf5gwM6B2">
+                            <field name="TEXT">先煞車，然後左後退一點點</field>
+                            <next>
+                              <block type="mcu_car_stop" id="db3JkR5Vp7JG@5b6nrq.">
+                                <field name="MODE">BRAKE</field>
+                                <next>
+                                  <block type="py_coding_comment" id="oZLZ0+_G^4an*%gB2KDu">
+                                    <field name="TEXT">擲骰子</field>
+                                    <next>
+                                      <block type="py_logic_if" id="u_(*$gFuk`)l5[}3ka^1">
+                                        <mutation elif="0" else="1"></mutation>
+                                        <value name="IF0">
+                                          <block type="py_logic_compare" id="udsIUleOtGimnVKy|VaD">
+                                            <field name="OP">&gt;</field>
+                                            <value name="A">
+                                              <shadow type="py_math_number" id="JXa?T/dz.bI)${/j:xZ;">
+                                                <field name="NUM">0</field>
+                                              </shadow>
+                                              <block type="py_math_random" id="=1zJCtfi}Ix;rUF}Lryu">
+                                                <value name="FROM">
+                                                  <shadow type="py_math_number" id="$(`cuw/1QXVQ2R+bH;Zk">
+                                                    <field name="NUM">1</field>
+                                                  </shadow>
+                                                </value>
+                                                <value name="TO">
+                                                  <shadow type="py_math_number" id="E*z(:}uV5F``Nq#%5?yh">
+                                                    <field name="NUM">100</field>
+                                                  </shadow>
+                                                </value>
+                                              </block>
+                                            </value>
+                                            <value name="B">
+                                              <shadow type="py_math_number" id=":V_OeM=qT(n6.oU43j-!">
+                                                <field name="NUM">70</field>
+                                              </shadow>
+                                            </value>
+                                          </block>
+                                        </value>
+                                        <statement name="DO0">
+                                          <block type="py_coding_comment" id="#_{Ft#q%Jpo*%8[xLgfv">
+                                            <field name="TEXT">30%機率左後退</field>
+                                            <next>
+                                              <block type="mcu_car_motor" id="~{E!lBL4_mneJRE,}S}`">
+                                                <value name="LEFT">
+                                                  <shadow type="math_number" id="_#RCh4mRx]MBzjYqumLy">
+                                                    <field name="NUM">0</field>
+                                                  </shadow>
+                                                </value>
+                                                <value name="RIGHT">
+                                                  <shadow type="math_number" id="UOZS:=6DE=2wjN[2Dy}A">
+                                                    <field name="NUM">-50</field>
+                                                  </shadow>
+                                                </value>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </statement>
+                                        <statement name="ELSE">
+                                          <block type="mcu_car_motor" id="[B#Eh0!fb/8RdOAN3_3:">
+                                            <value name="LEFT">
+                                              <shadow type="math_number" id="l$u1VpLVTm/[J#dh,N(|">
+                                                <field name="NUM">-50</field>
+                                              </shadow>
+                                            </value>
+                                            <value name="RIGHT">
+                                              <shadow type="math_number" id="B%,*AZjHvrX{]TyVmpx.">
+                                                <field name="NUM">0</field>
+                                              </shadow>
+                                            </value>
+                                          </block>
+                                        </statement>
+                                        <next>
+                                          <block type="py_time_sleep" id="cpFhw`v)!ds@ku=g^g6_">
+                                            <value name="SECONDS">
+                                              <shadow type="py_math_number" id="!2#{7oGwmiLTs%BHG{q8">
+                                                <field name="NUM">0.5</field>
+                                              </shadow>
+                                            </value>
+                                            <next>
+                                              <block type="mcu_car_stop" id="o0wQxhy2OqlTN!c::$/X">
+                                                <field name="MODE">BRAKE</field>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </statement>
+                        <statement name="ELSE">
+                          <block type="py_coding_comment" id="}y^I.ZIa3Z8PRL=r+D,3">
+                            <field name="TEXT">直走</field>
+                            <next>
+                              <block type="mcu_car_motor" id="6nb,i{r0*uW]_@dXLe^i">
+                                <value name="LEFT">
+                                  <shadow type="math_number" id="fDXyO.p;VnkPc|HQs4$g">
+                                    <field name="NUM">50</field>
+                                  </shadow>
+                                </value>
+                                <value name="RIGHT">
+                                  <shadow type="math_number" id="VjU`8:-BYzO.Cc{::Dyt">
+                                    <field name="NUM">50</field>
+                                  </shadow>
+                                </value>
+                              </block>
+                            </next>
+                          </block>
+                        </statement>
+                      </block>
+                    </statement>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

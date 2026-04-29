@@ -1,4 +1,4 @@
-<xml xmlns="https://developers.google.com/blockly/xml" platform="CircuitPython">
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
   <variables>
     <variable id=";o1_WMEGa/:3|glP7#yW">i</variable>
   </variables>
