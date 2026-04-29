@@ -28,6 +28,25 @@ export class CocoyaManager {
     }
 
     /**
+     * 取得目前設定的 Python 路徑
+     */
+    private getPythonPath(): string {
+        return this.context.globalState.get<string>('pythonPath', 'python');
+    }
+
+    /**
+     * 停止所有 Cocoya 相關的終端機任務，釋放序列埠
+     */
+    private async stopAllCocoyaTerminals() {
+        const cocoyaTerminals = vscode.window.terminals.filter(t => t.name.startsWith('Cocoya'));
+        for (const t of cocoyaTerminals) {
+            t.sendText('\u0003'); // 發送 Ctrl+C
+            await new Promise(resolve => setTimeout(resolve, 300));
+            t.dispose(); // 徹底關閉
+        }
+    }
+
+    /**
      * 翻譯輔助函式 (Host 端)
      */
     private t(key: string, ...args: string[]): string {
@@ -76,7 +95,19 @@ export class CocoyaManager {
                 case 'saveFileAs':
                     await this.handleSaveFileAs(message);
                     break;
-                case 'refreshSerialPorts':
+                case 'openSerialMonitor':
+                const monPort = message.serialPort;
+                if (!monPort) return;
+                const monPython = this.getPythonPath();
+                const monLang = vscode.env.language.startsWith('zh') ? 'zh-hant' : 'en';
+                const monScript = vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'deploy_mcu.py').fsPath;
+                
+                const monTerminal = vscode.window.createTerminal('Cocoya Serial Monitor');
+                monTerminal.sendText(`& "${monPython}" "${monScript}" "${monPort}" --monitor-only --lang ${monLang}`);
+                monTerminal.show();
+                break;
+
+            case 'refreshSerialPorts':
                     await this.handleRefreshSerialPorts();
                     break;
                 case 'setPythonPath':
@@ -134,6 +165,26 @@ export class CocoyaManager {
                     break;
                 case 'openHelp':
                     this.handleOpenHelp(message.helpId);
+                    break;
+                case 'eraseFilesystem':
+                    await this.stopAllCocoyaTerminals();
+                    const ePort = message.serialPort;
+                    const ePython = this.getPythonPath();
+                    const eLang = vscode.env.language.startsWith('zh') ? 'zh-hant' : 'en';
+                    const eScript = vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'deploy_mcu.py').fsPath;
+                    const eTerminal = vscode.window.createTerminal('Cocoya Repair');
+                    eTerminal.sendText(`& "${ePython}" "${eScript}" "${ePort}" --erase-filesystem --lang ${eLang}`);
+                    eTerminal.show();
+                    break;
+                case 'setupStableMode':
+                    await this.stopAllCocoyaTerminals();
+                    const sPort = message.serialPort;
+                    const sPython = this.getPythonPath();
+                    const sLang = vscode.env.language.startsWith('zh') ? 'zh-hant' : 'en';
+                    const sScript = vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'deploy_mcu.py').fsPath;
+                    const sTerminal = vscode.window.createTerminal('Cocoya Setup');
+                    sTerminal.sendText(`& "${sPython}" "${sScript}" "${sPort}" --setup-stable --lang ${sLang}`);
+                    sTerminal.show();
                     break;
                 case 'autoBackup':
                     this.handleAutoBackup(message.xml);
@@ -413,7 +464,7 @@ export class CocoyaManager {
                     platform = platformMatch[1];
                 } else {
                     // 2. 備援方案：偵測特定積木 (針對舊檔案)
-                    if (content.includes('type="py_loop_while"')) platform = 'CircuitPython';
+                    if (content.includes('type="py_loop_while"')) platform = 'MicroPython';
                     else if (content.includes('type="py_main"')) platform = 'PC';
                 }
                 
@@ -480,7 +531,7 @@ export class CocoyaManager {
         // 1. 清理定位用的隱形標記 (保留 # ID 註解以維持行號一致)
         const cleanCode = message.code.replace(/\u0001ID:.*?\u0002/g, '');
         
-        if (platform === 'CircuitPython') {
+        if (platform === 'MicroPython') {
             const port = message.serialPort;
             if (!port) {
                 vscode.window.showErrorMessage(this.t('MSG_SELECT_PORT'));
@@ -512,38 +563,21 @@ export class CocoyaManager {
             // 獲取靜態部署腳本路徑
             const deployScriptPath = path.join(this.context.extensionPath, 'resources', 'deploy_mcu.py');
 
-            // 使用 VS Code 原生進度條顯示「上傳中」
-            await vscode.window.withProgress({
-                location: vscode.ProgressLocation.Notification,
-                title: this.t('MSG_DEPLOY_UPLOADING'),
-                cancellable: false
-            }, async (progress) => {
-                return new Promise<void>((resolve, reject) => {
-                    const cmd = `"${pythonPath}" "${deployScriptPath}" "${port}" "${mcuCodePath}" --no-monitor`;
-                    exec(cmd, (error, stdout, stderr) => {
-                        if (error) {
-                            vscode.window.showErrorMessage(`Deploy failed: ${stderr || stdout}`);
-                            reject(error);
-                        } else {
-                            vscode.window.showInformationMessage(this.t('MSG_DEPLOY_COMPLETED'));
-                            resolve();
-                        }
-                    });
-                });
-            });
-
-            // 上傳完畢後，開啟終端機執行 Monitor 模式
+            // --- 優化：合併為一階段執行，避免多次打開序列埠導致重啟 ---
             let terminal = vscode.window.terminals.find(t => t.name === 'Cocoya Execution');
             if (!terminal) {
                 terminal = vscode.window.createTerminal('Cocoya Execution');
             } else {
+                // 先送 Ctrl-C 中斷前一次的監控
                 terminal.sendText('\u0003'); 
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 300));
             }
             
             terminal.show();
-            // 注意這裡不帶 --no-monitor，讓腳本進入 monitor 模式
-            terminal.sendText(`& "${pythonPath}" "${deployScriptPath}" "${port}" "${mcuCodePath}"`);
+            // 直接執行：這會觸發「上傳中」訊息並接著進入「監控」
+            const lang = vscode.env.language.toLowerCase().startsWith('zh') ? 'zh-hant' : 'en';
+            const serialFlag = message.serialUploadOnly ? '--serial-only' : '';
+            terminal.sendText(`& "${pythonPath}" "${deployScriptPath}" "${port}" "${mcuCodePath}" ${serialFlag} --lang ${lang}`);
             
             this.panel.webview.postMessage({ command: 'runCompleted' });
             return;
@@ -671,7 +705,7 @@ export class CocoyaManager {
                 uf2FileName = path.basename(srcPath);
             } else return;
         } else {
-            const firmwareDir = path.join(this.context.extensionPath, 'resources', 'firmware', 'CircuitPython', model);
+            const firmwareDir = path.join(this.context.extensionPath, 'resources', 'firmware', 'MicroPython', model);
             if (!fs.existsSync(firmwareDir)) {
                 vscode.window.showErrorMessage(`Firmware directory not found: ${firmwareDir}`);
                 return;
@@ -722,19 +756,8 @@ export class CocoyaManager {
                     return;
                 }
 
-                progress.report({ message: "Success! Waiting for MCU to reboot as CIRCUITPY..." });
-
-                let circuitPyDrive: string | null = null;
-                for (let i = 0; i < 15; i++) {
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    circuitPyDrive = findDisk('CIRCUITPY');
-                    if (circuitPyDrive) break;
-                }
-
-                if (circuitPyDrive) {
-                    progress.report({ message: "Clearing code.py..." });
-                    fs.writeFileSync(path.join(circuitPyDrive, 'code.py'), '# Empty project\nprint("Cocoya Firmware Reset Done!")\n', 'utf8');
-                }
+                progress.report({ message: "Success! Firmware burned. Rebooting..." });
+                await new Promise(resolve => setTimeout(resolve, 3000));
             });
             vscode.window.showInformationMessage(this.localeMessages['MSG_FIRMWARE_BURN_SUCCESS'] || 'Firmware burned and initialized!');
         } catch (e: any) {

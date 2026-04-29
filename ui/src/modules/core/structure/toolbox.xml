@@ -14,5 +14,5 @@
     <block type="py_import"></block>
     <block type="py_import_from"></block>
     <block type="py_main" platform="PC"></block>
-    <block type="mcu_main" platform="CircuitPython"></block>
+    <block type="mcu_main" platform="MicroPython"></block>
 </category>

@@ -1,6 +1,6 @@
 Object.assign(Blockly.Msg, {
   "MCU_MAIN": "Main Program (主程式入口)",
-  "MCU_MAIN_TOOLTIP": "CircuitPython 的主程式執行入口。",
+  "MCU_MAIN_TOOLTIP": "MicroPython 的主程式執行入口。",
   "PY_MAIN": "if __name__ == \"__main__\"",
   "PY_MAIN_TOOLTIP": "Python 程式的執行入口（僅在 PC 模式下生效）。",
   "PY_DEF_ZONE": "Global Definitions (全域定義)",

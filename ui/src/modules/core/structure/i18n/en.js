@@ -1,6 +1,6 @@
 Object.assign(Blockly.Msg, {
   "MCU_MAIN": "Main Program",
-  "MCU_MAIN_TOOLTIP": "Main entry point for CircuitPython program.",
+  "MCU_MAIN_TOOLTIP": "Main entry point for MicroPython program.",
   "PY_MAIN": "if __name__ == \"__main__\"",
   "PY_MAIN_TOOLTIP": "Main entry point for Python (PC only).",
   "PY_DEF_ZONE": "Global Definitions",

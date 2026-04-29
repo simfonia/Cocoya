@@ -1,8 +1,9 @@
 // Loop Generators: loops_generators.js
 
 Blockly.Python.forBlock['py_loop_while'] = function(block, generator) {
-  var condition = generator.valueToCode(block, 'CONDITION', Blockly.Python.ORDER_NONE) || 'False';
+  var condition = generator.valueToCode(block, 'CONDITION', Blockly.Python.ORDER_NONE) || 'True';
   var branch = generator.statementToCode(block, 'DO') || generator.INDENT + 'pass\n';
+
   return 'while ' + condition + ':\n' + branch;
 };
 

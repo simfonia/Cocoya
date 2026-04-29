@@ -133,6 +133,46 @@ body {
     color: #FE2F89;
 }
 
+.dropdown-separator {
+    height: 1px;
+    background-color: #eee;
+    margin: 4px 0;
+}
+
+/* 子選單樣式 */
+.dropdown-submenu {
+    position: relative;
+}
+
+.dropdown-submenu .submenu-content {
+    display: none;
+    position: absolute;
+    left: 100%;
+    top: -4px;
+    background-color: #ffffff;
+    min-width: 220px;
+    box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.15);
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    z-index: 1100;
+    padding: 4px 0;
+}
+
+/* 隱形橋樑：防止子選單間隙 */
+.dropdown-submenu .submenu-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -10px;
+    width: 10;
+    height: 100%;
+    background: transparent;
+}
+
+.dropdown-submenu:hover .submenu-content {
+    display: block;
+}
+
 .toolbar-dropdown:hover .dropdown-content {
     display: block;
 }
@@ -150,36 +190,35 @@ body {
     display: block;
 }
 
-/* 更新按鈕專用：根據狀態切換粉紅或綠色圖示 */
-.update-available:hover .green-hover {
-    display: none !important;
+/* 更新按鈕專用：對齊 #wavecode */
+#btn-update {
+    position: relative;
+    transition: transform 0.3s, opacity 0.3s;
 }
 
-.update-latest:hover .pink-hover {
-    display: none !important;
+.update-hidden {
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.5);
 }
 
-@keyframes blink-update {
-    0% {
-        background-color: transparent;
-    }
-
-    50% {
-        background-color: #ffcdd2;
-    }
-
-    100% {
-        background-color: transparent;
-    }
+.update-spin-ccw {
+    animation: spin-ccw 2s linear infinite;
 }
 
-.update-blink {
-    animation: blink-update 1.5s infinite;
+@keyframes spin-ccw {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(-360deg); }
 }
 
-.update-available:hover {
-    background-color: #ffcdd2 !important;
-    /* 紅色 */
+.update-bounce-pulse {
+    animation: bounce-pulse 2s infinite;
+}
+
+@keyframes bounce-pulse {
+    0%, 20%, 50%, 80%, 100% { transform: translateY(0); filter: brightness(1); }
+    40% { transform: translateY(-5px); filter: brightness(1.2) drop-shadow(0 0 5px #FE2F89); }
+    60% { transform: translateY(-3px); filter: brightness(1.1); }
 }
 
 .toolbar-spacer {
@@ -648,10 +687,16 @@ body.vscode-high-contrast .platform-select {
 }
 
 body.vscode-dark .dropdown-content,
-body.vscode-high-contrast .dropdown-content {
+body.vscode-high-contrast .dropdown-content,
+body.vscode-dark .submenu-content,
+body.vscode-high-contrast .submenu-content {
     background-color: #2d2d2d;
     border-color: #404040;
     box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.5);
+}
+
+body.vscode-dark .dropdown-separator {
+    background-color: #444;
 }
 
 body.vscode-dark .dropdown-item,

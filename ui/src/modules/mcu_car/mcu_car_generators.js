@@ -1,49 +1,48 @@
 // mcu_car_generators.js
+// Optimized for MicroPython (Machine module)
+
 Blockly.Python.forBlock['mcu_car_motor'] = function(block, generator) {
-  generator.definitions_['import_board'] = 'import board';
-  generator.definitions_['import_pwmio'] = 'import pwmio';
+  generator.definitions_['import_machine'] = 'import machine';
 
   generator.definitions_['class_car_motor'] = `
 class CarMotor:
     def __init__(self):
-        # Maker Pi RP2040 Motor Pins
-        self.m1a = pwmio.PWMOut(board.GP8, frequency=1000)
-        self.m1b = pwmio.PWMOut(board.GP9, frequency=1000)
-        self.m2a = pwmio.PWMOut(board.GP10, frequency=1000)
-        self.m2b = pwmio.PWMOut(board.GP11, frequency=1000)
+        # Maker Pi RP2040 Motor Pins (GP8, GP9, GP10, GP11)
+        self.m1a = machine.PWM(machine.Pin(8), freq=1000)
+        self.m1b = machine.PWM(machine.Pin(9), freq=1000)
+        self.m2a = machine.PWM(machine.Pin(10), freq=1000)
+        self.m2b = machine.PWM(machine.Pin(11), freq=1000)
 
     def set_speed(self, left, right):
         # Left Motor (M1)
         l = max(min(left, 100), -100)
         if l >= 0:
-            self.m1a.duty_cycle = int(l * 655.35)
-            self.m1b.duty_cycle = 0
+            self.m1a.duty_u16(int(l * 655.35))
+            self.m1b.duty_u16(0)
         else:
-            self.m1a.duty_cycle = 0
-            self.m1b.duty_cycle = int(-l * 655.35)
+            self.m1a.duty_u16(0)
+            self.m1b.duty_u16(int(-l * 655.35))
         
         # Right Motor (M2)
         r = max(min(right, 100), -100)
         if r >= 0:
-            self.m2a.duty_cycle = int(r * 655.35)
-            self.m2b.duty_cycle = 0
+            self.m2a.duty_u16(int(r * 655.35))
+            self.m2b.duty_u16(0)
         else:
-            self.m2a.duty_cycle = 0
-            self.m2b.duty_cycle = int(-r * 655.35)
+            self.m2a.duty_u16(0)
+            self.m2b.duty_u16(int(-r * 655.35))
 
     def stop(self):
-        # Brake: Short to GND (IN1=L, IN2=L) - Verified by User Observation
-        self.m1a.duty_cycle = 0
-        self.m1b.duty_cycle = 0
-        self.m2a.duty_cycle = 0
-        self.m2b.duty_cycle = 0
+        self.m1a.duty_u16(0)
+        self.m1b.duty_u16(0)
+        self.m2a.duty_u16(0)
+        self.m2b.duty_u16(0)
 
     def coast(self):
-        # Coast: Hi-Z (IN1=H, IN2=H) - Verified by User Observation
-        self.m1a.duty_cycle = 65535
-        self.m1b.duty_cycle = 65535
-        self.m2a.duty_cycle = 65535
-        self.m2b.duty_cycle = 65535
+        self.m1a.duty_u16(65535)
+        self.m1b.duty_u16(65535)
+        self.m2a.duty_u16(65535)
+        self.m2b.duty_u16(65535)
 `;
 
   var left = generator.valueToCode(block, 'LEFT', Blockly.Python.ORDER_ATOMIC) || '0';
@@ -61,22 +60,21 @@ Blockly.Python.forBlock['mcu_car_stop'] = function(block, generator) {
   generator.definitions_['import_time'] = 'import time';
   
   if (mode === 'COAST') {
-    return `if 'car' in globals(): car.coast()\ntime.sleep(0.01)  ${Blockly.Msg["CAR_COAST_DELAY"]}\n`;
+    return `if 'car' in globals(): car.coast()\ntime.sleep(0.01)\n`;
   } else {
-    return `if 'car' in globals(): car.stop()\ntime.sleep(0.1)  ${Blockly.Msg["CAR_BRAKE_DELAY"]}\n`;
+    return `if 'car' in globals(): car.stop()\ntime.sleep(0.1)\n`;
   }
 };
 
-// --- Servo Helper Injection ---
+// --- Servo Helper Injection (MicroPython) ---
 var SERVO_CLASS_INJECT = `
 class PiCarServo:
-    _TRIM = {} # Store per-pin min_us/max_us
+    _TRIM = {} 
 
-    def __init__(self, pin, min_us=460, max_us=2400):
-        self.pwm = pwmio.PWMOut(pin, frequency=50)
-        self.pin_str = str(pin).replace("board.", "")
-        # Use existing trim if available, else use default (Apply 400-2600 limit)
-        _m1, _m2 = self._TRIM.get(self.pin_str, (min_us, max_us))
+    def __init__(self, pin_num, min_us=460, max_us=2400):
+        self.pwm = machine.PWM(machine.Pin(pin_num), freq=50)
+        self.pin_num = pin_num
+        _m1, _m2 = self._TRIM.get(pin_num, (min_us, max_us))
         self.min_us = max(min(_m1, 2600), 400)
         self.max_us = max(min(_m2, 2600), 400)
         self.current_angle = 90
@@ -85,36 +83,30 @@ class PiCarServo:
     def set_angle(self, angle):
         angle = max(min(angle, 180), 0)
         self.current_angle = angle
-        # Always fetch latest trim values (Apply 400-2600 limit)
-        _m1, _m2 = self._TRIM.get(self.pin_str, (self.min_us, self.max_us))
+        _m1, _m2 = self._TRIM.get(self.pin_num, (self.min_us, self.max_us))
         min_u = max(min(_m1, 2600), 400)
         max_u = max(min(_m2, 2600), 400)
         
-        # Map angle (0-180) to pulse width (min_u - max_u us)
         us = min_u + (angle / 180 * (max_u - min_u))
-        # Convert microseconds to duty_cycle (0-65535)
-        # Period at 50Hz is 20,000us (1,000,000 / 50)
-        self.pwm.duty_cycle = int(us / 20000 * 65535)
+        # MicroPython duty_u16: us / 20000 * 65535
+        self.pwm.duty_u16(int(us / 20000 * 65535))
 
     def move_smooth(self, target_angle, speed):
         PiCarServo.move_sync([self], [target_angle], speed)
 
     @staticmethod
     def move_sync(servos, targets, speed):
-        # Speed 10: Instant positioning
         if speed >= 10:
             for i in range(len(servos)):
                 servos[i].set_angle(targets[i])
             return
-
-        # Speed 1-9: Smooth stepping (Map 1->0.1s, 9->0.01s)
         delay = (10 - max(min(speed, 9), 1)) * 0.011
         moving = True
         while moving:
             moving = False
             for i in range(len(servos)):
                 s = servos[i]
-                t = targets[i] # Target angle is already pre-validated
+                t = targets[i]
                 if s.current_angle != t:
                     step = 1 if t > s.current_angle else -1
                     s.set_angle(s.current_angle + step)
@@ -123,33 +115,32 @@ class PiCarServo:
 `;
 
 Blockly.Python.forBlock['mcu_car_servo'] = function(block, generator) {
-  generator.definitions_['import_board'] = 'import board';
-  generator.definitions_['import_pwmio'] = 'import pwmio';
+  generator.definitions_['import_machine'] = 'import machine';
   generator.definitions_['import_time'] = 'import time';
   generator.definitions_['class_picar_servo'] = SERVO_CLASS_INJECT;
 
-  var pin = block.getFieldValue('PIN');
+  var pin_str = block.getFieldValue('PIN'); // "board.GP12"
+  var pin_num = pin_str.replace('board.GP', '');
   var angle = generator.valueToCode(block, 'ANGLE', Blockly.Python.ORDER_ATOMIC) || '90';
-  var pin_id = pin.replace('board.', '');
 
-  generator.definitions_['init_servo_' + pin_id] = `
-if 'servo_${pin_id}' not in globals():
-    servo_${pin_id} = PiCarServo(${pin})
+  generator.definitions_['init_servo_' + pin_num] = `
+if 'servo_${pin_num}' not in globals():
+    servo_${pin_num} = PiCarServo(${pin_num})
 `;
 
-  return `servo_${pin_id}.set_angle(${angle})\n`;
+  return `servo_${pin_num}.set_angle(${angle})\n`;
 };
 
 Blockly.Python.forBlock['mcu_car_servo_setup'] = function(block, generator) {
   generator.definitions_['class_picar_servo'] = SERVO_CLASS_INJECT;
   
-  var hand = block.getFieldValue('HAND'); // 現在是 "board.GP12" 等格式
+  var hand_str = block.getFieldValue('HAND'); // "board.GP12"
+  var pin_num = hand_str.replace('board.GP', '');
   var min = block.getFieldValue('MIN') || '460';
   var max = block.getFieldValue('MAX') || '2400';
-  var pin_id = hand.replace('board.', '');
   
-  var code = `PiCarServo._TRIM["${pin_id}"] = (${min}, ${max})\n`;
-  code += `if 'servo_${pin_id}' in globals(): servo_${pin_id}.min_us, servo_${pin_id}.max_us = ${min}, ${max}\n`;
+  var code = `PiCarServo._TRIM[${pin_num}] = (${min}, ${max})\n`;
+  code += `if 'servo_${pin_num}' in globals(): servo_${pin_num}.min_us, servo_${pin_num}.max_us = ${min}, ${max}\n`;
   
   return code;
 };
@@ -158,24 +149,21 @@ Blockly.Python.forBlock['mcu_car_hand_range'] = function(block, generator) {
   generator.definitions_['class_picar_servo'] = SERVO_CLASS_INJECT;
   var range = generator.valueToCode(block, 'RANGE', Blockly.Python.ORDER_ATOMIC) || '180';
   return `
-if 'servo_GP12' not in globals(): servo_GP12 = PiCarServo(board.GP12)
-if 'servo_GP13' not in globals(): servo_GP13 = PiCarServo(board.GP13)
-servo_GP12.hand_range = ${range}
-servo_GP13.hand_range = ${range}
+if 'servo_12' not in globals(): servo_12 = PiCarServo(12)
+if 'servo_13' not in globals(): servo_13 = PiCarServo(13)
+servo_12.hand_range = ${range}
+servo_13.hand_range = ${range}
 `;
 };
 
 Blockly.Python.forBlock['mcu_car_in_position'] = function(block, generator) {
-  generator.definitions_['import_board'] = 'import board';
-  generator.definitions_['import_pwmio'] = 'import pwmio';
-  generator.definitions_['import_time'] = 'import time';
+  generator.definitions_['import_machine'] = 'import machine';
   generator.definitions_['class_picar_servo'] = SERVO_CLASS_INJECT;
-  // 確保初始化
   var code = `
-if 'servo_GP12' not in globals(): servo_GP12 = PiCarServo(board.GP12)
-if 'servo_GP13' not in globals(): servo_GP13 = PiCarServo(board.GP13)
-servo_GP12.set_angle(180)
-servo_GP13.set_angle(0)
+if 'servo_12' not in globals(): servo_12 = PiCarServo(12)
+if 'servo_13' not in globals(): servo_13 = PiCarServo(13)
+servo_12.set_angle(180)
+servo_13.set_angle(0)
 `;
   return code;
 };
@@ -185,194 +173,161 @@ Blockly.Python.forBlock['mcu_car_move_hands'] = function(block, generator) {
   var percent = generator.valueToCode(block, 'PERCENT', Blockly.Python.ORDER_ATOMIC) || '50';
   var speed = generator.valueToCode(block, 'SPEED', Blockly.Python.ORDER_ATOMIC) || '8';
   
-  generator.definitions_['import_board'] = 'import board';
-  generator.definitions_['import_pwmio'] = 'import pwmio';
+  generator.definitions_['import_machine'] = 'import machine';
   generator.definitions_['import_time'] = 'import time';
   generator.definitions_['class_picar_servo'] = SERVO_CLASS_INJECT;
 
   var code = `
-if 'servo_GP12' not in globals(): servo_GP12 = PiCarServo(board.GP12)
-if 'servo_GP13' not in globals(): servo_GP13 = PiCarServo(board.GP13)
+if 'servo_12' not in globals(): servo_12 = PiCarServo(12)
+if 'servo_13' not in globals(): servo_13 = PiCarServo(13)
 _p = max(min(${percent}, 100), 0) / 100.0
 _s = max(min(${speed}, 10), 1)
-# Dynamic target based on hand_range: Right (0 -> range), Left (180 -> 180-range)
-_target_R = int(_p * servo_GP13.hand_range)
-_target_L = 180 - int(_p * servo_GP12.hand_range)
+_target_R = int(_p * servo_13.hand_range)
+_target_L = 180 - int(_p * servo_12.hand_range)
 `;
   if (hand === 'BOTH') {
-    code += `PiCarServo.move_sync([servo_GP12, servo_GP13], [_target_L, _target_R], _s)\n`;
+    code += `PiCarServo.move_sync([servo_12, servo_13], [_target_L, _target_R], _s)\n`;
   } else if (hand === 'RIGHT') {
-    code += `servo_GP13.move_smooth(_target_R, _s)\n`;
+    code += `servo_13.move_smooth(_target_R, _s)\n`;
   } else if (hand === 'LEFT') {
-    code += `servo_GP12.move_smooth(_target_L, _s)\n`;
+    code += `servo_12.move_smooth(_target_L, _s)\n`;
   }
   
   return code;
 };
 
 Blockly.Python.forBlock['mcu_car_ultrasonic'] = function(block, generator) {
-  generator.definitions_['import_board'] = 'import board';
-  generator.definitions_['import_digitalio'] = 'import digitalio';
+  generator.definitions_['import_machine'] = 'import machine';
   generator.definitions_['import_time'] = 'import time';
 
-  // Inject UltrasonicHelper
   generator.definitions_['class_ultrasonic'] = `
 class UltrasonicHelper:
     def __init__(self, trig_pin, echo_pin):
-        self.trig = digitalio.DigitalInOut(trig_pin)
-        self.trig.direction = digitalio.Direction.OUTPUT
-        self.echo = digitalio.DigitalInOut(echo_pin)
-        self.echo.direction = digitalio.Direction.INPUT
+        self.trig = machine.Pin(trig_pin, machine.Pin.OUT)
+        self.echo = machine.Pin(echo_pin, machine.Pin.IN)
 
     def get_distance(self):
-        self.trig.value = False
-        time.sleep(0.000002)
-        self.trig.value = True
-        time.sleep(0.00001)
-        self.trig.value = False
+        time.sleep_ms(20)  # Wait for sensor to settle
+        self.trig.low()
+        time.sleep_us(2)
+        self.trig.high()
+        time.sleep_us(10)
+        self.trig.low()
         
-        # Timeout after 30ms (approx 5 meters)
-        timeout = time.monotonic() + 0.03
-        while not self.echo.value:
-            if time.monotonic() > timeout: return -1.0
-        
-        start = time.monotonic_ns()
-        while self.echo.value:
-            if time.monotonic() > timeout: return -1.0
-        end = time.monotonic_ns()
-        
-        return round((end - start) / 1000000 * 34.3 / 2, 2)
+        # machine.time_pulse_us returns duration in microseconds
+        try:
+            pulse_time = machine.time_pulse_us(self.echo, 1, 30000)
+            if pulse_time < 0: return 10000
+            return round(pulse_time * 0.0343 / 2, 2)
+        except:
+            return 10000
 `;
 
-  var trig = block.getFieldValue('TRIG');
-  var echo = block.getFieldValue('ECHO');
-  var trig_id = trig.replace('board.', '');
-  var echo_id = echo.replace('board.', '');
-  var instance_name = 'ultrasonic_' + trig_id + '_' + echo_id;
+  var trig_str = block.getFieldValue('TRIG');
+  var echo_str = block.getFieldValue('ECHO');
+  var trig_num = trig_str.replace('board.GP', '');
+  var echo_num = echo_str.replace('board.GP', '');
+  var instance_name = 'ultrasonic_' + trig_num + '_' + echo_num;
 
   generator.definitions_['init_' + instance_name] = `
 if '${instance_name}' not in globals():
-    ${instance_name} = UltrasonicHelper(${trig}, ${echo})
+    ${instance_name} = UltrasonicHelper(${trig_num}, ${echo_num})
 `;
 
   return [instance_name + ".get_distance()", Blockly.Python.ORDER_FUNCTION_CALL];
 };
 
 Blockly.Python.forBlock['mcu_car_check_color'] = function(block, generator) {
-  generator.definitions_['import_board'] = 'import board';
-  generator.definitions_['import_digitalio'] = 'import digitalio';
+  generator.definitions_['import_machine'] = 'import machine';
   generator.definitions_['import_time'] = 'import time';
 
-  var pin = block.getFieldValue('PIN');
-  var pin_id = pin.replace('board.', '');
-  var irVar = 'ir_d_' + pin_id;
-
+  var pin_str = block.getFieldValue('PIN');
+  var pin_num = pin_str.replace('board.GP', '');
+  var irVar = 'ir_d_' + pin_num;
 
   generator.definitions_['init_' + irVar] = 
     "if '" + irVar + "' not in globals():\n" +
-    "    " + irVar + " = digitalio.DigitalInOut(" + pin + ")\n" +
-    "    " + irVar + ".direction = digitalio.Direction.INPUT";
+    "    " + irVar + " = machine.Pin(" + pin_num + ", machine.Pin.IN, machine.Pin.PULL_UP)";
 
-  var comment = " # sleep 傳回 None，故必執行 or 後方讀取邏輯";
-  // Maker Pi IR is 1 when Black, 0 when White.
-  // We want to return 0 for Black, 1 for White to match the block label.
-  var code = "(time.sleep(0.001) or (0 if " + irVar + ".value else 1))" + comment;
+  var code = "(time.sleep_ms(1) or (0 if " + irVar + ".value() else 1))";
   return [code, 6]; 
 };
 
 Blockly.Python.forBlock['mcu_car_check_gray'] = function(block, generator) {
-  generator.definitions_['import_board'] = 'import board';
-  generator.definitions_['import_analogio'] = 'import analogio';
+  generator.definitions_['import_machine'] = 'import machine';
   generator.definitions_['import_time'] = 'import time';
 
-  var pin = block.getFieldValue('PIN');
-  var pin_id = pin.replace('board.', '');
-  var irVar = 'ir_a_' + pin_id;
+  var pin_str = block.getFieldValue('PIN');
+  var pin_num = pin_str.replace('board.GP', '');
+  var irVar = 'ir_a_' + pin_num;
 
   generator.definitions_['init_' + irVar] = 
     "if '" + irVar + "' not in globals():\n" +
-    "    " + irVar + " = analogio.AnalogIn(" + pin + ")";
+    "    " + irVar + " = machine.ADC(machine.Pin(" + pin_num + "))";
 
-  // 註解說明：sleep 傳回 None (Falsy)，故必執行 or 後方的讀取邏輯
-  var comment = " # sleep 傳回 None，故必執行 or 後方讀取邏輯";
-  // CircuitPython 0-65535 map to 0-1023
-  // piBlockly return (1023 - IR_A) where 0 is black.
-  return
-  var code = "(time.sleep(0.001) or (1023 - int(" + irVar + ".value * 1023 / 65535)))" + comment;
+  // MicroPython ADC is 0-65535, map to 0-1023
+  var code = "(time.sleep_ms(1) or (1023 - int(" + irVar + ".read_u16() * 1023 / 65535)))";
   return [code, 6];
 };
-// --- Music Engine ---
+
 const MUSIC_ENGINE_INJECT = `
 class MusicEngine:
-    def __init__(self, pin):
-        import pwmio
-        self.buzzer = pwmio.PWMOut(pin, variable_frequency=True)
+    def __init__(self, pin_num):
+        self.buzzer = machine.PWM(machine.Pin(pin_num))
         self.tempo = 120
-        self.volume = 50 # Default 50%
+        self.volume = 50 
         self.note_map = {"C":0, "CS":1, "D":2, "DS":3, "E":4, "F":5, "FS":6, "G":7, "GS":8, "A":9, "AS":10, "B":11, "R":-1}
 
     def get_freq(self, note, octave):
         if note == "R": return 0
         semi = self.note_map.get(note, 0)
-        # A4 = 440Hz, A4 is octave 4, semi 9
-        # freq = 440 * 2^((n-45)/12)
         n = octave * 12 + semi
         return int(440 * (2 ** ((n - 57) / 12)))
 
     def play(self, freq, duration_ms):
         if freq > 0:
-            self.buzzer.frequency = freq
-            # Map 0-100 to 0-32768 (0-50% Duty Cycle for volume control)
-            self.buzzer.duty_cycle = int(max(min(self.volume, 100), 0) * 327.68)
-        time.sleep(duration_ms / 1000)
-        self.buzzer.duty_cycle = 0
-        time.sleep(0.01) # Staccato gap
+            self.buzzer.freq(freq)
+            # Map 0-100 to 0-32768
+            self.buzzer.duty_u16(int(max(min(self.volume, 100), 0) * 327.68))
+        time.sleep_ms(duration_ms)
+        self.buzzer.duty_u16(0)
+        time.sleep_ms(10) 
 
     def parse_and_play(self, melody_str):
         import re
-        # Simplified regex for CircuitPython compatibility
-        # Group 1: Note (A-G or R), Group 2: Octave (optional), Group 3: Raw Duration string
         pattern = r"([A-GR][#S]?)([0-8])?([WHQEST\._T\+]+)"
         dur_map = {"W":4.0, "H":2.0, "Q":1.0, "E":0.5, "S":0.25, "T":0.125}
-        
         for part in melody_str.replace(",", " ").split():
             m = re.match(pattern, part.upper())
             if m:
-                # Standardize Sharp: C# or CS -> CS
                 note = m.group(1).replace("#", "S")
                 octave = int(m.group(2)) if m.group(2) else 4
-                
-                # Parse multiple durations (Ties) manually using split
                 total_dur = 0
                 for d_part in m.group(3).split("+"):
                     if not d_part: continue
-                    # Take first char as duration identifier
                     base_dur = dur_map.get(d_part[0], 1.0)
                     if "." in d_part: base_dur *= 1.5
                     if "_T" in d_part: base_dur *= 0.666
                     total_dur += base_dur
-                
                 ms = (60000 / self.tempo) * total_dur
                 self.play(self.get_freq(note, octave), int(ms))
-            else:
-                print(f"Warning: Invalid note format '{part}'")
 `;
 
 Blockly.Python.forBlock['mcu_car_set_tempo'] = function(block, generator) {
   var bpm = generator.valueToCode(block, 'BPM', Blockly.Python.ORDER_ATOMIC) || '120';
-  generator.definitions_['import_board'] = 'import board';
+  generator.definitions_['import_machine'] = 'import machine';
   generator.definitions_['import_time'] = 'import time';
   generator.definitions_['class_music_engine'] = MUSIC_ENGINE_INJECT;
-  generator.definitions_['init_music'] = "if 'music' not in globals(): music = MusicEngine(board.GP22)";
+  generator.definitions_['init_music'] = "if 'music' not in globals(): music = MusicEngine(22)";
   return `music.tempo = ${bpm}\n`;
 };
 
 Blockly.Python.forBlock['mcu_car_set_volume'] = function(block, generator) {
   var vol = generator.valueToCode(block, 'VOL', Blockly.Python.ORDER_ATOMIC) || '50';
-  generator.definitions_['import_board'] = 'import board';
+  generator.definitions_['import_machine'] = 'import machine';
   generator.definitions_['import_time'] = 'import time';
   generator.definitions_['class_music_engine'] = MUSIC_ENGINE_INJECT;
-  generator.definitions_['init_music'] = "if 'music' not in globals(): music = MusicEngine(board.GP22)";
+  generator.definitions_['init_music'] = "if 'music' not in globals(): music = MusicEngine(22)";
   return `music.volume = ${vol}\n`;
 };
 
@@ -383,10 +338,10 @@ Blockly.Python.forBlock['mcu_car_play_note'] = function(block, generator) {
   var dotted = block.getFieldValue('DOTTED') === 'TRUE';
   var triplet = block.getFieldValue('TRIPLET') === 'TRUE';
 
-  generator.definitions_['import_board'] = 'import board';
+  generator.definitions_['import_machine'] = 'import machine';
   generator.definitions_['import_time'] = 'import time';
   generator.definitions_['class_music_engine'] = MUSIC_ENGINE_INJECT;
-  generator.definitions_['init_music'] = "if 'music' not in globals(): music = MusicEngine(board.GP22)";
+  generator.definitions_['init_music'] = "if 'music' not in globals(): music = MusicEngine(22)";
 
   var code = `_dur = (60000 / music.tempo) * ${durRatio}`;
   if (dotted) code += " * 1.5";
@@ -396,46 +351,40 @@ Blockly.Python.forBlock['mcu_car_play_note'] = function(block, generator) {
 
 Blockly.Python.forBlock['mcu_car_play_melody'] = function(block, generator) {
   var melody = block.getFieldValue('MELODY');
-  generator.definitions_['import_board'] = 'import board';
+  generator.definitions_['import_machine'] = 'import machine';
   generator.definitions_['import_time'] = 'import time';
   generator.definitions_['class_music_engine'] = MUSIC_ENGINE_INJECT;
-  generator.definitions_['init_music'] = "if 'music' not in globals(): music = MusicEngine(board.GP22)";
+  generator.definitions_['init_music'] = "if 'music' not in globals(): music = MusicEngine(22)";
   return `music.parse_and_play(${JSON.stringify(melody)})\n`;
 };
 
 Blockly.Python.forBlock['mcu_car_tone'] = function(block, generator) {
   var freq = generator.valueToCode(block, 'FREQ', Blockly.Python.ORDER_ATOMIC) || '440';
   var ms = generator.valueToCode(block, 'MS', Blockly.Python.ORDER_ATOMIC) || '500';
-  generator.definitions_['import_board'] = 'import board';
+  generator.definitions_['import_machine'] = 'import machine';
   generator.definitions_['import_time'] = 'import time';
   generator.definitions_['class_music_engine'] = MUSIC_ENGINE_INJECT;
-  generator.definitions_['init_music'] = "if 'music' not in globals(): music = MusicEngine(board.GP22)";
+  generator.definitions_['init_music'] = "if 'music' not in globals(): music = MusicEngine(22)";
   return `music.play(${freq}, ${ms})\n`;
 };
 
 Blockly.Python.forBlock['mcu_car_no_tone'] = function(block, generator) {
-  generator.definitions_['init_music'] = "if 'music' not in globals(): music = MusicEngine(board.GP22)";
-  return "music.buzzer.duty_cycle = 0\n";
+  generator.definitions_['init_music'] = "if 'music' not in globals(): music = MusicEngine(22)";
+  return "music.buzzer.duty_u16(0)\n";
 };
 
 Blockly.Python.forBlock['mcu_car_note_freq'] = function(block, generator) {
   var note = block.getFieldValue('NOTE');
   var octave = block.getFieldValue('OCTAVE');
   generator.definitions_['class_music_engine'] = MUSIC_ENGINE_INJECT;
-  generator.definitions_['init_music'] = "if 'music' not in globals(): music = MusicEngine(board.GP22)";
+  generator.definitions_['init_music'] = "if 'music' not in globals(): music = MusicEngine(22)";
   return [`music.get_freq("${note}", ${octave})`, Blockly.Python.ORDER_FUNCTION_CALL];
 };
 
-// --- NeoPixel LED ---
-Blockly.Msg["CAR_SET_LED"] = "設定內建 NeoPixel 燈 %1 顏色 %2";
-Blockly.Msg["CAR_LED_ALL"] = "全部";
-Blockly.Msg["CAR_LED_LEFT"] = "左 (0)";
-Blockly.Msg["CAR_LED_RIGHT"] = "右 (1)";
-
 Blockly.Python.forBlock['mcu_car_set_led_color'] = function(block, generator) {
-  generator.definitions_['import_board'] = 'import board';
+  generator.definitions_['import_machine'] = 'import machine';
   generator.definitions_['import_neopixel'] = 'import neopixel';
-  generator.definitions_['init_np'] = "if 'np' not in globals(): np = neopixel.NeoPixel(board.GP18, 2)";
+  generator.definitions_['init_np'] = "if 'np' not in globals(): np = neopixel.NeoPixel(machine.Pin(18), 2)";
   
   var idx = block.getFieldValue('LED_INDEX');
   var color = block.getFieldValue('COLOR');
@@ -444,68 +393,53 @@ Blockly.Python.forBlock['mcu_car_set_led_color'] = function(block, generator) {
   var b = parseInt(color.substring(5, 7), 16);
 
   if (idx === 'ALL') {
-    return `np.fill((${r}, ${g}, ${b}))\nnp.show()\n`;
+    return `np.fill((${r}, ${g}, ${b}))\nnp.write()\n`;
   }
-  return `np[${idx}] = (${r}, ${g}, ${b})\nnp.show()\n`;
+  return `np[${idx}] = (${r}, ${g}, ${b})\nnp.write()\n`;
 };
 
 Blockly.Python.forBlock['mcu_car_wait_start'] = function(block, generator) {
-  generator.definitions_['import_board'] = 'import board';
-  generator.definitions_['import_digitalio'] = 'import digitalio';
+  generator.definitions_['import_machine'] = 'import machine';
   generator.definitions_['import_time'] = 'import time';
 
-  var pin = block.getFieldValue('PIN');
-  var pin_id = pin.replace('board.', '');
+  var pin_str = block.getFieldValue('PIN');
+  var pin_num = pin_str.replace('board.GP', '');
 
-  generator.definitions_['init_btn_' + pin_id] = `
-if 'btn_${pin_id}' not in globals():
-    btn_${pin_id} = digitalio.DigitalInOut(${pin})
-    btn_${pin_id}.direction = digitalio.Direction.INPUT
-    btn_${pin_id}.pull = digitalio.Pull.UP
+  generator.definitions_['init_btn_' + pin_num] = `
+if 'btn_${pin_num}' not in globals():
+    btn_${pin_num} = machine.Pin(${pin_num}, machine.Pin.IN, machine.Pin.PULL_UP)
 `;
 
   return `print("${Blockly.Msg["CAR_WAIT_KEY_MSG"]}")
-while btn_${pin_id}.value:
-${generator.INDENT}time.sleep(0.01) ${Blockly.Msg["CAR_DEBOUNCE_COMMENT"]}
-time.sleep(0.5) ${Blockly.Msg["CAR_HAND_OFF_COMMENT"]}
+while btn_${pin_num}.value():
+    time.sleep(0.01)
+time.sleep(0.5)
 `;
 };
 
 Blockly.Python.forBlock['mcu_car_set_led_io'] = function(block, generator) {
-  generator.definitions_['import_board'] = 'import board';
-  generator.definitions_['import_digitalio'] = 'import digitalio';
-
+  generator.definitions_['import_machine'] = 'import machine';
   var pin_val = generator.valueToCode(block, 'PIN', Blockly.Python.ORDER_ATOMIC) || '0';
   var state = generator.valueToCode(block, 'STATE', Blockly.Python.ORDER_ATOMIC) || 'True';
-
-  // 使用字典管理動態腳位，避免重複初始化
   generator.definitions_['init_led_map'] = "if '_LED_MAP' not in globals(): _LED_MAP = {}";
 
   return `
 _p_id = int(${pin_val})
 if _p_id not in _LED_MAP:
-    _p_obj = getattr(board, f"GP{_p_id}")
-    _LED_MAP[_p_id] = digitalio.DigitalInOut(_p_obj)
-    _LED_MAP[_p_id].direction = digitalio.Direction.OUTPUT
-_LED_MAP[_p_id].value = ${state}
+    _LED_MAP[_p_id] = machine.Pin(_p_id, machine.Pin.OUT)
+_LED_MAP[_p_id].value(1 if ${state} else 0)
 `;
 };
 
 Blockly.Python.forBlock['mcu_car_button_pressed'] = function(block, generator) {
-  generator.definitions_['import_board'] = 'import board';
-  generator.definitions_['import_digitalio'] = 'import digitalio';
+  generator.definitions_['import_machine'] = 'import machine';
+  var pin_str = block.getFieldValue('PIN');
+  var pin_num = pin_str.replace('board.GP', '');
 
-  var pin = block.getFieldValue('PIN');
-  var pin_id = pin.replace('board.', '');
-
-  // 注入初始化代碼 (上拉電阻模式)
-  generator.definitions_['init_btn_' + pin_id] = `
-if 'btn_${pin_id}' not in globals():
-    btn_${pin_id} = digitalio.DigitalInOut(${pin})
-    btn_${pin_id}.direction = digitalio.Direction.INPUT
-    btn_${pin_id}.pull = digitalio.Pull.UP
+  generator.definitions_['init_btn_' + pin_num] = `
+if 'btn_${pin_num}' not in globals():
+    btn_${pin_num} = machine.Pin(${pin_num}, machine.Pin.IN, machine.Pin.PULL_UP)
 `;
 
-  // 因為是 Active Low，所以按下時 value 為 False，需取反
-  return ["(not btn_" + pin_id + ".value)", Blockly.Python.ORDER_LOGICAL_NOT];
+  return ["(not btn_" + pin_num + ".value())", Blockly.Python.ORDER_LOGICAL_NOT];
 };

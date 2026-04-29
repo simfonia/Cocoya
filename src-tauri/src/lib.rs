@@ -144,11 +144,12 @@ fn get_module_toolbox(handle: tauri::AppHandle, path: String) -> Result<String, 
 async fn open_file(handle: tauri::AppHandle, state: State<'_, AppState>) -> Result<OpenFileResult, String> {
     let file_path = handle.dialog().file().add_filter("Cocoya XML", &["xml"]).blocking_pick_file();
 
-    if let Some(path) = file_path {
+    if let Some(p) = file_path {
+        let path = p.into_path().map_err(|_| "Failed to parse path".to_string())?;
         let xml = fs::read_to_string(&path).map_err(|e| e.to_string())?;
         let filename = path.file_name().unwrap().to_str().unwrap().to_string();
         
-        let platform = if xml.contains("platform=\"CircuitPython\"") { "CircuitPython" } else { "PC" };
+        let platform = if xml.contains("platform=\"MicroPython\"") { "MicroPython" } else { "PC" };
 
         // --- 檢查實體備份 ---
         let mut backup_xml = None;
@@ -164,7 +165,7 @@ async fn open_file(handle: tauri::AppHandle, state: State<'_, AppState>) -> Resu
 
         {
             let mut current = state.current_path.lock().unwrap();
-            *current = Some(path.into());
+            *current = Some(path);
         }
 
         Ok(OpenFileResult {
@@ -243,14 +244,15 @@ fn reject_recovery(state: State<'_, AppState>) -> Result<(), String> {
 #[tauri::command]
 async fn reset_firmware(handle: tauri::AppHandle, model: String, should_clear: bool) -> Result<(), String> {
     // 1. 定位韌體源檔案
-    let uf2_file = if model == "custom" {
-        handle.dialog().file()
+    let uf2_file: std::path::PathBuf = if model == "custom" {
+        let picked = handle.dialog().file()
             .add_filter("UF2 Firmware", &["uf2"])
             .blocking_pick_file()
-            .ok_or_else(|| "Canceled".to_string())?
+            .ok_or_else(|| "Canceled".to_string())?;
+        picked.into_path().map_err(|_| "Failed to parse firmware path".to_string())?
     } else {
         let firmware_dir = handle.path().resolve(
-            format!("resources/firmware/CircuitPython/{}", model),
+            format!("resources/firmware/MicroPython/{}", model),
             tauri::path::BaseDirectory::Resource
         ).map_err(|e| e.to_string())?;
 
@@ -322,7 +324,8 @@ async fn save_file(handle: tauri::AppHandle, state: State<'_, AppState>, xml: St
             .blocking_save_file();
         
         if let Some(p) = picked {
-            path_to_save = Some(p.into());
+            let path = p.into_path().map_err(|_| "Failed to parse save path".to_string())?;
+            path_to_save = Some(path);
         } else {
             return Err("Canceled".into());
         }
@@ -349,11 +352,33 @@ fn get_serial_ports() -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
+async fn setup_stable_mode(handle: tauri::AppHandle, port: String) -> Result<(), String> {
+    let python_path = "python"; 
+    let script_path = if cfg!(debug_assertions) {
+        std::env::current_dir().unwrap().join("resources/deploy_mcu.py")
+    } else {
+        handle.path().resolve("resources/deploy_mcu.py", tauri::path::BaseDirectory::Resource).unwrap()
+    };
+
+    Command::new(python_path)
+        .arg(script_path)
+        .arg(port)
+        .arg("--setup-stable")
+        .arg("--lang")
+        .arg("zh-hant")
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
 async fn deploy_mcu(
     handle: tauri::AppHandle,
     python_path: String,
     port: String,
     code: String,
+    serial_upload_only: bool,
 ) -> Result<(), String> {
     // 1. 準備暫存檔案
     let temp_dir = std::env::temp_dir().join("cocoya_tauri");
@@ -379,21 +404,65 @@ async fn deploy_mcu(
         }
     };
 
-    // 3. 執行部署程序 (使用 --no-monitor 以便獲取結束狀態)
-    let output = Command::new(&python_path)
-        .arg(&deployer_path)
-        .arg(&port)
-        .arg(&script_path)
-        .arg("--no-monitor")
-        .output()
-        .map_err(|e| format!("Failed to execute deployer: {}", e))?;
+    // 3. 執行部署程序
+    let mut cmd = Command::new(&python_path);
+    cmd.arg(&deployer_path).arg(&port).arg(&script_path).arg("--no-monitor");
+    
+    if serial_upload_only {
+        cmd.arg("--serial-only");
+    }
+
+    let output = cmd.output().map_err(|e| format!("Failed to execute deployer: {}", e))?;
 
     if output.status.success() {
         Ok(())
     } else {
-        let err = String::from_utf8_lossy(&output.stdout); // deploy_mcu.py 的錯誤訊息可能在 stdout
+        let err = String::from_utf8_lossy(&output.stdout);
         Err(format!("Deployment failed: {}", err))
     }
+}
+
+#[tauri::command]
+async fn open_serial_monitor(handle: tauri::AppHandle, port: String) -> Result<(), String> {
+    let python_path = "python"; 
+    let script_path = if cfg!(debug_assertions) {
+        std::env::current_dir().unwrap().join("resources/deploy_mcu.py")
+    } else {
+        handle.path().resolve("resources/deploy_mcu.py", tauri::path::BaseDirectory::Resource).unwrap()
+    };
+
+    let lang = "zh-hant"; 
+
+    Command::new(python_path)
+        .arg(script_path)
+        .arg(port)
+        .arg("--monitor-only")
+        .arg("--lang")
+        .arg(lang)
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+#[tauri::command]
+async fn erase_filesystem(handle: tauri::AppHandle, port: String) -> Result<(), String> {
+    let python_path = "python"; 
+    let script_path = if cfg!(debug_assertions) {
+        std::env::current_dir().unwrap().join("resources/deploy_mcu.py")
+    } else {
+        handle.path().resolve("resources/deploy_mcu.py", tauri::path::BaseDirectory::Resource).unwrap()
+    };
+
+    Command::new(python_path)
+        .arg(script_path)
+        .arg(port)
+        .arg("--erase-filesystem")
+        .arg("--lang")
+        .arg("zh-hant")
+        .spawn()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -415,6 +484,9 @@ pub fn run() {
             save_file,
             get_serial_ports,
             deploy_mcu,
+            open_serial_monitor,
+            setup_stable_mode,
+            erase_filesystem,
             auto_backup,
             clear_backup,
             reject_recovery,

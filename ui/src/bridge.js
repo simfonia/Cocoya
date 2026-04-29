@@ -95,7 +95,7 @@ const CocoyaBridge = {
                     if (this.isVsCode) {
                         this.vscode.postMessage({ command, ...data });
                     } else if (this.isTauri) {
-                        if (data.platform === 'CircuitPython') {
+                        if (data.platform === 'MicroPython') {
                             await tauriInvoke('deploy_mcu', {
                                 pythonPath: localStorage.getItem('pythonPath') || 'python',
                                 port: data.serialPort,
@@ -221,7 +221,7 @@ const CocoyaBridge = {
                     if (this.isVsCode) {
                         this.vscode.postMessage({ command, ...data });
                     } else if (this.isTauri) {
-                        const { ask, message } = await import('@tauri-apps/api/plugin-dialog');
+                        const { ask, message } = await import('@tauri-apps/plugin-dialog');
                         if (command === 'alert') {
                             await message(data.message, { title: 'Cocoya', kind: 'info' });
                         } else {

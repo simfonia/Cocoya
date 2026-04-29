@@ -35,7 +35,7 @@ Blockly.Msg["CAR_HAND_RIGHT"] = "右手 (GP13)";
 
 // πCar Sensor System
 Blockly.Msg["CAR_ULTRASONIC"] = "讀取超音波距離 (公分) Trig %1 Echo %2";
-Blockly.Msg["CAR_ULTRASONIC_TOOLTIP"] = "使用 HC-SR04 超音波感測器測量障礙物距離。";
+Blockly.Msg["CAR_ULTRASONIC_TOOLTIP"] = "使用 HC-SR04 超音波感測器測量障礙物距離(cm)。 約 420 cm 以上無法測得，將傳回 10000。";
 Blockly.Msg["CAR_CHECK_COLOR"] = "偵測循跡顏色 (腳位 %1) [0:黑, 1:白]";
 Blockly.Msg["CAR_CHECK_COLOR_TOOLTIP"] = "讀取循跡感測器的數位訊號。回傳 0 代表黑色，1 代表白色。";
 Blockly.Msg["CAR_CHECK_GRAY"] = "偵測循跡灰階值 (腳位 %1) [0-1023]";

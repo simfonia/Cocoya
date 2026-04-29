@@ -1,4 +1,4 @@
-<xml xmlns="https://developers.google.com/blockly/xml" platform="CircuitPython">
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
   <variables>
     <variable id="#a}}{,q47GkbYX!9)6%2">distance</variable>
     <variable id="uXiA3]JB)+5oHTarh{Fv">color</variable>

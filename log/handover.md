@@ -139,7 +139,7 @@
     - **穩定性革命**：實作全局 SVG 屬性攔截器，徹底解決 NaN 報錯與積木刪除時的同步崩潰問題。
 - **下一階段目標**：
     - 進入里程碑 v3.1 剩餘部分：實作 TinyML 資料採集面板。
-    - 進入里程碑 v4.0：跨平台（Linux/macOS）序列埠路徑適配。
+    - 進入里程碑 v4.0：跨平台（Linux/macOS）序列埠路徑適適配。
 - **目前狀態**：編輯器已具備專業 IDE 級別的導航與搜尋能力，硬體控制精度達到工業級。
 
 ## 2026-03-02 Webview 重構與基礎腳位補完 (里程碑 v3.1 強化)
@@ -178,7 +178,7 @@
         - **分叉保護 (Forking)**：實作拒絕恢復時自動改名封存（`.bak.old_[timestamp]`），防止舊進度覆蓋心血。
         - **雙模式適配**：同步完成 VS Code Extension 與 Tauri 獨立版的備份對接。
     - **Tauri 後端強化**：
-        - 實作 `get_serial_ports`, `deploy_mcu`, `auto_backup`, `clear_backup`, `reject_recovery` 等 Rust 指令。
+        - 實作 `get_serial_ports`, `deploy_mcu`, `auto_backup`, `clear_backup`, `reject_recovery` 等 Rust 指令.
         - 智慧偵測：啟動時自動掃描系統 `temp` 下的未命名備份並推播至前端。
     - **UI/UX 精進**：
         - 設定按鈕升級為下拉選單，引入 Python Logo 圖示與深色主題適配。
@@ -186,3 +186,15 @@
 - **關鍵維護**：
     - 更新 `variables_blocks.js` 棄用 API，對齊 Blockly 最新版本。
 - **目前狀態**：系統已具備極高的資料安全性，Tauri 獨立版功能已接近 VSIX 版，準備進入封裝測試階段。
+
+## 2026-04-29 全面遷移至 MicroPython (里程碑 v6.0 啟動)
+- **進度**：正式放棄 CircuitPython (USB MSC) 模式，全面遷移至 **MicroPython (Serial REPL)** 模式。
+- **核心進度**：
+    - **部署工具革命**：重寫 `deploy_mcu.py`，改採全序列埠 Raw REPL 推送代碼。徹底解決 Windows 磁碟鎖定、毀損與權限衝突問題。
+    - **硬體產生器換血**：完成 `machine` 模組遷移。重寫馬達、舵機、超音波、音樂引擎與 Camera 驅動邏輯。
+    - **介面大整頓**：重新設計設定選單，建立「韌體設定」子選單。移除過時的 USB 鎖定與穩定模式補丁功能。
+    - **維修工具補完**：實作一鍵「深度修復磁碟 (Erase Filesystem)」，並加入後端終端機自動清理機制，避免 COM 埠衝突。
+- **下一階段目標**：
+    - 補完 MicroPython 模式下的範例專案。
+    - 準備各型號板子的 MicroPython 韌體資源包。
+- **目前狀態**：核心上傳機制已達到前所未有的穩定性。

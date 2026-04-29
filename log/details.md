@@ -280,3 +280,29 @@ efreshMinimap 進行強制同步。
 - **設定選單升級**：將原有的設定齒輪按鈕重構為可擴充的下拉選單 (Dropdown Menu)，支援深色主題適配與「隱形橋樑」滑鼠防斷觸。
 - **API 相容性**：將 `variables_blocks.js` 中的棄用 API 更新為 `workspace.getVariableMap().getAllVariables()`。
 - **路徑轉換修正**：優化 `extension.ts` 的路徑替換 Regex，確保所有 `src` 與 `href` 無論是否帶有領頭斜槓，都能正確映射至 Webview 資源路徑。
+
+## 關鍵技術實作紀錄 (2026-04-29 更新)
+
+### 1. MicroPython Raw REPL 推送協議
+- **協議手順**：
+    1. `\x03\x03` (Ctrl+C)：中斷目前運行的程式。
+    2. `\x01` (Ctrl+A)：進入 Raw REPL 模式。
+    3. `f=open("main.py","w");f.write(...)`：將代碼字節流推入 Flash。使用 `repr(code)` 處理換行與引號轉義，確保複雜程式碼不崩潰。
+    4. `\x02\x04` (Ctrl+B/D)：退出 Raw 模式並執行 Soft Reboot。
+- **優點**：完全避開作業系統對隨身碟的檔案系統管理，即插即傳，永不鎖死。
+
+### 2. 硬體抽象層 (HAL) 的 MicroPython 適配
+- **模組替換**：棄用 `board` 庫，全面改採 `machine.Pin`。
+- **腳位定義**：採用整數編號（如 `machine.Pin(8)`）代替 `board.GP8`，增加跨平台通用性。
+- **音樂引擎**：將 PWM 寫入權從頻率控制改為 `duty_u16` 控制，並優化了時值解析器以適配 MP。
+
+### 3. 序列埠搶佔保護 (Terminal Preemption)
+- **問題**：監控器 (Monitor) 開啟時，部署工具因無法開啟 COM 埠而報 `PermissionError`。
+- **解決**：在 `extension.ts` 實作 `stopAllCocoyaTerminals()`。執行維護指令前，先發送 Ctrl+C 中斷舊任務並 `dispose()` 舊視窗，強迫釋放 Serial 控制權。
+
+### 4. 深度磁碟修復 (Erase FS) 實作
+- **邏輯**：透過序列埠發送 `import storage; storage.erase_filesystem()` (針對 CP) 或 `import os; os.remove(...)` 執行訊號，解決了先前指令停留在緩衝區而無動作的問題。
+
+### 5. CSS 巢狀子選單 (Nested Dropdown)
+- **視覺**：實作 `.dropdown-submenu` 並搭配 `.submenu-content` 的絕對定位。
+- **優化**：加入偽元素 `::before` 適作為隱形橋樑，防止滑鼠在主、子選單移動過程中的 1px 間隙導致選單收合，優化了教學現場的操作流暢度。
