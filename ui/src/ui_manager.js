@@ -157,17 +157,19 @@ window.CocoyaUI = {
     applyI18n: function() {
         if (typeof Blockly === 'undefined') return;
         
-        // 擴大掃描範圍，包含 p, button 等常用標籤
-        const elements = document.querySelectorAll('[title^="%{BKY_"], span, p, button, option');
-        elements.forEach(el => {
-            // 1. 處理 Tooltip (title)
+        // 1. 處理 Tooltip (title) - 獨立處理，不影響內容
+        const titleElements = document.querySelectorAll('[title^="%{BKY_"]');
+        titleElements.forEach(el => {
             const title = el.getAttribute('title');
             if (title && title.startsWith('%{BKY_')) {
                 const key = title.substring(6, title.length - 1);
                 if (Blockly.Msg[key]) el.setAttribute('title', Blockly.Msg[key]);
             }
-            
-            // 2. 處理文字內容 (textContent)
+        });
+
+        // 2. 處理文字內容 (textContent) - 僅限葉子節點標籤，避免誤刪容器內的 img
+        const textElements = document.querySelectorAll('span, p, button, option');
+        textElements.forEach(el => {
             const text = el.textContent.trim();
             if (text && text.startsWith('%{BKY_')) {
                 const key = text.substring(6, text.length - 1);
@@ -195,13 +197,27 @@ window.CocoyaUI = {
             return;
         }
 
-        ports.forEach(port => {
+        ports.forEach(p => {
             const opt = document.createElement('option');
-            opt.value = port;
-            opt.textContent = port;
-            if (port === currentVal) opt.selected = true;
+            // 兼容舊有的 string 格式與新的物件格式
+            const portValue = typeof p === 'string' ? p : p.port;
+            const portLabel = typeof p === 'string' ? p : p.label;
+            
+            opt.value = portValue;
+            opt.textContent = portLabel;
+            if (portValue === currentVal) {
+                opt.selected = true;
+                // 同步將完整名稱設為 selector 的 title，讓 hover 時能看完整名字
+                selector.setAttribute('title', portLabel);
+            }
             selector.appendChild(opt);
         });
+
+        // 監聽改變事件，同步更新 title
+        selector.onchange = (e) => {
+            const selectedOpt = selector.options[selector.selectedIndex];
+            if (selectedOpt) selector.setAttribute('title', selectedOpt.textContent);
+        };
     },
 
     /**
@@ -227,12 +243,24 @@ window.CocoyaUI = {
      * @param {string} platform 
      */
     updateSettingsMenu: function(platform) {
+        const group = document.getElementById('group-firmware-settings');
         const resetBtn = document.getElementById('btn-reset-firmware');
-        if (!resetBtn) return;
+        const eraseBtn = document.getElementById('btn-erase-filesystem');
         
         const isMCU = (platform === 'MCU' || platform === 'MicroPython');
-        // 只有 MCU 模式才顯示重置韌體選項
-        resetBtn.style.display = isMCU ? 'flex' : 'none';
+        
+        // 切換整個群組的顯示狀態
+        if (group) group.style.display = isMCU ? 'block' : 'none';
+
+        // 同時切換分隔線 (如果有的話)
+        const separator = group?.previousElementSibling;
+        if (separator && separator.classList.contains('dropdown-separator')) {
+            separator.style.display = isMCU ? 'block' : 'none';
+        }
+
+        // 只有 MCU 模式才顯示重置與修復內容
+        if (resetBtn) resetBtn.style.display = isMCU ? 'flex' : 'none';
+        if (eraseBtn) eraseBtn.style.display = isMCU ? 'flex' : 'none';
     },
 
     /**
@@ -355,13 +383,13 @@ window.CocoyaUI = {
         const scrollCheck = document.getElementById('scroll-options-check');
         if (scrollOptionsBtn && scrollCheck) {
             const updateCheckUI = () => {
-                const isEnabled = localStorage.getItem('cocoya_use_scroll_plugin') !== 'false'; // 預設開啟
+                const isEnabled = localStorage.getItem('cocoya_use_scroll_plugin') === 'true'; // 預設關閉
                 scrollCheck.textContent = isEnabled ? '✔' : '';
             };
             updateCheckUI();
             
             scrollOptionsBtn.onclick = async () => {
-                const current = localStorage.getItem('cocoya_use_scroll_plugin') !== 'false';
+                const current = localStorage.getItem('cocoya_use_scroll_plugin') === 'true';
                 const nextValue = !current;
                 localStorage.setItem('cocoya_use_scroll_plugin', nextValue);
                 updateCheckUI();
@@ -406,7 +434,7 @@ window.CocoyaUI = {
             };
         }
 
-        // --- 穩定教學模式：深度修復磁碟 (Erase Filesystem) ---
+        // --- 深度修復清空檔案 (Erase Filesystem) ---
         const eraseFsBtn = document.getElementById('btn-erase-filesystem');
         if (eraseFsBtn) {
             eraseFsBtn.onclick = async () => {
