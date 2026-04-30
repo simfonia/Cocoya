@@ -96,6 +96,7 @@ export class CocoyaManager {
                     await this.handleSaveFileAs(message);
                     break;
                 case 'openSerialMonitor':
+                await this.stopAllCocoyaTerminals();
                 const monPort = message.serialPort;
                 if (!monPort) return;
                 const monPython = this.getPythonPath();
@@ -318,19 +319,69 @@ export class CocoyaManager {
      * 重新整理序列埠清單 (目前僅支援 Windows)
      */
     private async handleRefreshSerialPorts() {
-        const ports: string[] = [];
         try {
-            const { execSync } = require('child_process');
-            // Windows: 使用 PowerShell 獲取 COM 埠清單
-            const output = execSync('powershell "[System.IO.Ports.SerialPort]::GetPortNames()"', { encoding: 'utf8' });
-            if (output) {
-                const lines = output.split(/\r?\n/).map((s: string) => s.trim()).filter((s: string) => s !== '');
-                lines.forEach((p: string) => { if (!ports.includes(p)) ports.push(p); });
-            }
+            const { exec } = require('child_process');
+            
+            const boardMap: { [key: string]: string } = {
+                "VID_2E8A&PID_0005": "Maker Pi RP2040 / Pico",
+                "VID_2E8A&PID_0003": "Maker Pi RP2040 (CP)",
+                "VID_303A&PID_1001": "XIAO ESP32-S3 / ESP32",
+                "VID_1A86&PID_7523": "Arduino Uno / CH340",
+                "VID_10C4&PID_EA60": "CP210x USB Adapter",
+                "VID_2341&PID_0043": "Arduino Uno R3"
+            };
+
+            // 使用 Win32_SerialPort (速度比 Win32_PnPEntity 快 10 倍以上)
+            const psCmd = "Get-CimInstance Win32_SerialPort | ForEach-Object { $_.Name + '|' + $_.PNPDeviceID }";
+            const cmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "${psCmd}"`;
+            
+            exec(cmd, (error: any, stdout: string) => {
+                const ports: any[] = [];
+                if (!error && stdout) {
+                    const lines = stdout.split(/\r?\n/).map((s: string) => s.trim()).filter((s: string) => s !== '');
+                    lines.forEach((line: string) => {
+                        const parts = line.split('|');
+                        if (parts.length < 2) return;
+                        
+                        const name = parts[0];
+                        const pnpId = parts[1];
+                        const comMatch = name.match(/\((COM\d+)\)/);
+                        if (!comMatch) return;
+                        
+                        const port = comMatch[1];
+                        let label = port;
+
+                        for (const [key, boardName] of Object.entries(boardMap)) {
+                            if (pnpId.includes(key)) {
+                                label = `[${boardName}] ${port}`;
+                                break;
+                            }
+                        }
+                        ports.push({ port: port, label: label });
+                    });
+                }
+                
+                // 備援：如果詳細描述沒抓到 (或是為空)，改用基本的 GetPortNames
+                if (ports.length === 0) {
+                    const { execSync } = require('child_process');
+                    try {
+                        const basicOutput = execSync('powershell "[System.IO.Ports.SerialPort]::GetPortNames()"', { encoding: 'utf8' });
+                        if (basicOutput) {
+                            const lines = basicOutput.split(/\r?\n/).map((s: string) => s.trim()).filter((s: string) => s !== '');
+                            lines.forEach((p: string) => {
+                                if (!ports.find((x: any) => x.port === p)) {
+                                    ports.push({ port: p, label: p });
+                                }
+                            });
+                        }
+                    } catch (e) {}
+                }
+                this.panel.webview.postMessage({ command: 'serialPortsData', ports });
+            });
         } catch (e) {
             console.error('Failed to list serial ports', e);
+            this.panel.webview.postMessage({ command: 'serialPortsData', ports: [] });
         }
-        this.panel.webview.postMessage({ command: 'serialPortsData', ports });
     }
 
     private handleGetManifest() {
@@ -564,14 +615,10 @@ export class CocoyaManager {
             const deployScriptPath = path.join(this.context.extensionPath, 'resources', 'deploy_mcu.py');
 
             // --- 優化：合併為一階段執行，避免多次打開序列埠導致重啟 ---
-            let terminal = vscode.window.terminals.find(t => t.name === 'Cocoya Execution');
-            if (!terminal) {
-                terminal = vscode.window.createTerminal('Cocoya Execution');
-            } else {
-                // 先送 Ctrl-C 中斷前一次的監控
-                terminal.sendText('\u0003'); 
-                await new Promise(resolve => setTimeout(resolve, 300));
-            }
+            await this.stopAllCocoyaTerminals();
+            
+            // 永遠開啟一個乾淨的終端機，確保不會用到正在 disposed 的舊視窗
+            const terminal = vscode.window.createTerminal('Cocoya Execution');
             
             terminal.show();
             // 直接執行：這會觸發「上傳中」訊息並接著進入「監控」

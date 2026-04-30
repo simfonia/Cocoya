@@ -22,7 +22,8 @@
         updateTimer: null,
         promptRequests: new Map(),
         currentPlatform: localStorage.getItem('cocoya_platform') || 'MicroPython',
-        useScrollPlugin: localStorage.getItem('cocoya_use_scroll_plugin') !== 'false', // 預設開啟，除非明確設為 false
+        // 按照使用者要求，預設關閉自動平移 (除非 localStorage 明確設為 true)
+        useScrollPlugin: localStorage.getItem('cocoya_use_scroll_plugin') === 'true', 
         autoBackupTimer: null,
         manifest: null,
         lastCleanCode: '',

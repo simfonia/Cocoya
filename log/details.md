@@ -127,7 +127,7 @@
 
 ### 1. 遊戲化碰撞與防抖 (Debouncing Physics)
 - **挑戰**: 偵測點進入球體半徑後會觸發多重加分。
-- **解決**: 引入 **方向性判定**。僅當球體垂直速度 `vy > 0` (下落中) 時才觸發碰撞。撞擊後立即賦予 `vy = -bounce_power`，使其進入向上噴飛狀態，從而避開連續加分判定。
+- **解決**: 引入 **方向性判定**。僅當球體垂直速度 `vy > 0` (下落中)時才觸發碰撞。撞擊後立即賦予 `vy = -bounce_power`，使其進入向上噴飛狀態，從而避開連續加分判定。
 
 ### 2. UI 排版穩定化 (Visual Consistency)
 - **zfill 應用**: 透過 `str().zfill(3)` 固定角度顯示寬度，防止數字從兩位數變三位數時文字抖動。
@@ -306,3 +306,30 @@ efreshMinimap 進行強制同步。
 ### 5. CSS 巢狀子選單 (Nested Dropdown)
 - **視覺**：實作 `.dropdown-submenu` 並搭配 `.submenu-content` 的絕對定位。
 - **優化**：加入偽元素 `::before` 適作為隱形橋樑，防止滑鼠在主、子選單移動過程中的 1px 間隙導致選單收合，優化了教學現場的操作流暢度。
+
+## 關鍵技術實作紀錄 (2026-04-30 更新)
+
+### 1. Terminal Singleton (單一終端機模式)
+- **問題**：VSIX 模式下，多次點擊「偵測序列埠」或「上傳程式」會開啟多個終端機視窗，造成 `PermissionError 13` (序列埠被佔用)。
+- **解決**：
+    - 在 `extension.ts` 實作 `stopAllCocoyaTerminals()`。
+    - 邏輯：遍歷所有 `Cocoya` 開頭的終端機 -> 發送 `Ctrl+C` 中斷進程 -> 呼叫 `dispose()` 強制關閉。
+    - 配合 `await` 確保舊視窗徹底消失後，才建立全新的單一終端機，解決了競爭條件 (Race Condition)。
+
+### 2. 高效能 WMI 偵測 (Hardware Detection Optimization)
+- **舊方案**：使用 `Win32_PnPEntity` 查詢所有硬體樹，反應延遲長達 3~5 秒。
+- **優化方案**：
+    - 改用 **`Win32_SerialPort`** 類別，精確鎖定序列埠裝置，速度提升 10 倍以上（約 0.2 秒完成）。
+    - 結合 **非同步 `exec`** 調用，防止 PowerShell 執行期間阻塞 VS Code 擴充功能主進程。
+
+### 3. 智慧硬體辨識 (Smart Hardware Labeling)
+- **原理**：抓取 `PNPDeviceID` 提取硬體的 **VID** 與 **PID**。
+- **實作**：建立 `boardMap` 對照表（如 `2E8A` 映射為 `Maker Pi RP2040`）。
+- **UI 呈現**：
+    - 下拉選單顯示格式：`[板子型號] COMx`。
+    - CSS 強化：設定 `max-width` 與 `text-overflow: ellipsis` 防止長字串破壞工具列版面。
+    - 動態 Tooltip：Hover 時自動顯示完整硬體描述，兼顧簡潔與資訊透明。
+
+### 4. 嚴謹術語與引導修正
+- **對齊 MicroPython**：由於 MP 無法重建 FAT 磁區，將「重建磁區」修正為「清空使用者檔案」。
+- **i18n 增強**：新增 `TLB_SETTINGS_ERASE_FS_TOOLTIP` 為維修功能提供即時指引。

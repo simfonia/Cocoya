@@ -77,7 +77,8 @@
     "TLB_SETTINGS_SERIAL_UPLOAD": "Stable Mode (Serial Upload Only)",
     "TLB_SETTINGS_FIRMWARE_GROUP": "Firmware Settings",
     "TLB_SETTINGS_SETUP_STABLE": "Lock USB Disk (Stable Mode)",
-    "TLB_SETTINGS_ERASE_FS": "Reset USB Disk (Erase All Files)",
+    "TLB_SETTINGS_ERASE_FS": "Deep Repair (Clear MCU Files)",
+    "TLB_SETTINGS_ERASE_FS_TOOLTIP": "Stops dead loops and clears internal MCU files. Use when code freezes or to reset for a new user.",
     "TLB_SETTINGS_RESET_FIRMWARE": "Reset Firmware (Flash UF2)",
 
     "TLB_RUN": "Run Program",
@@ -129,13 +130,14 @@
     "MSG_RECOVER_BACKUP": "Unsaved changes detected. Do you want to recover them?",
     "MSG_RECOVER_IGNORE": "Ignore and start new project",
     "MSG_RESET_FIRMWARE_CONFIRM": "Resetting firmware will clear all content on the MCU. Please ensure the MCU is in BOOTSEL / Flashing mode.\nContinue?",
-    "MSG_ASK_CLEAR_CODE": "Do you want to clear the code (code.py) on the MCU after burning?",
+    "MSG_ASK_CLEAR_CODE": "Do you want to clear the code (main.py) on the MCU after burning?",
     "MSG_SELECT_MCU_MODEL": "Please select your MCU model:",
     "MSG_FIRMWARE_BURN_SUCCESS": "Firmware burned successfully! The MCU will restart.",
     "MSG_FIRMWARE_BURN_FAILED": "Burning failed: ",
     "MSG_RELOAD_TO_APPLY": "Settings saved. Please restart the application to apply changes.",
     "MSG_SETUP_STABLE_CONFIRM": "This will write boot.py to MCU to enable Stable Mode.\n\n[Effect]: Windows will become Read-Only for this drive (preventing damage), and Cocoya will upload code via Serial.\n[Escape]: To restore Windows write access later, hold \"GP20 button (Button 1)\" while plugging in the USB cable.\n\nAre you sure you want to continue?",
 
+    "MSG_ERASE_FS_CONFIRM": "WARNING: This will force stop the program and ERASE ALL USER FILES (main.py, etc.) on the MCU. This cannot be undone! Continue?",
     // Syntax (Basic)
     "PY_DEF": "def",
     "PY_RETURN": "return",

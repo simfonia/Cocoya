@@ -10,6 +10,8 @@ C:\Workspace\cocoya\
 │   ├── handover.md        # 任務交接檔
 │   ├── todo.md            # 任務清單
 │   └── work/              # 每日工作紀錄
+│       ├── 2026-04-29.md  # 重大架構轉型：全面遷移 MicroPython
+│       └── 2026-04-30.md  # UI/UX 精進：Serial 穩定性與硬體辨識優化
 ├── ui/                    # 雙模共用前端根目錄 (Vite Project)
 │   ├── index.html         # Webview 與 Tauri 共用入口
 │   ├── blockly/           # Blockly 核心庫與靜態插件
