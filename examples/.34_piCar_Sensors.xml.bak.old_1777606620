@@ -1,24 +1,24 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
-  <block type="py_definition_zone" id="8go3vMj_h]%Q%yz$Onz$" x="100" y="20"></block>
-  <block type="py_main" id="Z%}kcWIkUO}4P,/!#_39" x="100" y="140">
+  <block type="py_definition_zone" id="ZSlEN0j$XndJdYY-f;rF" x="100" y="20"></block>
+  <block type="py_main" id="Bb8T-CK)xO*/jUqd,mRV" x="100" y="140">
     <statement name="DO">
-      <block type="py_loop_while" id="|3QLMGw5*X|T%|qQYRS-">
+      <block type="py_loop_while" id="qBMYu(pobEpM(wewa~08">
         <value name="CONDITION">
-          <block type="py_logic_boolean" id=".(o8`(B$fw07D$GuM@O!">
+          <block type="py_logic_boolean" id="_7HQ8@J;|_ZMrg*G?l.e">
             <field name="BOOL">True</field>
           </block>
         </value>
         <statement name="DO">
-          <block type="py_io_print" id="sSsI9U;{41DDs,gOv~U{">
+          <block type="py_io_print" id="!@UX25xY_HNlGI)(UIQ`">
             <value name="TEXT">
-              <shadow type="py_text" id="^K1f,4@9Kq#q!?D~w-2c">
+              <shadow type="py_text" id="=^)W0Rwsk9[dgkWkPN,{">
                 <field name="TEXT">Hello Cocoya!</field>
               </shadow>
             </value>
             <next>
-              <block type="py_time_sleep" id="g*lcoj+o1(1NB1faPr(J">
+              <block type="py_time_sleep" id="-%?F4qyL(4uF}CBQ=8nL">
                 <value name="SECONDS">
-                  <shadow type="py_math_number" id="r`}P(_@eW|K}Lj`vrZI7">
+                  <shadow type="py_math_number" id="hLBWrDVZyTY,ZeOLdh=S">
                     <field name="NUM">1</field>
                   </shadow>
                 </value>

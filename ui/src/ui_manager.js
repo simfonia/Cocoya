@@ -14,8 +14,9 @@ window.CocoyaUI = {
 
     /** @type {boolean} 是否處於未儲存狀態 */
     isDirty: false,
-    
-    // ... (維持中間其他函式不變)
+
+    /** @type {boolean} 終端機是否開啟自動捲動 */
+    isTerminalAutoScroll: true,
 
     /**
      * 更新 Python 代碼預覽區域
@@ -83,6 +84,7 @@ window.CocoyaUI = {
                 if (!this.blockToRangeMap.has(id)) {
                     this.blockToRangeMap.set(id, { start: index, end: index });
                 } else {
+                    // 如果已存在 (可能是一行有多個 ID)，更新結束點
                     this.blockToRangeMap.get(id).start = index;
                 }
             });
@@ -137,17 +139,32 @@ window.CocoyaUI = {
         if (saveBtn) {
             saveBtn.style.borderBottom = isDirty ? '2px solid #FE2F89' : 'none';
         }
-        this.updateFileStatus();
+        this.updateFileStatus(this.currentFilename);
     },
 
     /**
-     * 更新檔名顯示與 Dirty 標記 (*)
-     * @param {string} [filename] 新檔名，若省略則維持現狀
+     * 更新目前的檔案狀態顯示
+     * @param {string} filename 
      */
     updateFileStatus: function(filename) {
         if (filename !== undefined) this.currentFilename = filename;
         
-        // 檔名狀態現在由 VS Code 頁籤顯示，不再需要更新前端 DOM
+        const fileLabel = document.getElementById('current-filename');
+        const defaultName = window.Blockly ? (Blockly.Msg['TLB_FILE_NEW'] || '未命名專案') : 'Untitled';
+        let displayName = this.currentFilename || defaultName;
+
+        // 如果是髒狀態，檔名加上 *
+        if (this.isDirty && !displayName.endsWith('*')) {
+            displayName += ' *';
+        }
+
+        if (fileLabel) {
+            fileLabel.textContent = displayName;
+            fileLabel.title = displayName; // Hover 顯示完整路徑/名稱
+        }
+        
+        // 同步更新 Tauri 視窗標題
+        window.CocoyaBridge.send('setWindowTitle', { title: displayName });
     },
 
     /**
@@ -280,6 +297,84 @@ window.CocoyaUI = {
     },
 
     /**
+     * 開啟快速選取 (QuickPick) 視窗
+     * @param {string} title 視窗標題
+     * @param {Array<{id:string, label:string}>} options 選項列表
+     * @param {Function} onSelect 選取後的回調函式
+     */
+    showQuickPick: function(title, options, onSelect) {
+        const modal = document.getElementById('quick-pick-modal');
+        const titleEl = document.getElementById('quick-pick-title');
+        const listEl = document.getElementById('quick-pick-list');
+        if (!modal || !listEl) return;
+
+        titleEl.textContent = title;
+        listEl.innerHTML = '';
+        this._onQuickPickSelect = onSelect;
+
+        options.forEach(opt => {
+            const item = document.createElement('div');
+            item.className = 'quick-pick-item';
+            item.textContent = opt.label;
+            item.onclick = () => {
+                this.closeQuickPick(opt.id);
+            };
+            listEl.appendChild(item);
+        });
+
+        modal.style.display = 'flex';
+    },
+
+    /**
+     * 關閉快速選取視窗
+     * @param {string|null} result 選取的 ID 或取消
+     */
+    closeQuickPick: function(result) {
+        const modal = document.getElementById('quick-pick-modal');
+        if (modal) modal.style.display = 'none';
+        if (this._onQuickPickSelect) {
+            this._onQuickPickSelect(result);
+            this._onQuickPickSelect = null;
+        }
+    },
+
+    /**
+     * 顯示全域 Loading 提示
+     * @param {string} message 提示訊息
+     */
+    showLoadingModal: function(message) {
+        let modal = document.getElementById('loading-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'loading-modal';
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-content" style="width: auto; padding: 30px; text-align: center;">
+                    <div class="loading-spinner" style="border: 4px solid #f3f3f3; border-top: 4px solid #FE2F89; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 15px;"></div>
+                    <p id="loading-message" style="margin: 0; font-size: 14px; font-weight: bold; color: #333;"></p>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // 加入 spinner 動畫樣式 (若 style.css 沒寫的話)
+            const style = document.createElement('style');
+            style.textContent = `@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`;
+            document.head.appendChild(style);
+        }
+        
+        document.getElementById('loading-message').textContent = message;
+        modal.style.display = 'flex';
+    },
+
+    /**
+     * 隱藏全域 Loading 提示
+     */
+    hideLoadingModal: function() {
+        const modal = document.getElementById('loading-modal');
+        if (modal) modal.style.display = 'none';
+    },
+
+    /**
      * 設定更新狀態 UI (對齊 #wavecode)
      * @param {Object} data 更新資訊
      * @param {boolean} data.hasUpdate 是否有新版本
@@ -295,21 +390,26 @@ window.CocoyaUI = {
         this.updateUrl = data.url;
         const base = window.CocoyaMediaUri || '/src';
         
-        // 清除舊狀態
-        btn.classList.remove('update-hidden', 'update-blink', 'update-spin-ccw', 'update-bounce-pulse', 'update-available', 'update-latest');
+        // 清除舊狀態 (包含圖片旋轉動畫)
+        btn.classList.remove('update-hidden', 'update-blink', 'update-spin-ccw', 'update-bounce-pulse', 'update-available', 'update-latest', 'bounce-gradient');
+        img.classList.remove('spin-animation');
         
         if (data.hasUpdate) {
             // --- 發現新版本 (對齊 wavecode 'available' 狀態) ---
-            btn.classList.add('update-available', 'update-bounce-pulse');
+            btn.classList.add('update-available', 'bounce-gradient');
             img.src = `${base}/icons/cloud_download_24dp_FE2F89.png`;
-            const template = Blockly.Msg['MSG_UPDATE_AVAILABLE_TOOLTIP'] || 'New version (%1). Click to download.';
-            btn.setAttribute('title', template.replace('%1', 'v' + data.latestVersion));
+            
+            // 對齊 #wavecode: 直接顯示新版本號
+            const label = (Blockly.Msg['MSG_UPDATE_AVAILABLE'] || '發現新版本').replace(' (%1)', '').replace('(%1)', '');
+            btn.setAttribute('title', `${label}: v${data.latestVersion} (目前版本: v${data.currentVersion})`);
         } else {
             // --- 目前已是最新 (對齊 wavecode 'latest' 狀態) ---
             btn.classList.add('update-latest');
             img.src = `${base}/icons/published_with_changes_24dp_75FB4C.png`;
-            const template = Blockly.Msg['MSG_UPDATE_LATEST_TOOLTIP'] || 'Already up to date (%1)';
-            btn.setAttribute('title', template.replace('%1', 'v' + data.currentVersion));
+            
+            // 對齊 #wavecode: 直接顯示目前版本號
+            const label = (Blockly.Msg['MSG_UPDATE_LATEST'] || '已是最新版').replace(' (%1)', '').replace('(%1)', '');
+            btn.setAttribute('title', `${label}: v${data.currentVersion}`);
             
             // 3秒後自動隱藏 (對齊 wavecode 邏輯)
             setTimeout(() => {
@@ -319,12 +419,199 @@ window.CocoyaUI = {
     },
 
     /**
+     * 切換代碼預覽面板顯示狀態
+     * @param {boolean|null} force 強制狀態 (true=開, false=關)
+     */
+    toggleCodeArea: function(force) {
+        const panel = document.getElementById('codeArea');
+        const toggle = document.getElementById('code-toggle');
+        if (!panel) return;
+
+        const isCollapsed = panel.classList.contains('collapsed');
+        const targetState = (force !== undefined && force !== null) ? !force : !isCollapsed;
+
+        if (targetState) {
+            panel.classList.add('collapsed');
+        } else {
+            panel.classList.remove('collapsed');
+        }
+
+        // 更新箭頭方向 (對齊 #wavecode)
+        if (toggle) {
+            const arrow = toggle.querySelector('.arrow');
+            if (arrow) arrow.textContent = panel.classList.contains('collapsed') ? '◀' : '▶';
+        }
+
+        // 觸發畫布調整
+        setTimeout(() => {
+            if (window.Blockly) Blockly.svgResize(Blockly.getMainWorkspace());
+            window.dispatchEvent(new Event('resize'));
+        }, 310);
+    },
+
+    /**
+     * 初始化介面佈局邏輯 (縮放與收合)
+     */
+    initLayout: function() {
+        const self = this;
+        const resizer = document.getElementById('panel-resizer');
+        const panel = document.getElementById('codeArea');
+        const toggle = document.getElementById('code-toggle');
+
+        let isResizing = false;
+        let startX, startWidth;
+        let rafId = null;
+
+        // --- 1. 面板縮放 ---
+        if (resizer && panel) {
+            resizer.onmousedown = (e) => {
+                // 如果面板已收合，不允許縮放
+                if (panel.classList.contains('collapsed')) return;
+                
+                isResizing = true;
+                startX = e.clientX;
+                startWidth = panel.offsetWidth;
+                document.body.classList.add('resizing-panel');
+                resizer.classList.add('is-dragging');
+            };
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                
+                if (rafId) cancelAnimationFrame(rafId);
+                
+                rafId = requestAnimationFrame(() => {
+                    // 往左拉是增加寬度 (startX - e.clientX)
+                    const width = startWidth + (startX - e.clientX);
+                    if (width > 100 && width < window.innerWidth - 300) {
+                        panel.style.width = `${width}px`;
+                        // 即時重繪畫布
+                        if (window.Blockly) {
+                            const ws = Blockly.getMainWorkspace();
+                            if (ws) Blockly.svgResize(ws);
+                        }
+                    }
+                });
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (!isResizing) return;
+                isResizing = false;
+                document.body.classList.remove('resizing-panel');
+                resizer.classList.remove('is-dragging');
+                
+                if (rafId) cancelAnimationFrame(rafId);
+                
+                // 最後強制同步一次，確保沒有灰色邊塊
+                setTimeout(() => {
+                    if (window.Blockly) {
+                        const ws = Blockly.getMainWorkspace();
+                        if (ws) Blockly.svgResize(ws);
+                    }
+                    window.dispatchEvent(new Event('resize'));
+                }, 50);
+            });
+        }
+
+        // --- 2. 面板收合 (Handle) ---
+        if (toggle) {
+            toggle.onclick = () => self.toggleCodeArea();
+        }
+    },
+
+    /**
+     * 切換終端機面板顯示狀態
+     * @param {boolean|null} force 強制狀態 (true=開, false=關)
+     */
+    toggleTerminal: function(force) {
+        const panel = document.getElementById('terminalArea');
+        if (!panel) return;
+
+        const isCollapsed = panel.classList.contains('collapsed');
+        const targetState = (force !== undefined && force !== null) ? !force : !isCollapsed;
+
+        if (targetState) {
+            panel.classList.add('collapsed');
+        } else {
+            panel.classList.remove('collapsed');
+        }
+
+        // 觸發畫布調整
+        setTimeout(() => {
+            if (window.Blockly) Blockly.svgResize(Blockly.getMainWorkspace());
+        }, 310);
+    },
+
+    /**
+     * 向終端機新增日誌
+     * @param {string} text 文字內容
+     * @param {'out'|'err'|'info'|'success'} type 類型 (影響顏色)
+     */
+    appendTerminal: function(text, type = 'out') {
+        const content = document.getElementById('terminalContent');
+        if (!content) return;
+
+        // --- 優化：只要有訊息就自動展開 (除非面板已收合且非錯誤訊息) ---
+        if (document.getElementById('terminalArea').classList.contains('collapsed')) {
+            this.toggleTerminal(true);
+        }
+
+        const lastChild = content.lastElementChild;
+        // 如果最後一行存在，且類型相同，且不以換行符結尾，則附加文字
+        if (lastChild && lastChild.className === `term-${type}` && !lastChild.textContent.endsWith('\n')) {
+            lastChild.textContent += text;
+        } else {
+            const span = document.createElement('span');
+            span.className = `term-${type}`;
+            span.textContent = text;
+            content.appendChild(span);
+        }
+
+        // --- 優化：最大行數限制 (1000 行) ---
+        if (content.children.length > 1000) {
+            content.removeChild(content.firstChild);
+        }
+
+        // 自動捲動到底部 (除非已關閉自動捲動)
+        if (this.isTerminalAutoScroll) {
+            content.scrollTop = content.scrollHeight;
+        }
+    },
+
+    /**
+     * 清空終端機
+     */
+    clearTerminal: function() {
+        const content = document.getElementById('terminalContent');
+        if (content) content.innerHTML = '';
+    },
+
+    /**
      * 初始化工具列事件綁定
      * @param {Function} postMessageFunc Webview 通訊函式
      */
     initToolbar: function(postMessageFunc) {
         const self = this;
         
+        // --- 初始化佈局 (縮放與收合) ---
+        self.initLayout();
+        
+        // --- 環境偵測：停止與關閉按鈕 ---
+        const stopBtn = document.getElementById('btn-stop');
+        const closeBtn = document.getElementById('btn-close');
+
+        if (window.CocoyaBridge) {
+            if (window.CocoyaBridge.isTauri) {
+                // Tauri: 顯示停止鈕，隱藏關閉鈕
+                if (stopBtn) stopBtn.style.display = 'flex';
+                if (closeBtn) closeBtn.style.display = 'none';
+            } else if (window.CocoyaBridge.isVsCode) {
+                // VSIX: 兩個都顯示
+                if (stopBtn) stopBtn.style.display = 'flex';
+                if (closeBtn) closeBtn.style.display = 'flex';
+            }
+        }
+
         /**
          * 綁定按鈕點擊事件的內部輔助函式
          */
@@ -334,9 +621,16 @@ window.CocoyaUI = {
             
             el.onclick = () => {
                 // 1. 處理外部連結 (更新按鈕)
-                if (id === 'btn-update' && self.updateUrl && el.classList.contains('update-available')) {
-                    postMessageFunc({ command: 'openExternal', url: self.updateUrl });
-                    return;
+                if (id === 'btn-update') {
+                    if (self.updateUrl && el.classList.contains('update-available')) {
+                        postMessageFunc({ command: 'openExternal', url: self.updateUrl });
+                        return;
+                    }
+                    // 立即更新 Tooltip 並啟動旋轉動畫 (對齊 #wavecode)
+                    const checkMsg = (typeof Blockly !== 'undefined' && Blockly.Msg['MSG_CHECKING_UPDATE']) || 'Checking for updates...';
+                    el.setAttribute('title', checkMsg);
+                    const img = el.querySelector('img');
+                    if (img) img.classList.add('spin-animation');
                 }
 
                 // 2. 準備訊息酬載
@@ -357,6 +651,13 @@ window.CocoyaUI = {
 
                 // 4. 若需要程式碼 (執行程式)
                 if (cmd === 'runCode' && typeof Blockly !== 'undefined') {
+                    // --- 自動恢復自動捲動 (對齊使用者需求) ---
+                    if (!self.isTerminalAutoScroll) {
+                        self.isTerminalAutoScroll = true;
+                        const terminalPauseBtn = document.getElementById('btn-pause-terminal');
+                        if (terminalPauseBtn) terminalPauseBtn.classList.add('paused');
+                    }
+                    
                     // 使用 CocoyaApp 處理過的乾淨代碼，確保行號與 Preview 一致且縮排正確
                     msg.code = window.CocoyaApp.lastCleanCode || Blockly.Python.workspaceToCode(Blockly.getMainWorkspace());
                     msg.platform = document.getElementById('platform-selector')?.value || 'PC';
@@ -368,6 +669,45 @@ window.CocoyaUI = {
                 postMessageFunc(msg);
             };
         };
+
+        // --- 終端機控制 ---
+        const terminalToggleBtn = document.getElementById('btn-terminal');
+        if (terminalToggleBtn) {
+            terminalToggleBtn.onclick = () => self.toggleTerminal();
+        }
+
+        const terminalCloseBtn = document.getElementById('btn-close-terminal');
+        if (terminalCloseBtn) {
+            terminalCloseBtn.onclick = () => self.toggleTerminal(false);
+        }
+
+        const terminalClearBtn = document.getElementById('btn-clear-terminal');
+        if (terminalClearBtn) {
+            terminalClearBtn.onclick = () => self.clearTerminal();
+        }
+
+        const terminalPauseBtn = document.getElementById('btn-pause-terminal');
+        if (terminalPauseBtn) {
+            // 預設開啟自動捲動，按鈕亮起
+            if (self.isTerminalAutoScroll) terminalPauseBtn.classList.add('paused');
+            
+            terminalPauseBtn.onclick = () => {
+                self.isTerminalAutoScroll = !self.isTerminalAutoScroll;
+                if (self.isTerminalAutoScroll) {
+                    terminalPauseBtn.classList.add('paused');
+                    // 開啟時立即捲動到最新
+                    const content = document.getElementById('terminalContent');
+                    if (content) content.scrollTop = content.scrollHeight;
+                } else {
+                    terminalPauseBtn.classList.remove('paused');
+                }
+            };
+        }
+
+        const codeCloseBtn = document.getElementById('btn-close-code');
+        if (codeCloseBtn) {
+            codeCloseBtn.onclick = () => self.toggleCodeArea(false);
+        }
 
         // 綁定檔案操作
         bind('btn-new', 'newFile', { includeXml: true });
@@ -518,19 +858,11 @@ window.CocoyaUI = {
             };
         }
         
-        // 綁定關閉按鈕
-        const stopBtn = document.getElementById('btn-stop');
+        // 綁定停止按鈕 (終止程式)
         if (stopBtn) {
             stopBtn.onclick = () => {
-                const xml = (typeof Blockly !== 'undefined') ? 
-                    Blockly.Xml.domToPrettyText(Blockly.Xml.workspaceToDom(Blockly.getMainWorkspace())) : '';
-                
                 self.flashButton('btn-stop', '#ffebee'); // 紅色回饋
-                postMessageFunc({ 
-                    command: 'closeEditor', 
-                    isDirty: self.isDirty,
-                    xml: xml
-                });
+                postMessageFunc({ command: 'stopCode' });
             };
         }
 
@@ -583,8 +915,19 @@ window.CocoyaUI = {
      * @param {Object} results 模組安裝狀態
      */
     updateEnvironmentStatus: function(results) {
+        console.log('[UI] updateEnvironmentStatus received:', results);
+        const modal = document.getElementById('diagnose-modal');
+        const body = document.getElementById('diagnose-body');
         const list = document.getElementById('module-list');
-        if (!list) return;
+        
+        if (!modal || !list || !results) {
+            console.error('[UI] Cannot find diagnosis modal elements or results is empty');
+            return;
+        }
+
+        // 隱藏「正在偵測...」的提示段落 (如果有)
+        const loadingPara = body?.querySelector('p');
+        if (loadingPara) loadingPara.style.display = 'none';
 
         const modules = [
             { id: 'cv2', name: 'opencv-python' },
@@ -595,7 +938,7 @@ window.CocoyaUI = {
 
         list.innerHTML = '';
         modules.forEach(mod => {
-            const installed = results[mod.id];
+            const installed = !!results[mod.id];
             const li = document.createElement('li');
             li.className = 'module-item';
             
@@ -605,13 +948,16 @@ window.CocoyaUI = {
             
             const btnTxt = Blockly.Msg['DIAG_INSTALL_BTN'] || 'Install';
             
+            // 使用 Bridge 發送安裝指令
+            const installBtnHtml = !installed ? `<button class="btn-install" onclick="window.CocoyaBridge.send('installModule', {module: '${mod.name}'})">${btnTxt}</button>` : '';
+            
             li.innerHTML = `
                 <span style="font-size: 14px;">${mod.name}</span>
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <span class="module-status ${installed ? 'status-ok' : 'status-missing'}">
                         ${statusTxt}
                     </span>
-                    ${!installed ? `<button class="btn-install" onclick="vsCodeApi.postMessage({command: 'installModule', module: '${mod.name}'})">${btnTxt}</button>` : ''}
+                    ${installBtnHtml}
                 </div>
             `;
             list.appendChild(li);

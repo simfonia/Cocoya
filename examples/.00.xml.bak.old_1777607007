@@ -1,0 +1,14 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
+  <block type="py_definition_zone" id="4,-K!Y1Zudb0K@WS`%,b" x="100" y="20"></block>
+  <block type="mcu_main" id="O8NNHWVeFj@Ma4!!a.FE" x="100" y="200">
+    <statement name="DO">
+      <block type="py_loop_while" id="CXUFzaJUiOx(qOns}^[T">
+        <value name="CONDITION">
+          <block type="py_logic_boolean" id="@E#1P`,i9zG.C$j^:^)W">
+            <field name="BOOL">True</field>
+          </block>
+        </value>
+      </block>
+    </statement>
+  </block>
+</xml>

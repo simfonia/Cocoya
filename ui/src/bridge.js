@@ -91,22 +91,60 @@ const CocoyaBridge = {
                     }
                     break;
 
+                case 'setPythonPath':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
+                        try {
+                            const newPath = await tauriInvoke('pick_python_path');
+                            if (newPath) {
+                                localStorage.setItem('pythonPath', newPath);
+                                const msg = (window.Blockly?.Msg['MSG_PYTHON_UPDATED'] || 'Python path updated to: %1').replace('%1', newPath);
+                                this.alert(msg);
+                            }
+                        } catch (e) {
+                            if (e !== 'Canceled') console.error('[Bridge] Failed to pick python path:', e);
+                        }
+                    }
+                    break;
+
                 case 'runCode':
                     if (this.isVsCode) {
                         this.vscode.postMessage({ command, ...data });
                     } else if (this.isTauri) {
-                        if (data.platform === 'MicroPython') {
-                            await tauriInvoke('deploy_mcu', {
-                                pythonPath: localStorage.getItem('pythonPath') || 'python',
-                                port: data.serialPort,
-                                code: data.code
-                            });
-                            this._dispatchToFrontend({ command: 'deployCompleted' });
-                        } else {
-                            await tauriInvoke('run_python', { 
-                                code: data.code, 
-                                pythonPath: localStorage.getItem('pythonPath') || 'python' 
-                            });
+                        try {
+                            const pythonPath = localStorage.getItem('pythonPath') || 'python';
+                            const lang = (window.Blockly && Blockly.Msg['BKY_LANG']) || 'zh-hant';
+                            
+                            if (data.platform === 'MicroPython') {
+                                if (!data.serialPort) {
+                                    this.alert(window.Blockly?.Msg['MSG_SELECT_PORT'] || 'Please select a serial port first!');
+                                    return;
+                                }
+                                window.CocoyaUI.showLoadingModal(window.Blockly?.Msg['MSG_UPLOADING'] || 'Uploading code to MCU...');
+                                
+                                await tauriInvoke('deploy_mcu', {
+                                    pythonPath: pythonPath,
+                                    port: data.serialPort,
+                                    code: data.code,
+                                    serialUploadOnly: data.serialUploadOnly || false,
+                                    lang: lang
+                                });
+                                
+                                window.CocoyaUI.hideLoadingModal();
+                                // 成功後閃爍綠燈
+                                window.CocoyaUI.flashButton('btn-run', '#75FB4C');
+                            } else {
+                                // PC 模式：直接執行
+                                await tauriInvoke('run_python', { 
+                                    code: data.code, 
+                                    pythonPath: pythonPath 
+                                });
+                                window.CocoyaUI.flashButton('btn-run', '#75FB4C');
+                            }
+                        } catch (e) {
+                            window.CocoyaUI.hideLoadingModal();
+                            this.alert('Run failed: ' + e);
                         }
                     }
                     break;
@@ -114,6 +152,32 @@ const CocoyaBridge = {
                 case 'stopCode':
                     if (this.isVsCode) this.vscode.postMessage({ command, ...data });
                     else if (this.isTauri) await tauriInvoke('stop_python');
+                    break;
+
+                case 'openSerialMonitor':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
+                        try {
+                            if (!data.serialPort) return;
+                            const pythonPath = localStorage.getItem('pythonPath') || 'python';
+                            const lang = (window.Blockly && Blockly.Msg['BKY_LANG']) || 'zh-hant';
+                            // 開啟監控前自動展開終端機
+                            if (window.CocoyaUI) {
+                                window.CocoyaUI.toggleTerminal(true);
+                                window.CocoyaUI.appendTerminal(`--- Opening Monitor: ${data.serialPort} ---`, 'info');
+                            }
+                            await tauriInvoke('open_serial_monitor', { 
+                                port: data.serialPort,
+                                pythonPath: pythonPath,
+                                lang: lang
+                            });
+                        } catch (e) {
+                            console.error('[Bridge] Failed to open monitor:', e);
+                            const errLabel = window.Blockly?.Msg['MSG_MONITOR_FAILED'] || 'Failed to open monitor: ';
+                            this.alert(errLabel + e);
+                        }
+                    }
                     break;
 
                 case 'refreshSerialPorts':
@@ -191,17 +255,135 @@ const CocoyaBridge = {
                     }
                     break;
 
+                case 'checkUpdate':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
+                        try {
+                            // 1. 獲取目前版本
+                            const currentVersion = await tauriInvoke('get_version').catch(() => '0.7.5');
+                            const GITHUB_REPO_API = "https://api.github.com/repos/simfonia/Cocoya/releases/latest";
+                            const DOWNLOAD_URL = "https://github.com/simfonia/Cocoya/releases";
+
+                            // 2. 獲取遠端版本
+                            const res = await fetch(GITHUB_REPO_API);
+                            if (!res.ok) throw new Error('Network response was not ok');
+                            const release = await res.json();
+                            const latestVersion = release.tag_name.replace('v', '');
+
+                            // 3. 版本比對 (簡化版語義化比對)
+                            const cParts = currentVersion.split(/[.-]/).map(v => parseInt(v) || 0);
+                            const lParts = latestVersion.split(/[.-]/).map(v => parseInt(v) || 0);
+                            
+                            let hasUpdate = false;
+                            for (let i = 0; i < 3; i++) {
+                                const l = lParts[i] || 0;
+                                const c = cParts[i] || 0;
+                                if (l > c) { hasUpdate = true; break; }
+                                if (l < c) { hasUpdate = false; break; }
+                            }
+
+                            // 4. 回傳狀態給前端 UI
+                            if (window.CocoyaUI) {
+                                window.CocoyaUI.setUpdateStatus({
+                                    hasUpdate,
+                                    currentVersion,
+                                    latestVersion,
+                                    url: DOWNLOAD_URL
+                                });
+                            }
+                        } catch (e) {
+                            console.error('[Bridge] Check update failed:', e);
+                            // 失敗時也回傳目前狀態以停止旋轉動畫
+                            if (window.CocoyaUI) {
+                                const current = await tauriInvoke('get_version').catch(() => '0.7.5');
+                                window.CocoyaUI.setUpdateStatus({ hasUpdate: false, currentVersion: current, latestVersion: current, url: '' });
+                            }
+                        }
+                    }
+                    break;
+
+                case 'openExternal':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
+                        try {
+                            const { open } = await import('@tauri-apps/plugin-shell');
+                            await open(data.url);
+                        } catch (e) {
+                            console.error('[Bridge] Failed to open external URL:', e);
+                            window.open(data.url, '_blank'); // 退回原始方式
+                        }
+                    }
+                    break;
+
+                case 'eraseFilesystem':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
+                        try {
+                            this._firstLogReceived = true;
+                            // 主動打開終端機面板 (正確名稱為 toggleTerminal)
+                            window.CocoyaUI.toggleTerminal(true);
+                            const loadingMsg = window.Blockly?.Msg['MSG_ERASING_FS'] || 'Rebuilding filesystem... Please wait about 15 seconds.';
+                            window.CocoyaUI.showLoadingModal(loadingMsg);
+                            const pythonPath = localStorage.getItem('pythonPath') || 'python';
+                            const lang = (window.Blockly && Blockly.Msg['BKY_LANG']) || 'zh-hant';
+                            await tauriInvoke('erase_filesystem', { 
+                                port: data.serialPort,
+                                pythonPath: pythonPath,
+                                lang: lang
+                            });
+                            window.CocoyaUI.hideLoadingModal();
+                            this.alert(window.Blockly?.Msg['MSG_ERASE_FS_SUCCESS'] || 'Filesystem rebuilt successfully!');
+                        } catch (e) {
+                            this._firstLogReceived = true;
+                            window.CocoyaUI.hideLoadingModal();
+                            this.alert('Erase failed: ' + e);
+                        }
+                    }
+                    break;
+                case 'confirmSwitch':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
+                        const { ask } = await import('@tauri-apps/plugin-dialog');
+                        const ok = await ask(data.message, { title: 'Cocoya', kind: 'warning' });
+                        if (ok) {
+                            this._dispatchToFrontend({ command: 'switchPlatform', platform: data.newPlatform });
+                        }
+                    }
+                    break;
+
                 case 'setDirty':
                     if (this.isVsCode) {
                         this.vscode.postMessage({ command, ...data });
                     } else if (this.isTauri) {
-                        const { getCurrentWindow } = await import('@tauri-apps/api/window');
-                        const appWindow = getCurrentWindow();
-                        const title = await appWindow.title();
-                        if (data.isDirty && !title.includes('*')) {
-                            await appWindow.setTitle(title + ' *');
-                        } else if (!data.isDirty && title.includes('*')) {
-                            await appWindow.setTitle(title.replace(' *', ''));
+                        // Tauri 模式：通常由 ui_manager 透過 setWindowTitle 處理，
+                        // 這裡保留以防未來有其他後端需求
+                    }
+                    break;
+
+                case 'setWindowTitle':
+                    if (this.isTauri) {
+                        try {
+                            await tauriInvoke('set_window_title', { title: `Cocoya - ${data.title}` });
+                        } catch (e) { console.warn('[Bridge] Failed to set window title via Rust:', e); }
+                    }
+                    break;
+
+                case 'setupStableMode':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
+                        try {
+                            window.CocoyaUI.showLoadingModal('Setting up stable mode...');
+                            await tauriInvoke('setup_stable_mode', { port: data.serialPort });
+                            window.CocoyaUI.hideLoadingModal();
+                            this.alert('Stable mode enabled!');
+                        } catch (e) {
+                            window.CocoyaUI.hideLoadingModal();
+                            this.alert('Setup failed: ' + e);
                         }
                     }
                     break;
@@ -210,8 +392,18 @@ const CocoyaBridge = {
                     if (this.isVsCode) {
                         this.vscode.postMessage({ command, ...data });
                     } else if (this.isTauri) {
-                        await tauriInvoke('reset_firmware', { model: data.model, shouldClear: data.shouldClear });
-                        this.alert(window.Blockly?.Msg['MSG_FIRMWARE_BURN_SUCCESS'] || 'Burn success!');
+                        try {
+                            const loadingMsg = window.Blockly?.Msg['MSG_BURNING_FIRMWARE'] || 'Burning firmware... Please do not close the window.';
+                            window.CocoyaUI.showLoadingModal(loadingMsg);
+                            
+                            await tauriInvoke('reset_firmware', { model: data.model, shouldClear: data.shouldClear });
+                            
+                            window.CocoyaUI.hideLoadingModal();
+                            this.alert(window.Blockly?.Msg['MSG_FIRMWARE_BURN_SUCCESS'] || 'Burn success!');
+                        } catch (e) {
+                            window.CocoyaUI.hideLoadingModal();
+                            throw e; // 交給外層 catch 處理錯誤彈窗
+                        }
                     }
                     break;
 
@@ -237,9 +429,55 @@ const CocoyaBridge = {
                     }
                     break;
 
-                case 'pickMcuModel':
-                    // 此指令僅用於 VS Code QuickPick
-                    if (this.isVsCode) this.vscode.postMessage({ command, ...data });
+                case 'newFile':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
+                        // Tauri 模式下，開新檔案改為建立新視窗 (方案 B)
+                        await tauriInvoke('create_window');
+                    }
+                    break;
+
+                case 'createWindow':
+                    if (this.isTauri) {
+                        await tauriInvoke('create_window');
+                    }
+                    break;
+
+                case 'checkEnvironment':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
+                        try {
+                            const pythonPath = localStorage.getItem('pythonPath') || 'python';
+                            const results = await tauriInvoke('check_environment', { pythonPath: pythonPath });
+                            this._dispatchToFrontend({ command: 'environmentStatus', results });
+                        } catch (e) {
+                            console.error('[Bridge] Check environment failed:', e);
+                        }
+                    }
+                    break;
+
+                case 'installModule':
+                    if (this.isVsCode) {
+                        this.vscode.postMessage({ command, ...data });
+                    } else if (this.isTauri) {
+                        // Tauri 模式：開啟終端機執行安裝
+                        try {
+                            const pythonPath = localStorage.getItem('pythonPath') || 'python';
+                            if (window.CocoyaUI) {
+                                window.CocoyaUI.toggleTerminal(true);
+                                window.CocoyaUI.appendTerminal(`--- Installing module: ${data.module} ---`, 'info');
+                            }
+                            // 執行 pip install，不需要 await 因為我們想讓它異步執行
+                            tauriInvoke('run_python', { 
+                                code: `import subprocess; import sys; subprocess.run(["${pythonPath}", "-m", "pip", "install", "${data.module}", "--user"])`,
+                                pythonPath: pythonPath 
+                            });
+                        } catch (e) {
+                            console.error('[Bridge] Failed to start installation:', e);
+                        }
+                    }
                     break;
 
                 case 'setLocale':
@@ -281,10 +519,19 @@ const CocoyaBridge = {
     async _setupTauriListeners() {
         if (!tauriListen) return;
         await tauriListen('python-log', (event) => {
-            console.log('%c[Python]', 'color: #4caf50; font-weight: bold;', event.payload);
+            // 收到第一筆日誌時，關閉 Loading 視窗 (適用於 PC 模式啟動緩慢)
+            if (!this._firstLogReceived) {
+                this._firstLogReceived = true;
+                window.CocoyaUI.hideLoadingModal();
+            }
+            // 轉向至終端機面板
+            if (window.CocoyaUI) window.CocoyaUI.appendTerminal(event.payload, 'out');
         });
         await tauriListen('python-error', (event) => {
-            console.error('[Python Error]', event.payload);
+            this._firstLogReceived = true;
+            window.CocoyaUI.hideLoadingModal();
+            // 轉向至終端機面板 (紅色)
+            if (window.CocoyaUI) window.CocoyaUI.appendTerminal(event.payload, 'err');
         });
         await tauriListen('recoveryData', (event) => {
             this._dispatchToFrontend({ command: 'recoveryData', xml: event.payload.xml });
@@ -309,13 +556,14 @@ const CocoyaBridge = {
             if (this.isVsCode) {
                 this.send('pickMcuModel', { options, requestId });
             } else {
-                // Tauri 模式目前簡化為使用 prompt (未來可實作自定義選單)
-                const msg = (window.Blockly?.Msg['MSG_SELECT_MCU_MODEL'] || 'Select MCU:') + '\n' + 
-                            options.map((m, i) => `${i+1}. ${m.label}`).join('\n');
-                this.prompt(msg, '1').then(res => {
-                    if (!res) { resolve(null); return; }
-                    const idx = parseInt(res, 10) - 1;
-                    resolve(options[idx]?.id || null);
+                // Tauri 模式使用自定義的 QuickPick UI
+                const title = window.Blockly?.Msg['MSG_SELECT_MCU_MODEL'] || 'Select MCU Model';
+                window.CocoyaUI.showQuickPick(title, options, (selectedId) => {
+                    this._dispatchToFrontend({ 
+                        command: 'promptResponse', 
+                        requestId: requestId, 
+                        result: selectedId 
+                    });
                 });
             }
         });

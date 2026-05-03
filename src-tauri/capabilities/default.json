@@ -11,6 +11,17 @@
     "core:event:default",
     "core:event:allow-listen",
     "core:event:allow-emit",
-    "core:window:allow-set-title"
+    "core:window:allow-set-title",
+    {
+      "identifier": "shell:allow-open",
+      "allow": [
+        {
+          "schemes": [
+            "http",
+            "https"
+          ]
+        }
+      ]
+    }
   ]
 }

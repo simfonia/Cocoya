@@ -15,6 +15,10 @@ src-tauri/gen/
 temp_scripts/
 *.tmp
 *.log
+*.bak
+.xml.bak
+.*.bak
+untitled_backup*.xml
 
 # Project specific
 backup/
