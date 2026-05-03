@@ -21,7 +21,21 @@
         isDirty: false,
         updateTimer: null,
         promptRequests: new Map(),
-        currentPlatform: localStorage.getItem('cocoya_platform') || 'MicroPython',
+        currentPlatform: (function() {
+            try { 
+                let p = localStorage.getItem('cocoya_platform');
+                
+                // --- 自動遷移邏輯 (CircuitPython -> MicroPython) ---
+                if (p === 'CircuitPython' || p === 'MCU') {
+                    p = 'MicroPython';
+                    localStorage.setItem('cocoya_platform', p);
+                }
+                return p || 'MicroPython';
+            } catch (e) { 
+                console.warn('[App] LocalStorage access blocked:', e);
+                return 'MicroPython'; 
+            }
+        })(),
         // 按照使用者要求，預設關閉自動平移 (除非 localStorage 明確設為 true)
         useScrollPlugin: localStorage.getItem('cocoya_use_scroll_plugin') === 'true', 
         autoBackupTimer: null,
@@ -33,6 +47,7 @@
          * 啟動初始化
          */
         init: function() {
+            console.log('[App] Initializing...');
             if (!window.CocoyaXMLRequests) window.CocoyaXMLRequests = new Map();
             this.setupThemeSync(); // 啟動自動主題同步偵測
             this.setupBlocklyPrompts();
@@ -41,6 +56,11 @@
             this.setupIndentSelector();
             // 向後端請求模組清單
             window.CocoyaBridge.send('getManifest');
+
+            // --- 啟動時自動檢查更新 (對齊 #wavecode) ---
+            setTimeout(() => {
+                window.CocoyaBridge.send('checkUpdate');
+            }, 1000);
         },
 
         /**
@@ -251,6 +271,7 @@
          * 核心初始化：建立工作區並加載模組
          */
         initializeCocoya: async function(manifest, mediaUri, lang) {
+            console.log('[App] initializeCocoya starting...', { manifest, mediaUri, lang });
             this.manifest = manifest;
             this.currentLang = lang || 'zh-hant';
             window.CocoyaMediaUri = mediaUri;

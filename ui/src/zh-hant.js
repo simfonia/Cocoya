@@ -88,7 +88,11 @@
     "TLB_RUN_PC": "執行 PC 端程式",
     "TLB_RUN_MCU": "上傳至 MCU",
     "TLB_UPDATE": "檢查更新",
-    "TLB_STOP": "關閉",
+    "TLB_STOP": "關閉編輯器",
+    "TLB_STOP_PROGRAM": "停止執行",
+    "TLB_TERMINAL": "開啟/關閉終端機",
+    "TLB_TOGGLE_CODE": "開啟/關閉程式碼預覽",
+    "TLB_PAUSE_SCROLL": "暫停自動捲動",
     "TLB_SERIAL_PORT": "序列埠",
     "TLB_SERIAL_REFRESH": "偵測序列埠",
     "TLB_SERIAL_CONNECT": "連接序列埠",
@@ -109,6 +113,7 @@
     "MSG_CLOSE": "關閉",
 
     // 更新檢查訊息
+    "MSG_CHECKING_UPDATE": "正在檢查更新...",
     "MSG_UPDATE_LATEST": "目前已是最新版本 (%1)",
     "MSG_UPDATE_AVAILABLE": "有新版本可更新 (%1)",
     "MSG_UPDATE_LATEST_TOOLTIP": "目前已是最新版本 (%1)",

@@ -33,6 +33,10 @@ ui/.gitignore
 temp_scripts/
 out/test/
 cocoya-*.vsix
+*.bak
+.xml.bak
+.*.bak
+untitled_backup*.xml
 
 # Note: We KEEP ui/src/ because VSIX currently references ESM scripts directly.
 # Note: We KEEP resources/ because it contains deploy_mcu.py needed by VSIX.

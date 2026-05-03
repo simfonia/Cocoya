@@ -12,7 +12,10 @@ async function loadScript(url) {
         const script = document.createElement('script');
         script.src = url;
         script.onload = resolve;
-        script.onerror = reject;
+        script.onerror = (err) => {
+            console.error(`[Loader] Failed to load script: ${url}`, err);
+            reject(err);
+        };
         document.head.appendChild(script);
     });
 }
@@ -34,7 +37,6 @@ async function fetchXMLViaHost(moduleId) {
 async function loadModule(moduleId, mediaUri, lang) {
     try {
         const basePath = `${mediaUri}/modules`;
-        console.log(`Loading module: ${moduleId}`);
         
         // 1. 先載入語系檔 (如果有的話)
         if (lang) {
@@ -68,6 +70,11 @@ window.CocoyaLoader = {
      * @param {string} lang 目前語系
      */
     loadModules: async function(manifest, mediaUri, platform = 'PC', lang) {
+        if (!manifest || !manifest.modules) {
+            console.error('[Loader] Manifest or modules array is missing!', manifest);
+            return [];
+        }
+
         const promises = manifest.modules.map(async (module) => {
             if (module.platforms && !module.platforms.includes(platform)) {
                 return null;

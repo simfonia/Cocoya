@@ -23,30 +23,70 @@ body {
 }
 
 #toolbar {
-    height: 40px;
+    min-height: 40px;
+    height: auto;
     background-color: #ffffff;
     border-bottom: 1px solid #ddd;
     display: flex;
+    flex-wrap: wrap; /* 允許在空間不足時換行 */
     align-items: center;
-    padding: 0 10px;
+    padding: 4px 10px;
+    gap: 8px;
     user-select: none;
+    box-sizing: border-box;
 }
 
 .toolbar-group {
     display: flex;
     align-items: center;
-    gap: 3px;
+    gap: 4px;
+    flex-wrap: wrap; /* 空間不足時允許內部換行，防止溢出 */
 }
 
 .toolbar-separator {
     width: 1px;
     height: 20px;
     background-color: #ddd;
-    margin: 0 8px;
+    margin: 0 4px;
 }
 
 .toolbar-flex-spacer {
     flex: 1;
+    min-width: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#file-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #f8f8f8;
+    padding: 4px 12px;
+    border-radius: 15px;
+    border: 1px solid #eee;
+    font-size: 11px;
+    color: #666;
+    max-width: 250px;
+    overflow: hidden;
+    margin: 0 4px; /* 新增左右外距 */
+    flex-shrink: 1; /* 允許縮小 */
+}
+
+#current-filename {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-weight: 500;
+}
+
+/* 深色模式下的檔名標籤 */
+body.vscode-dark #file-breadcrumb,
+body.vscode-high-contrast #file-breadcrumb {
+    background-color: #333;
+    border-color: #444;
+    color: #bbb;
 }
 
 .platform-select {
@@ -59,11 +99,11 @@ body {
     cursor: pointer;
     outline: none;
     height: 28px;
-    margin-right: 10px;
 }
 
 .serial-select {
-    max-width: 120px; /* 限制寬度以免破壞版面 */
+    min-width: 80px;
+    max-width: 150px; /* 限制寬度以免破壞版面 */
     background-color: #f3f3f3;
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -75,6 +115,43 @@ body {
     height: 28px;
     text-overflow: ellipsis; /* 超出部分顯示省略號 */
     white-space: nowrap;
+}
+
+/* 響應式微調：當視窗太小時縮小間距或隱藏非關鍵元件 */
+@media (max-width: 1000px) {
+    #file-breadcrumb {
+        max-width: 180px;
+    }
+}
+
+@media (max-width: 850px) {
+    #file-breadcrumb {
+        max-width: 120px;
+    }
+    .toolbar-separator {
+        margin: 0 2px;
+    }
+}
+
+@media (max-width: 800px) {
+    #codeArea {
+        width: 300px;
+    }
+}
+
+@media (max-width: 700px) {
+    #file-breadcrumb {
+        display: none; /* 極窄螢幕時隱藏路徑標籤以確保功能按鈕可見 */
+    }
+}
+
+@media (max-width: 600px) {
+    .toolbar-flex-spacer {
+        display: none; /* 窄螢幕時移除中間空白，讓兩側群組靠攏或換行 */
+    }
+    #codeArea {
+        width: 200px;
+    }
 }
 
 .serial-select:hover {
@@ -201,11 +278,16 @@ body {
     display: none;
 }
 
+/* 預設 Hover 顯示切換：只有當同時存在兩種圖示時才切換 */
 .toolbar-btn:hover .normal-icon {
     display: none;
 }
 
-/* 預設 Hover 顯示 */
+/* 如果按鈕內只有一個 img，或者沒有 hover-icon，則維持顯示 normal-icon */
+.toolbar-btn:not(:has(.hover-icon)):hover .normal-icon {
+    display: block;
+}
+
 .toolbar-btn:hover .hover-icon {
     display: block;
 }
@@ -257,7 +339,93 @@ body {
     display: flex;
     flex-direction: column;
     border-left: 1px solid #ddd;
-    transition: width 0.2s;
+    transition: width 0.3s ease, opacity 0.3s ease;
+    overflow: visible; /* 改為 visible 以顯示 toggle handle */
+    position: relative;
+}
+
+#codeArea.collapsed {
+    width: 0 !important;
+    border-left: none;
+}
+
+#codeArea.collapsed #codeHeader,
+#codeArea.collapsed #codeContent {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#resizer-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 9999;
+}
+
+body.resizing-panel #resizer-overlay {
+    display: block;
+}
+
+body.resizing-panel #codeArea {
+    transition: none !important; /* 拖動時關閉動畫，確保 Blockly 同步 */
+}
+
+#panel-resizer {
+    width: 6px;
+    background-color: transparent;
+    cursor: col-resize;
+    z-index: 100;
+    transition: background-color 0.2s;
+    margin-left: -3px; /* 跨越邊界以便點擊 */
+    margin-right: -3px;
+}
+
+#panel-resizer:hover, #panel-resizer.is-dragging {
+    background-color: #FE2F89;
+}
+
+#code-toggle {
+    position: absolute;
+    left: -16px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 48px;
+    background-color: #f3f3f3;
+    border: 1px solid #ddd;
+    border-right: none;
+    border-radius: 6px 0 0 6px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    z-index: 101;
+    color: #FE2F89;
+    font-size: 10px;
+}
+
+#codeArea.collapsed #code-toggle {
+    left: -16px; /* 保持在邊界上 */
+}
+
+body.resizing-panel {
+    cursor: col-resize;
+    user-select: none;
+}
+
+/* 深色模式下的切換鈕與調整棒 */
+body.vscode-dark #code-toggle,
+body.vscode-high-contrast #code-toggle {
+    background-color: #2d2d2d;
+    border-color: #404040;
+}
+
+body.vscode-dark #panel-resizer:hover,
+body.vscode-dark #panel-resizer.is-dragging {
+    background-color: #FE2F89;
 }
 
 #codeHeader {
@@ -589,6 +757,192 @@ body {
     cursor: pointer;
 }
 
+/* Quick Pick 列表樣式 */
+.quick-pick-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.quick-pick-item {
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    border-bottom: 1px solid #f5f5f5;
+    font-size: 14px;
+    color: #333;
+    display: flex;
+    align-items: center;
+}
+
+.quick-pick-item:last-child {
+    border-bottom: none;
+}
+
+.quick-pick-item:hover {
+    background-color: #fce4ec;
+    color: #FE2F89;
+}
+
+/* 深色模式支援 */
+body.vscode-dark .quick-pick-item,
+body.vscode-high-contrast .quick-pick-item {
+    color: #cccccc;
+    border-bottom-color: #333;
+}
+
+body.vscode-dark .quick-pick-item:hover,
+body.vscode-high-contrast .quick-pick-item:hover {
+    background-color: #3e3e3e;
+    color: #FE2F89;
+}
+
+body.vscode-dark .modal-content,
+body.vscode-high-contrast .modal-content {
+    background-color: #2d2d2d;
+    color: #e0e0e0;
+}
+
+body.vscode-dark .modal-header,
+body.vscode-high-contrast .modal-header {
+    border-bottom-color: #444 !important;
+}
+
+body.vscode-dark .modal-footer,
+body.vscode-high-contrast .modal-footer {
+    border-top-color: #444 !important;
+}
+
+body.vscode-dark .btn-close,
+body.vscode-high-contrast .btn-close {
+    background-color: #3c3c3c;
+    border-color: #555;
+    color: #e0e0e0;
+}
+
+/* --- 整合式終端機面板 (Terminal) --- */
+#terminalArea {
+    height: 200px;
+    background-color: #1e1e1e;
+    color: #cccccc;
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid #333;
+    transition: height 0.3s ease, opacity 0.3s ease;
+    overflow: hidden;
+}
+
+#terminalArea.collapsed {
+    height: 0;
+    border-top: none;
+    opacity: 0;
+    pointer-events: none;
+}
+
+#terminalHeader {
+    height: 32px;
+    background-color: #252526;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 12px;
+    user-select: none;
+}
+
+#terminalTitle {
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.terminal-tool-btn {
+    background: transparent;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 3px;
+}
+
+.terminal-tool-btn:hover {
+    background-color: #3e3e42;
+    color: #fff;
+}
+
+.terminal-tool-btn.paused {
+    background-color: #FE2F89 !important;
+    color: white !important;
+}
+
+.terminal-tool-btn.paused img {
+    filter: brightness(0) invert(1);
+}
+
+#terminalContent {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 12px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-all;
+    /* Firefox 捲軸支援 */
+    scrollbar-width: thin;
+    scrollbar-color: #555 #1e1e1e;
+}
+
+/* --- 終端機專屬深色捲軸 (Webkit/Blink) --- */
+#terminalContent::-webkit-scrollbar {
+    width: 10px;
+}
+
+#terminalContent::-webkit-scrollbar-track {
+    background: #1e1e1e;
+}
+
+#terminalContent::-webkit-scrollbar-thumb {
+    background: #444;
+    border-radius: 5px;
+    border: 2px solid #1e1e1e;
+}
+
+#terminalContent::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* 終端機文字顏色 */
+.term-out { color: #cccccc; }
+.term-err { color: #f48771; }
+.term-info { color: #75beff; font-weight: bold; }
+.term-success { color: #89d185; }
+
+/* --- 更新檢查按鈕動畫 (對齊 #wavecode) --- */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.spin-animation {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+.bounce-gradient {
+    animation: bounce 0.6s ease-in-out infinite;
+    filter: drop-shadow(0 0 5px #FE2F89);
+}
+
+.update-hidden {
+    display: none !important;
+}
+
 /* --- VS Code / System Theme Integration --- */
 
 /* 深色模式全局變數 */
@@ -729,12 +1083,22 @@ body.vscode-high-contrast .dropdown-item:hover {
     background-color: #3e3e3e;
     color: #FE2F89;
 }
-
-/* 自動反轉圖示顏色 (排除 Python Logo) */
-body.vscode-dark .normal-icon:not([src*="python"]),
-body.vscode-high-contrast .normal-icon:not([src*="python"]) {
+/* 自動反轉圖示顏色 (排除 Python Logo 與停止按鈕) */
+body.vscode-dark .normal-icon:not([src*="python"]):not([src*="stop_24dp_EA3323"]),
+body.vscode-high-contrast .normal-icon:not([src*="python"]):not([src*="stop_24dp_EA3323"]) {
     filter: invert(1) brightness(0.9);
 }
+
+#btn-stop:hover {
+    background-color: #fdecea !important; /* 淺紅色背景 */
+}
+
+body.vscode-dark #btn-stop:hover,
+body.vscode-high-contrast #btn-stop:hover {
+    background-color: #442a2a !important; /* 深紅色背景 */
+}
+
+/* 3. 修正程式碼預覽區 */
 
 body.vscode-dark .dropdown-item img:not([src*="python"]) {
     filter: invert(1) brightness(0.9);

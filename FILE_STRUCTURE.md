@@ -11,36 +11,37 @@ C:\Workspace\cocoya\
 │   ├── todo.md            # 任務清單
 │   └── work/              # 每日工作紀錄
 │       ├── 2026-04-29.md  # 重大架構轉型：全面遷移 MicroPython
-│       └── 2026-04-30.md  # UI/UX 精進：Serial 穩定性與硬體辨識優化
+│       └── 2026-04-30.md  # UI/UX 精進：Tauri 穩定化與整合式終端機
 ├── ui/                    # 雙模共用前端根目錄 (Vite Project)
-│   ├── index.html         # Webview 與 Tauri 共用入口
+│   ├── index.html         # Webview 與 Tauri 共用入口 (新增 Terminal 佈局)
+│   ├── favicon.ico        # 本地圖示以解決 404 報錯
 │   ├── blockly/           # Blockly 核心庫與靜態插件
 │   ├── src/               # 前端原始碼與模組 (SSOT 單一事實來源)
-│   │   ├── bridge.js      # CocoyaBridge 通訊抽象層
-│   │   ├── main.js        # Webview 進入點 (對接 MicroPython 模式)
+│   │   ├── bridge.js      # CocoyaBridge 通訊抽象層 (多視窗隔離對接)
+│   │   ├── main.js        # Webview 進入點 (自動平台遷移邏輯)
 │   │   ├── module_loader.js # 動態模組載入器
-│   │   ├── ui_manager.js  # UI 渲染與互動管理器 (含韌體子選單)
-│   │   ├── utils.js       # 全域攔截器、搜尋引擎、縮排縮放器
-│   │   ├── style.css      # 主樣式表 (含子選單 Hover 樣式)
-│   │   ├── zh-hant.js     # 核心語系檔 (MicroPython 標籤更新)
+│   │   ├── ui_manager.js  # UI 渲染與管理器 (Terminal & Pause Scroll 控制)
+│   │   ├── utils.js       # 全域攔截器與工具函式
+│   │   ├── style.css      # 主樣式表 (Terminal 動畫與響應式佈局)
+│   │   ├── zh-hant.js     # 核心語系檔
 │   │   ├── en.js          # 核心語系檔
+│   │   ├── vs.min.css     # 本地化 Highlight.js 樣式
+│   │   ├── highlight.min.js # 本地化 Highlight.js 核心
+│   │   ├── python.min.js  # 本地化 Python 語法解析
 │   │   ├── core_manifest.json # 模組載入清單
-│   │   └── modules/       # 雙模共用積木模組 (已全面遷移至 MicroPython HAL)
+│   │   └── modules/       # 雙模共用積木模組
 │   └── package.json       # Vite 設定
 ├── src/                   # Extension 後端 (TypeScript)
-│   └── extension.ts       # 擴充功能管理器 (加入終端機自動清理邏輯)
+│   └── extension.ts       # 擴充功能管理器
 ├── src-tauri/             # Tauri 後端專案 (Rust)
 │   ├── Cargo.toml         # Rust 專案配置
-│   ├── tauri.conf.json    # Tauri 應用配置
+│   ├── tauri.conf.json    # Tauri 應用配置 (資源白名單映射)
 │   └── src/
 │       ├── main.rs        # 應用程式入口
-│       └── lib.rs         # 核心指令 (含 open_serial_monitor 等新指令)
+│       └── lib.rs         # [MAJOR] AppState 隔離重構與多視窗指令
 ├── resources/             # 延伸模組靜態資源
-│   ├── deploy_mcu.py      # [MAJOR] MicroPython 全序列埠部署腳本
+│   ├── deploy_mcu.py      # [ENHANCED] 強化擦除與監控邏輯
 │   └── firmware/          # 韌體資源庫
-│       └── MicroPython/   # [NEW] 已更換為 MicroPython 資源目錄
-│           ├── MakerPi_RP2040/
-│           └── XIAO_ESP32_S3/
 ├── temp_scripts/          # 執行期間暫存目錄
 ├── package.json           # 根目錄設定
 └── tsconfig.json          # TS 編譯設定

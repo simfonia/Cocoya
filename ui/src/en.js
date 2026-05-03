@@ -85,7 +85,11 @@
     "TLB_RUN_PC": "Run PC Program",
     "TLB_RUN_MCU": "Upload to MCU",
     "TLB_UPDATE": "Check for Updates",
-    "TLB_STOP": "Close",
+    "TLB_STOP": "Close Editor",
+    "TLB_STOP_PROGRAM": "Stop Program",
+    "TLB_TERMINAL": "Toggle Terminal",
+    "TLB_TOGGLE_CODE": "Toggle Code Preview",
+    "TLB_PAUSE_SCROLL": "Pause Auto-scroll",
     "TLB_SERIAL_PORT": "Serial Port",
     "TLB_SERIAL_REFRESH": "Detect Serial Port",
     "TLB_SERIAL_CONNECT": "Connect Serial",
@@ -106,6 +110,7 @@
     "MSG_CLOSE": "Close",
 
     // Update messages
+    "MSG_CHECKING_UPDATE": "Checking for updates...",
     "MSG_UPDATE_LATEST": "Already up to date (%1)",
     "MSG_UPDATE_AVAILABLE": "New version available (%1)",
     "MSG_UPDATE_LATEST_TOOLTIP": "You are using the latest version (%1)",
