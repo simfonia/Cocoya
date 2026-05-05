@@ -1,0 +1,128 @@
+/**
+ * Cocoya 通訊橋樑基礎類別 (Base Bridge)
+ * 定義通訊規格與共用設施
+ */
+export class BaseBridge {
+    constructor() {
+        this.isVsCode = false;
+        this.isTauri = false;
+        this.ready = new Promise((resolve) => {
+            this._resolveReady = resolve;
+        });
+        this._listeners = new Set();
+    }
+
+    /**
+     * 初始化橋接器 (由子類別重寫)
+     */
+    init() {
+        this._resolveReady();
+    }
+
+    /**
+     * 發送指令至後端 (由子類別實作核心邏輯)
+     * @param {string} command 
+     * @param {object} data 
+     */
+    async send(command, data = {}) {
+        await this.ready;
+        // 由子類別實作
+    }
+
+    /**
+     * 註冊監聽器
+     */
+    onMessage(callback) {
+        this._listeners.add(callback);
+    }
+
+    /**
+     * 移除監聽器
+     */
+    offMessage(callback) {
+        this._listeners.delete(callback);
+    }
+
+    /**
+     * 將訊息分發給所有註冊的監聽器
+     */
+    _dispatchToFrontend(message) {
+        this._listeners.forEach(cb => cb(message));
+    }
+
+    // --- 通用捷徑方法 ---
+
+    getManifest() { 
+        this.send('getManifest'); 
+    }
+
+    saveFile(xml, isDirty) { 
+        this.send('saveFile', { xml, isDirty }); 
+    }
+
+    runCode(code, platform, serialPort, serialUploadOnly = false) { 
+        this.send('runCode', { code, platform, serialPort, serialUploadOnly }); 
+    }
+
+    stopCode() { 
+        this.send('stopCode'); 
+    }
+
+    /**
+     * 彈出確認視窗 (回傳 Promise<boolean>)
+     */
+    confirm(message) {
+        const requestId = 'confirm_' + Date.now();
+        return new Promise((resolve) => {
+            const handler = (msg) => {
+                if (msg.command === 'promptResponse' && msg.requestId === requestId) {
+                    this.offMessage(handler);
+                    resolve(msg.result);
+                }
+            };
+            this.onMessage(handler);
+            this.send('confirm', { message, requestId });
+        });
+    }
+
+    /**
+     * 彈出輸入視窗 (回傳 Promise<string|null>)
+     */
+    prompt(message, defaultValue = '') {
+        const requestId = 'prompt_' + Date.now();
+        return new Promise((resolve) => {
+            const handler = (msg) => {
+                if (msg.command === 'promptResponse' && msg.requestId === requestId) {
+                    this.offMessage(handler);
+                    resolve(msg.result);
+                }
+            };
+            this.onMessage(handler);
+            this.send('prompt', { message, defaultValue, requestId });
+        });
+    }
+
+    /**
+     * 彈出警告視窗
+     */
+    alert(message) {
+        this.send('alert', { message });
+    }
+
+    /**
+     * 彈出型號選取視窗 (由子類別根據平台特性優化實作)
+     */
+    async pickMcuModel(options) {
+        const requestId = 'pick_' + Date.now();
+        return new Promise((resolve) => {
+            const handler = (msg) => {
+                if (msg.command === 'promptResponse' && msg.requestId === requestId) {
+                    this.offMessage(handler);
+                    resolve(msg.result);
+                }
+            };
+            this.onMessage(handler);
+            this.send('pickMcuModel', { options, requestId });
+        });
+    }
+}

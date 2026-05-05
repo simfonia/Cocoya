@@ -587,7 +587,12 @@
          */
         setupWorkspaceListeners: function() {
             this.workspace.addChangeListener((event) => {
-                // 如果還在初始化，或是 UI 事件，直接跳過髒標記判定
+                // 處理選中同步 (UI 事件也要處理，且不分初始化階段)
+                if (event.type === 'selected' || event.type === Blockly.Events.SELECTED) {
+                    if (window.CocoyaUI) window.CocoyaUI.syncSelection(event.newElementId);
+                }
+
+                // 如果還在初始化，或是 UI 事件，直接跳過髒標記判定 (如：移動捲軸、選取積木等)
                 if (this.isInitializing || event.isUiEvent) return;
 
                 const isBlockChange = [
@@ -605,11 +610,6 @@
                     this.triggerBlockStateUpdate(); 
                     this.triggerCodeUpdate();
                     this.triggerAutoBackup(); 
-                }
-                
-                // 處理選中同步
-                if (event.type === 'selected' || event.type === Blockly.Events.SELECTED) {
-                    if (window.CocoyaUI) window.CocoyaUI.syncSelection(event.newElementId);
                 }
             });
         },
