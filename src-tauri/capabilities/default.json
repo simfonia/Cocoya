@@ -13,17 +13,6 @@
     "core:event:allow-emit",
     "core:window:allow-set-title",
     "core:window:allow-destroy",
-    "core:window:allow-close",
-    {
-      "identifier": "shell:allow-open",
-      "allow": [
-        {
-          "schemes": [
-            "http",
-            "https"
-          ]
-        }
-      ]
-    }
+    "core:window:allow-close"
   ]
 }
