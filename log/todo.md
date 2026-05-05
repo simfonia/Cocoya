@@ -15,7 +15,7 @@
 - [x] **[核心] 底層通訊重構**：重寫 `deploy_mcu.py`，改採全序列埠 (Raw REPL) 傳輸，解決磁碟鎖定問題。
 - [x] **[核心] 硬體產生器 (HAL) 遷移**：重寫馬達、舵機、超音波、音樂引擎與 Camera 驅動邏輯 (使用 `machine` 庫)。
 - [x] **[UI] 介面清理與環境優化**：重新設計設定選單，移除過時的 USB 鎖定功能，實作「深度修復磁碟」。
-- [x] **[UI/UX]** 為「深度修復」加入 Hover 說明與垃圾桶圖示，修正「重建磁區」誤導術語。
+- [x] **[UI/UX]** 為「深度修復」加入 Hover說明與垃圾桶圖示，修正「重建磁區」誤導術語。
 - [x] **[核心/VSIX]** 實作序列埠智慧辨識 (Smart Labeling) 與高效能非同步偵測。
 - [x] **[核心/VSIX]** 實作 Terminal Singleton 模式，徹底解決 COM 埠佔用衝突。
 
@@ -35,14 +35,17 @@
     - [x] 實現部分指令鏡像：`run_python` (含串流日誌)、`get_manifest`、`get_module_toolbox`.
     - [x] 實現檔案系統指令：`save_file` (含 dialog)、`open_file`.
     - [x] 實現序列埠 hardware 指令：`get_serial_ports`、`deploy_mcu`.
+    - [x] **[重大修復]** 徹底解決視窗關閉攔截失效、權限缺失與標題同步問題。
+    - [x] **[重大修復]** 實作多視窗備份隔離與自動清理機制。
     - [ ] 整合 `deploy_mcu.py` 作為 Tauri Sidecar 以利打包發布。
     - [ ] 實作重置韌體功能 (Reset Firmware)：
-        - [ ] 策略 A：UF2 複製模式 (適用於 RP2040)。
+        - [x] 策略 A：UF2 複製模式 (適用於 RP2040)。
         - [ ] 策略 B：Serial 模式 (適用於 ESP32-S3，需整合 esptool Sidecar)。
-    - [ ] 實現 Tauri 模式下的 **環境診斷** (check_environment)。
+    - [x] 實現 Tauri 模式下的 **環境診斷** (check_environment)。
 - [ ] **建置自動化**：配置 Vite Build，產出 VSIX 運行時資源。
 - [x] **[UI/UX] 響應式工具列修正**：解決視窗過小時工具列溢出疊加問題，導入媒體查詢與 `minWidth` 限制。
 - [x] **[UI/UX] 程式碼預覽面板收合與縮放**：實作可切換的收合把手 (對齊 #wavecode) 與手動調整垂直分割面積功能。
+- [x] **[Bug 修復]** 修復 VSIX 模式下 Python 套件檢查 (check_environment) 卡住的問題。
 
 ## [待辦] 里程碑 v5.1: 跨平台與 TinyML
 - [ ] **[核心/跨平台]** 實作 macOS/Linux 的序列埠 Friendly Name 偵測 (ioreg/udevadm)。
@@ -50,4 +53,4 @@
 - [ ] **TinyML 工具整合**：在獨立應用程式模式下提供影像標註與資料採集面板。
 
 ---
-*最後更新日期：2026-05-03 (UI/UX 響應式與收合面板實作)*
+*最後更新日期：2026-05-04 (Tauri 多視窗關閉與備份修復)*

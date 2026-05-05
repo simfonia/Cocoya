@@ -7,6 +7,7 @@
 // Tauri 2.0 API 引用
 let tauriInvoke = null;
 let tauriListen = null;
+let tauriGetCurrent = null;
 
 const CocoyaBridge = {
     // 環境判定
@@ -26,36 +27,38 @@ const CocoyaBridge = {
     /**
      * 初始化 Bridge
      */
-    async init() {
-        // 建立一個可供外部等待的 Promise
+    init() {
+        // 建立一個供外部等待的 Promise
         this.ready = new Promise((resolve) => {
             this._resolveReady = resolve;
         });
 
         if (this.isVsCode) {
             this.vscode = acquireVsCodeApi();
-            console.log('[Bridge] Running in VS Code mode');
             window.addEventListener('message', (event) => {
                 this._dispatchToFrontend(event.data);
             });
             this._resolveReady();
         } else if (this.isTauri) {
-            console.log('[Bridge] Running in Tauri mode');
-            try {
-                // 動態導入 Tauri v2 API
-                const { invoke } = await import('@tauri-apps/api/core');
-                const { listen } = await import('@tauri-apps/api/event');
-                tauriInvoke = invoke;
-                tauriListen = listen;
-                console.log('[Bridge] Tauri API loaded successfully');
-                this._setupTauriListeners();
-                this._resolveReady();
-            } catch (e) {
-                console.error('[Bridge] Failed to load Tauri API:', e);
-                this._resolveReady();
-            }
+            // 非同步導入 API 並啟動監聽器，但不阻塞 init()
+            (async () => {
+                try {
+                    const { invoke } = await import('@tauri-apps/api/core');
+                    const { listen } = await import('@tauri-apps/api/event');
+                    const { getCurrentWebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+                    
+                    tauriInvoke = invoke;
+                    tauriListen = listen;
+                    tauriGetCurrent = getCurrentWebviewWindow;
+                    
+                    await this._setupTauriListeners();
+                    this._resolveReady();
+                } catch (e) {
+                    console.error('[Bridge] Failed to load Tauri API:', e);
+                    this._resolveReady();
+                }
+            })();
         } else {
-            console.warn('[Bridge] Running in Browser (Preview) mode');
             this._resolveReady();
         }
     },
@@ -209,8 +212,12 @@ const CocoyaBridge = {
                         this.vscode.postMessage({ command, ...data });
                     } else if (this.isTauri) {
                         const isSaveAs = (command === 'saveFileAs');
-                        const filename = await tauriInvoke('save_file', { xml: data.xml, saveAs: isSaveAs });
-                        this._dispatchToFrontend({ command: 'saveCompleted', filename: filename });
+                        try {
+                            const filename = await tauriInvoke('save_file', { xml: data.xml, saveAs: isSaveAs });
+                            this._dispatchToFrontend({ command: 'saveCompleted', filename: filename });
+                        } catch (e) {
+                            if (e !== 'Canceled') console.error('[Bridge] Save failed:', e);
+                        }
                     }
                     break;
 
@@ -218,15 +225,19 @@ const CocoyaBridge = {
                     if (this.isVsCode) {
                         this.vscode.postMessage({ command, ...data });
                     } else if (this.isTauri) {
-                        const res = await tauriInvoke('open_file');
-                        this._dispatchToFrontend({ 
-                            command: 'loadWorkspace', 
-                            xml: res.xml, 
-                            filename: res.filename, 
-                            platform: res.platform 
-                        });
-                        if (res.backup_xml) {
-                            this._dispatchToFrontend({ command: 'recoveryData', xml: res.backup_xml });
+                        try {
+                            const res = await tauriInvoke('open_file');
+                            this._dispatchToFrontend({ 
+                                command: 'loadWorkspace', 
+                                xml: res.xml, 
+                                filename: res.filename, 
+                                platform: res.platform 
+                            });
+                            if (res.backup_xml) {
+                                this._dispatchToFrontend({ command: 'recoveryData', xml: res.backup_xml });
+                            }
+                        } catch (e) {
+                            if (e !== 'Canceled') console.error('[Bridge] Open failed:', e);
                         }
                     }
                     break;
@@ -367,7 +378,10 @@ const CocoyaBridge = {
                 case 'setWindowTitle':
                     if (this.isTauri) {
                         try {
-                            await tauriInvoke('set_window_title', { title: `Cocoya - ${data.title}` });
+                            const fullTitle = `Cocoya - ${data.title}`;
+                            console.error(`[Bridge] Setting title: "${fullTitle}"`);
+                            document.title = fullTitle;
+                            await tauriInvoke('set_window_title', { title: fullTitle });
                         } catch (e) { console.warn('[Bridge] Failed to set window title via Rust:', e); }
                     }
                     break;
@@ -517,25 +531,91 @@ const CocoyaBridge = {
     },
 
     async _setupTauriListeners() {
-        if (!tauriListen) return;
-        await tauriListen('python-log', (event) => {
-            // 收到第一筆日誌時，關閉 Loading 視窗 (適用於 PC 模式啟動緩慢)
-            if (!this._firstLogReceived) {
+        if (!tauriListen || !tauriGetCurrent) return;
+
+        // --- 1. 攔截視窗關閉事件 (Tauri 模式) ---
+        try {
+            const appWindow = tauriGetCurrent();
+            
+            // 重要：必須 await 註冊，且 callback 必須是同步的
+            await appWindow.onCloseRequested((event) => {
+                const title = document.title;
+                const isDirty = title.includes('*');
+                
+                console.error(`[Bridge] Close check - Title: "${title}", isDirty: ${isDirty}`);
+
+                if (isDirty) {
+                    event.preventDefault(); // 攔截！
+                    CocoyaBridge._handleCloseDialog(appWindow); 
+                }
+            });
+
+            // --- 2. 監聽 Python 日誌與備份恢復 ---
+            await appWindow.listen('python-log', (event) => {
+                if (!this._firstLogReceived) {
+                    this._firstLogReceived = true;
+                    if (window.CocoyaUI) window.CocoyaUI.hideLoadingModal();
+                }
+                if (window.CocoyaUI) window.CocoyaUI.appendTerminal(event.payload, 'out');
+            });
+
+            await appWindow.listen('python-error', (event) => {
                 this._firstLogReceived = true;
-                window.CocoyaUI.hideLoadingModal();
+                if (window.CocoyaUI) window.CocoyaUI.hideLoadingModal();
+                if (window.CocoyaUI) window.CocoyaUI.appendTerminal(event.payload, 'err');
+            });
+
+            await appWindow.listen('recoveryData', (event) => {
+                this._dispatchToFrontend({ command: 'recoveryData', xml: event.payload.xml });
+            });
+        } catch (e) {
+            console.error('[Bridge] Failed to setup Tauri listeners:', e);
+        }
+    },
+
+    /**
+     * 處理關閉確認對話框 (Tauri 專用非同步流程)
+     */
+    async _handleCloseDialog(appWindow) {
+        try {
+            const app = window.CocoyaApp;
+            const confirmMsg = (window.Blockly && Blockly.Msg['MSG_SAVE_CONFIRM']) || 'Do you want to save changes?';
+            
+            if (window.CocoyaUI && window.CocoyaUI.showSaveConfirm) {
+                const choice = await window.CocoyaUI.showSaveConfirm(confirmMsg);
+
+                if (choice === 'save') {
+                    const dom = Blockly.Xml.workspaceToDom(app.workspace);
+                    const platform = app.currentPlatform;
+                    dom.setAttribute('platform', platform);
+                    const xml = Blockly.Xml.domToPrettyText(dom);
+                    
+                    const filename = await tauriInvoke('save_file', { xml, saveAs: false });
+                    if (filename) {
+                        app.setDirty(false); 
+                        await appWindow.destroy(); 
+                    }
+                } else if (choice === 'discard') {
+                    app.setDirty(false); 
+                    // 給 UI 一點點時間更新狀態後立即銷毀
+                    setTimeout(async () => {
+                        await appWindow.destroy();
+                    }, 50);
+                }
+            } else {
+                // 原生 fallback
+                const { ask } = await import('@tauri-apps/plugin-dialog');
+                const ok = await ask(confirmMsg, { title: 'Cocoya', kind: 'warning' });
+                if (ok) {
+                    app.setDirty(false);
+                    await appWindow.destroy();
+                }
             }
-            // 轉向至終端機面板
-            if (window.CocoyaUI) window.CocoyaUI.appendTerminal(event.payload, 'out');
-        });
-        await tauriListen('python-error', (event) => {
-            this._firstLogReceived = true;
-            window.CocoyaUI.hideLoadingModal();
-            // 轉向至終端機面板 (紅色)
-            if (window.CocoyaUI) window.CocoyaUI.appendTerminal(event.payload, 'err');
-        });
-        await tauriListen('recoveryData', (event) => {
-            this._dispatchToFrontend({ command: 'recoveryData', xml: event.payload.xml });
-        });
+        } catch (err) {
+            console.error('[Bridge] Error in _handleCloseDialog:', err);
+            // 發生錯誤時強制放行，避免視窗永遠關不掉
+            await appWindow.destroy();
+        }
     },
 
     /**

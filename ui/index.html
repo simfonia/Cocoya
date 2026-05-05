@@ -111,7 +111,7 @@
                     <div class="toolbar-btn" id="btn-update" title="%{BKY_TLB_UPDATE}">
                         <img src="/src/icons/published_with_changes_24dp_1F1F1F.png" class="update-icon">
                     </div>
-                    <div class="toolbar-btn" id="btn-close" title="%{BKY_TLB_STOP}" style="display: none;">
+                    <div class="toolbar-btn" id="btn-close" title="%{BKY_TLB_CLOSE_EDITOR}" style="display: none;">
                         <img src="/src/icons/dangerous_24dp_1F1F1F.png" class="normal-icon">
                         <img src="/src/icons/dangerous_24dp_FE2F89.png" class="hover-icon">
                     </div>
@@ -166,6 +166,24 @@
                 </div>
             </div>
             <div id="codeContent"></div>
+        </div>
+    </div>
+
+    <!-- 儲存確認視窗 (對齊 VSIX 3按鈕體驗) -->
+    <div id="save-confirm-modal" class="modal-overlay">
+        <div class="modal-content" style="max-width: 450px; padding: 30px; text-align: left;">
+            <div style="display: flex; gap: 20px; align-items: flex-start;">
+                <img src="/src/icons/save_24dp_FE2F89.png" style="width: 32px; height: 32px;">
+                <div>
+                    <h3 id="save-confirm-message" style="margin: 0 0 10px 0; font-size: 16px;">%{BKY_MSG_SAVE_CONFIRM}</h3>
+                    <p style="margin: 0; font-size: 13px; color: #666;" id="save-confirm-detail">您對此專案所做的變更若不儲存將會遺失。</p>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 30px;">
+                <button class="btn-primary" id="btn-save-confirm-save" style="background: #FE2F89; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-weight: bold;">%{BKY_MSG_SAVE}</button>
+                <button class="btn-secondary" id="btn-save-confirm-discard" style="background: #f0f0f0; border: 1px solid #ccc; padding: 8px 15px; border-radius: 4px; cursor: pointer;">%{BKY_MSG_DONT_SAVE}</button>
+                <button class="btn-secondary" id="btn-save-confirm-cancel" style="background: white; border: 1px solid #ccc; padding: 8px 15px; border-radius: 4px; cursor: pointer;">%{BKY_MSG_CANCEL}</button>
+            </div>
         </div>
     </div>
 
