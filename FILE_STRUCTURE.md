@@ -10,8 +10,8 @@ C:\Workspace\cocoya\
 │   ├── handover.md        # 任務交接檔
 │   ├── todo.md            # 任務清單
 │   └── work/              # 每日工作紀錄
-│       ├── 2026-04-29.md  # 重大架構轉型：全面遷移 MicroPython
-│       └── 2026-04-30.md  # UI/UX 精進：Tauri 穩定化與整合式終端機
+│       ├── 2026-05-03.md  # UI/UX 響應式佈局與收合面板實作
+│       └── 2026-05-04.md  # 重大修復：Tauri 多視窗關閉攔截與備份隔離
 ├── ui/                    # 雙模共用前端根目錄 (Vite Project)
 │   ├── index.html         # Webview 與 Tauri 共用入口 (新增 Terminal 佈局)
 │   ├── favicon.ico        # 本地圖示以解決 404 報錯
@@ -36,6 +36,7 @@ C:\Workspace\cocoya\
 ├── src-tauri/             # Tauri 後端專案 (Rust)
 │   ├── Cargo.toml         # Rust 專案配置
 │   ├── tauri.conf.json    # Tauri 應用配置 (資源白名單映射)
+│   ├── capabilities/      # [UPDATED] 視窗權限配置 (default.json)
 │   └── src/
 │       ├── main.rs        # 應用程式入口
 │       └── lib.rs         # [MAJOR] AppState 隔離重構與多視窗指令

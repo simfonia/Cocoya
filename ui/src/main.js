@@ -19,6 +19,7 @@
         workspace: null,
         minimap: null,
         isDirty: false,
+        isInitializing: true, // [新增] 強制初始化狀態鎖定
         updateTimer: null,
         promptRequests: new Map(),
         currentPlatform: (function() {
@@ -271,7 +272,10 @@
          * 核心初始化：建立工作區並加載模組
          */
         initializeCocoya: async function(manifest, mediaUri, lang) {
-            console.log('[App] initializeCocoya starting...', { manifest, mediaUri, lang });
+            if (this._isAlreadyInitializing) return;
+            this._isAlreadyInitializing = true;
+            this.isInitializing = true; // 開始初始化，鎖定狀態
+            
             this.manifest = manifest;
             this.currentLang = lang || 'zh-hant';
             window.CocoyaMediaUri = mediaUri;
@@ -307,7 +311,6 @@
                     zoom: { controls: true, wheel: false, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 }
                 };
 
-                // 只有在使用者設定啟用時才載入插件
                 if (this.useScrollPlugin) {
                     injectOptions.plugins = { 'blockDragger': scrollDragger, 'metricsManager': scrollMetrics };
                 }
@@ -335,22 +338,31 @@
                 
                 this.registerVariablesCallback();
                 CocoyaUtils.setupGeneratorOverrides();
-                this.setupWorkspaceListeners();
-
+                
                 // 9. 建立預設積木
                 if (this.workspace.getTopBlocks(false).length === 0) {
                     this.createDefaultBlocks();
                 }
                 
-                // 10. 執行首次自動主題同步
-                if (this.applyAutoTheme) this.applyAutoTheme();
-                
+                // 10. 延遲啟動監聽器並強制重置狀態
+                setTimeout(() => {
+                    this.setupWorkspaceListeners(); // 這時候才掛載監聽器
+                    this.isInitializing = false;    // 解除鎖定
+                    this.isDirty = false;
+                    this.setDirty(false);           // 同步 UI
+                    
+                    if (this.applyAutoTheme) this.applyAutoTheme();
+                    this.triggerCodeUpdate();
+                }, 800); 
+
                 // 11. 檢查是否有未儲存的自動備份
                 await this.checkAutoBackup();
 
-                this.triggerCodeUpdate();
             } catch (error) {
                 console.error('[Cocoya] Initialization Failed:', error);
+            } finally {
+                // 確保狀態解除，避免鎖死
+                this._isAlreadyInitializing = false;
             }
         },
 
@@ -575,31 +587,29 @@
          */
         setupWorkspaceListeners: function() {
             this.workspace.addChangeListener((event) => {
+                // 如果還在初始化，或是 UI 事件，直接跳過髒標記判定
+                if (this.isInitializing || event.isUiEvent) return;
+
                 const isBlockChange = [
-                    Blockly.Events.BLOCK_MOVE, 
-                    Blockly.Events.BLOCK_CREATE, 
-                    Blockly.Events.BLOCK_CHANGE, 
-                    Blockly.Events.BLOCK_DELETE, 
-                    Blockly.Events.VAR_CREATE, 
-                    Blockly.Events.VAR_RENAME, 
-                    Blockly.Events.VAR_DELETE
+                    'move', 'create', 'change', 'delete',
+                    'var_create', 'var_rename', 'var_delete',
+                    Blockly.Events.BLOCK_MOVE,
+                    Blockly.Events.BLOCK_CREATE,
+                    Blockly.Events.BLOCK_CHANGE,
+                    Blockly.Events.BLOCK_DELETE
                 ].includes(event.type);
 
                 // 處理髒狀態與孤兒檢查
-                if (isBlockChange && !event.isUiEvent) { 
+                if (isBlockChange) { 
                     this.setDirty(true); 
                     this.triggerBlockStateUpdate(); 
+                    this.triggerCodeUpdate();
+                    this.triggerAutoBackup(); 
                 }
                 
                 // 處理選中同步
-                if (event.type === Blockly.Events.SELECTED && window.CocoyaUI) {
-                    window.CocoyaUI.syncSelection(event.newElementId);
-                }
-
-                // 處理程式碼即時預覽
-                if (!event.isUiEvent || isBlockChange) {
-                    this.triggerCodeUpdate();
-                    this.triggerAutoBackup(); // 每當變動時啟動自動備份
+                if (event.type === 'selected' || event.type === Blockly.Events.SELECTED) {
+                    if (window.CocoyaUI) window.CocoyaUI.syncSelection(event.newElementId);
                 }
             });
         },
@@ -667,6 +677,10 @@
          * 設定髒狀態並通知後端
          */
         setDirty: function(dirty) { 
+            // 初始化期間強制拒絕設為髒
+            if (this.isInitializing && dirty === true) return;
+            if (this.isDirty === dirty) return;
+
             this.isDirty = dirty; 
             if (window.CocoyaUI) window.CocoyaUI.setDirty(dirty); 
             window.CocoyaBridge.send('setDirty', { isDirty: dirty }); 
@@ -720,8 +734,13 @@
          */
         resetWorkspace: function() { 
             if (this.workspace) {
-                this.workspace.clear(); 
-                this.createDefaultBlocks(); 
+                Blockly.Events.disable();
+                try {
+                    this.workspace.clear(); 
+                    this.createDefaultBlocks(); 
+                } finally {
+                    Blockly.Events.enable();
+                }
                 if (window.CocoyaUI) window.CocoyaUI.updateFileStatus(''); 
                 this.setDirty(false); 
                 this.triggerCodeUpdate(); 
@@ -732,9 +751,13 @@
          * 儲存完成後的回調
          */
         onSaveCompleted: function(filename) { 
-            if (filename && window.CocoyaUI) window.CocoyaUI.updateFileStatus(filename); 
-            this.setDirty(false); 
-            if (window.CocoyaUI) window.CocoyaUI.flashButton('btn-save', '#e3f2fd'); 
+            if (filename) {
+                if (window.CocoyaUI) window.CocoyaUI.updateFileStatus(filename); 
+                this.setDirty(false); 
+                if (window.CocoyaUI) window.CocoyaUI.flashButton('btn-save', '#e3f2fd'); 
+                // 存檔成功，立即清理備份
+                window.CocoyaBridge.send('clearBackup');
+            }
         },
 
         /**
@@ -742,6 +765,7 @@
          */
         createDefaultBlocks: function() {
             if (this.minimap) this.minimap._isPaused = true;
+            Blockly.Events.disable();
             try {
                 let offsetX = 100; 
                 const toolboxDiv = document.querySelector('.blocklyToolboxDiv');
@@ -774,8 +798,15 @@
                 setTimeout(() => { 
                     if (this.minimap) { this.minimap._isPaused = false; this.refreshMinimap(); }
                     this.workspace.clearUndo(); 
-                }, 400); 
-            } catch (e) { console.error('[Cocoya] Failed to create default blocks:', e); }
+                    // 初始化積木後再次確保髒狀態為假
+                    this.isDirty = false;
+                    if (window.CocoyaUI) window.CocoyaUI.setDirty(false);
+                }, 500); 
+            } catch (e) { 
+                console.error('[Cocoya] Failed to create default blocks:', e); 
+            } finally {
+                Blockly.Events.enable();
+            }
         }
     };
 

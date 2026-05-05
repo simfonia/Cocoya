@@ -1,32 +1,11 @@
-<xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
-  <block type="py_definition_zone" id="8go3vMj_h]%Q%yz$Onz$" x="100" y="20"></block>
-  <block type="py_main" id="Z%}kcWIkUO}4P,/!#_39" x="100" y="140">
-    <statement name="DO">
-      <block type="py_loop_while" id="|3QLMGw5*X|T%|qQYRS-">
-        <value name="CONDITION">
-          <block type="py_logic_boolean" id=".(o8`(B$fw07D$GuM@O!">
-            <field name="BOOL">True</field>
-          </block>
-        </value>
-        <statement name="DO">
-          <block type="py_io_print" id="sSsI9U;{41DDs,gOv~U{">
-            <value name="TEXT">
-              <shadow type="py_text" id="^K1f,4@9Kq#q!?D~w-2c">
-                <field name="TEXT">Hello Cocoya!</field>
-              </shadow>
-            </value>
-            <next>
-              <block type="py_time_sleep" id="g*lcoj+o1(1NB1faPr(J">
-                <value name="SECONDS">
-                  <shadow type="py_math_number" id="r`}P(_@eW|K}Lj`vrZI7">
-                    <field name="NUM">1</field>
-                  </shadow>
-                </value>
-              </block>
-            </next>
-          </block>
-        </statement>
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
+  <block type="py_definition_zone" id="e@@eqITY^Ny3b:{;iIEq" x="50" y="90"></block>
+  <block type="mcu_main" id="%T+q,~k~a9G?Op,iXs@v" x="100" y="200"></block>
+  <block type="py_loop_while" id="4HBEF?GGWxtS`JY=%9`O" disabled-reasons="orphan" x="110" y="330">
+    <value name="CONDITION">
+      <block type="py_logic_boolean" id="ZcE9Z=#/=0H/,mKs(8zl" disabled-reasons="orphan">
+        <field name="BOOL">True</field>
       </block>
-    </statement>
+    </value>
   </block>
 </xml>

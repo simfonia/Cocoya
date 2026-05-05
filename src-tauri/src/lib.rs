@@ -234,7 +234,8 @@ fn auto_backup(window: Window, state: State<'_, AppState>, xml: String) -> Resul
         } else {
             let temp_dir = std::env::temp_dir().join("cocoya_tauri");
             if !temp_dir.exists() { fs::create_dir_all(&temp_dir).ok(); }
-            temp_dir.join("untitled_backup.xml")
+            // 使用視窗 Label 隔離未命名備份
+            temp_dir.join(format!("untitled_backup_{}.xml", window.label()))
         }
     };
     fs::write(backup_path, xml).map_err(|e| e.to_string())
@@ -242,13 +243,22 @@ fn auto_backup(window: Window, state: State<'_, AppState>, xml: String) -> Resul
 
 #[tauri::command]
 fn clear_backup(window: Window, state: State<'_, AppState>) -> Result<(), String> {
+    // 1. 清除實體檔案對應的隱藏備份 (.filename.bak)
     let paths = state.current_paths.lock().unwrap();
     if let Some(path) = paths.get(window.label()) {
         let bak_path = path.parent().unwrap().join(format!(".{}.bak", path.file_name().unwrap().to_str().unwrap()));
         if bak_path.exists() { let _ = fs::remove_file(bak_path); }
     }
-    let untitled_bak = std::env::temp_dir().join("cocoya_tauri").join("untitled_backup.xml");
+    
+    // 2. 清除該視窗對應的未命名備份
+    let temp_dir = std::env::temp_dir().join("cocoya_tauri");
+    let untitled_bak = temp_dir.join(format!("untitled_backup_{}.xml", window.label()));
     if untitled_bak.exists() { let _ = fs::remove_file(untitled_bak); }
+    
+    // 3. (相容性) 清除舊版通用備份
+    let legacy = temp_dir.join("untitled_backup.xml");
+    if legacy.exists() { let _ = fs::remove_file(legacy); }
+    
     Ok(())
 }
 
@@ -389,6 +399,10 @@ async fn save_file(window: Window, handle: tauri::AppHandle, state: State<'_, Ap
     }
 
     if let Some(path) = path_to_save {
+        // 取得備份檔路徑 (在寫入新檔前，先準備好清理它)
+        let bak_path = path.parent().unwrap().join(format!(".{}.bak", path.file_name().unwrap().to_str().unwrap()));
+        
+        // 執行存檔
         fs::write(&path, &xml).map_err(|e| e.to_string())?;
         let filename = path.file_name().unwrap().to_str().unwrap().to_string();
         
@@ -396,6 +410,13 @@ async fn save_file(window: Window, handle: tauri::AppHandle, state: State<'_, Ap
             let mut paths = state.current_paths.lock().unwrap();
             paths.insert(window.label().to_string(), path);
         }
+
+        // --- 存檔成功，立即清理相關備份 ---
+        if bak_path.exists() { let _ = fs::remove_file(bak_path); }
+        let temp_dir = std::env::temp_dir().join("cocoya_tauri");
+        let untitled_bak = temp_dir.join(format!("untitled_backup_{}.xml", window.label()));
+        if untitled_bak.exists() { let _ = fs::remove_file(untitled_bak); }
+        
         Ok(filename)
     } else {
         Err("No path".into())
@@ -691,7 +712,8 @@ async fn erase_filesystem(
 
 #[tauri::command]
 async fn create_window(handle: tauri::AppHandle) -> Result<(), String> {
-    tauri::WebviewWindowBuilder::new(&handle, format!("window-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis()), tauri::WebviewUrl::App("index.html".into()))
+    let label = format!("window-{}", std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis());
+    tauri::WebviewWindowBuilder::new(&handle, label, tauri::WebviewUrl::App("index.html".into()))
         .title("Cocoya Blockly Editor")
         .inner_size(1200.0, 800.0)
         .build()

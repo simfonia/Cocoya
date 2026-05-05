@@ -395,23 +395,31 @@ window.CocoyaUI = {
         img.classList.remove('spin-animation');
         
         if (data.hasUpdate) {
-            // --- 發現新版本 (對齊 wavecode 'available' 狀態) ---
+            // --- 發現新版本 ---
             btn.classList.add('update-available', 'bounce-gradient');
             img.src = `${base}/icons/cloud_download_24dp_FE2F89.png`;
             
-            // 對齊 #wavecode: 直接顯示新版本號
-            const label = (Blockly.Msg['MSG_UPDATE_AVAILABLE'] || '發現新版本').replace(' (%1)', '').replace('(%1)', '');
-            btn.setAttribute('title', `${label}: v${data.latestVersion} (目前版本: v${data.currentVersion})`);
+            let label = (Blockly.Msg['MSG_UPDATE_AVAILABLE'] || '發現新版本');
+            if (label.includes('%1')) {
+                label = label.replace('%1', `v${data.latestVersion}`);
+            } else {
+                label = `${label}: v${data.latestVersion}`;
+            }
+            btn.setAttribute('title', `${label} (目前版本: v${data.currentVersion})`);
         } else {
-            // --- 目前已是最新 (對齊 wavecode 'latest' 狀態) ---
+            // --- 目前已是最新 ---
             btn.classList.add('update-latest');
             img.src = `${base}/icons/published_with_changes_24dp_75FB4C.png`;
             
-            // 對齊 #wavecode: 直接顯示目前版本號
-            const label = (Blockly.Msg['MSG_UPDATE_LATEST'] || '已是最新版').replace(' (%1)', '').replace('(%1)', '');
-            btn.setAttribute('title', `${label}: v${data.currentVersion}`);
+            let label = (Blockly.Msg['MSG_UPDATE_LATEST'] || '已是最新版');
+            if (label.includes('%1')) {
+                label = label.replace('%1', `v${data.currentVersion}`);
+            } else {
+                label = `${label}: v${data.currentVersion}`;
+            }
+            btn.setAttribute('title', label);
             
-            // 3秒後自動隱藏 (對齊 wavecode 邏輯)
+            // 3秒後自動隱藏
             setTimeout(() => {
                 btn.classList.add('update-hidden');
             }, 3000);
@@ -596,19 +604,22 @@ window.CocoyaUI = {
         // --- 初始化佈局 (縮放與收合) ---
         self.initLayout();
         
-        // --- 環境偵測：停止與關閉按鈕 ---
+        // --- 環境偵測：按鈕顯示控制 ---
         const stopBtn = document.getElementById('btn-stop');
         const closeBtn = document.getElementById('btn-close');
+        const terminalToggleBtn = document.getElementById('btn-terminal');
 
         if (window.CocoyaBridge) {
             if (window.CocoyaBridge.isTauri) {
-                // Tauri: 顯示停止鈕，隱藏關閉鈕
+                // Tauri: 顯示停止鈕、隱藏關閉鈕、顯示自訂終端機
                 if (stopBtn) stopBtn.style.display = 'flex';
                 if (closeBtn) closeBtn.style.display = 'none';
+                if (terminalToggleBtn) terminalToggleBtn.style.display = 'flex';
             } else if (window.CocoyaBridge.isVsCode) {
-                // VSIX: 兩個都顯示
+                // VSIX: 顯示停止鈕、顯示關閉鈕、隱藏自訂終端機 (VSIX 用不到)
                 if (stopBtn) stopBtn.style.display = 'flex';
                 if (closeBtn) closeBtn.style.display = 'flex';
+                if (terminalToggleBtn) terminalToggleBtn.style.display = 'none';
             }
         }
 
@@ -671,7 +682,6 @@ window.CocoyaUI = {
         };
 
         // --- 終端機控制 ---
-        const terminalToggleBtn = document.getElementById('btn-terminal');
         if (terminalToggleBtn) {
             terminalToggleBtn.onclick = () => self.toggleTerminal();
         }
@@ -714,6 +724,7 @@ window.CocoyaUI = {
         bind('btn-open', 'openFile', { includeXml: true });
         bind('btn-save', 'saveFile', { includeXml: true });
         bind('btn-save-as', 'saveFileAs', { includeXml: true });
+        bind('btn-close', 'closeEditor', { includeXml: true }); // VSIX 模式關閉編輯器
         
         // 綁定設定與功能按鈕
         bind('btn-set-python-path', 'setPythonPath');
@@ -908,6 +919,31 @@ window.CocoyaUI = {
         
         const list = document.getElementById('module-list');
         if (list) list.innerHTML = `<li>${Blockly.Msg['DIAG_CHECKING'] || 'Checking...'}</li>`;
+    },
+
+    /**
+     * 顯示儲存確認對話框 (支援儲存、不儲存、取消)
+     * @param {string} message 提示訊息
+     * @returns {Promise<'save'|'discard'|'cancel'>} 使用者選擇
+     */
+    showSaveConfirm: function(message) {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('save-confirm-modal');
+            if (!modal) { resolve('cancel'); return; }
+
+            const msgEl = document.getElementById('save-confirm-message');
+            if (msgEl && message) msgEl.textContent = message;
+
+            modal.style.display = 'flex';
+
+            const btnSave = document.getElementById('btn-save-confirm-save');
+            const btnDiscard = document.getElementById('btn-save-confirm-discard');
+            const btnCancel = document.getElementById('btn-save-confirm-cancel');
+
+            btnSave.onclick = () => { modal.style.display = 'none'; resolve('save'); };
+            btnDiscard.onclick = () => { modal.style.display = 'none'; resolve('discard'); };
+            btnCancel.onclick = () => { modal.style.display = 'none'; resolve('cancel'); };
+        });
     },
 
     /**

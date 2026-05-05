@@ -86,3 +86,25 @@
         - < 700px：完全隱藏路徑標籤 (`display: none`)。這在 VS Code 的分割視窗（Split View）模式下尤為重要，確保即使在 1/3 寬度下功能按鈕依然可用。
 - **邊界防護**：
     - 在 `tauri.conf.json` 配置 `minWidth: 960`。此數值是根據 `(Left Group ~500px) + (Right Area ~400px)` 計算得出的安全值，確保在不換行的情況下擁有最佳視覺效果。
+
+## 關鍵技術實作紀錄 (2026-05-04 更新)
+
+### 1. Tauri v2 視窗權限與攔截機制
+- **權限作用域 (Capability Scoping)**：
+    - 在 Tauri v2 中，`capabilities/default.json` 預設可能只授權給 `"main"` 視窗。
+    - **修正**：將 `"windows": ["main"]` 修改為 `["*"]`，確保動態創建的次要視窗（如開新專案）也能獲得 `core:window:allow-close` 等權限，否則攔截器註冊會默默失敗。
+- **標題驅動的髒檢查 (Title-based Dirty Check)**：
+    - Webview 的 `document.title` 與原生的 Window Title 並非自動同步。
+    - **同步策略**：在 `setWindowTitle` 指令中，同時執行 `document.title = fullTitle` 與 `tauriInvoke('set_window_title', ...)`。
+    - **理由**：`onCloseRequested` 的 JS 回調能即時讀取 `document.title` 中的 `*` 標記，而不需非同步等待後端狀態，這對攔截流程至關重要。
+
+### 2. 多視窗備份隔離 (Multi-window Backup Isolation)
+- **Label-based Path**：
+    - 在 Rust 端，針對未命名專案使用 `untitled_backup_{window_label}.xml`。
+    - **生命週期管理**：存檔成功後，後端會根據目前視窗的 `label()` 與 `path` 同時清理隱藏備份檔 (`.filename.bak`) 與暫存備份檔。這解決了使用者存檔後，下次開啟仍被問是否恢復舊資料的 UX 缺陷。
+
+### 3. VSIX 環境偵測加固 (Robust VSIX Detection)
+- **execFile vs exec**：
+    - 在 Windows 下，`child_process.exec` 的字串參數若包含複雜引號，常被 CMD 誤解析。
+    - **解決方案**：改用 `execFile(pythonPath, ['-c', checkScript])`。
+    - **優勢**：參數以陣列傳遞，繞過 Shell 解析器，確保 Python 腳本完整傳遞，徹底消除因「引號被吃掉」導致的偵測失敗。

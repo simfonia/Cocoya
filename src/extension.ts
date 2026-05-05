@@ -121,7 +121,8 @@ export class CocoyaManager {
                     this.handleStopCode();
                     break;
                 case 'checkUpdate':
-                    vscode.window.showInformationMessage(this.t('MSG_UPDATE_LATEST'));
+                    const v = this.context.extension.packageJSON.version;
+                    vscode.window.showInformationMessage(this.t('MSG_UPDATE_LATEST', v));
                     break;
                 case 'closeEditor':
                     await this.handleCloseEditor(message);
@@ -274,29 +275,45 @@ export class CocoyaManager {
 
     /**
      * 檢查必要的 Python 模組是否已安裝
+     * 使用 execFile 以數組傳遞參數，徹底避免 Windows 上的引號轉義問題
      */
     private async handleCheckEnvironment() {
         let pythonPath = this.context.globalState.get<string>('pythonPath', 'python');
-        const modules = [
-            { id: 'cv2', name: 'opencv-python', importName: 'cv2' },
-            { id: 'mediapipe', name: 'mediapipe', importName: 'mediapipe' },
-            { id: 'PIL', name: 'Pillow', importName: 'PIL' },
-            { id: 'serial', name: 'pyserial', importName: 'serial' }
-        ];
+        const modules = ['cv2', 'mediapipe', 'PIL', 'serial'];
+        
+        const checkScript = `
+import importlib.util
+import json
+import sys
 
-        const results: any = {};
-        const { execSync } = require('child_process');
+modules = ${JSON.stringify(modules)}
+results = {}
+for m in modules:
+    try:
+        results[m] = importlib.util.find_spec(m) is not None
+    except:
+        results[m] = False
+print(json.dumps(results))
+        `.trim();
 
-        for (const mod of modules) {
-            try {
-                execSync(`"${pythonPath}" -c "import ${mod.importName}"`, { stdio: 'ignore' });
-                results[mod.id] = true;
-            } catch (e) {
-                results[mod.id] = false;
+        const { execFile } = require('child_process');
+        
+        // 使用 execFile，將 -c 與腳本作為獨立參數傳遞，不經過 Shell 字串解析
+        execFile(pythonPath, ['-c', checkScript], (error: any, stdout: string) => {
+            let results: any = {};
+            if (!error) {
+                try {
+                    results = JSON.parse(stdout.trim());
+                } catch (e) {
+                    console.error('[Cocoya] Failed to parse environment check output:', e);
+                    modules.forEach(m => results[m] = false);
+                }
+            } else {
+                // 如果 Python 執行失敗 (路徑不對或權限問題)，全部設為 false
+                modules.forEach(m => results[m] = false);
             }
-        }
-
-        this.panel.webview.postMessage({ command: 'environmentStatus', results });
+            this.panel.webview.postMessage({ command: 'environmentStatus', results });
+        });
     }
 
     /**
@@ -662,23 +679,19 @@ export class CocoyaManager {
     }
 
     private async validatePySerial(pPath: string): Promise<boolean> {
-        try {
-            const { execSync } = require('child_process');
-            execSync(`"${pPath}" -c "import serial"`, { stdio: 'ignore' });
-            return true;
-        } catch (e) {
-            return false;
-        }
+        return new Promise((resolve) => {
+            exec(`"${pPath}" -c "import serial"`, (error) => {
+                resolve(!error);
+            });
+        });
     }
 
     private async validatePythonPath(pPath: string): Promise<boolean> {
-        try {
-            const { execSync } = require('child_process');
-            execSync(`"${pPath}" --version`, { stdio: 'ignore' });
-            return true;
-        } catch (e) {
-            return false;
-        }
+        return new Promise((resolve) => {
+            exec(`"${pPath}" --version`, (error) => {
+                resolve(!error);
+            });
+        });
     }
 
     private handleStopCode() {
