@@ -21,10 +21,18 @@ C:\Workspace\cocoya\
 │   ├── main.js        # Webview 進入點 (自動平台遷移邏輯)
 │   ├── module_loader.js # 動態模組載入器
 │   ├── ui_manager.js  # UI 基礎邏輯與 I18n 管理 (原 Monolithic 檔案瘦身中)
-│   ├── ui/            # [NEW] UI 子模組
-│   │   ├── terminal.js # 終端機邏輯 (抽離自 ui_manager)
-│   │   └── renderer.js # 渲染與佈局邏輯 (抽離自 ui_manager)
-│   ├── utils.js       # 全域攔截器與工具函式
+├── ui/            # UI 子模組 (抽離自 ui_manager)
+│   ├── terminal.js # 終端機邏輯
+│   ├── renderer.js # 渲染與佈局邏輯
+│   ├── hardware.js # [NEW] 序列埠與韌體邏輯
+│   ├── dialogs.js  # [NEW] 對話框與視覺反饋
+│   └── base.js     # [NEW] 基礎狀態與工具列事件
+├── app/           # [NEW] 應用程式核心子模組 (抽離自 main.js)
+│   ├── config.js   # 平台與主題配置
+│   ├── persistence.js # 檔案與備份持久化
+│   ├── workspace.js # Blockly 與 Minimap 管理
+│   └── lifecycle.js # 初始化與通訊生命週期
+├── utils.js       # 全域攔截器與工具函式
 │   │   ├── style.css      # 主樣式表 (Terminal 動畫與響應式佈局)
 │   │   ├── zh-hant.js     # 核心語系檔
 │   │   ├── en.js          # 核心語系檔
