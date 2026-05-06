@@ -39,19 +39,20 @@ This document serves as the Technical Reference and Source of Truth (SSOT) for t
 ## CocoyaUI (`ui/src/ui_manager.js`)
 
 | Method / Property | Description | Status | Target Module |
-| :--- | :--- | :--- | :--- |
-| `renderPythonPreview(raw)` | Renders code with indentation guides | Original | `ui/renderer.js` |
-| `syncSelection(id)` | Highlights code lines for selected block | Original | `ui/renderer.js` |
-| `setDirty(bool)` | UI feedback (pink border) for dirty state | Original | `ui/base.js` |
-| `updateFileStatus(fn)` | Updates filename in toolbar and window title | Original | `ui/base.js` |
-| `applyI18n()` | Replaces %{BKY_...} placeholders in DOM | Original | `ui/base.js` |
-| `updateSerialPorts(ports)` | Updates the serial port dropdown | Original | `ui/hardware.js` |
-| `updateRunTooltip(p)` | Updates Run button tooltip based on platform | Original | `ui/hardware.js` |
-| `updateSettingsMenu(p)` | Shows/hides MCU settings (Reset Firmware) | Original | `ui/hardware.js` |
-| `flashButton(id, color)` | Visual feedback for button actions | Original | `ui/dialogs.js` |
-| `openQuickPick(options)` | Custom list selection UI | Original | `ui/dialogs.js` |
-| `initTerminal()` | Sets up the built-in terminal UI | Migrated | `ui/terminal.js` |
-| `appendTerminal(text, ...)` | Appends logs to the terminal | Migrated | `ui/terminal.js` |
-| `setUpdateStatus(data)` | Shows update progress in UI | Original | `ui/base.js` |
-| `updateEnvironmentStatus(r)` | Shows Python package status in UI | Original | `ui/hardware.js` |
-| `initToolbar(cb)` | Sets up all toolbar button click listeners | Original | `ui/base.js` |
+| `renderPythonPreview(raw)` | Renders code with indentation guides | Migrated | `ui/renderer.js` |
+| `syncSelection(id)` | Highlights code lines for selected block | Migrated | `ui/renderer.js` |
+| `setDirty(bool)` | UI feedback (pink border) for dirty state | Migrated | `ui/base.js` |
+| `updateFileStatus(fn)` | Updates filename in toolbar and window title | Migrated | `ui/base.js` |
+| `applyI18n()` | Replaces %{BKY_...} placeholders in DOM | Migrated | `ui/base.js` |
+| `updateSerialPorts(ports)` | Updates the serial port dropdown | Migrated | `ui/hardware.js` |
+| `updateRunTooltip(p)` | Updates Run button tooltip based on platform | Migrated | `ui/hardware.js` |
+| `updateSettingsMenu(p)` | Shows/hides MCU settings (Reset Firmware) | Migrated | `ui/hardware.js` |
+| `flashButton(id, color)` | Visual feedback for button actions | Migrated | `ui/dialogs.js` |
+| `showQuickPick(options)` | Custom list selection UI | Migrated | `ui/dialogs.js` |
+| `closeQuickPick(result)` | Closes the custom list selection UI | Migrated | `ui/dialogs.js` |
+| `showLoadingModal(msg)` | Shows global loading spinner | Migrated | `ui/dialogs.js` |
+| `hideLoadingModal()` | Hides global loading spinner | Migrated | `ui/dialogs.js` |
+| `showSaveConfirm(msg)` | VS Code-style 3-button save dialog | Migrated | `ui/dialogs.js` |
+| `applyHighlightColor(c)` | Updates CSS variables for code highlighting | Migrated | `ui/dialogs.js` |
+| `initToolbar(cb)` | Sets up all toolbar button click listeners | Migrated | `ui/base.js` |
+| `setUpdateStatus(data)` | Shows update progress in UI | Migrated | `ui/base.js` |
