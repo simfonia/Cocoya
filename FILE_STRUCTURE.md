@@ -16,12 +16,15 @@ C:\Workspace\cocoya\
 │   ├── index.html         # Webview 與 Tauri 共用入口 (新增 Terminal 佈局)
 │   ├── favicon.ico        # 本地圖示以解決 404 報錯
 │   ├── blockly/           # Blockly 核心庫與靜態插件
-│   ├── src/               # 前端原始碼與模組 (SSOT 單一事實來源)
-│   │   ├── bridge.js      # CocoyaBridge 通訊抽象層 (多視窗隔離對接)
-│   │   ├── main.js        # Webview 進入點 (自動平台遷移邏輯)
-│   │   ├── module_loader.js # 動態模組載入器
-│   │   ├── ui_manager.js  # UI 渲染與管理器 (Terminal & Pause Scroll 控制)
-│   │   ├── utils.js       # 全域攔截器與工具函式
+├── src/               # 前端原始碼與模組 (SSOT 單一事實來源)
+│   ├── bridge.js      # CocoyaBridge 通訊抽象層 (多視窗隔離對接)
+│   ├── main.js        # Webview 進入點 (自動平台遷移邏輯)
+│   ├── module_loader.js # 動態模組載入器
+│   ├── ui_manager.js  # UI 基礎邏輯與 I18n 管理 (原 Monolithic 檔案瘦身中)
+│   ├── ui/            # [NEW] UI 子模組
+│   │   ├── terminal.js # 終端機邏輯 (抽離自 ui_manager)
+│   │   └── renderer.js # 渲染與佈局邏輯 (抽離自 ui_manager)
+│   ├── utils.js       # 全域攔截器與工具函式
 │   │   ├── style.css      # 主樣式表 (Terminal 動畫與響應式佈局)
 │   │   ├── zh-hant.js     # 核心語系檔
 │   │   ├── en.js          # 核心語系檔

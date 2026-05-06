@@ -136,7 +136,7 @@
     - **自研搜尋引擎**：實作 BlockSearcher 文字索引系統，支援全文字匹配（包含 中文字串中間詞）與單字元即時觸發，並嵌入至 Toolbox 頂部。
     - **地圖與導航**：整合 Workspace Minimap 並實作「收合/展開」按鈕，針對 Webview 進行穩定性強化與自動縮放優化。
     - **πCar 邏輯修正**：經實測校正，Maker Pi RP2040 之馬達邏輯為 Low=Brake, High=Coast；Servo 系統支援獨立校準與「雙手同步」移動。
-    - **穩定性革命**：實作全局 SVG 屬性攔截器，徹底解決 NaN 報錯與積木刪除時的同步崩毀問題。
+    - **穩定性革命**：實作 SVG 屬性攔截器，徹底解決 NaN 報錯與積木刪除時的同步崩毀問題。
 - **下一階段目標**：
     - 進入里程碑 v3.1 剩餘部分：實作 TinyML 資料採集面板。
     - 進入里程碑 v4.0：跨平台（Linux/macOS）序列埠路徑適適配。
@@ -232,6 +232,18 @@
     - **[備份系統精進]**：實作 `untitled_backup_{label}.xml` 視窗標籤隔離機制。手動存檔成功後自動清理關聯備份，消除過期的恢復提示。
     - **[VSIX 偵測修復]**：重構 VSIX Python 環境檢查為全非同步 `execFile`。解決引號轉義導致的「已安裝卻報未安裝」誤判與 Extension Host 卡死問題。
 - **目前狀態**：雙版本在多視窗操作、資料備份與環境偵測上的一致性與穩定性大幅提升。
+
+## 2026-05-06 UI 邏輯模組化重構 (里程碑 v5.0 進行中)
+- **進度**：
+    - **[架構重整]**：啟動 `CocoyaUI` 大規模重構，將單一龐大的 `ui_manager.js` 拆分為功能明確的子模組。
+    - **[模組遷移]**：
+        - 成功遷移 **Terminal** 邏輯至 `ui/terminal.js`。
+        - 成功遷移 **Renderer & Layout** 邏輯至 `ui/renderer.js`（含 Python 預覽、高亮同步與面板縮放）。
+    - **[相容性修復]**：修正 `window.CocoyaUI` 初始化模式為 `Object.assign`，解決模組間方法被覆蓋的關鍵 Bug。
+    - **[文檔化]**：建立 `docs/api_manifest.md` 作為重構的技術基準（SSOT）。
+- **下一階段目標**：
+    - 繼續遷移 Hardware（序列埠/韌體）與 Dialogs（彈窗/視覺回饋）模組。
+    - 啟動 `main.js` (CocoyaApp) 的模組化。
 
 ## 未來開發導向 (Future Roadmap)
 - **跨平台計畫**：計畫重構 src/extension.ts 中的硬體偵測邏輯，將 powershell 指令抽象化，以支援 Linux 與 macOS 環境。
