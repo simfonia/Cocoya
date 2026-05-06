@@ -35,8 +35,15 @@
     - [x] 實現部分指令鏡像：`run_python` (含串流日誌)、`get_manifest`、`get_module_toolbox`.
     - [x] 實現檔案系統指令：`save_file` (含 dialog)、`open_file`.
     - [x] 實現序列埠 hardware 指令：`get_serial_ports`、`deploy_mcu`.
-    - [x] **[重大修復]** 徹底解決視窗關閉攔截失效、權限缺失與標題同步問題。
-    - [x] **[重大修復]** 實作多視窗備份隔離與自動清理機制。
+    - [x] **[重大修復]** 徹底解決視窗關閉攔截失效、權限缺失與標題同步問題.
+    - [x] **[重大修復]** 實作多視窗備份隔離與自動清理機制.
+    - [ ] **[進行中] UI 邏輯架構重構 (Modularization)**:
+        - [x] 建立 `api_manifest.md` 作為重構參考。
+        - [x] 遷移 Terminal 邏輯至 `ui/terminal.js`。
+        - [x] 遷移 Renderer & Layout 邏輯至 `ui/renderer.js`。
+        - [ ] 遷移 Hardware 控制邏輯至 `ui/hardware.js`。
+        - [ ] 遷移 Dialog & Feedback 邏輯至 `ui/dialogs.js`。
+        - [ ] 模組化 `main.js` (App 核心、Workspace、Persistence)。
     - [ ] 整合 `deploy_mcu.py` 作為 Tauri Sidecar 以利打包發布。
     - [ ] 實作重置韌體功能 (Reset Firmware)：
         - [x] 策略 A：UF2 複製模式 (適用於 RP2040)。

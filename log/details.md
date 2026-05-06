@@ -49,7 +49,7 @@
 
 ### 2. 整合式終端機 (Webview-side Terminal)
 - **同步緩衝技術**：
-    - 修改 `appendTerminal` 邏輯：若傳入文字無 `\n` 且類型相同，則 `textContent += text`。
+    - 修改 `appendTerminal` 邏輯：若傳入文字無 `\n`且類型相同，則 `textContent += text`。
     - **解決問題**：修復了斷線重連時 `.` 指示符一直跳行的視覺缺陷。
 - **狀態控制 (isTerminalAutoScroll)**：
     - 預設開啟。按下工具列「執行」時，系統會強制恢復自動捲動，確保使用者看到最新的 Boot 日誌。
@@ -108,3 +108,16 @@
     - 在 Windows 下，`child_process.exec` 的字串參數若包含複雜引號，常被 CMD 誤解析。
     - **解決方案**：改用 `execFile(pythonPath, ['-c', checkScript])`。
     - **優勢**：參數以陣列傳遞，繞過 Shell 解析器，確保 Python 腳本完整傳遞，徹底消除因「引號被吃掉」導致的偵測失敗。
+
+## 關鍵技術實作紀錄 (2026-05-06 更新)
+
+### 1. ESM 模組共享物件初始化 (Object.assign Pattern)
+- **問題**：在不使用現代 Bundler (如 Webpack/Vite) 的純 `script` 標籤載入環境下，若多個 JS 檔案都嘗試定義 `window.CocoyaUI = { ... }`，後載入的檔案會完全覆蓋掉先前的定義。這導致 `terminal.js` 注入的方法在 `ui_manager.js` 載入後消失，引發 `TypeError: window.CocoyaUI.toggleTerminal is not a function`。
+- **解決方案**：所有子模組統一使用 `window.CocoyaUI = Object.assign(window.CocoyaUI || {}, { ... });`。
+- **優點**：
+    - **累加性**：支援多個檔案向同一個全域物件注入功能。
+    - **安全性**：即使載入順序變動，也不會發生覆蓋。
+
+### 2. UI 邏輯解耦策略 (Module Separation)
+- **Renderer 模組化**：實作 `ui/renderer.js`，解決了 Python 預覽渲染與積木高亮同步邏輯在單一檔案過於龐大（ Monolithic）的問題。
+- **佈局動態綁定**：將縮放把手 (`#panel-resizer`) 與收合控制 (`#code-toggle`) 封裝在 `initLayout` 中，並透過 `ui_manager.js` 的 `initToolbar` 統一驅動，確保 UI 邏輯的初始化順序一致。
