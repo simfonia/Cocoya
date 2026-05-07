@@ -136,6 +136,8 @@
     "MSG_PYTHON_UPDATED": "Python 路徑已更新: %1",
     "MSG_RECOVER_BACKUP": "偵測到上次未儲存的變更，是否要恢復？",
     "MSG_RECOVER_IGNORE": "忽略並建立新專案",
+    "MSG_READ_ONLY_ALERT": "此檔案已被其他視窗開啟，將以唯讀模式載入。您可以使用「另存新檔」來編輯。",
+    "MSG_READ_ONLY_HINT": "此檔案已被其他視窗開啟，目前為唯讀模式。",
     "MSG_RESET_FIRMWARE_CONFIRM": "重置韌體將清除 MCU 上的所有內容。請確保 MCU 已進入 BOOTSEL / 燒錄模式。\n是否繼續？",
     "MSG_ASK_CLEAR_CODE": "燒錄完成後，是否要清空 MCU 上的程式碼 (main.py)？",
     "MSG_SELECT_MCU_MODEL": "請選擇您的 MCU 型號：",

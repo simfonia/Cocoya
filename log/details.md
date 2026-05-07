@@ -121,3 +121,24 @@
 ### 2. UI 邏輯解耦策略 (Module Separation)
 - **Renderer 模組化**：實作 `ui/renderer.js`，解決了 Python 預覽渲染與積木高亮同步邏輯在單一檔案過於龐大（ Monolithic）的問題。
 - **佈局動態綁定**：將縮放把手 (`#panel-resizer`) 與收合控制 (`#code-toggle`) 封裝在 `initLayout` 中，並透過 `ui_manager.js` 的 `initToolbar` 統一驅動，確保 UI 邏輯的初始化順序一致。
+
+### 3. 多視窗完整性協議 (Multi-Window Integrity Protocol, MWIP)
+為了解決多個編輯視窗同時操作同一份資料時的潛在衝突，實作了以下核心邏輯：
+
+- **單一事實來源鎖定 (SSOT File Locking)**：
+    - 在 Rust 端 `AppState` 維護 `file_locks: HashMap<PathBuf, WindowLabel>`。
+    - **規則**：第一個開啟該檔案的路徑者獲得「寫入權」；後續開啟者被標記為 `is_read_only: true`。
+    - **強制保護**：即便唯讀視窗嘗試另存新檔為原檔名，Rust `save_file` 指令會直接拒絕執行，確保權限不被非法篡改。
+- **原子化髒狀態同步 (Atomic Dirty Sync)**：
+    - JS `setDirty` 會同步調用 Rust `set_dirty` 並進行 `await`。
+    - **Race Condition 解決**：在點擊關閉對話框的「儲存」按鈕時，必須先 `await set_dirty(false)` 成功後才發起 `close_window`。這確保了 Rust 的 `on_window_event` 在執行時讀到的狀態是 100% 正確的「乾淨」狀態，避免二次攔截。
+- **精準關閉攔截 (Targeted Unicast)**：
+    - 捨棄全域廣播的 `window.emit`，改用 `window.emit_to(&label, "closeRequested", ...)`。
+    - **效果**：關閉視窗 B 時，只有視窗 B 會跳出詢問框，不會干擾到視窗 A。
+- **宣示權備份恢復 (Safe Backup Claiming)**：
+    - 針對未命名備份檔，新視窗啟動時會呼叫 `check_startup_backup`。
+    - **互斥邏輯**：一旦視窗偵測到可恢復檔案，後端會立即將其重新命名為 `.recovering`。
+    - **效果**：即使同時開啟 10 個視窗，同一個備份檔也只會被其中一個視窗「領走」，徹底解決了重複彈窗恢復的問題。
+- **唯讀編輯權限轉正**：
+    - 允許唯讀視窗變髒（顯示 `*`），按 `X` 時引導至「另存新檔」。
+    - 一旦另存成功，該視窗自動轉為「正常」模式，並清除唯讀按鈕限制，獲得新檔案的鎖定權。

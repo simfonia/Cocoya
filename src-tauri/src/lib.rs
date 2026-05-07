@@ -11,6 +11,14 @@ use tauri_plugin_dialog::DialogExt;
 struct AppState {
     python_processes: Arc<Mutex<HashMap<String, Child>>>,
     current_paths: Arc<Mutex<HashMap<String, PathBuf>>>,
+    file_locks: Arc<Mutex<HashMap<PathBuf, String>>>, // Path -> Window Label
+    dirty_states: Arc<Mutex<HashMap<String, bool>>>, // Window Label -> isDirty
+}
+
+#[tauri::command]
+fn set_dirty(window: Window, state: State<'_, AppState>, is_dirty: bool) {
+    let mut dirty_states = state.dirty_states.lock().unwrap();
+    dirty_states.insert(window.label().to_string(), is_dirty);
 }
 
 #[tauri::command]
@@ -83,11 +91,11 @@ async fn stop_python(window: Window, state: State<'_, AppState>) -> Result<(), S
 }
 
 #[tauri::command]
-fn get_manifest(window: Window, handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
+fn get_manifest(handle: tauri::AppHandle) -> Result<serde_json::Value, String> {
     let resource_path = handle
         .path()
         .resolve("resources/core_manifest.json", tauri::path::BaseDirectory::Resource);
-    
+
     let target_path = match resource_path {
         Ok(p) if p.exists() => p,
         _ => {
@@ -100,57 +108,12 @@ fn get_manifest(window: Window, handle: tauri::AppHandle) -> Result<serde_json::
             dev_path
         }
     };
-    
+
     let content = fs::read_to_string(&target_path).map_err(|e| format!("Failed to read manifest at {:?}: {}", target_path, e))?;
     let json: serde_json::Value = serde_json::from_str(&content).map_err(|e| e.to_string())?;
 
-    // --- 檢查並搜尋孤兒備份 (Orphaned Backups) ---
-    let temp_dir = std::env::temp_dir().join("cocoya_tauri");
-    if temp_dir.exists() {
-        // 1. 獲取所有目前正在運行的視窗 Label
-        let active_labels: Vec<String> = handle.webview_windows()
-            .keys()
-            .cloned()
-            .collect();
-
-        // 2. 掃描暫存目錄
-        if let Ok(entries) = fs::read_dir(&temp_dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-
-                // 檢查是否為未命名的備份檔
-                if filename.starts_with("untitled_backup") && filename.ends_with(".xml") {
-                    let mut should_recover = false;
-
-                    if filename == "untitled_backup.xml" {
-                        // 舊版或通用備份，直接恢復
-                        should_recover = true;
-                    } else if let Some(label_part) = filename.strip_prefix("untitled_backup_") {
-                        if let Some(label) = label_part.strip_suffix(".xml") {
-                            // 如果該備份所屬的視窗 Label 目前不在活躍清單中，則視為孤兒
-                            if !active_labels.contains(&label.to_string()) {
-                                should_recover = true;
-                            }
-                        }
-                    }
-
-                    if should_recover {
-                        if let Ok(bak_xml) = fs::read_to_string(&path) {
-                            // 透過事件主動推播備份給特定的視窗
-                            window.emit("recoveryData", serde_json::json!({ "xml": bak_xml })).ok();
-                            // 找到一個就夠了，避免一次噴出太多恢復視窗
-                            break; 
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     Ok(json)
 }
-
 #[tauri::command]
 fn get_module_toolbox(handle: tauri::AppHandle, path: String) -> Result<String, String> {
     let resource_path = handle
@@ -187,14 +150,25 @@ async fn open_file(window: Window, handle: tauri::AppHandle, state: State<'_, Ap
         
         let platform = if xml.contains("platform=\"MicroPython\"") { "MicroPython" } else { "PC" };
 
+        // --- 檢查鎖定 (File Locking Logic) ---
+        let mut locks = state.file_locks.lock().unwrap();
+        let is_read_only = if let Some(owner) = locks.get(&path) {
+            owner != window.label()
+        } else {
+            locks.insert(path.clone(), window.label().to_string());
+            false
+        };
+
         // --- 檢查實體備份 ---
         let mut backup_xml = None;
-        let parent = path.parent().unwrap();
-        let bak_path = parent.join(format!(".{}.bak", filename));
-        if bak_path.exists() {
-            if let Ok(b_xml) = fs::read_to_string(&bak_path) {
-                if b_xml.trim() != xml.trim() {
-                    backup_xml = Some(b_xml);
+        if !is_read_only {
+            let parent = path.parent().unwrap();
+            let bak_path = parent.join(format!(".{}.bak", filename));
+            if bak_path.exists() {
+                if let Ok(b_xml) = fs::read_to_string(&bak_path) {
+                    if b_xml.trim() != xml.trim() {
+                        backup_xml = Some(b_xml);
+                    }
                 }
             }
         }
@@ -208,7 +182,8 @@ async fn open_file(window: Window, handle: tauri::AppHandle, state: State<'_, Ap
             xml: xml,
             filename: filename,
             platform: platform.into(),
-            backup_xml: backup_xml
+            backup_xml: backup_xml,
+            is_read_only: is_read_only
         })
     } else {
         Err("Canceled".into())
@@ -220,7 +195,8 @@ struct OpenFileResult {
     xml: String,
     filename: String,
     platform: String,
-    backup_xml: Option<String>
+    backup_xml: Option<String>,
+    is_read_only: bool
 }
 
 #[tauri::command]
@@ -242,6 +218,46 @@ fn auto_backup(window: Window, state: State<'_, AppState>, xml: String) -> Resul
 }
 
 #[tauri::command]
+fn check_startup_backup(window: Window, handle: tauri::AppHandle) -> Option<String> {
+    let temp_dir = std::env::temp_dir().join("cocoya_tauri");
+    if !temp_dir.exists() { return None; }
+
+    let active_labels: Vec<String> = handle.webview_windows().keys().cloned().collect();
+    
+    if let Ok(entries) = fs::read_dir(&temp_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+            
+            if filename.starts_with("untitled_backup") && filename.ends_with(".xml") {
+                let mut should_recover = false;
+                if filename == "untitled_backup.xml" {
+                    should_recover = true;
+                } else if let Some(label_part) = filename.strip_prefix("untitled_backup_") {
+                    if let Some(label) = label_part.strip_suffix(".xml") {
+                        // 如果 Label 對應的視窗目前沒在跑，表示是上次當掉留下的
+                        if !active_labels.contains(&label.to_string()) {
+                            should_recover = true;
+                        }
+                    }
+                }
+                
+                if should_recover {
+                    if let Ok(xml) = fs::read_to_string(&path) {
+                        // 為了防止其他視窗同時抓到，立即重新命名為 .recovering
+                        let new_path = path.with_extension("xml.recovering");
+                        if let Ok(_) = fs::rename(&path, &new_path) {
+                            return Some(xml);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+#[tauri::command]
 fn clear_backup(window: Window, state: State<'_, AppState>) -> Result<(), String> {
     // 1. 清除實體檔案對應的隱藏備份 (.filename.bak)
     let paths = state.current_paths.lock().unwrap();
@@ -253,38 +269,45 @@ fn clear_backup(window: Window, state: State<'_, AppState>) -> Result<(), String
     // 2. 清除該視窗對應的未命名備份
     let temp_dir = std::env::temp_dir().join("cocoya_tauri");
     let untitled_bak = temp_dir.join(format!("untitled_backup_{}.xml", window.label()));
-    if untitled_bak.exists() { let _ = fs::remove_file(untitled_bak); }
+    if untitled_bak.exists() { let _ = fs::remove_file(&untitled_bak); }
     
+    // 處理正在恢復中的檔案
+    let recovering = untitled_bak.with_extension("xml.recovering");
+    if recovering.exists() { let _ = fs::remove_file(recovering); }
+
     // 3. (相容性) 清除舊版通用備份
     let legacy = temp_dir.join("untitled_backup.xml");
-    if legacy.exists() { let _ = fs::remove_file(legacy); }
+    if legacy.exists() { let _ = fs::remove_file(&legacy); }
+    let legacy_recovering = legacy.with_extension("xml.recovering");
+    if legacy_recovering.exists() { let _ = fs::remove_file(legacy_recovering); }
     
     Ok(())
 }
 
 #[tauri::command]
 fn reject_recovery(window: Window, state: State<'_, AppState>) -> Result<(), String> {
-    let backup_path = {
-        let paths = state.current_paths.lock().unwrap();
-        if let Some(path) = paths.get(window.label()) {
-            let dir = path.parent().unwrap();
-            let name = path.file_name().unwrap().to_str().unwrap();
-            Some(dir.join(format!(".{}.bak", name)))
-        } else {
-            let p = std::env::temp_dir().join("cocoya_tauri").join(format!("untitled_backup_{}.xml", window.label()));
-            if p.exists() { Some(p) } else {
-                let legacy = std::env::temp_dir().join("cocoya_tauri").join("untitled_backup.xml");
-                if legacy.exists() { Some(legacy) } else { None }
-            }
-        }
-    };
+    let temp_dir = std::env::temp_dir().join("cocoya_tauri");
+    let backup_paths = vec![
+        {
+            let paths = state.current_paths.lock().unwrap();
+            paths.get(window.label()).map(|path| {
+                path.parent().unwrap().join(format!(".{}.bak", path.file_name().unwrap().to_str().unwrap()))
+            })
+        },
+        Some(temp_dir.join(format!("untitled_backup_{}.xml", window.label()))),
+        Some(temp_dir.join(format!("untitled_backup_{}.xml.recovering", window.label()))),
+        Some(temp_dir.join("untitled_backup.xml")),
+        Some(temp_dir.join("untitled_backup.xml.recovering")),
+    ];
 
-    if let Some(p) = backup_path {
-        if p.exists() {
-            let timestamp = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
-            let archive_path = format!("{}.old_{}", p.to_str().unwrap(), timestamp);
-            let _ = fs::rename(p, archive_path);
+    for p_opt in backup_paths {
+        if let Some(p) = p_opt {
+            if p.exists() {
+                let timestamp = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
+                let archive_path = format!("{}.old_{}", p.to_str().unwrap(), timestamp);
+                let _ = fs::rename(p, archive_path);
+            }
         }
     }
     Ok(())
@@ -399,6 +422,19 @@ async fn save_file(window: Window, handle: tauri::AppHandle, state: State<'_, Ap
     }
 
     if let Some(path) = path_to_save {
+        // --- 檢查鎖定 (如果有人鎖定且不是我，則拒絕存檔到該路徑) ---
+        {
+            let mut locks = state.file_locks.lock().unwrap();
+            if let Some(owner) = locks.get(&path) {
+                if owner != window.label() {
+                    return Err("檔案已被其他視窗開啟，無法存回原檔，請使用另存新檔。".to_string());
+                }
+            } else {
+                // 如果沒人鎖定（例如存新檔），則我成為擁有者
+                locks.insert(path.clone(), window.label().to_string());
+            }
+        }
+
         // 取得備份檔路徑 (在寫入新檔前，先準備好清理它)
         let bak_path = path.parent().unwrap().join(format!(".{}.bak", path.file_name().unwrap().to_str().unwrap()));
         
@@ -421,6 +457,11 @@ async fn save_file(window: Window, handle: tauri::AppHandle, state: State<'_, Ap
     } else {
         Err("No path".into())
     }
+}
+
+#[tauri::command]
+fn close_window(window: Window) {
+    let _ = window.close();
 }
 
 #[derive(serde::Serialize)]
@@ -795,6 +836,8 @@ pub fn run() {
         .manage(AppState {
             python_processes: Arc::new(Mutex::new(HashMap::new())),
             current_paths: Arc::new(Mutex::new(HashMap::new())),
+            file_locks: Arc::new(Mutex::new(HashMap::new())),
+            dirty_states: Arc::new(Mutex::new(HashMap::new())),
         })
         .invoke_handler(tauri::generate_handler![
             run_python, 
@@ -816,8 +859,54 @@ pub fn run() {
             set_window_title,
             pick_python_path,
             get_version,
-            check_environment
+            check_environment,
+            set_dirty,
+            close_window,
+            check_startup_backup
         ])
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                let state: State<AppState> = window.state();
+                let label = window.label().to_string();
+                
+                // 1. 檢查髒狀態 (Dirty State)
+                let is_dirty = {
+                    let dirty_states = state.dirty_states.lock().unwrap();
+                    *dirty_states.get(&label).unwrap_or(&false)
+                };
+
+                if is_dirty {
+                    // 攔截原生關閉事件
+                    api.prevent_close();
+                    // 發送事件通知前端「要關了，請確認存檔」 (僅發送給該視窗，避免廣播)
+                    let _ = window.emit_to(&label, "closeRequested", ());
+                } else {
+                    // --- 真正關閉前的清理 ---
+                    
+                    // 釋放檔案鎖定 (File Locks)
+                    {
+                        let mut locks = state.file_locks.lock().unwrap();
+                        locks.retain(|_, owner| owner != &label);
+                    }
+                    
+                    // 移除路徑追蹤與髒狀態紀錄
+                    {
+                        let mut paths = state.current_paths.lock().unwrap();
+                        paths.remove(&label);
+                        let mut dirty_states = state.dirty_states.lock().unwrap();
+                        dirty_states.remove(&label);
+                    }
+                    
+                    // 終止該視窗的 Python 進程
+                    {
+                        let mut procs = state.python_processes.lock().unwrap();
+                        if let Some(mut child) = procs.remove(&label) {
+                            let _ = child.kill();
+                        }
+                    }
+                }
+            }
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

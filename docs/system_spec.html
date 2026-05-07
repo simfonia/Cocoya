@@ -124,6 +124,8 @@
         <li><a href="#picar-spec">19. πCar 高精度控制與並行</a></li>
         <li><a href="#svg-protection">20. 全局 SVG 屬性安全攔截</a></li>
         <li><a href="#help-system">21. 積木說明文件系統</a></li>
+        <li><a href="#dual-mode">22. 雙模開發架構</a></li>
+        <li><a href="#mwip">23. 多視窗完整性協議 (MWIP)</a></li>
     </ul>
 </nav>
 
@@ -162,16 +164,20 @@
     </section>
 
     <section id="structure">
-        <h2>3. 檔案架構 (v5.0 雙模 SSOT 版)</h2>
-        <p>為達成 VS Code 與獨立桌面應用程式 (Tauri) 的邏輯共享，所有積木模組、產生器與 UI 邏輯統一存放於 <code>ui/src/</code> 下。這被稱為 <strong>SSOT (單一事實來源)</strong> 架構。</p>
+        <h2>3. 檔案架構 (v6.0 模組化 SSOT 版)</h2>
+        <p>為了解耦龐大的編輯器邏輯，系統將原本的單一 JS 檔案拆分為功能專一的子模組。所有代碼存放於 <code>ui/src/</code> 並遵循 SSOT 原則。</p>
         <div class="file-tree">
             cocoya/ui/src/<br>
-            ├── bridge.js (通訊抽象層)<br>
-            ├── main.js (UI 進入點)<br>
+            ├── bridge/ (通訊橋樑)<br>
+            │   ├── base.js, tauri.js, vscode.js<br>
+            ├── app/ (核心邏輯)<br>
+            │   ├── persistence.js (存檔/備份)<br>
+            │   ├── workspace.js (積木引擎)<br>
+            │   └── lifecycle.js (初始化)<br>
+            ├── ui/ (介面元件)<br>
+            │   ├── terminal.js, renderer.js<br>
+            │   └── dialogs.js (自定義彈窗)<br>
             ├── modules/ (雙模共用模組)<br>
-            │   ├── core/ (基礎積木)<br>
-            │   ├── cv_*/ (AI 視覺積木)<br>
-            │   └── hardware/ (硬體控制)<br>
             ├── zh-hant.js (核心語系)<br>
             └── style.css (全域樣式)
         </div>
@@ -467,8 +473,12 @@ execSync(`"${pythonPath}" -c "import ${module}"`, { stdio: 'ignore' });</code></
         <h2>22. 雙模開發架構 (Dual-Mode Architecture)</h2>
         <p>為了兼顧開發者環境與終端教學現場，Cocoya 採用一套 UI、兩套 Host 的雙模架構。</p>
 
-        <h3>A. 統一前端 (Shared UI)</h3>
-        <p>前端 UI 代碼統一存放在 <code>ui/src</code> 中，並使用 Vite 進行建置。不論是 VSIX 還是 Tauri，載入的積木模組 (<code>modules/</code>) 皆為同一套代碼，達成「更動一次，雙模同步」。</p>
+        <h3>A. 模組化累積機制 (Object.assign Pattern)</h3>
+        <p>前端採用 <strong>累加式對象定義</strong>。各子模組透過 <code>window.CocoyaApp = Object.assign(window.CocoyaApp || {}, { ... })</code> 將功能注入全域命名空間。</p>
+        <ul>
+            <li><strong>優點:</strong> 無需現代 Bundler (如 Vite/Webpack) 即可在瀏覽器環境直接執行。</li>
+            <li><strong>安全性:</strong> 徹底解決多檔案載入時發生的命名空間覆蓋 (Overwrite) 問題。</li>
+        </ul>
 
         <h3>B. 通訊橋樑 (CocoyaBridge)</h3>
         <p>系統透過 <code>bridge.js</code> 抽象化底層通訊。前端邏輯呼叫 <code>Bridge.saveFile()</code> 時，內部會自動判別環境：</p>
@@ -481,8 +491,25 @@ execSync(`"${pythonPath}" -c "import ${module}"`, { stdio: 'ignore' });</code></
         <p>Rust 後端會實作與 VS Code Extension Host 完全對等的功能（如：序列埠掃描、Python 代碼執行、磁碟部署），確保教學體驗的一致性。</p>
     </section>
 
+    <section id="mwip">
+        <h2>23. 多視窗完整性協議 (Multi-Window Integrity Protocol, MWIP)</h2>
+        <p>為了解決多個編輯視窗同時操作同一份資料時的潛在衝突與數據遺失，系統在 Tauri 桌面模式下實作了嚴格的完整性機制：</p>
+
+        <h3>A. 單一事實來源鎖定 (SSOT File Locking)</h3>
+        <p>後端透過 <code>HashMap&lt;PathBuf, WindowLabel&gt;</code> 追蹤檔案所有權。第一個開啟該路徑的視窗獲得獨佔寫入權，後續視窗強制以「唯讀模式」載入，且無法透過「另存新檔」覆蓋已鎖定的檔案。</p>
+
+        <h3>B. 原子化髒狀態同步 (Atomic Dirty Sync)</h3>
+        <p>視窗的「髒狀態」必須與 Rust 後端同步。在執行「儲存並關閉」流程時，系統會先 <code>await</code> 後端狀態更新為乾淨，確保 <code>onCloseRequested</code> 攔截器能讀取到正確的最終狀態，防止 Race Condition 導致的重複對話框。</p>
+
+        <h3>C. 宣示權備份恢復 (Safe Backup Claiming)</h3>
+        <p>為防止多個新視窗搶奪同一個遺留備份檔，系統採用「先到先得」宣示機制：當視窗偵測到備份後，立即將其重新命名為 <code>.recovering</code>。這保證了備份恢復動作的唯一性與不可重複性。</p>
+
+        <h3>D. 精準事件路由 (Targeted Unicast)</h3>
+        <p>所有關於「視窗即將關閉」或「備份偵測」的事件，必須使用 <code>emit_to(label, ...)</code> 定向發送。嚴禁使用全域廣播，以確保多視窗環境下，使用者操作的交互提示不會發生跨視窗干擾。</p>
+    </section>
+
     <footer>
-        <p>© 2026 simfonia - Cocoya 專案組。文件更新日期：2026-04-09 (v5.0)</p>
+        <p>© 2026 simfonia - Cocoya 專案組。文件更新日期：2026-05-06 (v5.1)</p>
     </footer>
 </main>
 
