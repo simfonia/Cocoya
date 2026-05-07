@@ -227,23 +227,21 @@
 - **目前狀態**：介面穩定性與適配性大幅提升。
 
 ## 2026-05-04 Tauri 多視窗穩定化與 VSIX 偵測修復 (里程碑 v7.1 完成)
-- **核心進度**：
-    - **[Tauri 視窗革命]**：徹底解決關閉攔截失效。透過擴展 `capabilities` 授權範圍至 `["*"]` 與實作原生標題雙向同步，確保 `onCloseRequested` 100% 觸發。
-    - **[備份系統精進]**：實作 `untitled_backup_{label}.xml` 視窗標籤隔離機制。手動存檔成功後自動清理關聯備份，消除過期的恢復提示。
-    - **[VSIX 偵測修復]**：重構 VSIX Python 環境檢查為全非同步 `execFile`。解決引號轉義導致的「已安裝卻報未安裝」誤判與 Extension Host 卡死問題。
-- **目前狀態**：雙版本在多視窗操作、資料備份與環境偵測上的一致性與穩定性大幅提升。
+... (略)
 
-## 2026-05-06 UI 邏輯模組化重構 (里程碑 v5.0 進行中)
-- **進度**：
-    - **[架構重整]**：啟動 `CocoyaUI` 大規模重構，將單一龐大的 `ui_manager.js` 拆分為功能明確的子模組。
-    - **[模組遷移]**：
-        - 成功遷移 **Terminal** 邏輯至 `ui/terminal.js`。
-        - 成功遷移 **Renderer & Layout** 邏輯至 `ui/renderer.js`（含 Python 預覽、高亮同步與面板縮放）。
-    - **[相容性修復]**：修正 `window.CocoyaUI` 初始化模式為 `Object.assign`，解決模組間方法被覆蓋的關鍵 Bug。
-    - **[文檔化]**：建立 `docs/api_manifest.md` 作為重構的技術基準（SSOT）。
-- **下一階段目標**：
-    - 繼續遷移 Hardware（序列埠/韌體）與 Dialogs（彈窗/視覺回饋）模組。
-    - 啟動 `main.js` (CocoyaApp) 的模組化。
+## 2026-05-06 UI 模組化重構與多視窗完整性協議 (MWIP 完成)
+- **核心進度**：
+    - **[重構] UI 邏輯解耦**：成功將 `ui_manager.js` 與 `main.js` 拆分為 10 個以上的專用子模組，並建立 `api_manifest.md` 作為技術基準。
+    - **[重大突破] 多視窗完整性協議 (MWIP)**：
+        - 實作「首開鎖定，後開唯讀」機制，徹底解決多視窗寫入衝突。
+        - 實作「宣示權備份恢復」，透過 `.recovering` 原子改名保證備份恢復的唯一性。
+        - 實作「精準事件單播」，解決 X 按鈕觸發多視窗彈窗的 Bug。
+        - 實作「原子化狀態同步」，消除關閉視窗時的 Race Condition。
+- **目前狀態**：Tauri 獨立版在架構與數據安全性上已達到商業級水準。
+- **待辦**：
+    - 補完 MicroPython 模式下的所有範例專案。
+    - 準備各型號板子的 MicroPython 韌體資源包。
+    - 整合 `deploy_mcu.py` 作為 Tauri Sidecar。
 
 ## 未來開發導向 (Future Roadmap)
 - **跨平台計畫**：計畫重構 src/extension.ts 中的硬體偵測邏輯，將 powershell 指令抽象化，以支援 Linux 與 macOS 環境。

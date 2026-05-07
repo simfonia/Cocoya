@@ -1,9 +1,9 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
-  <block type="py_definition_zone" id="e@@eqITY^Ny3b:{;iIEq" x="50" y="90"></block>
-  <block type="mcu_main" id="%T+q,~k~a9G?Op,iXs@v" x="100" y="200"></block>
-  <block type="py_loop_while" id="4HBEF?GGWxtS`JY=%9`O" disabled-reasons="orphan" x="110" y="330">
+  <block type="py_definition_zone" id="Ob.:}X[z=Z?!~,Sor?WB" x="100" y="20"></block>
+  <block type="mcu_main" id="(mi4nvRS$%n3.iy|r]X0" x="50" y="130"></block>
+  <block type="py_loop_while" id="D;-2({*1|=oQ!Y:RUN8=" disabled-reasons="orphan" x="110" y="270">
     <value name="CONDITION">
-      <block type="py_logic_boolean" id="ZcE9Z=#/=0H/,mKs(8zl" disabled-reasons="orphan">
+      <block type="py_logic_boolean" id="#zhgAEW?9KZUyGW9D~Gm" disabled-reasons="orphan">
         <field name="BOOL">True</field>
       </block>
     </value>

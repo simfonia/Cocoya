@@ -1,0 +1,11 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
+  <block type="py_definition_zone" id="e@@eqITY^Ny3b:{;iIEq" x="90" y="90"></block>
+  <block type="py_loop_while" id="4HBEF?GGWxtS`JY=%9`O" disabled-reasons="orphan" x="250" y="150">
+    <value name="CONDITION">
+      <block type="py_logic_boolean" id="ZcE9Z=#/=0H/,mKs(8zl" disabled-reasons="orphan">
+        <field name="BOOL">True</field>
+      </block>
+    </value>
+  </block>
+  <block type="mcu_main" id="%T+q,~k~a9G?Op,iXs@v" x="110" y="250"></block>
+</xml>

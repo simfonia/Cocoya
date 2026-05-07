@@ -19,6 +19,11 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         this.setupIndentSelector();
         window.CocoyaBridge.send('getManifest');
 
+        // Tauri 專屬：啟動後主動檢查是否有遺留的孤兒備份
+        if (window.CocoyaBridge.isTauri) {
+            window.CocoyaBridge.send('checkStartupBackup');
+        }
+
         setTimeout(() => {
             window.CocoyaBridge.send('checkUpdate');
         }, 1000);
@@ -55,7 +60,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         window.CocoyaBridge.onMessage(async (message) => {
             switch (message.command) {
                 case 'manifestData': await this.initializeCocoya(message.data, message.mediaUri, message.lang); break;
-                case 'loadWorkspace': await this.loadWorkspace(message.xml, message.filename, message.platform); break;
+                case 'loadWorkspace': await this.loadWorkspace(message.xml, message.filename, message.platform, message.is_read_only); break;
                 case 'resetWorkspace': this.resetWorkspace(); break;
                 case 'saveCompleted': this.onSaveCompleted(message.filename); break;
                 case 'runCompleted': if (window.CocoyaUI) window.CocoyaUI.flashButton('btn-run', '#c8e6c9'); break;

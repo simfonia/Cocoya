@@ -10,6 +10,12 @@ Cocoya 是一個針對 Python AI視覺的教學工具。它透過 Blockly 產生
     - MCU: CircuitPython (XIAO S3 Sense, Maker Pi RP2040)。
 - **通訊方式**：Serial (USB)。
 
+### 多視窗完整性規範 (Multi-Window Integrity Protocol)
+- **精準通訊**：在 Tauri 後端發送視窗專屬事件時，必須使用 `window.emit_to(&label, ...)`，嚴禁使用全域廣播的 `emit`，以防止觸發多個視窗的對話框。
+- **原子化狀態同步**：前端在執行「儲存並關閉」流程時，必須 `await window.CocoyaBridge.send('setDirty', { isDirty: false })` 確保後端狀態更新後，才呼叫 `close_window`。
+- **備份宣示權**：處理未命名備份時，必須遵循「偵測後立即重新命名為 `.recovering`」的宣示模式，確保同一個備份檔不會被多個視窗同時抓取。
+- **強制鎖定**：後端 `save_file` 指令必須檢查路徑擁有者。若非目前視窗鎖定的路徑，必須回傳錯誤並由前端 Alert 提示使用者「另存新檔」。
+
 ### 產生器開發規範 (Generator Standards)
 - **基準縮排 (Base 4-Space Indent)**: 
     - **強制要求**: 所有在產生器 (.js) 中以字串形式定義的靜態 Python 程式碼（例如注入 `generator.definitions_` 的輔助函式），**必須統一使用 4 個空白** 作為縮排基準。

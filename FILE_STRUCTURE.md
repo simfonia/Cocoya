@@ -17,25 +17,28 @@ C:\Workspace\cocoya\
 │   ├── favicon.ico        # 本地圖示以解決 404 報錯
 │   ├── blockly/           # Blockly 核心庫與靜態插件
 ├── src/               # 前端原始碼與模組 (SSOT 單一事實來源)
-│   ├── bridge.js      # CocoyaBridge 通訊抽象層 (多視窗隔離對接)
-│   ├── main.js        # Webview 進入點 (自動平台遷移邏輯)
-│   ├── module_loader.js # 動態模組載入器
-│   ├── ui_manager.js  # UI 基礎邏輯與 I18n 管理 (原 Monolithic 檔案瘦身中)
-├── ui/            # UI 子模組 (抽離自 ui_manager)
-│   ├── terminal.js # 終端機邏輯
-│   ├── renderer.js # 渲染與佈局邏輯
-│   ├── hardware.js # [NEW] 序列埠與韌體邏輯
-│   ├── dialogs.js  # [NEW] 對話框與視覺反饋
-│   └── base.js     # [NEW] 基礎狀態與工具列事件
-├── app/           # [NEW] 應用程式核心子模組 (抽離自 main.js)
-│   ├── config.js   # 平台與主題配置
-│   ├── persistence.js # 檔案與備份持久化
-│   ├── workspace.js # Blockly 與 Minimap 管理
-│   └── lifecycle.js # 初始化與通訊生命週期
-├── utils.js       # 全域攔截器與工具函式
-│   │   ├── style.css      # 主樣式表 (Terminal 動畫與響應式佈局)
-│   │   ├── zh-hant.js     # 核心語系檔
-│   │   ├── en.js          # 核心語系檔
+│   ├── bridge/      # [NEW] 通訊橋樑子模組
+│   │   ├── base.js    # 橋接基底類別
+│   │   ├── tauri.js   # Tauri 專屬橋接 (含 MWIP 邏輯)
+│   │   └── vscode.js  # VS Code 專屬橋接
+│   ├── ui/          # [NEW] UI 功能子模組
+│   │   ├── terminal.js # 終端機邏輯
+│   │   ├── renderer.js # 渲染與佈局邏輯
+│   │   ├── hardware.js # 序列埠與韌體邏輯
+│   │   ├── dialogs.js  # 對話框與視覺反饋
+│   │   └── base.js     # 基礎狀態與工具列事件
+│   ├── app/         # [NEW] 應用程式核心子模組
+│   │   ├── config.js   # 平台與主題配置
+│   │   ├── persistence.js # 檔案與備份持久化 (含 MWIP 邏輯)
+│   │   ├── workspace.js # Blockly 與 Minimap 管理
+│   │   └── lifecycle.js # 初始化與通訊生命週期
+│   ├── modules/       # 雙模共用積木模組
+│   ├── main.js        # Legacy Entry Point
+│   ├── ui_manager.js  # Legacy Entry Point
+│   ├── utils.js       # 全域攔截器與工具函式
+│   ├── zh-hant.js     # 核心語系檔
+│   └── en.js          # 核心語系檔
+
 │   │   ├── vs.min.css     # 本地化 Highlight.js 樣式
 │   │   ├── highlight.min.js # 本地化 Highlight.js 核心
 │   │   ├── python.min.js  # 本地化 Python 語法解析

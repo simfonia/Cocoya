@@ -134,6 +134,8 @@
     "MSG_PYTHON_UPDATED": "Python path updated: %1",
     "MSG_RECOVER_BACKUP": "Unsaved changes detected. Do you want to recover them?",
     "MSG_RECOVER_IGNORE": "Ignore and start new project",
+    "MSG_READ_ONLY_ALERT": "This file is already open in another window and will be loaded in Read-Only mode. Use 'Save As' to make changes.",
+    "MSG_READ_ONLY_HINT": "This file is open in another window (Read-Only).",
     "MSG_RESET_FIRMWARE_CONFIRM": "Resetting firmware will clear all content on the MCU. Please ensure the MCU is in BOOTSEL / Flashing mode.\nContinue?",
     "MSG_ASK_CLEAR_CODE": "Do you want to clear the code (main.py) on the MCU after burning?",
     "MSG_SELECT_MCU_MODEL": "Please select your MCU model:",

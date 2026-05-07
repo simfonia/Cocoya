@@ -154,7 +154,10 @@ export class BridgeTauri extends BaseBridge {
                         const filename = await this.tauriInvoke('save_file', { xml: data.xml, saveAs: isSaveAs });
                         this._dispatchToFrontend({ command: 'saveCompleted', filename: filename });
                     } catch (e) {
-                        if (e !== 'Canceled') console.error('[Bridge] Save failed:', e);
+                        if (e !== 'Canceled') {
+                            console.error('[Bridge] Save failed:', e);
+                            this.alert((window.Blockly?.Msg['BKY_SAVE_FAILED'] || 'Save failed: ') + e);
+                        }
                     }
                     break;
 
@@ -165,13 +168,21 @@ export class BridgeTauri extends BaseBridge {
                             command: 'loadWorkspace', 
                             xml: res.xml, 
                             filename: res.filename, 
-                            platform: res.platform 
+                            platform: res.platform,
+                            is_read_only: res.is_read_only // 補上遺漏的唯讀旗標
                         });
                         if (res.backup_xml) {
                             this._dispatchToFrontend({ command: 'recoveryData', xml: res.backup_xml });
                         }
                     } catch (e) {
                         if (e !== 'Canceled') console.error('[Bridge] Open failed:', e);
+                    }
+                    break;
+
+                case 'checkStartupBackup':
+                    result = await this.tauriInvoke('check_startup_backup');
+                    if (result) {
+                        this._dispatchToFrontend({ command: 'recoveryData', xml: result });
                     }
                     break;
 
@@ -239,6 +250,14 @@ export class BridgeTauri extends BaseBridge {
                     } catch (e) { console.warn('[Bridge] Failed to set window title via Rust:', e); }
                     break;
 
+                case 'setDirty':
+                    await this.tauriInvoke('set_dirty', { isDirty: data.isDirty });
+                    break;
+
+                case 'closeWindow':
+                    await this.tauriInvoke('close_window');
+                    break;
+
                 case 'setupStableMode':
                     try {
                         window.CocoyaUI.showLoadingModal('Setting up stable mode...');
@@ -280,10 +299,14 @@ export class BridgeTauri extends BaseBridge {
                     break;
 
                 case 'setDirty':
-                    // Tauri 模式目前透過 setWindowTitle 處理髒狀態顯示，此處為 no-op
+                    await this.tauriInvoke('set_dirty', { isDirty: data.isDirty });
                     break;
 
-                case 'checkEnvironment':
+                case 'closeWindow':
+                    await this.tauriInvoke('close_window');
+                    break;
+
+                case 'setupStableMode':
                     try {
                         const pythonPath = localStorage.getItem('pythonPath') || 'python';
                         const results = await this.tauriInvoke('check_environment', { pythonPath: pythonPath });
@@ -329,14 +352,9 @@ export class BridgeTauri extends BaseBridge {
         try {
             const appWindow = this.tauriGetCurrent();
             
-            // 視窗關閉攔截
-            await appWindow.onCloseRequested((event) => {
-                const title = document.title;
-                const isDirty = title.includes('*');
-                if (isDirty) {
-                    event.preventDefault();
-                    this._handleCloseDialog(appWindow); 
-                }
+            // 監聽後端發來的「要關了」請求 (由 Rust 攔截 X 按鈕觸發)
+            await appWindow.listen('closeRequested', () => {
+                this._handleCloseDialog(appWindow);
             });
 
             // 監聽日誌
@@ -353,10 +371,6 @@ export class BridgeTauri extends BaseBridge {
                 if (window.CocoyaUI) window.CocoyaUI.hideLoadingModal();
                 if (window.CocoyaUI) window.CocoyaUI.appendTerminal(event.payload, 'err');
             });
-
-            await appWindow.listen('recoveryData', (event) => {
-                this._dispatchToFrontend({ command: 'recoveryData', xml: event.payload.xml });
-            });
         } catch (e) {
             console.error('[Bridge] Failed to setup Tauri listeners:', e);
         }
@@ -371,32 +385,50 @@ export class BridgeTauri extends BaseBridge {
                 const choice = await window.CocoyaUI.showSaveConfirm(confirmMsg);
 
                 if (choice === 'save') {
+                    // 準備 XML
                     const dom = Blockly.Xml.workspaceToDom(app.workspace);
                     dom.setAttribute('platform', app.currentPlatform);
                     const xml = Blockly.Xml.domToPrettyText(dom);
                     
-                    const filename = await this.tauriInvoke('save_file', { xml, saveAs: false });
-                    if (filename) {
-                        app.setDirty(false); 
-                        await appWindow.destroy(); 
+                    try {
+                        // 1. 執行存檔 (若為唯讀則強制另存新檔)
+                        const isReadOnly = !!app.isReadOnly;
+                        const filename = await this.tauriInvoke('save_file', { xml, saveAs: isReadOnly });
+                        
+                        if (filename) {
+                            // 2. 存檔成功
+                            await app.onSaveCompleted(filename); 
+                            // 3. 要求後端關閉視窗
+                            await this.tauriInvoke('close_window'); 
+                        }
+                    } catch (e) {
+                        // 處理取消與失敗
+                        if (e === 'Canceled') {
+                            // 使用者在系統對話框案取消，不做任何事，讓視窗維持開啟並保持 isDirty=true
+                            console.log('[Bridge] Save canceled by user.');
+                        } else {
+                            // 真正的儲存錯誤（如權限、磁碟滿）
+                            this.alert((window.Blockly?.Msg['BKY_SAVE_FAILED'] || 'Save failed: ') + e);
+                        }
                     }
                 } else if (choice === 'discard') {
-                    app.setDirty(false); 
-                    setTimeout(async () => {
-                        await appWindow.destroy();
-                    }, 50);
+                    // 強制不儲存：直接清除狀態並要求關閉
+                    await app.setDirty(false);
+                    await this.tauriInvoke('close_window');
                 }
             } else {
+                // Fallback for simple alert
                 const { ask } = await import('@tauri-apps/plugin-dialog');
                 const ok = await ask(confirmMsg, { title: 'Cocoya', kind: 'warning' });
                 if (ok) {
+                    // 這裡簡化處理，如果不支援 showSaveConfirm 則僅問是否要關閉 (可能遺失未存檔)
                     app.setDirty(false);
-                    await appWindow.destroy();
+                    await this.tauriInvoke('close_window');
                 }
             }
         } catch (err) {
             console.error('[Bridge] Error in _handleCloseDialog:', err);
-            await appWindow.destroy();
+            await this.tauriInvoke('close_window');
         }
     }
 
