@@ -48,7 +48,7 @@ export class BridgeTauri extends BaseBridge {
             switch (command) {
                 case 'getManifest':
                     result = await this.tauriInvoke('get_manifest'); 
-                    this._dispatchToFrontend({ command: 'manifestData', data: result, mediaUri: '/src', lang: 'zh-hant' });
+                    this._dispatchToFrontend({ command: 'manifestData', data: result, mediaUri: 'src', lang: 'zh-hant' });
                     break;
 
                 case 'getModuleToolbox':

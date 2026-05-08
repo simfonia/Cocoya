@@ -6,8 +6,8 @@
     <title>Cocoya Blockly Editor</title>
     <!-- Highlight.js 語法高亮 (本地化) -->
     <link rel="stylesheet" href="/src/vs.min.css">
-    <script src="/src/highlight.min.js"></script>
-    <script src="/src/python.min.js"></script>
+    <script src="src/highlight.min.js"></script>
+    <script src="src/python.min.js"></script>
     
     <!-- 樣式表 (Vite 會處理) -->
     <link rel="stylesheet" href="/src/style.css">
@@ -25,38 +25,38 @@
                     </select>
                     <div class="toolbar-separator"></div>
                     <div id="file-breadcrumb">
-                        <img src="/src/icons/load_project_24dp_1F1F1F.png" style="width: 14px; opacity: 0.5;">
+                        <img src="src/icons/load_project_24dp_1F1F1F.png" style="width: 14px; opacity: 0.5;">
                         <span id="current-filename">%{BKY_TLB_FILE_NEW}</span>
                     </div>
                     <div class="toolbar-btn" id="btn-new" title="%{BKY_TLB_NEW}">
-                        <img src="/src/icons/new_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="/src/icons/new_24dp_FE2F89.png" class="hover-icon">
+                        <img src="src/icons/new_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="src/icons/new_24dp_FE2F89.png" class="hover-icon">
                     </div>
                     <div class="toolbar-btn" id="btn-open" title="%{BKY_TLB_OPEN}">
-                        <img src="/src/icons/load_project_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="/src/icons/load_project_24dp_FE2F89.png" class="hover-icon">
+                        <img src="src/icons/load_project_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="src/icons/load_project_24dp_FE2F89.png" class="hover-icon">
                     </div>
                     <div class="toolbar-btn" id="btn-save" title="%{BKY_TLB_SAVE}">
-                        <img src="/src/icons/save_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="/src/icons/save_24dp_FE2F89.png" class="hover-icon">
+                        <img src="src/icons/save_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="src/icons/save_24dp_FE2F89.png" class="hover-icon">
                     </div>
                     <div class="toolbar-btn" id="btn-save-as" title="%{BKY_TLB_SAVE_AS}">
-                        <img src="/src/icons/save_as_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="/src/icons/save_as_24dp_FE2F89.png" class="hover-icon">
+                        <img src="src/icons/save_as_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="src/icons/save_as_24dp_FE2F89.png" class="hover-icon">
                     </div>
                     <div class="toolbar-separator"></div>
                     <div class="toolbar-dropdown">
                         <div class="toolbar-btn" id="btn-settings-root" title="%{BKY_TLB_SETTINGS}">
-                            <img src="/src/icons/settings_24dp_1F1F1F.png" class="normal-icon">
-                            <img src="/src/icons/settings_24dp_FE2F89.png" class="hover-icon">
+                            <img src="src/icons/settings_24dp_1F1F1F.png" class="normal-icon">
+                            <img src="src/icons/settings_24dp_FE2F89.png" class="hover-icon">
                         </div>
                         <div class="dropdown-content">
                             <div class="dropdown-item" id="btn-set-python-path">
-                                <img src="/src/icons/python.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                <img src="src/icons/python.png" style="width: 16px; height: 16px; margin-right: 8px;">
                                 <span>%{BKY_TLB_SETTINGS_PYTHON_PATH}</span>
                             </div>
                             <div class="dropdown-item" id="btn-diagnose">
-                                <img src="/src/icons/dashboard_customize_24dp_FE2F89.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                <img src="src/icons/dashboard_customize_24dp_FE2F89.png" style="width: 16px; height: 16px; margin-right: 8px;">
                                 <span>%{BKY_TLB_DIAGNOSE}</span>
                             </div>
                             <div class="dropdown-item" id="btn-toggle-scroll-options">
@@ -66,17 +66,17 @@
                             <div class="dropdown-separator"></div>
                             <div class="dropdown-submenu" id="group-firmware-settings">
                                 <div class="dropdown-item submenu-title">
-                                    <img src="/src/icons/hr_resting_24dp_FE2F89.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                    <img src="src/icons/hr_resting_24dp_FE2F89.png" style="width: 16px; height: 16px; margin-right: 8px;">
                                     <span>%{BKY_TLB_SETTINGS_FIRMWARE_GROUP}</span>
                                     <span style="margin-left: auto; font-size: 10px;">▶</span>
                                 </div>
                                 <div class="submenu-content">
                                     <div class="dropdown-item" id="btn-erase-filesystem" title="%{BKY_TLB_SETTINGS_ERASE_FS_TOOLTIP}">
-                                        <img src="/src/icons/delete_24dp_FE2F89.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                        <img src="src/icons/delete_24dp_FE2F89.png" style="width: 16px; height: 16px; margin-right: 8px;">
                                         <span>%{BKY_TLB_SETTINGS_ERASE_FS}</span>
                                     </div>
                                     <div class="dropdown-item" id="btn-reset-firmware">
-                                        <img src="/src/icons/hr_resting_24dp_FE2F89.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                        <img src="src/icons/hr_resting_24dp_FE2F89.png" style="width: 16px; height: 16px; margin-right: 8px;">
                                         <span>%{BKY_TLB_SETTINGS_RESET_FIRMWARE}</span>
                                     </div>
                                 </div>
@@ -90,30 +90,30 @@
                 <!-- 右側群組：Serial 與 執行 -->
                 <div class="toolbar-group">
                     <div class="toolbar-btn" id="btn-refresh-serial" title="%{BKY_TLB_SERIAL_REFRESH}">
-                        <img src="/src/icons/connect_serial_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="/src/icons/connect_serial_24dp_FE2F89.png" class="hover-icon">
+                        <img src="src/icons/connect_serial_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="src/icons/connect_serial_24dp_FE2F89.png" class="hover-icon">
                     </div>
                     <select id="serial-selector" class="serial-select" title="%{BKY_TLB_SERIAL_PORT}">
                         <option value="">(No Port)</option>
                     </select>
                     <div class="toolbar-separator"></div>
                     <div class="toolbar-btn" id="btn-run" title="%{BKY_TLB_RUN}">
-                        <img src="/src/icons/run_blocks_24dp_75FB4C.png" class="normal-icon">
-                        <img src="/src/icons/run_blocks_24dp_FE2F89.png" class="hover-icon">
+                        <img src="src/icons/run_blocks_24dp_75FB4C.png" class="normal-icon">
+                        <img src="src/icons/run_blocks_24dp_FE2F89.png" class="hover-icon">
                     </div>
                     <div class="toolbar-btn" id="btn-stop" title="%{BKY_TLB_STOP_PROGRAM}">
-                        <img src="/src/icons/stop_24dp_EA3323.png" class="normal-icon">
+                        <img src="src/icons/stop_24dp_EA3323.png" class="normal-icon">
                     </div>
                     <div class="toolbar-btn" id="btn-terminal" title="%{BKY_TLB_TERMINAL}">
-                        <img src="/src/icons/terminal_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="/src/icons/terminal_24dp_FE2F89.png" class="hover-icon">
+                        <img src="src/icons/terminal_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="src/icons/terminal_24dp_FE2F89.png" class="hover-icon">
                     </div>
                     <div class="toolbar-btn" id="btn-update" title="%{BKY_TLB_UPDATE}">
-                        <img src="/src/icons/published_with_changes_24dp_1F1F1F.png" class="update-icon">
+                        <img src="src/icons/published_with_changes_24dp_1F1F1F.png" class="update-icon">
                     </div>
                     <div class="toolbar-btn" id="btn-close" title="%{BKY_TLB_CLOSE_EDITOR}" style="display: none;">
-                        <img src="/src/icons/dangerous_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="/src/icons/dangerous_24dp_FE2F89.png" class="hover-icon">
+                        <img src="src/icons/dangerous_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="src/icons/dangerous_24dp_FE2F89.png" class="hover-icon">
                     </div>
                 </div>
             </div>
@@ -122,15 +122,15 @@
             <div id="terminalArea" class="collapsed">
                 <div id="terminalHeader">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <img src="/src/icons/terminal_24dp_FE2F89.png" style="width: 14px;">
+                        <img src="src/icons/terminal_24dp_FE2F89.png" style="width: 14px;">
                         <span id="terminalTitle">TERMINAL</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <button class="terminal-tool-btn" id="btn-pause-terminal" title="Pause Auto-scroll">
-                            <img src="/src/icons/list_arrow_24dp_FE2F89.png" style="width: 16px; height: 16px; opacity: 0.8;">
+                            <img src="src/icons/list_arrow_24dp_FE2F89.png" style="width: 16px; height: 16px; opacity: 0.8;">
                         </button>
                         <button class="terminal-tool-btn" id="btn-clear-terminal" title="Clear Console">
-                            <img src="/src/icons/delete_24dp_FE2F89.png" style="width: 16px; height: 16px;">
+                            <img src="src/icons/delete_24dp_FE2F89.png" style="width: 16px; height: 16px;">
                         </button>
                         <button class="terminal-tool-btn" id="btn-close-terminal" title="Close Panel">
                             <span style="font-size: 16px; font-weight: bold;">×</span>
@@ -154,8 +154,8 @@
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <div class="toolbar-btn" id="btn-copy-code" title="Copy Code" style="width: 24px; height: 24px;">
-                        <img src="/src/icons/content_copy_24dp_1F1F1F.png" class="normal-icon" style="width: 18px; height: 18px;">
-                        <img src="/src/icons/content_copy_24dp_FE2F89.png" class="hover-icon" style="width: 18px; height: 18px;">
+                        <img src="src/icons/content_copy_24dp_1F1F1F.png" class="normal-icon" style="width: 18px; height: 18px;">
+                        <img src="src/icons/content_copy_24dp_FE2F89.png" class="hover-icon" style="width: 18px; height: 18px;">
                     </div>
                     <div class="toolbar-separator" style="height: 16px; margin: 0;"></div>
                     <span style="font-size: 10px;">Indent:</span>
@@ -173,7 +173,7 @@
     <div id="save-confirm-modal" class="modal-overlay">
         <div class="modal-content" style="max-width: 450px; padding: 30px; text-align: left;">
             <div style="display: flex; gap: 20px; align-items: flex-start;">
-                <img src="/src/icons/save_24dp_FE2F89.png" style="width: 32px; height: 32px;">
+                <img src="src/icons/save_24dp_FE2F89.png" style="width: 32px; height: 32px;">
                 <div>
                     <h3 id="save-confirm-message" style="margin: 0 0 10px 0; font-size: 16px;">%{BKY_MSG_SAVE_CONFIRM}</h3>
                     <p style="margin: 0; font-size: 13px; color: #666;" id="save-confirm-detail">您對此專案所做的變更若不儲存將會遺失。</p>
@@ -223,34 +223,34 @@
     </div>
 
     <!-- Blockly 核心 -->
-    <script src="/blockly/core/blockly.js"></script>
-    <script src="/blockly/core/python_compressed.js"></script>
+    <script src="blockly/core/blockly.js"></script>
+    <script src="blockly/core/python_compressed.js"></script>
 
     <!-- 插件 -->
-    <script src="/blockly/plugins/field-colour.js"></script>
-    <script src="/blockly/plugins/field-multilineinput.js"></script>
-    <script src="/blockly/plugins/scroll-options.js"></script>
-    <script src="/blockly/plugins/workspace-minimap.js"></script>
-    <script src="/blockly/plugins/blockly-modal.js"></script>
+    <script src="blockly/plugins/field-colour.js"></script>
+    <script src="blockly/plugins/field-multilineinput.js"></script>
+    <script src="blockly/plugins/scroll-options.js"></script>
+    <script src="blockly/plugins/workspace-minimap.js"></script>
+    <script src="blockly/plugins/blockly-modal.js"></script>
 
     <!-- 主程式核心邏輯 (重要: 必須在 main.js 之前載入) -->
-    <script src="/src/utils.js"></script>
-    <script src="/src/ui/terminal.js"></script>
-    <script src="/src/ui/renderer.js"></script>
-    <script src="/src/ui/hardware.js"></script>
-    <script src="/src/ui/dialogs.js"></script>
-    <script src="/src/ui/base.js"></script>
-    <script src="/src/ui_manager.js"></script>
-    <script src="/src/module_loader.js"></script>
+    <script src="src/utils.js"></script>
+    <script src="src/ui/terminal.js"></script>
+    <script src="src/ui/renderer.js"></script>
+    <script src="src/ui/hardware.js"></script>
+    <script src="src/ui/dialogs.js"></script>
+    <script src="src/ui/base.js"></script>
+    <script src="src/ui_manager.js"></script>
+    <script src="src/module_loader.js"></script>
 
     <!-- 主程式子模組 (對齊模組化重構) -->
-    <script src="/src/app/config.js"></script>
-    <script src="/src/app/persistence.js"></script>
-    <script src="/src/app/workspace.js"></script>
-    <script src="/src/app/lifecycle.js"></script>
+    <script src="src/app/config.js"></script>
+    <script src="src/app/persistence.js"></script>
+    <script src="src/app/workspace.js"></script>
+    <script src="src/app/lifecycle.js"></script>
 
     <!-- 啟動橋樑與主程式 (ESM) -->
-    <script type="module" src="/src/bridge.js"></script>
-    <script type="module" src="/src/main.js"></script>
+    <script type="module" src="src/bridge.js"></script>
+    <script type="module" src="src/main.js"></script>
 </body>
 </html>

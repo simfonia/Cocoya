@@ -13,7 +13,8 @@ C:\Workspace\cocoya\
 │       ├── 2026-05-03.md  # UI/UX 響應式佈局與收合面板實作
 │       └── 2026-05-04.md  # 重大修復：Tauri 多視窗關閉攔截與備份隔離
 ├── ui/                    # 雙模共用前端根目錄 (Vite Project)
-│   ├── index.html         # Webview 與 Tauri 共用入口 (新增 Terminal 佈局)
+│   ├── index.html         # Webview 與 Tauri 共用入口
+│   ├── vite.config.js     # Vite 配置 (含資產同步外掛)
 │   ├── favicon.ico        # 本地圖示以解決 404 報錯
 │   ├── blockly/           # Blockly 核心庫與靜態插件
 ├── src/               # 前端原始碼與模組 (SSOT 單一事實來源)

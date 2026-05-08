@@ -49,7 +49,7 @@
         - [x] 策略 A：UF2 複製模式 (適用於 RP2040)。
         - [ ] 策略 B：Serial 模式 (適用於 ESP32-S3，需整合 esptool Sidecar)。
     - [x] 實現 Tauri 模式下的 **環境診斷** (check_environment)。
-- [ ] **建置自動化**：配置 Vite Build，產出 VSIX 運行時資源。
+- [x] **建置自動化**：配置 Vite Build (vite.config.js)，實作自動資產同步外掛，解決 Tauri 生產環境 JS 缺失問題。
 - [x] **[UI/UX] 響應式工具列修正**：解決視窗過小時工具列溢出疊加問題，導入媒體查詢與 `minWidth` 限制。
 - [x] **[UI/UX] 程式碼預覽面板收合與縮放**：實作可切換的收合把手 (對齊 #wavecode) 與手動調整垂直分割面積功能。
 - [x] **[Bug 修復]** 修復 VSIX 模式下 Python 套件檢查 (check_environment) 卡住的問題。
