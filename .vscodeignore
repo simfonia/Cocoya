@@ -27,6 +27,7 @@ package-lock.json
 ui/package-lock.json
 ui/package.json
 ui/vite.config.js
+ui/dist/
 ui/.gitignore
 
 # Temp artifacts
