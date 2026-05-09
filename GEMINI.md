@@ -10,6 +10,13 @@ Cocoya 是一個針對 Python AI視覺的教學工具。它透過 Blockly 產生
     - MCU: CircuitPython (XIAO S3 Sense, Maker Pi RP2040)。
 - **通訊方式**：Serial (USB)。
 
+### Tauri 2.0 安全與指令規範
+- **指令權限二階段定義 (Permission Workflow)**：
+    1. **定義 (Define)**：在 `src-tauri/permissions/` 下建立 `.toml` 或 `.json` 檔案（例如 `commands.toml`），定義 `identifier` 並將指令加入 `commands.allow` 陣列。
+    2. **分配 (Assign)**：在 `src-tauri/capabilities/default.json` 的 `permissions` 陣列中引用該 `identifier`（例如 `"allow-all-commands"`）。
+- **權限重要性**：若未完成上述二階段定義，指令在生產環境 (Release Build) 會被攔截，導致功能失效。
+- **能力分發**：偏好透過 `bridge.capabilities` (前端) 查詢環境特性，而非直接檢查 `isTauri` 旗標。
+
 ### 多視窗完整性規範 (Multi-Window Integrity Protocol)
 - **精準通訊**：在 Tauri 後端發送視窗專屬事件時，必須使用 `window.emit_to(&label, ...)`，嚴禁使用全域廣播的 `emit`，以防止觸發多個視窗的對話框。
 - **原子化狀態同步**：前端在執行「儲存並關閉」流程時，必須 `await window.CocoyaBridge.send('setDirty', { isDirty: false })` 確保後端狀態更新後，才呼叫 `close_window`。

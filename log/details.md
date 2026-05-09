@@ -1,144 +1,29 @@
 # Cocoya 技術細節 (Details)
+... (略)
 
-## 專案核心架構 (2026-02-12)
-- **名稱意義**：Code, Compute, Yield AI (編碼、運算、產出人工智慧)。
-- **開發平台**：VS Code Extension。
-- **視覺化程式碼**：Blockly。
-- **目標語言**：
-    - PC 端：Python 3 (OpenCV, MediaPipe)。
-    - MCU 端：CircuitPython (用於 Maker Pi RP2040 與 XIAO ESP32-S3)。
-- **通訊協議**：規劃使用 Serial (USB) 作為 PC 與 MCU 的指令橋樑。
+## 關鍵技術實作紀錄 (2026-05-09 更新)
 
-## 模組加載架構：混合體 (Hybrid Architecture)
-為了兼顧更新靈活性與教學環境的穩定性，採用以下設計：
-1.  **單一儲存庫 (Monorepo)**：核心與模組位於同一 Repo，便於開發與版本控管。
-2.  **單一事實來源 (SSOT)**：所有模組定義與 XML 儲存於 `ui/src/modules` 下，由 VSIX 與 Tauri 共享。
-
-## 關鍵技術實作紀錄 (2026-02-13 更新)
-
-### 1. 雙欄佈局與積木定位 (Precise Positioning)
-- **實作方式**：
-    - 在 `Blockly.Python.scrub_` 注入自定義 ID 標籤。陳述句使用 `# ID:xxx`，運算式使用不可見字元 `\u0001ID:xxx\u0002` 標記。
-    - 前端 `ui_manager.js` 解析這些標記，建立 `blockId -> DOM Line` 的映射表。
-    - 點擊積木時，利用 `scrollIntoView` 與黃色高亮色塊實現同步導航。
-
-### 2. VS Code Webview Prompt 解決方案
-- **問題**：Webview 沙盒禁止原生 `prompt()`，導致無法建立變數。
-- **解決**：透過 `postMessage` 向 Host 請求 `vscode.window.showInputBox` 並使用 requestId 追蹤回調。
-
-## 關鍵技術實作紀錄 (2026-04-30 更新)
-
-### 1. Terminal Singleton (單一終端機模式)
-- **問題**：多次操作造成序列埠佔用衝突（PermissionError 13）。
-- **解決**：在 `extension.ts` 實作 `stopAllCocoyaTerminals()`。執行維護指令前，先發送 Ctrl+C 並 `dispose()` 舊視窗，強迫釋放控制權。
-
-### 2. 智慧硬體辨識 (Smart Hardware Labeling)
-- **原理**：抓取 `PNPDeviceID` 提取 VID/PID。
-- **實作**：建立 `boardMap` 對照表，將技術代碼映射為 `Maker Pi RP2040` 等易讀名稱，優化教學引導。
-
-## 關鍵技術實作紀錄 (2026-05-01 更新)
-
-### 1. Tauri 多視窗進程管理與狀態隔離
-- **核心架構**：
-    - 在 `lib.rs` 的 `AppState` 使用 `HashMap<String, Child>` 與 `HashMap<String, PathBuf>`。
-    - 以 `window.label()` (時間戳記唯一標籤) 作為 Key。
-    - **效果**：視窗 A 存檔不會誤用視窗 B 的路徑；視窗 A 的 Python 無窮迴圈不會影響視窗 B 的執行。
-- **孤兒備份搜尋 (Orphan Scavenger)**：
-    - 啟動時掃描 `temp/cocoya_tauri/` 下不屬於當前活躍標籤的 `untitled_backup_*.xml`。
-    - 主動推送 `recoveryData` 事件，確保異常關閉的進度能被任何新視窗救回。
-
-### 2. 整合式終端機 (Webview-side Terminal)
-- **同步緩衝技術**：
-    - 修改 `appendTerminal` 邏輯：若傳入文字無 `\n`且類型相同，則 `textContent += text`。
-    - **解決問題**：修復了斷線重連時 `.` 指示符一直跳行的視覺缺陷。
-- **狀態控制 (isTerminalAutoScroll)**：
-    - 預設開啟。按下工具列「執行」時，系統會強制恢復自動捲動，確保使用者看到最新的 Boot 日誌。
-- **視覺優化**：
-    - 自定義 `::-webkit-scrollbar` 樣式為深灰色，對齊終端機黑色背景。
-
-### 3. MicroPython 深度修復 (Recursive Deep Repair)
-- **通訊協議**：加入 **DTR/RTS** 硬體流控支援，確保連線成功率。
-- **軟硬兼施中斷**：連發 5 次 `\x03` 後自動嘗試 `\x04` 軟重啟，解決無限 print 導致 Raw REPL 進入失敗的問題。
-- **遞迴清理**：在 Python 端注入遞迴 `wipe()` 函式，深度掃除 MicroPython 根目錄下所有殘留檔案與目錄。
-
-### 4. 跨平台 UI/UX 對齊 (VSIX vs Tauri)
-- **條件式按鈕**：
-    - VSIX：保留「關閉(X)」按鈕對應 `closeEditor`。
-    - Tauri：隱藏「關閉(X)」按鈕，將「停止」按鈕移至執行鈕旁。
-- **Unbuffered 傳輸**：
-    - 所有 Python 調用（PC/MCU/Monitor）統一強制加上 **`-u`** 參數。
-    - 確保 Python -> Rust -> JS 之間的日誌流即時穿透，不再受 Python 緩衝區扣留。
-
-### 5. 生產環境權限配置 (Tauri v2)
-- **檢查更新**：需在 `capabilities/default.json` 開啟 `shell:allow-open` 並放行 `http/https` 協議。
-- **除錯工具**：需同步在 `tauri.conf.json` (`devtools: true`) 與 `Cargo.toml` (`features = ["devtools"]`) 開啟特性。
-
-## 關鍵技術實作紀錄 (2026-05-03 更新)
-
-### 1. 響應式工具列與溢出處理 (Responsive Toolbar)
-- **問題分析**：
-    - 原本 `.toolbar-group` 使用 `flex-wrap: nowrap`，導致其總寬度若大於 `#blocklyArea` 時會直接溢出並疊加在相鄰的 `#codeArea` 上。
-    - `#file-breadcrumb` 佔用過多空間，且缺乏動態縮放機制。
+### 1. Tauri 2.0 二階段權限工作流 (Permission Workflow)
+- **問題**：Tauri 2.0 的生產版本 (Release Build) 具有極嚴格的指令攔截機制。單純在 `capabilities/default.json` 寫上指令名稱會導致 `Permission not found`。
 - **解決方案**：
-    - **內部換行**：將 `.toolbar-group` 改為 `flex-wrap: wrap`。當視窗變窄時，設定按鈕會自動推擠至下一行，維持在 `#blocklyArea` 內部。
-    - **漸進式隱藏**：
-        - 1000px ~ 850px：縮減路徑標籤最大寬度。
-        - < 700px：完全隱藏路徑標籤 (`display: none`)。這在 VS Code 的分割視窗（Split View）模式下尤為重要，確保即使在 1/3 寬度下功能按鈕依然可用。
-- **邊界防護**：
-    - 在 `tauri.conf.json` 配置 `minWidth: 960`。此數值是根據 `(Left Group ~500px) + (Right Area ~400px)` 計算得出的安全值，確保在不換行的情況下擁有最佳視覺效果。
+    1.  **定義層 (Define)**：在 `src-tauri/permissions/commands.toml` 中使用 `[[permission]]` 定義權限 ID（如 `allow-all-commands`），並在 `commands.allow` 陣列中列出所有 `snake_case` 的 Rust 指令名稱。
+    2.  **分配層 (Assign)**：在 `src-tauri/capabilities/default.json` 的 `permissions` 陣列中引用該 ID。
+- **優勢**：集中管理自定義指令權限，避免 `tauri.conf.json` 或 `default.json` 過於臃腫。
 
-## 關鍵技術實作紀錄 (2026-05-04 更新)
+### 2. AppController 映射分發模式 (Map-based Dispatcher)
+- **原理**：將原本 `handleCommand` 中的 `switch-case` 結構替換為 `Map` 物件。
+- **實作細節**：
+    - 在 `constructor` 中執行 `this.handlers = new Map()` 並調用 `_initHandlers()`。
+    - **擴展性**：新增後端事件監聽時，只需 `this.handlers.set('cmd', (m) => ...)`。
+    - **穩定性**：統一封裝 `try...catch` 於分發層，防止單一處理器錯誤中斷整個 Webview 訊息循環。
 
-### 1. Tauri v2 視窗權限與攔截機制
-- **權限作用域 (Capability Scoping)**：
-    - 在 Tauri v2 中，`capabilities/default.json` 預設可能只授權給 `"main"` 視窗。
-    - **修正**：將 `"windows": ["main"]` 修改為 `["*"]`，確保動態創建的次要視窗（如開新專案）也能獲得 `core:window:allow-close` 等權限，否則攔截器註冊會默默失敗。
-- **標題驅動的髒檢查 (Title-based Dirty Check)**：
-    - Webview 的 `document.title` 與原生的 Window Title 並非自動同步。
-    - **同步策略**：在 `setWindowTitle` 指令中，同時執行 `document.title = fullTitle` 與 `tauriInvoke('set_window_title', ...)`。
-    - **理由**：`onCloseRequested` 的 JS 回調能即時讀取 `document.title` 中的 `*` 標記，而不需非同步等待後端狀態，這對攔截流程至關重要。
+### 3. Utils 模組化與命名空間保護 (Namespace Preservation)
+- **挑戰**：在傳統 `<script>` 載入環境下進行模組化，必須防止命名空間衝突與載入順序問題。
+- **解決方案**：
+    - 建立 `utils.js` 作為 Entry Point，僅負責執行 `window.CocoyaUtils = window.CocoyaUtils || {};`。
+    - 各子模組 (`core.js`, `search.js` 等) 使用 **IIFE (立即執行函式)** 封裝，透過 `Object.assign` 向全域物件注入功能。
+- **ESM 兼容性警告**：在傳統腳本中嚴禁使用 `export` 關鍵字，否則會觸發 `Uncaught SyntaxError`。必須透過全域賦值 (`window.X = X`) 導出內容。
 
-### 2. 多視窗備份隔離 (Multi-window Backup Isolation)
-- **Label-based Path**：
-    - 在 Rust 端，針對未命名專案使用 `untitled_backup_{window_label}.xml`。
-    - **生命週期管理**：存檔成功後，後端會根據目前視窗的 `label()` 與 `path` 同時清理隱藏備份檔 (`.filename.bak`) 與暫存備份檔。這解決了使用者存檔後，下次開啟仍被問是否恢復舊資料的 UX 缺陷。
-
-### 3. VSIX 環境偵測加固 (Robust VSIX Detection)
-- **execFile vs exec**：
-    - 在 Windows 下，`child_process.exec` 的字串參數若包含複雜引號，常被 CMD 誤解析。
-    - **解決方案**：改用 `execFile(pythonPath, ['-c', checkScript])`。
-    - **優勢**：參數以陣列傳遞，繞過 Shell 解析器，確保 Python 腳本完整傳遞，徹底消除因「引號被吃掉」導致的偵測失敗。
-
-## 關鍵技術實作紀錄 (2026-05-06 更新)
-
-### 1. ESM 模組共享物件初始化 (Object.assign Pattern)
-- **問題**：在不使用現代 Bundler (如 Webpack/Vite) 的純 `script` 標籤載入環境下，若多個 JS 檔案都嘗試定義 `window.CocoyaUI = { ... }`，後載入的檔案會完全覆蓋掉先前的定義。這導致 `terminal.js` 注入的方法在 `ui_manager.js` 載入後消失，引發 `TypeError: window.CocoyaUI.toggleTerminal is not a function`。
-- **解決方案**：所有子模組統一使用 `window.CocoyaUI = Object.assign(window.CocoyaUI || {}, { ... });`。
-- **優點**：
-    - **累加性**：支援多個檔案向同一個全域物件注入功能。
-    - **安全性**：即使載入順序變動，也不會發生覆蓋。
-
-### 2. UI 邏輯解耦策略 (Module Separation)
-- **Renderer 模組化**：實作 `ui/renderer.js`，解決了 Python 預覽渲染與積木高亮同步邏輯在單一檔案過於龐大（ Monolithic）的問題。
-- **佈局動態綁定**：將縮放把手 (`#panel-resizer`) 與收合控制 (`#code-toggle`) 封裝在 `initLayout` 中，並透過 `ui_manager.js` 的 `initToolbar` 統一驅動，確保 UI 邏輯的初始化順序一致。
-
-### 3. 多視窗完整性協議 (Multi-Window Integrity Protocol, MWIP)
-為了解決多個編輯視窗同時操作同一份資料時的潛在衝突，實作了以下核心邏輯：
-
-- **單一事實來源鎖定 (SSOT File Locking)**：
-    - 在 Rust 端 `AppState` 維護 `file_locks: HashMap<PathBuf, WindowLabel>`。
-    - **規則**：第一個開啟該檔案的路徑者獲得「寫入權」；後續開啟者被標記為 `is_read_only: true`。
-    - **強制保護**：即便唯讀視窗嘗試另存新檔為原檔名，Rust `save_file` 指令會直接拒絕執行，確保權限不被非法篡改。
-- **原子化髒狀態同步 (Atomic Dirty Sync)**：
-    - JS `setDirty` 會同步調用 Rust `set_dirty` 並進行 `await`。
-    - **Race Condition 解決**：在點擊關閉對話框的「儲存」按鈕時，必須先 `await set_dirty(false)` 成功後才發起 `close_window`。這確保了 Rust 的 `on_window_event` 在執行時讀到的狀態是 100% 正確的「乾淨」狀態，避免二次攔截。
-- **精準關閉攔截 (Targeted Unicast)**：
-    - 捨棄全域廣播的 `window.emit`，改用 `window.emit_to(&label, "closeRequested", ...)`。
-    - **效果**：關閉視窗 B 時，只有視窗 B 會跳出詢問框，不會干擾到視窗 A。
-- **宣示權備份恢復 (Safe Backup Claiming)**：
-    - 針對未命名備份檔，新視窗啟動時會呼叫 `check_startup_backup`。
-    - **互斥邏輯**：一旦視窗偵測到可恢復檔案，後端會立即將其重新命名為 `.recovering`。
-    - **效果**：即使同時開啟 10 個視窗，同一個備份檔也只會被其中一個視窗「領走」，徹底解決了重複彈窗恢復的問題。
-- **唯讀編輯權限轉正**：
-    - 允許唯讀視窗變髒（顯示 `*`），按 `X` 時引導至「另存新檔」。
-    - 一旦另存成功，該視窗自動轉為「正常」模式，並清除唯讀按鈕限制，獲得新檔案的鎖定權。
+### 4. 跨平台指令參數一致化 (Flag Synchronization)
+- **實作**：在 `mcu.rs` 的 `erase_filesystem` 調用中補齊 `--tauri` 旗標。
+- **目的**：確保 `deploy_mcu.py` 輸出的是適合終端機面板顯示的簡潔日誌格式，而非預設的帶顏色轉義字元或重複提示。

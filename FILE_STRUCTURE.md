@@ -33,13 +33,20 @@ C:\Workspace\cocoya\
 │   │   │   └── base.js     # 基礎狀態與工具列事件
 │   │   ├── app/         # 應用程式核心子模組
 │   │   │   ├── config.js   # 平台與主題配置
+│   │   │   ├── controller.js # [NEW] 中央分發與解耦控制
 │   │   │   ├── persistence.js # 檔案與備份持久化
 │   │   │   ├── workspace.js # Blockly 與 Minimap 管理
 │   │   │   └── lifecycle.js # 初始化與通訊生命週期
+│   │   ├── utils/         # 通用工具子模組
+│   │   │   ├── core.js      # DOM 攔截、ID 提取與縮排修復
+│   │   │   ├── toolbox.js   # XML 過濾邏輯
+│   │   │   ├── generators.js # Blockly 產生器修補
+│   │   │   ├── mutator.js   # Mutator Undo 方案
+│   │   │   └── search.js    # 積木搜尋引擎
 │   │   ├── modules/       # 雙模共用積木模組
 │   │   ├── main.js        # Legacy Entry Point
 │   │   ├── ui_manager.js  # Legacy Entry Point
-│   │   ├── utils.js       # 全域攔截器與工具函式
+│   │   ├── utils.js       # [REFACTORED] 入口與命名空間初始化
 │   │   ├── zh-hant.js     # 核心語系檔
 │   │   ├── en.js          # 核心語系檔
 │   │   ├── vs.min.css     # 本地化 Highlight.js 樣式

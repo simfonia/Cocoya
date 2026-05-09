@@ -2,6 +2,21 @@
 
 This document serves as the Technical Reference and Source of Truth (SSOT) for the public APIs of `CocoyaApp` and `CocoyaUI`. It is used to track functional parity during refactoring.
 
+## CocoyaUtils (`ui/src/utils.js`)
+
+| Method / Property | Description | Status | Target Module |
+| :--- | :--- | :--- | :--- |
+| `TAG_START` | Invisible tag start (\u0001) | Migrated | `utils/core.js` |
+| `TAG_END` | Invisible tag end (\u0002) | Migrated | `utils/core.js` |
+| `extractIds(line)` | Extracts ID markers from code lines | Migrated | `utils/core.js` |
+| `fixIndent(code, i)` | Fixes indentation for static code snippets | Migrated | `utils/core.js` |
+| `filterToolboxXML(x, p)` | Filters blocks based on platform | Migrated | `utils/toolbox.js` |
+| `setupGeneratorOverrides()` | Applies indentation and sync patches | Migrated | `utils/generators.js` |
+| `Mutator.execute(...)` | Enhanced undo/redo for mutator blocks | Migrated | `utils/mutator.js` |
+| `BlockSearcher.buildIndex(w)` | Indexes blocks for search | Migrated | `utils/search.js` |
+| `BlockSearcher.search(q)` | Performs block search | Migrated | `utils/search.js` |
+| `BlockSearcher.inject(w)` | Injects search UI into toolbox | Migrated | `utils/search.js` |
+
 ## CocoyaApp (`ui/src/main.js`)
 
 | Method / Property | Description | Status | Target Module |
@@ -35,6 +50,13 @@ This document serves as the Technical Reference and Source of Truth (SSOT) for t
 | `resetWorkspace()` | Clears workspace and sets default blocks | Migrated | `app/persistence.js` |
 | `onSaveCompleted(fn)` | Callback after successful save | Migrated | `app/persistence.js` |
 | `createDefaultBlocks()` | Injects starting blocks based on platform | Migrated | `app/lifecycle.js` |
+
+## AppController (`ui/src/app/controller.js`)
+
+| Method / Property | Description | Status | Target Module |
+| :--- | :--- | :--- | :--- |
+| `handleCommand(m)` | Main message router for backend events | Migrated | `app/controller.js` |
+| `dispatch(cmd, p)` | Frontend command dispatcher to backend | Migrated | `app/controller.js` |
 
 ## CocoyaUI (`ui/src/ui_manager.js`)
 

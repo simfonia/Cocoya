@@ -1,0 +1,28 @@
+[[permission]]
+identifier = "allow-all-commands"
+description = "Allows all custom commands for Cocoya"
+commands.allow = [
+  "run_python",
+  "stop_python",
+  "get_manifest",
+  "get_module_toolbox",
+  "open_file",
+  "save_file",
+  "get_serial_ports",
+  "deploy_mcu",
+  "open_serial_monitor",
+  "setup_stable_mode",
+  "erase_filesystem",
+  "auto_backup",
+  "clear_backup",
+  "reject_recovery",
+  "reset_firmware",
+  "create_window",
+  "set_window_title",
+  "pick_python_path",
+  "get_version",
+  "check_environment",
+  "set_dirty",
+  "close_window",
+  "check_startup_backup"
+]

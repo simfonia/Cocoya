@@ -11,6 +11,21 @@ export class BridgeVSIX extends BaseBridge {
     }
 
     /**
+     * 獲取環境功能清單 (VS Code)
+     */
+    get capabilities() {
+        return {
+            hasTerminal: false,
+            canClose: true,
+            supportsAutoUpdate: false,
+            supportsFirmwareReset: false,
+            supportsEnvironmentCheck: true,
+            supportsStableMode: true,
+            supportsEraseFS: true
+        };
+    }
+
+    /**
      * 初始化 VSIX 通訊
      */
     init() {
