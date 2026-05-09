@@ -225,6 +225,7 @@ pub async fn erase_filesystem(
         .arg("--erase-filesystem")
         .arg("--lang")
         .arg(&lang)
+        .arg("--tauri")
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()

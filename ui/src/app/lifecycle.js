@@ -12,6 +12,10 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
      */
     init: function() {
         if (!window.CocoyaXMLRequests) window.CocoyaXMLRequests = new Map();
+        
+        // 初始化中央控制器 (必須在 setupWindowListeners 之前)
+        this.controller = new window.AppController(this, window.CocoyaUI, window.CocoyaBridge);
+
         this.setupThemeSync();
         this.setupBlocklyPrompts();
         this.setupWindowListeners();
@@ -19,10 +23,8 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         this.setupIndentSelector();
         window.CocoyaBridge.send('getManifest');
 
-        // Tauri 專屬：啟動後主動檢查是否有遺留的孤兒備份
-        if (window.CocoyaBridge.isTauri) {
-            window.CocoyaBridge.send('checkStartupBackup');
-        }
+        // 啟動時環境檢查 (由 Bridge 層決定是否真正執行)
+        window.CocoyaBridge.send('checkStartupBackup');
 
         setTimeout(() => {
             window.CocoyaBridge.send('checkUpdate');
@@ -57,23 +59,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
      * 設定全域視窗與通訊監聽
      */
     setupWindowListeners: function() {
-        window.CocoyaBridge.onMessage(async (message) => {
-            switch (message.command) {
-                case 'manifestData': await this.initializeCocoya(message.data, message.mediaUri, message.lang); break;
-                case 'loadWorkspace': await this.loadWorkspace(message.xml, message.filename, message.platform, message.is_read_only); break;
-                case 'resetWorkspace': this.resetWorkspace(); break;
-                case 'saveCompleted': this.onSaveCompleted(message.filename); break;
-                case 'runCompleted': if (window.CocoyaUI) window.CocoyaUI.flashButton('btn-run', '#c8e6c9'); break;
-                case 'updateStatus': if (window.CocoyaUI) window.CocoyaUI.setUpdateStatus(message.data); break;
-                case 'serialPortsData': if (window.CocoyaUI) window.CocoyaUI.updateSerialPorts(message.ports); break;
-                case 'environmentStatus': if (window.CocoyaUI) window.CocoyaUI.updateEnvironmentStatus(message.results); break;
-                case 'switchPlatform': await this.switchPlatform(message.platform); break;
-                case 'recoveryData': await this.checkAutoBackup(message.xml); break;
-                case 'promptResponse': this.handlePromptResponse(message); break;
-                case 'toolboxData': this.handleToolboxData(message); break;
-            }
-        });
-
+        // 大部分的指令處理已移入 AppController
         window.addEventListener('resize', () => {
             if (this.workspace) Blockly.svgResize(this.workspace);
         });

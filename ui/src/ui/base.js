@@ -48,6 +48,18 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
     },
 
     /**
+     * 設定儲存按鈕啟用狀態 (由 Persistence 呼叫)
+     */
+    setSaveButtonState: function(enabled, hint = '') {
+        const saveBtn = document.getElementById('btn-save');
+        if (saveBtn) {
+            saveBtn.disabled = !enabled;
+            saveBtn.style.opacity = enabled ? '1' : '0.5';
+            saveBtn.setAttribute('title', hint);
+        }
+    },
+
+    /**
      * 處理 HTML 中的 i18n 佔位符 (%{BKY_...})
      * 會掃描所有的 title 屬性、span 內容以及 option 內容
      */
@@ -146,17 +158,12 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         const terminalToggleBtn = document.getElementById('btn-terminal');
 
         if (window.CocoyaBridge) {
-            if (window.CocoyaBridge.isTauri) {
-                // Tauri: 顯示停止鈕、隱藏關閉鈕、顯示自訂終端機
-                if (stopBtn) stopBtn.style.display = 'flex';
-                if (closeBtn) closeBtn.style.display = 'none';
-                if (terminalToggleBtn) terminalToggleBtn.style.display = 'flex';
-            } else if (window.CocoyaBridge.isVsCode) {
-                // VSIX: 顯示停止鈕、顯示關閉鈕、隱藏自訂終端機 (VSIX 用不到)
-                if (stopBtn) stopBtn.style.display = 'flex';
-                if (closeBtn) closeBtn.style.display = 'flex';
-                if (terminalToggleBtn) terminalToggleBtn.style.display = 'none';
-            }
+            const caps = window.CocoyaBridge.capabilities;
+            
+            // 根據能力清單設定按鈕顯示
+            if (stopBtn) stopBtn.style.display = 'flex'; // 停止鈕兩者皆有
+            if (closeBtn) closeBtn.style.display = caps.canClose ? 'flex' : 'none';
+            if (terminalToggleBtn) terminalToggleBtn.style.display = caps.hasTerminal ? 'flex' : 'none';
         }
 
         /**

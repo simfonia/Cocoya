@@ -85,11 +85,10 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         
         // 設定唯讀狀態
         this.isReadOnly = !!isReadOnly;
-        const saveBtn = document.getElementById('btn-save');
-        if (saveBtn) {
-            saveBtn.disabled = this.isReadOnly;
-            saveBtn.style.opacity = this.isReadOnly ? '0.5' : '1';
-            saveBtn.setAttribute('title', this.isReadOnly ? (Blockly.Msg['MSG_READ_ONLY_HINT'] || '此檔案已被其他視窗開啟，目前為唯讀模式。') : '');
+        
+        if (window.CocoyaUI && window.CocoyaUI.setSaveButtonState) {
+            const hint = this.isReadOnly ? (Blockly.Msg['MSG_READ_ONLY_HINT'] || '此檔案已被其他視窗開啟，目前為唯讀模式。') : '';
+            window.CocoyaUI.setSaveButtonState(!this.isReadOnly, hint);
         }
 
         if (this.isReadOnly) {
@@ -116,11 +115,9 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
     resetWorkspace: function() { 
         if (this.workspace) {
             this.isReadOnly = false; // 重置時恢復為可寫
-            const saveBtn = document.getElementById('btn-save');
-            if (saveBtn) {
-                saveBtn.disabled = false;
-                saveBtn.style.opacity = '1';
-                saveBtn.setAttribute('title', '');
+            
+            if (window.CocoyaUI && window.CocoyaUI.setSaveButtonState) {
+                window.CocoyaUI.setSaveButtonState(true, '');
             }
 
             Blockly.Events.disable();
@@ -143,11 +140,9 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         if (filename) {
             // 存檔成功，不論之前是否為唯讀，現在我就是這個新檔的擁有者了
             this.isReadOnly = false;
-            const saveBtn = document.getElementById('btn-save');
-            if (saveBtn) {
-                saveBtn.disabled = false;
-                saveBtn.style.opacity = '1';
-                saveBtn.setAttribute('title', '');
+            
+            if (window.CocoyaUI && window.CocoyaUI.setSaveButtonState) {
+                window.CocoyaUI.setSaveButtonState(true, '');
             }
 
             if (window.CocoyaUI) window.CocoyaUI.updateFileStatus(filename); 

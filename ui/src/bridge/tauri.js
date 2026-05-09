@@ -14,6 +14,21 @@ export class BridgeTauri extends BaseBridge {
     }
 
     /**
+     * 獲取環境功能清單 (Tauri)
+     */
+    get capabilities() {
+        return {
+            hasTerminal: true,
+            canClose: false,
+            supportsAutoUpdate: true,
+            supportsFirmwareReset: true,
+            supportsEnvironmentCheck: true,
+            supportsStableMode: true,
+            supportsEraseFS: true
+        };
+    }
+
+    /**
      * 初始化 Tauri 通訊與監聽器
      */
     async init() {
@@ -261,7 +276,8 @@ export class BridgeTauri extends BaseBridge {
                 case 'setupStableMode':
                     try {
                         window.CocoyaUI.showLoadingModal('Setting up stable mode...');
-                        await this.tauriInvoke('setup_stable_mode', { port: data.serialPort });
+                        const lang = (window.Blockly && Blockly.Msg['BKY_LANG']) || 'zh-hant';
+                        await this.tauriInvoke('setup_stable_mode', { port: data.serialPort, lang: lang });
                         window.CocoyaUI.hideLoadingModal();
                         this.alert('Stable mode enabled!');
                     } catch (e) {
@@ -298,15 +314,7 @@ export class BridgeTauri extends BaseBridge {
                     console.log('[Bridge] Locale sync ignored in Tauri mode');
                     break;
 
-                case 'setDirty':
-                    await this.tauriInvoke('set_dirty', { isDirty: data.isDirty });
-                    break;
-
-                case 'closeWindow':
-                    await this.tauriInvoke('close_window');
-                    break;
-
-                case 'setupStableMode':
+                case 'checkEnvironment':
                     try {
                         const pythonPath = localStorage.getItem('pythonPath') || 'python';
                         const results = await this.tauriInvoke('check_environment', { pythonPath: pythonPath });

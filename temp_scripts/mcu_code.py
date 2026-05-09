@@ -1,6 +1,6 @@
 import machine
 import time
-import random
+
 
 class MusicEngine:
     def __init__(self, pin_num):
@@ -72,13 +72,6 @@ class UltrasonicHelper:
 if 'ultrasonic_28_7' not in globals():
     ultrasonic_28_7 = UltrasonicHelper(28, 7)
 
-if '_random_initialized' not in globals():
-    try:
-        random.seed(time.ticks_us())
-    except AttributeError:
-        random.seed(time.monotonic_ns())
-    _random_initialized = True
-
 class CarMotor:
     def __init__(self):
         # Maker Pi RP2040 Motor Pins (GP8, GP9, GP10, GP11)
@@ -134,16 +127,9 @@ while True:  # S_ID:jWxqT?]:4t;~#xxsXgjg
         # 先煞車，然後左後退一點點  # S_ID:$Np:cV#^#ffdf5gwM6B2  # E_ID:$Np:cV#^#ffdf5gwM6B2
         if 'car' in globals(): car.stop()  # S_ID:db3JkR5Vp7JG@5b6nrq.
         time.sleep(0.1)  # E_ID:db3JkR5Vp7JG@5b6nrq.
-        # 擲骰子  # S_ID:oZLZ0+_G^4an*%gB2KDu  # E_ID:oZLZ0+_G^4an*%gB2KDu
-        if random.randint(1, 100) > 70:  # S_ID:u_(*$gFuk`)l5[}3ka^1
-            # 30%機率左後退  # S_ID:#_{Ft#q%Jpo*%8[xLgfv  # E_ID:#_{Ft#q%Jpo*%8[xLgfv
-              # S_ID:~{E!lBL4_mneJRE,}S}`
-            if 'car' not in globals(): car = CarMotor()
-            car.set_speed(0, (-50))  # E_ID:~{E!lBL4_mneJRE,}S}`
-        else:
-              # S_ID:[B#Eh0!fb/8RdOAN3_3:
-            if 'car' not in globals(): car = CarMotor()
-            car.set_speed((-50), 0)  # E_ID:[B#Eh0!fb/8RdOAN3_3:  # E_ID:u_(*$gFuk`)l5[}3ka^1
+          # S_ID:~{E!lBL4_mneJRE,}S}`
+        if 'car' not in globals(): car = CarMotor()
+        car.set_speed(0, (-50))  # E_ID:~{E!lBL4_mneJRE,}S}`
         time.sleep(0.5)  # S_ID:cpFhw`v)!ds@ku=g^g6_  # E_ID:cpFhw`v)!ds@ku=g^g6_
         if 'car' in globals(): car.stop()  # S_ID:o0wQxhy2OqlTN!c::$/X
         time.sleep(0.1)  # E_ID:o0wQxhy2OqlTN!c::$/X

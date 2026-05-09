@@ -45,6 +45,8 @@
         - [x] 遷移 Hardware 控制邏輯至 `ui/hardware.js`。
         - [x] 遷移 Dialog & Feedback 邏輯至 `ui/dialogs.js`。
         - [x] 模組化 `main.js` (App 核心、Workspace、Persistence)。
+        - [x] **[DONE]** 分拆 `utils.js` 到獨立子模組 (積木、產生器、工具函式)。
+        - [x] **[DONE]** 優化 `AppController` 為 Map 映射處理器模式。
     - [ ] 整合 `deploy_mcu.py` 作為 Tauri Sidecar 以利打包發布。
     - [ ] 實作重置韌體功能 (Reset Firmware)：
         - [x] 策略 A：UF2 複製模式 (適用於 RP2040)。

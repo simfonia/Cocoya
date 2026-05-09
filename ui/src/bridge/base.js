@@ -13,6 +13,22 @@ export class BaseBridge {
     }
 
     /**
+     * 獲取環境功能清單 (Capabilities)
+     * @returns {Object}
+     */
+    get capabilities() {
+        return {
+            hasTerminal: false,
+            canClose: false,
+            supportsAutoUpdate: false,
+            supportsFirmwareReset: false,
+            supportsEnvironmentCheck: false,
+            supportsStableMode: false,
+            supportsEraseFS: false
+        };
+    }
+
+    /**
      * 初始化橋接器 (由子類別重寫)
      */
     init() {
