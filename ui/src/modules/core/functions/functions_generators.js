@@ -10,7 +10,11 @@ Blockly.Python.forBlock['py_function_def'] = function(block, generator) {
   }
   
   var branch = generator.statementToCode(block, 'DO') || generator.INDENT + 'pass\n';
-  return 'def ' + name + '(' + params.join(', ') + '):\n' + branch;
+  var code = 'def ' + name + '(' + params.join(', ') + '):\n' + branch;
+  
+  // 修正：將函式定義移至 definitions_ 區塊，確保其產出於主程式之前，不受積木高度影響
+  generator.definitions_['func_' + name] = code;
+  return null; 
 };
 
 Blockly.Python.forBlock['py_function_return'] = function(block, generator) {
