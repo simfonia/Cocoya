@@ -30,10 +30,15 @@ Blockly.Python.forBlock['py_definition_zone'] = function(block, generator) {
   return cleanDefs;
 };
 
-Blockly.Python.forBlock['py_import'] = function(block) {
-  return 'import ' + block.getFieldValue('LIB') + '\n';
+Blockly.Python.forBlock['py_import'] = function(block, generator) {
+  var lib = block.getFieldValue('LIB');
+  generator.definitions_['import_' + lib] = 'import ' + lib;
+  return null;
 };
 
-Blockly.Python.forBlock['py_import_from'] = function(block) {
-  return 'from ' + block.getFieldValue('LIB') + ' import ' + block.getFieldValue('TARGET') + '\n';
+Blockly.Python.forBlock['py_import_from'] = function(block, generator) {
+  var lib = block.getFieldValue('LIB');
+  var target = block.getFieldValue('TARGET');
+  generator.definitions_['import_' + lib + '_' + target] = 'from ' + lib + ' import ' + target;
+  return null;
 };

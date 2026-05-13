@@ -48,11 +48,8 @@ class CarMotor:
   var left = generator.valueToCode(block, 'LEFT', Blockly.Python.ORDER_ATOMIC) || '0';
   var right = generator.valueToCode(block, 'RIGHT', Blockly.Python.ORDER_ATOMIC) || '0';
 
-  var code = `
-if 'car' not in globals(): car = CarMotor()
-car.set_speed(${left}, ${right})
-`;
-  return code;
+  generator.definitions_['init_car_motor'] = "if 'car' not in globals(): car = CarMotor()";
+  return 'car.set_speed(' + left + ', ' + right + ')\n';
 };
 
 Blockly.Python.forBlock['mcu_car_stop'] = function(block, generator) {
@@ -147,25 +144,20 @@ Blockly.Python.forBlock['mcu_car_servo_setup'] = function(block, generator) {
 
 Blockly.Python.forBlock['mcu_car_hand_range'] = function(block, generator) {
   generator.definitions_['class_picar_servo'] = SERVO_CLASS_INJECT;
+  generator.definitions_['init_servo_12'] = "if 'servo_12' not in globals(): servo_12 = PiCarServo(12)";
+  generator.definitions_['init_servo_13'] = "if 'servo_13' not in globals(): servo_13 = PiCarServo(13)";
+  
   var range = generator.valueToCode(block, 'RANGE', Blockly.Python.ORDER_ATOMIC) || '180';
-  return `
-if 'servo_12' not in globals(): servo_12 = PiCarServo(12)
-if 'servo_13' not in globals(): servo_13 = PiCarServo(13)
-servo_12.hand_range = ${range}
-servo_13.hand_range = ${range}
-`;
+  return 'servo_12.hand_range = ' + range + '\nservo_13.hand_range = ' + range + '\n';
 };
 
 Blockly.Python.forBlock['mcu_car_in_position'] = function(block, generator) {
   generator.definitions_['import_machine'] = 'import machine';
   generator.definitions_['class_picar_servo'] = SERVO_CLASS_INJECT;
-  var code = `
-if 'servo_12' not in globals(): servo_12 = PiCarServo(12)
-if 'servo_13' not in globals(): servo_13 = PiCarServo(13)
-servo_12.set_angle(180)
-servo_13.set_angle(0)
-`;
-  return code;
+  generator.definitions_['init_servo_12'] = "if 'servo_12' not in globals(): servo_12 = PiCarServo(12)";
+  generator.definitions_['init_servo_13'] = "if 'servo_13' not in globals(): servo_13 = PiCarServo(13)";
+  
+  return 'servo_12.set_angle(180)\nservo_13.set_angle(0)\n';
 };
 
 Blockly.Python.forBlock['mcu_car_move_hands'] = function(block, generator) {
@@ -176,21 +168,20 @@ Blockly.Python.forBlock['mcu_car_move_hands'] = function(block, generator) {
   generator.definitions_['import_machine'] = 'import machine';
   generator.definitions_['import_time'] = 'import time';
   generator.definitions_['class_picar_servo'] = SERVO_CLASS_INJECT;
+  generator.definitions_['init_servo_12'] = "if 'servo_12' not in globals(): servo_12 = PiCarServo(12)";
+  generator.definitions_['init_servo_13'] = "if 'servo_13' not in globals(): servo_13 = PiCarServo(13)";
 
-  var code = `
-if 'servo_12' not in globals(): servo_12 = PiCarServo(12)
-if 'servo_13' not in globals(): servo_13 = PiCarServo(13)
-_p = max(min(${percent}, 100), 0) / 100.0
-_s = max(min(${speed}, 10), 1)
-_target_R = int(_p * servo_13.hand_range)
-_target_L = 180 - int(_p * servo_12.hand_range)
-`;
+  var code = '_p = max(min(' + percent + ', 100), 0) / 100.0\n' +
+             '_s = max(min(' + speed + ', 10), 1)\n' +
+             '_target_R = int(_p * servo_13.hand_range)\n' +
+             '_target_L = 180 - int(_p * servo_12.hand_range)\n';
+             
   if (hand === 'BOTH') {
-    code += `PiCarServo.move_sync([servo_12, servo_13], [_target_L, _target_R], _s)\n`;
+    code += 'PiCarServo.move_sync([servo_12, servo_13], [_target_L, _target_R], _s)\n';
   } else if (hand === 'RIGHT') {
-    code += `servo_13.move_smooth(_target_R, _s)\n`;
+    code += 'servo_13.move_smooth(_target_R, _s)\n';
   } else if (hand === 'LEFT') {
-    code += `servo_12.move_smooth(_target_L, _s)\n`;
+    code += 'servo_12.move_smooth(_target_L, _s)\n';
   }
   
   return code;

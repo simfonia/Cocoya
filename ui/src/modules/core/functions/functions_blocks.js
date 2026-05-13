@@ -144,19 +144,19 @@ Blockly.Blocks['py_function_return'] = {
 
 Blockly.Blocks['py_function_local_set'] = { 
   init: function() { 
-    this.appendValueInput("VALUE").appendField(Blockly.Msg["PY_LOCAL"]).appendField(new Blockly.FieldTextInput("x"), "VAR").appendField(Blockly.Msg["PY_EQUAL"] || "="); 
+    this.appendValueInput("VALUE").appendField(Blockly.Msg["PY_PARAMETER"]).appendField(new Blockly.FieldTextInput("x"), "VAR").appendField(Blockly.Msg["PY_EQUAL"] || "="); 
     this.setPreviousStatement(true, null); 
     this.setNextStatement(true, null); 
     this.setColour(Blockly.Msg["COLOUR_FUNCTIONS"]); 
-    this.setTooltip(Blockly.Msg["PY_FUNCTION_LOCAL_SET_TOOLTIP"]); 
+    this.setTooltip(Blockly.Msg["PY_FUNCTION_PARAMETER_SET_TOOLTIP"]); 
   } 
 };
 
 Blockly.Blocks['py_function_local_get'] = { 
   init: function() { 
-    this.appendDummyInput().appendField(Blockly.Msg["PY_LOCAL"]).appendField(new Blockly.FieldTextInput("x"), "VAR"); 
+    this.appendDummyInput().appendField(Blockly.Msg["PY_PARAMETER"]).appendField(new Blockly.FieldTextInput("x"), "VAR"); 
     this.setOutput(true, null); 
     this.setColour(Blockly.Msg["COLOUR_FUNCTIONS"]); 
-    this.setTooltip(Blockly.Msg["PY_FUNCTION_LOCAL_GET_TOOLTIP"]); 
+    this.setTooltip(Blockly.Msg["PY_FUNCTION_PARAMETER_GET_TOOLTIP"]); 
   } 
 };
