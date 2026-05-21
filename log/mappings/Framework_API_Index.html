@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>Cocoya Framework API Index</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; border-left: 5px solid #FE2F89; }
+        h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 40px; }
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 0.8em; margin-right: 5px; }
+        .tag-bridge { background: #e3f2fd; color: #1976d2; }
+        .tag-vsix { background: #fff3e0; color: #f57c00; }
+    </style>
+</head>
+<body>
+    <h1>Cocoya Framework API Index</h1>
+
+    <h2>1. 通訊橋樑 (CocoyaBridge)</h2>
+    <p>前端與 Host 端 (VSIX/Tauri) 通訊的核心機制。</p>
+    
+    <h3>1.1 動態能力同步 (Capabilities Sync)</h3>
+    <p><span class="tag tag-bridge">Frontend</span> <span class="tag tag-vsix">VSIX</span></p>
+    <p>用於在啟動時將 Host 端的環境狀態（如是否連線 SSH）同步至前端。</p>
+    <pre>
+// Host 端 (extension.ts) 發送
+this.panel.webview.postMessage({ 
+    command: 'manifestData', 
+    capabilities: { isRemoteConnected: true, ... },
+    cloudAiEnabled: true,
+    ...
+});
+
+// 前端接收 (controller.js)
+this.handlers.set('manifestData', async (m) => {
+    if (this.bridge.updateCapabilities && m.capabilities) {
+        this.bridge.updateCapabilities(m.capabilities);
+    }
+    ...
+});
+    </pre>
+
+    <h2>2. Blockly 產生器開發</h2>
+    
+    <h3>2.1 使用 definitions_ 解耦定義與執行</h3>
+    <p>為了解決積木擺放順序導致的 Python 語法錯誤（如先呼叫後定義），應將所有宣告型代碼放入 <code>definitions_</code>。</p>
+    <pre>
+Blockly.Python.forBlock['py_function_def'] = function(block, generator) {
+  const name = ...;
+  const code = `def ${name}():\n  pass\n`;
+  // 注入全域定義區
+  generator.definitions_['func_' + name] = code;
+  return null; // 該積木在當前位置不產出代碼
+};
+    </pre>
+
+</body>
+</html>

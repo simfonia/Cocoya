@@ -9,7 +9,9 @@
         "sourceMap": true,
         "rootDir": "src",
         "strict": true,
-        "skipLibCheck": true
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "types": ["node"]
     },
     "exclude": [
         "node_modules",

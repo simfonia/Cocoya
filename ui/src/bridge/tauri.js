@@ -19,12 +19,14 @@ export class BridgeTauri extends BaseBridge {
     get capabilities() {
         return {
             hasTerminal: true,
-            canClose: false,
+            canClose: true,
             supportsAutoUpdate: true,
             supportsFirmwareReset: true,
             supportsEnvironmentCheck: true,
-            supportsStableMode: true,
-            supportsEraseFS: true
+            supportsStableMode: false,
+            supportsEraseFS: false,
+            isTauri: true,
+            isRemoteAware: false // Tauri 獨立版初期不支援雲端模式
         };
     }
 

@@ -156,6 +156,8 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         const stopBtn = document.getElementById('btn-stop');
         const closeBtn = document.getElementById('btn-close');
         const terminalToggleBtn = document.getElementById('btn-terminal');
+        const cloudAiContainer = document.getElementById('cloud-ai-container');
+        const cloudAiSeparator = document.getElementById('cloud-ai-separator');
 
         if (window.CocoyaBridge) {
             const caps = window.CocoyaBridge.capabilities;
@@ -164,6 +166,33 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             if (stopBtn) stopBtn.style.display = 'flex'; // 停止鈕兩者皆有
             if (closeBtn) closeBtn.style.display = caps.canClose ? 'flex' : 'none';
             if (terminalToggleBtn) terminalToggleBtn.style.display = caps.hasTerminal ? 'flex' : 'none';
+            
+            // 雲端 AI 模式：僅在具備雲端感知能力 (VSIX) 且非 Tauri 時顯示
+            if (cloudAiContainer && caps.isRemoteAware && !caps.isTauri) {
+                cloudAiContainer.style.display = 'flex';
+                if (cloudAiSeparator) cloudAiSeparator.style.display = 'block';
+            }
+        }
+
+        // --- 雲端 AI 模式：事件處理 ---
+        const cloudAiToggle = document.getElementById('cloud-ai-toggle');
+        if (cloudAiToggle) {
+            // 僅設定初始顯示，不要在此處進行「連線校準」以免時間差誤刪 localStorage
+            const isCloudAiEnabled = localStorage.getItem('cocoya_cloud_ai_enabled') === 'true';
+            cloudAiToggle.checked = isCloudAiEnabled;
+
+            cloudAiToggle.onchange = () => {
+                const enabled = cloudAiToggle.checked;
+                localStorage.setItem('cocoya_cloud_ai_enabled', enabled);
+                
+                // 通知後端模式切換
+                window.CocoyaBridge.send('setCloudAiMode', { enabled });
+                
+                // 視覺回饋：如果開啟但未連 SSH，給予警告提示（這部分後續由 Bridge 觸發）
+                if (enabled) {
+                    console.log('[UI] Cloud AI Mode Enabled');
+                }
+            };
         }
 
         /**
@@ -174,6 +203,11 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             if (!el) return;
             
             el.onclick = () => {
+                // BUG FIX: 強制關閉任何開啟中的積木輸入欄位 (WidgetDiv)，確保輸入值已寫回積木屬性
+                if (typeof Blockly !== 'undefined' && Blockly.getMainWorkspace()) {
+                    Blockly.hideChaff();
+                }
+
                 // 1. 處理外部連結 (更新按鈕)
                 if (id === 'btn-update') {
                     if (self.updateUrl && el.classList.contains('update-available')) {
@@ -213,7 +247,19 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                     }
                     
                     // 使用 CocoyaApp 處理過的乾淨代碼，確保行號與 Preview 一致且縮排正確
-                    msg.code = window.CocoyaApp.lastCleanCode || Blockly.Python.workspaceToCode(Blockly.getMainWorkspace());
+                    // 注意：若剛執行 hideChaff()，lastCleanCode 可能因 300ms 延遲尚未更新，故此處應考慮手動產生或確保同步
+                    let code = window.CocoyaApp.lastCleanCode;
+                    if (typeof window.CocoyaApp.triggerCodeUpdateSync === 'function') {
+                        code = window.CocoyaApp.triggerCodeUpdateSync();
+                    } else {
+                        // 回退方案：手動執行與 triggerCodeUpdate 相同的清理邏輯
+                        let rawCode = Blockly.Python.workspaceToCode(Blockly.getMainWorkspace());
+                        rawCode = rawCode.replace(/^[a-zA-Z_][a-zA-Z0-9_]* = None(  # ID:.*)?\n/mg, '');
+                        rawCode = rawCode.replace(/\u0001ID:.*?\u0002/g, '');
+                        code = rawCode.trim();
+                    }
+
+                    msg.code = code;
                     msg.platform = document.getElementById('platform-selector')?.value || 'PC';
                     msg.serialPort = document.getElementById('serial-selector')?.value || '';
                     msg.serialUploadOnly = localStorage.getItem('cocoya_serial_upload_only') === 'true';
@@ -398,6 +444,42 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             colorInput.oninput = (e) => {
                 if (self.applyHighlightColor) self.applyHighlightColor(e.target.value);
             };
+        }
+    },
+
+    /**
+     * 更新雲端 AI 切換開關狀態
+     * @param {boolean} enabled 
+     */
+    updateCloudAiToggle: function(enabled) {
+        const toggle = document.getElementById('cloud-ai-toggle');
+        if (toggle) {
+            toggle.checked = enabled;
+            localStorage.setItem('cocoya_cloud_ai_enabled', enabled);
+        }
+    },
+
+    /**
+     * 環境就緒後的雲端模式校準 (由 AppController 觸發)
+     */
+    syncCloudAiToggle: function() {
+        const toggle = document.getElementById('cloud-ai-toggle');
+        if (!toggle || !window.CocoyaBridge) return;
+
+        const isEnabled = localStorage.getItem('cocoya_cloud_ai_enabled') === 'true';
+        const isConnected = window.CocoyaBridge.capabilities.isRemoteConnected;
+        
+        console.log(`[UI] syncCloudAiToggle: stored=${isEnabled}, connected=${isConnected}`);
+
+        // 如果設定開啟但實際上沒連 SSH，則強制關閉
+        if (isEnabled && !isConnected) {
+            console.warn('[UI] Sync: Disabling Cloud AI toggle (No remote connection)');
+            toggle.checked = false;
+            localStorage.setItem('cocoya_cloud_ai_enabled', 'false');
+            window.CocoyaBridge.send('setCloudAiMode', { enabled: false });
+        } else if (isEnabled && isConnected) {
+            // 確保後端狀態同步
+            window.CocoyaBridge.send('setCloudAiMode', { enabled: true });
         }
     }
 });

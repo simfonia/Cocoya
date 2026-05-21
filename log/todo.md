@@ -10,6 +10,8 @@
 - [x] MediaPipe AI 視覺模組、πCar 硬體控制與 MCU 部署基礎。
 - [x] **[重大修復]** 解決 VSIX 模式下搜尋影子積木遺失、Minimap 不同步、Python 縮排位移等 Bug。
 - [x] **[重大修復]** 強化 MCU 部署韌性，解決 Windows 磁碟鎖定 (Errno 22) 並整合 VS Code 進度通知。
+- [x] **[Bug 修復]** 解決積木欄位輸入值未按 Enter 即點擊按鈕導致代碼未更新的問題 (2026-05-20)。
+- [x] **[功能開發]** 支援 Geek 270 度舵機，具備型號選單預設值與小車動作安全限位機制 (2026-05-20)。
 
 ## [已完成] 里程碑 v6.0: 全面轉向 MicroPython
 - [x] **[核心] 底層通訊重構**：重寫 `deploy_mcu.py`，改採全序列埠 (Raw REPL) 傳輸，解決磁碟鎖定問題。
@@ -38,7 +40,7 @@
     - [x] **[重大修復]** 徹底解決視窗關閉攔截失效、權限缺失與標題同步問題.
     - [x] **[重大修復]** 實作多視窗備份隔離與自動清理機制.
     - [x] **[重大修復]** **Rust 後端模組化重構**：完成 `lib.rs` 切割與 API SSOT 建立。
-    - [ ] **[進行中] UI 邏輯架構重構 (Modularization)**:
+    - [x] **UI 邏輯架構重構 (Modularization)**:
         - [x] 建立 `api_manifest.md` 作為重構參考。
         - [x] 遷移 Terminal 邏輯至 `ui/terminal.js`。
         - [x] 遷移 Renderer & Layout 邏輯至 `ui/renderer.js`。
@@ -47,30 +49,34 @@
         - [x] 模組化 `main.js` (App 核心、Workspace、Persistence)。
         - [x] **[DONE]** 分拆 `utils.js` 到獨立子模組 (積木、產生器、工具函式)。
         - [x] **[DONE]** 優化 `AppController` 為 Map 映射處理器模式。
-    - [ ] 整合 `deploy_mcu.py` 作為 Tauri Sidecar 以利打包發布。
+    - [ ] 整合 `deploy_mcu.py` 作為 Tauri Sidecar 以利打包發布.
     - [ ] 實作重置韌體功能 (Reset Firmware)：
         - [x] 策略 A：UF2 複製模式 (適用於 RP2040)。
         - [ ] 策略 B：Serial 模式 (適用於 ESP32-S3，需整合 esptool Sidecar)。
     - [x] 實現 Tauri 模式下的 **環境診斷** (check_environment)。
-- [x] **建置自動化**：配置 Vite Build (vite.config.js)，實作自動資產同步外掛，解決 Tauri 生產環境 JS 缺失問題。
+- [x] **建置自動化**：配置 Vite Build (vite.config.js)，實作自動資產同步外掛，解決 Tauri 生產環境 JS缺失問題。
 - [x] **[UI/UX] 響應式工具列修正**：解決視窗過小時工具列溢出疊加問題，導入媒體查詢與 `minWidth` 限制。
 - [x] **[UI/UX] 程式碼預覽面板收合與縮放**：實作可切換的收合把手 (對齊 #wavecode) 與手動調整垂直分割面積功能。
 - [x] **[Bug 修復]** 修復 VSIX 模式下 Python 套件檢查 (check_environment) 卡住的問題。
 
+## [已完成] 雲端 AI 模型訓練整合 (第一階段)
+- [x] **模式切換**：於工具列右上角加入「雲端 AI 模式」開關。開啟時，所有 Python 執行與檔案讀寫將自動導向遠端伺服器。
+- [x] **Tauri 版隔離**：本功能初期僅限 VSIX 版本，透過 `CocoyaBridge` 進行環境隔離，隱藏不支援選項。
+- [x] **自動路徑管理**：根據學生電腦 Hostname，在伺服器端自動建立隔離路徑 (如 `~/cocoya_ai/sessions/[MachineID]/`)。
+
+## [進行中] 雲端 AI 模型訓練 (NVIDIA NGX Spark 整合)
+- **核心方針**：利用 VSIX (VS Code Extension) 作為載體，結合 Remote-SSH 插件實現「本地編寫、雲端訓練、跨端部署」。
+- [ ] **環境診斷**：針對遠端環境 (Remote Host) 進行專屬的 CUDA、Docker 與 Python 模組檢查。
+- [ ] **雙向同步**：實現積木生成代碼 (.py) 與資料集 (Images/CSV) 的非同步上傳機制。
+- [ ] **伺服器端容器化訓練**：建立基於 NGC TAO 鏡像的訓練容器與模板程式。
+- [ ] **PC 模式推論支援**：支援直接在雲端執行推論程式，並將辨識結果串流回本地。
+- [ ] **MCU 模式部署**：自動將訓練出的 `.tflite` 下載並燒錄至 πCar (XIAO S3 Sense)。
+
 ## [待辦] 里程碑 v5.1: 跨平台與 TinyML
 - [ ] **[核心/跨平台]** 實作 macOS/Linux 的序列埠 Friendly Name 偵測 (ioreg/udevadm)。
-- [ ] **[核心/Tauri]** 升級 Rust 後端以支援詳細序列埠資訊與進程單一化管理。
 - [ ] **TinyML 工具整合**：在獨立應用程式模式下提供影像標註與資料採集面板。
-- [ ] **[NEW] 雲端 AI 訓練中心 (NVIDIA NGX Spark 整合)**：
-    - [ ] **伺服器端 (Remote)**：建立 Docker 化訓練環境，支援 GPU 加速推論與遷移學習 (含影像與 1D 序列數據)。
-    - [ ] **前端 (Webview)**：
-        - [ ] 開發「影像/感測器數據採集積木」，支援將樣本非同步傳送至遠端伺服器。
-        - [ ] **[NEW]** 實作 IMU 數據即時折線圖面板 (Data Visualizer)，協助學生理解特徵波形。
-    - [ ] **通訊層 (Bridge)**：實作雲端訓練狀態追蹤與模型檔案 (.tflite / C-Header) 回傳機制。
-    - [ ] **[NEW] Micro:bit 2.0 專屬強化**：
-        - [ ] 補完 MicroPython 模式下的 `radio` (無線電) 通訊積木。
-        - [ ] 實作加速度計 (Accelerometer) 數據流壓縮傳輸，優化 40 人同時採集的頻寬占用。
-    - [ ] **負載平衡**：針對 40 人班級設計「批次訓練 (Batch Training)」排隊與調度機制。
+- [ ] **IMU 數據即時折線圖**：實作數據視覺化面板，協助理解特徵波形。
+- [ ] **Micro:bit 2.0 強化**：無線電積木補完與加速度計數據流壓縮。
 
 ---
-*最後更新日期：2026-05-09 (加入 IMU TinyML 與無線電控制規劃)*
+*最後更新日期：2026-05-20 (修復積木欄位焦點未同步 Bug)*

@@ -214,13 +214,31 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
     triggerCodeUpdate: function() {
         if (this.updateTimer) clearTimeout(this.updateTimer);
         this.updateTimer = setTimeout(() => {
-            try {
-                let code = Blockly.Python.workspaceToCode(this.workspace);
-                code = code.replace(/^[a-zA-Z_][a-zA-Z0-9_]* = None(  # ID:.*)?\n/mg, '');
-                code = code.replace(/\u0001ID:.*?\u0002/g, '');
-                this.lastCleanCode = code.trim();
-                if (window.CocoyaUI) window.CocoyaUI.renderPythonPreview(code.trim());
-            } catch (e) { }
+            this.triggerCodeUpdateSync();
         }, 300);
+    },
+
+    /**
+     * [SYNC] 立即執行程式碼產出並同步 lastCleanCode (修復欄位焦點未更新 Bug)
+     * @returns {string} 清理後的程式碼
+     */
+    triggerCodeUpdateSync: function() {
+        try {
+            if (!this.workspace || typeof Blockly === 'undefined') return this.lastCleanCode;
+            
+            let code = Blockly.Python.workspaceToCode(this.workspace);
+            // 徹底清理：濾掉變數宣告預設值、行尾 ID 註解與運算式隱形標記
+            code = code.replace(/^[a-zA-Z_][a-zA-Z0-9_]* = None(  # ID:.*)?\n/mg, '');
+            code = code.replace(/\u0001ID:.*?\u0002/g, '');
+            
+            this.lastCleanCode = code.trim();
+            if (window.CocoyaUI && window.CocoyaUI.renderPythonPreview) {
+                window.CocoyaUI.renderPythonPreview(this.lastCleanCode);
+            }
+            return this.lastCleanCode;
+        } catch (e) {
+            console.error('[Workspace] Sync Code Update failed:', e);
+            return this.lastCleanCode;
+        }
     }
 });

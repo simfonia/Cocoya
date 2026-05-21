@@ -89,6 +89,16 @@
 
                 <!-- 右側群組：Serial 與 執行 -->
                 <div class="toolbar-group">
+                    <!-- 雲端 AI 模式開關 -->
+                    <div id="cloud-ai-container" class="cloud-ai-wrapper" style="display: none;">
+                        <span class="cloud-ai-label">Cloud AI</span>
+                        <label class="switch">
+                            <input type="checkbox" id="cloud-ai-toggle">
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="toolbar-separator" id="cloud-ai-separator" style="display: none;"></div>
+                    
                     <div class="toolbar-btn" id="btn-refresh-serial" title="%{BKY_TLB_SERIAL_REFRESH}">
                         <img src="src/icons/connect_serial_24dp_1F1F1F.png" class="normal-icon">
                         <img src="src/icons/connect_serial_24dp_FE2F89.png" class="hover-icon">

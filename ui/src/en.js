@@ -145,6 +145,8 @@
     "MSG_SETUP_STABLE_CONFIRM": "This will write boot.py to MCU to enable Stable Mode.\n\n[Effect]: Windows will become Read-Only for this drive (preventing damage), and Cocoya will upload code via Serial.\n[Escape]: To restore Windows write access later, hold \"GP20 button (Button 1)\" while plugging in the USB cable.\n\nAre you sure you want to continue?",
 
     "MSG_ERASE_FS_CONFIRM": "WARNING: This will force stop the program and ERASE ALL USER FILES (main.py, etc.) on the MCU. This cannot be undone! Continue?",
+    "MSG_CLOUD_AI_REQUIRES_REMOTE": "Cloud AI mode requires a Remote SSH connection. Please connect to your server first.",
+    
     // Syntax (Basic)
     "PY_DEF": "def",
     "PY_RETURN": "return",

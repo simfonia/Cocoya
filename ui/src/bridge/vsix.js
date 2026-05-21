@@ -8,27 +8,29 @@ export class BridgeVSIX extends BaseBridge {
         super();
         this.isVsCode = true;
         this.vscode = null;
-    }
-
-    /**
-     * 獲取環境功能清單 (VS Code)
-     */
-    get capabilities() {
-        return {
+        
+        // 覆寫 VSIX 專屬能力
+        Object.assign(this._caps, {
             hasTerminal: false,
             canClose: true,
             supportsAutoUpdate: false,
             supportsFirmwareReset: false,
             supportsEnvironmentCheck: true,
             supportsStableMode: true,
-            supportsEraseFS: true
-        };
+            supportsEraseFS: true,
+            isTauri: false,
+            isRemoteAware: true // VSIX 版具備雲端感知能力
+        });
     }
 
     /**
      * 初始化 VSIX 通訊
      */
-    init() {
+    init(manifest) {
+        if (manifest && manifest.capabilities) {
+            Object.assign(this._caps, manifest.capabilities);
+        }
+
         if (typeof acquireVsCodeApi === 'function') {
             this.vscode = acquireVsCodeApi();
             

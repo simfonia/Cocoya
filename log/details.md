@@ -1,29 +1,25 @@
 # Cocoya 技術細節 (Details)
 ... (略)
 
-## 關鍵技術實作紀錄 (2026-05-09 更新)
+## 關鍵技術實作紀錄 (2026-05-14 更新)
 
-### 1. Tauri 2.0 二階段權限工作流 (Permission Workflow)
-- **問題**：Tauri 2.0 的生產版本 (Release Build) 具有極嚴格的指令攔截機制。單純在 `capabilities/default.json` 寫上指令名稱會導致 `Permission not found`。
+### 1. 通訊橋樑能力動態同步機制 (Bridge Capabilities Sync)
+- **問題**：原本 Bridge 的 `capabilities` 是唯讀 Getter，無法反應啟動後從 Host 端獲取的環境資訊（如 Remote-SSH 連線狀態）。
 - **解決方案**：
-    1.  **定義層 (Define)**：在 `src-tauri/permissions/commands.toml` 中使用 `[[permission]]` 定義權限 ID（如 `allow-all-commands`），並在 `commands.allow` 陣列中列出所有 `snake_case` 的 Rust 指令名稱。
-    2.  **分配層 (Assign)**：在 `src-tauri/capabilities/default.json` 的 `permissions` 陣列中引用該 ID。
-- **優勢**：集中管理自定義指令權限，避免 `tauri.conf.json` 或 `default.json` 過於臃腫。
+    - 將 `BaseBridge.capabilities` 改為回傳內部的 `_caps` 物件，並提供 `updateCapabilities(caps)` 方法。
+    - 在 `AppController` 收到 `manifestData` 時，優先更新能力清單。
+- **效果**：UI 層能即時校準「雲端模式」開關的合法性與持久化狀態。
 
-### 2. AppController 映射分發模式 (Map-based Dispatcher)
-- **原理**：將原本 `handleCommand` 中的 `switch-case` 結構替換為 `Map` 物件。
-- **實作細節**：
-    - 在 `constructor` 中執行 `this.handlers = new Map()` 並調用 `_initHandlers()`。
-    - **擴展性**：新增後端事件監聽時，只需 `this.handlers.set('cmd', (m) => ...)`。
-    - **穩定性**：統一封裝 `try...catch` 於分發層，防止單一處理器錯誤中斷整個 Webview 訊息循環。
+### 2. 基於 definitions_ 的代碼生成順序控制
+- **原理**：Blockly Python 產生器在執行 `finish()` 時，會自動將 `definitions_` 陣列中的內容拼接在 Imports 之後。
+- **實作**：將 `py_function_def`、`py_import` 等宣告型積木由 Statement 改為 Definitions 模式。
+- **好處**：解決了因積木空間位置（高度）導致的「未定義即呼叫」報錯。
 
-### 3. Utils 模組化與命名空間保護 (Namespace Preservation)
-- **挑戰**：在傳統 `<script>` 載入環境下進行模組化，必須防止命名空間衝突與載入順序問題。
-- **解決方案**：
-    - 建立 `utils.js` 作為 Entry Point，僅負責執行 `window.CocoyaUtils = window.CocoyaUtils || {};`。
-    - 各子模組 (`core.js`, `search.js` 等) 使用 **IIFE (立即執行函式)** 封裝，透過 `Object.assign` 向全域物件注入功能。
-- **ESM 兼容性警告**：在傳統腳本中嚴禁使用 `export` 關鍵字，否則會觸發 `Uncaught SyntaxError`。必須透過全域賦值 (`window.X = X`) 導出內容。
+### 3. VSIX 遠端環境感知與測試配置
+- **Hostname 識別**：透過 Node.js 的 `os.hostname()` 區分不同學生的物理機器，作為雲端沙盒目錄的唯一鍵。
+- **Extension Kind 策略**：在 `package.json` 中宣告 `"extensionKind": ["ui"]`。這確保插件邏輯跑在本機，能同時讀取本地 `globalState` 與渲染 Webview，但又能透過 API 偵測視窗是否連入 SSH 遠端。
+- **環境隔離**：在 `extension.ts` 中透過 `vscode.env.remoteName` 判斷當前是否允許開啟雲端 AI 功能，並在 UI 上實作自動歸位邏輯。
 
-### 4. 跨平台指令參數一致化 (Flag Synchronization)
-- **實作**：在 `mcu.rs` 的 `erase_filesystem` 調用中補齊 `--tauri` 旗標。
-- **目的**：確保 `deploy_mcu.py` 輸出的是適合終端機面板顯示的簡潔日誌格式，而非預設的帶顏色轉義字元或重複提示。
+### 4. 遠端路徑沙盒化與自動初始化
+- **規範**：統一目錄結構 `~/cocoya_ai/sessions/[MachineID]/`。
+- **實作方式**：為了規避權限問題，不直接使用 FileSystem API 在遠端建立目錄，而是調用 VS Code 內建終端機發送 `mkdir -p` 指令。這在 Remote-SSH 激活狀態下會自動於伺服器端執行。
