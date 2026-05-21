@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as https from 'https';
+import * as os from 'os';
 import { exec } from 'child_process';
 
 /**
@@ -15,10 +16,15 @@ export class CocoyaManager {
     private panel: vscode.WebviewPanel;
     private context: vscode.ExtensionContext;
     private lastDirtyState: boolean = false;
+    
+    // 雲端 AI 相關屬性
+    private cloudAiEnabled: boolean = false;
+    private remoteWorkspaceRoot: string | undefined;
 
     constructor(context: vscode.ExtensionContext, panel: vscode.WebviewPanel) {
         this.context = context;
         this.panel = panel;
+        this.cloudAiEnabled = this.context.globalState.get<boolean>('cloudAiEnabled', false);
         this.setupMessageListener();
         this.scheduleUpdateCheck();
         // 初始重新整理序列埠
@@ -197,6 +203,9 @@ export class CocoyaManager {
                 case 'rejectRecovery':
                     this.handleRejectRecovery();
                     break;
+                case 'setCloudAiMode':
+                    await this.handleSetCloudAiMode(message.enabled);
+                    break;
             }
         }, undefined, this.context.subscriptions);
     }
@@ -223,6 +232,66 @@ export class CocoyaManager {
         } catch (e) {
             console.error('[Extension] Reject recovery (archive) failed', e);
         }
+    }
+
+    /**
+     * 取得機器唯一識別碼 (學生電腦名稱)
+     */
+    private getMachineId(): string {
+        return os.hostname() || 'Unknown_PC';
+    }
+
+    /**
+     * 處理雲端 AI 模式切換
+     */
+    private async handleSetCloudAiMode(enabled: boolean) {
+        const isRemote = vscode.env.remoteName !== undefined;
+        if (enabled && !isRemote) {
+            vscode.window.showWarningMessage(
+                this.t('MSG_CLOUD_AI_REQUIRES_REMOTE') || 
+                'Cloud AI mode requires a Remote SSH connection. Please connect to your server first.'
+            );
+            this.panel.webview.postMessage({ command: 'cloudAiModeStatus', enabled: false });
+            return;
+        }
+
+        this.cloudAiEnabled = enabled;
+        this.context.globalState.update('cloudAiEnabled', enabled);
+
+        if (enabled) {
+            await this.initializeRemoteSandbox();
+        }
+    }
+
+    /**
+     * 初始化遠端沙盒目錄
+     */
+    private async initializeRemoteSandbox() {
+        if (!vscode.env.remoteName) return;
+
+        const machineId = this.getMachineId();
+        // 在遠端環境中，$HOME 應透過 os.homedir() 或環境變數獲取
+        this.remoteWorkspaceRoot = `~/cocoya_ai/sessions/${machineId}`;
+
+        vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: "Initializing Cloud Sandbox...",
+            cancellable: false
+        }, async (progress) => {
+            try {
+                // 使用 VS Code 終端機建立遠端目錄 (mkdir -p)
+                const setupCmd = `mkdir -p "${this.remoteWorkspaceRoot}/dataset" "${this.remoteWorkspaceRoot}/models" "${this.remoteWorkspaceRoot}/src"`;
+                const terminal = vscode.window.createTerminal('Cocoya Sandbox');
+                terminal.sendText(setupCmd);
+                
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                terminal.dispose();
+                
+                vscode.window.showInformationMessage(`Cloud Sandbox Ready: ${this.remoteWorkspaceRoot}`);
+            } catch (e) {
+                vscode.window.showErrorMessage("Failed to initialize remote sandbox.");
+            }
+        });
     }
 
     /**
@@ -415,7 +484,21 @@ print(json.dumps(results))
         else if (lang.startsWith('en')) lang = 'en';
         else lang = 'en'; // 預設英文
 
-        this.panel.webview.postMessage({ command: 'manifestData', data: manifest, mediaUri, lang: lang });
+        // 注入 Host 端能力與環境資訊
+        const capabilities = {
+            isRemoteAware: true,
+            isRemoteConnected: vscode.env.remoteName !== undefined,
+            remoteName: vscode.env.remoteName
+        };
+
+        this.panel.webview.postMessage({ 
+            command: 'manifestData', 
+            data: manifest, 
+            mediaUri, 
+            lang: lang,
+            capabilities: capabilities,
+            cloudAiEnabled: this.cloudAiEnabled 
+        });
 
         // --- 新增：啟動時檢查未存檔備份 ---
         const tempBPath = path.join(this.context.extensionPath, 'temp_scripts', 'untitled_backup.xml');

@@ -10,6 +10,20 @@ export class BaseBridge {
             this._resolveReady = resolve;
         });
         this._listeners = new Set();
+        
+        // 預設能力清單
+        this._caps = {
+            hasTerminal: false,
+            canClose: false,
+            supportsAutoUpdate: false,
+            supportsFirmwareReset: false,
+            supportsEnvironmentCheck: false,
+            supportsStableMode: false,
+            supportsEraseFS: false,
+            isTauri: false,
+            isRemoteAware: false,
+            isRemoteConnected: false
+        };
     }
 
     /**
@@ -17,15 +31,16 @@ export class BaseBridge {
      * @returns {Object}
      */
     get capabilities() {
-        return {
-            hasTerminal: false,
-            canClose: false,
-            supportsAutoUpdate: false,
-            supportsFirmwareReset: false,
-            supportsEnvironmentCheck: false,
-            supportsStableMode: false,
-            supportsEraseFS: false
-        };
+        return this._caps;
+    }
+
+    /**
+     * 更新環境功能清單 (由 Host 注入環境資訊時調用)
+     */
+    updateCapabilities(caps) {
+        if (caps) {
+            Object.assign(this._caps, caps);
+        }
     }
 
     /**

@@ -913,6 +913,97 @@ body.vscode-high-contrast .btn-close {
     background: #555;
 }
 
+/* --- 雲端 AI 模式開關 --- */
+.cloud-ai-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px;
+    background: rgba(254, 47, 137, 0.05);
+    border-radius: 20px;
+    height: 28px;
+    border: 1px solid rgba(254, 47, 137, 0.2);
+    transition: all 0.3s ease;
+}
+
+.cloud-ai-wrapper:hover {
+    background: rgba(254, 47, 137, 0.1);
+    border-color: rgba(254, 47, 137, 0.5);
+    box-shadow: 0 0 8px rgba(254, 47, 137, 0.2);
+}
+
+.cloud-ai-label {
+    font-size: 10px;
+    font-weight: bold;
+    color: #FE2F89;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+/* Toggle Switch 基礎樣式 */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 34px;
+    height: 18px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 12px;
+    width: 12px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: #FE2F89;
+    box-shadow: 0 0 10px rgba(254, 47, 137, 0.4);
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px #FE2F89;
+}
+
+input:checked + .slider:before {
+    transform: translateX(16px);
+}
+
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+/* 深色模式支援 */
+body.vscode-dark .cloud-ai-wrapper,
+body.vscode-high-contrast .cloud-ai-wrapper {
+    background: rgba(254, 47, 137, 0.1);
+    border-color: rgba(254, 47, 137, 0.3);
+}
+
 /* 終端機文字顏色 */
 .term-out { color: #cccccc; }
 .term-err { color: #f48771; }

@@ -56,6 +56,15 @@ Blockly.Blocks['mcu_car_servo'] = {
             ["D1 (GP1)", "board.GP1"]
           ]
         },
+        {
+          "type": "field_dropdown",
+          "name": "TYPE",
+          "options": [
+            [Blockly.Msg["CAR_SERVO_TYPE_STANDARD"] || "Standard (180°)", "STANDARD"],
+            [Blockly.Msg["CAR_SERVO_TYPE_GEEK_270"] || "Geek 270", "GEEK_270"],
+            [Blockly.Msg["CAR_SERVO_TYPE_GEEK_270_180"] || "Geek 270 (Limited 180°)", "GEEK_270_180"]
+          ]
+        },
         { "type": "input_value", "name": "ANGLE", "check": "Number" }
       ],
       "previousStatement": null,
@@ -91,6 +100,7 @@ Blockly.Blocks['mcu_car_button_pressed'] = {
 // --- Servo Setup (Calibration) ---
 Blockly.Blocks['mcu_car_servo_setup'] = {
   init: function() {
+    const self = this;
     this.jsonInit({
       "message0": Blockly.Msg["CAR_SERVO_SETUP"],
       "args0": [
@@ -106,13 +116,46 @@ Blockly.Blocks['mcu_car_servo_setup'] = {
             ["D1 (GP1)", "board.GP1"]
           ]
         },
+        {
+          "type": "field_dropdown",
+          "name": "TYPE",
+          "options": [
+            [Blockly.Msg["CAR_SERVO_TYPE_STANDARD"] || "Standard (180°)", "STANDARD"],
+            [Blockly.Msg["CAR_SERVO_TYPE_GEEK_270"] || "Geek 270 (Full Range)", "GEEK_270"],
+            [Blockly.Msg["CAR_SERVO_TYPE_GEEK_270_180"] || "Geek 270 (Limited 180°)", "GEEK_270_180"],
+            [Blockly.Msg["CAR_SERVO_TYPE_CUSTOM"] || "Custom", "CUSTOM"]
+          ]
+        },
         { "type": "field_number", "name": "MIN", "value": 460, "min": 400, "max": 2600 },
-        { "type": "field_number", "name": "MAX", "value": 2400, "min": 400, "max": 2600 }
+        { "type": "field_number", "name": "MAX", "value": 2400, "min": 400, "max": 2600 },
+        { "type": "field_number", "name": "MAX_ANGLE", "value": 180, "min": 90, "max": 360 },
+        { "type": "field_number", "name": "OFFSET", "value": 0, "min": -45, "max": 45 }
       ],
       "inputsInline": true,
       "previousStatement": null, "nextStatement": null,
       "colour": Blockly.Msg["COLOUR_MCU_CAR_SERVO"],
       "tooltip": Blockly.Msg["CAR_SERVO_SETUP_TOOLTIP"]
+    });
+
+    // 實作自動填入邏輯 (實測Geek270為 550-2400)
+    this.getField('TYPE').setValidator(function(newValue) {
+      if (newValue === 'STANDARD') {
+        self.getField('MIN').setValue(460);
+        self.getField('MAX').setValue(2400);
+        self.getField('MAX_ANGLE').setValue(180);
+        self.getField('OFFSET').setValue(0);
+      } else if (newValue === 'GEEK_270') {
+        self.getField('MIN').setValue(550);
+        self.getField('MAX').setValue(2400);
+        self.getField('MAX_ANGLE').setValue(270);
+        self.getField('OFFSET').setValue(0);
+      } else if (newValue === 'GEEK_270_180') {
+        self.getField('MIN').setValue(550);
+        self.getField('MAX').setValue(1783); // 550 + (180/270 * 1850)
+        self.getField('MAX_ANGLE').setValue(180);
+        self.getField('OFFSET').setValue(0);
+      }
+      return newValue;
     });
   }
 };
@@ -122,7 +165,18 @@ Blockly.Blocks['mcu_car_hand_range'] = {
   init: function() {
     this.jsonInit({
       "message0": Blockly.Msg["CAR_HAND_RANGE"],
-      "args0": [{ "type": "input_value", "name": "RANGE", "check": "Number" }],
+      "args0": [
+        {
+          "type": "field_dropdown",
+          "name": "TYPE",
+          "options": [
+            [Blockly.Msg["CAR_SERVO_TYPE_STANDARD"] || "Standard (180°)", "STANDARD"],
+            [Blockly.Msg["CAR_SERVO_TYPE_GEEK_270"] || "Geek 270", "GEEK_270"],
+            [Blockly.Msg["CAR_SERVO_TYPE_GEEK_270_180"] || "Geek 270 (Limited 180°)", "GEEK_270_180"]
+          ]
+        },
+        { "type": "input_value", "name": "RANGE", "check": "Number" }
+      ],
       "previousStatement": null,
       "nextStatement": null,
       "colour": Blockly.Msg["COLOUR_MCU_CAR_SERVO"],
@@ -136,6 +190,16 @@ Blockly.Blocks['mcu_car_in_position'] = {
   init: function() {
     this.jsonInit({
       "message0": Blockly.Msg["CAR_IN_POSITION"],
+      "args0": [
+        {
+          "type": "field_dropdown",
+          "name": "TYPE",
+          "options": [
+            [Blockly.Msg["CAR_SERVO_TYPE_STANDARD"] || "Standard (180°)", "STANDARD"],
+            [Blockly.Msg["CAR_SERVO_TYPE_GEEK_270"] || "Geek 270", "GEEK_270"]
+          ]
+        }
+      ],
       "previousStatement": null,
       "nextStatement": null,
       "colour": Blockly.Msg["COLOUR_MCU_CAR_SERVO"],
@@ -150,6 +214,15 @@ Blockly.Blocks['mcu_car_move_hands'] = {
     this.jsonInit({
       "message0": Blockly.Msg["CAR_MOVE_HANDS"],
       "args0": [
+        {
+          "type": "field_dropdown",
+          "name": "TYPE",
+          "options": [
+            [Blockly.Msg["CAR_SERVO_TYPE_STANDARD"] || "Standard (180°)", "STANDARD"],
+            [Blockly.Msg["CAR_SERVO_TYPE_GEEK_270"] || "Geek 270", "GEEK_270"],
+            [Blockly.Msg["CAR_SERVO_TYPE_GEEK_270_180"] || "Geek 270 (Limited 180°)", "GEEK_270_180"]
+          ]
+        },
         {
           "type": "field_dropdown",
           "name": "HAND",

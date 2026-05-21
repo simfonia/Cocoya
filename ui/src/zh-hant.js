@@ -145,6 +145,7 @@
     "MSG_FIRMWARE_BURN_FAILED": "燒錄失敗：",
     "MSG_RELOAD_TO_APPLY": "設定已儲存。請重新啟動編輯器以套用變更。",
     "MSG_ERASE_FS_CONFIRM": "【警告】：這將強制終止目前的程式並清空 MCU 內的所有使用者檔案（main.py 等），資料將消失且無法復原！\n\n確定要執行深度修復嗎？",
+    "MSG_CLOUD_AI_REQUIRES_REMOTE": "雲端 AI 模式需要 Remote SSH 連線。請先連線至您的伺服器，再開啟此開關。",
 
     // Python 核心關鍵字
     "PY_DEF": "def",

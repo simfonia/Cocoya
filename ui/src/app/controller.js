@@ -19,7 +19,21 @@ class AppController {
      */
     _initHandlers() {
         // App 核心邏輯
-        this.handlers.set('manifestData', async (m) => await this.app.initializeCocoya(m.data, m.mediaUri, m.lang));
+        this.handlers.set('manifestData', async (m) => {
+            // 先更新 Bridge 的能力資訊 (包含重要的 isRemoteConnected 狀態)
+            if (this.bridge.updateCapabilities && m.capabilities) {
+                this.bridge.updateCapabilities(m.capabilities);
+            }
+
+            // 同步雲端 AI 狀態
+            if (m.cloudAiEnabled !== undefined && this.ui.updateCloudAiToggle) {
+                this.ui.updateCloudAiToggle(m.cloudAiEnabled);
+            }
+
+            await this.app.initializeCocoya(m.data, m.mediaUri, m.lang);
+            // 當環境資訊就緒後，執行雲端模式校準
+            if (this.ui.syncCloudAiToggle) this.ui.syncCloudAiToggle();
+        });
         this.handlers.set('loadWorkspace', async (m) => await this.app.loadWorkspace(m.xml, m.filename, m.platform, m.is_read_only));
         this.handlers.set('resetWorkspace', () => this.app.resetWorkspace());
         this.handlers.set('saveCompleted', (m) => this.app.onSaveCompleted(m.filename));
@@ -33,6 +47,7 @@ class AppController {
         this.handlers.set('updateStatus', (m) => { if (this.ui.setUpdateStatus) this.ui.setUpdateStatus(m.data); });
         this.handlers.set('serialPortsData', (m) => { if (this.ui.updateSerialPorts) this.ui.updateSerialPorts(m.ports); });
         this.handlers.set('environmentStatus', (m) => { if (this.ui.updateEnvironmentStatus) this.ui.updateEnvironmentStatus(m.results); });
+        this.handlers.set('cloudAiModeStatus', (m) => { if (this.ui.updateCloudAiToggle) this.ui.updateCloudAiToggle(m.enabled); });
     }
 
     /**

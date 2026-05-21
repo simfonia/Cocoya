@@ -4,11 +4,15 @@
     <statement name="DO">
       <block type="mcu_car_servo_setup" id="{pi/Ag/fvG8rBoD-JVj)">
         <field name="HAND">board.GP12</field>
+        <field name="TYPE">CUSTOM</field>
         <field name="MIN">460</field>
         <field name="MAX">2400</field>
+        <field name="MAX_ANGLE">180</field>
+        <field name="OFFSET">0</field>
         <next>
           <block type="mcu_car_servo" id="e,w:*eN0j7]#9XE6(*[0">
             <field name="PIN">board.GP12</field>
+            <field name="TYPE">STANDARD</field>
             <value name="ANGLE">
               <shadow type="math_number" id="qW)o:S?BeBN$[zYbvMu@">
                 <field name="NUM">180</field>
@@ -17,11 +21,15 @@
             <next>
               <block type="mcu_car_servo_setup" id="]#tGU:@Mq_dbKq@@CKYG">
                 <field name="HAND">board.GP13</field>
+                <field name="TYPE">CUSTOM</field>
                 <field name="MIN">410</field>
                 <field name="MAX">2480</field>
+                <field name="MAX_ANGLE">180</field>
+                <field name="OFFSET">0</field>
                 <next>
                   <block type="mcu_car_servo" id="@*DuvgeAH_Tg!v_ZVZf9">
                     <field name="PIN">board.GP13</field>
+                    <field name="TYPE">STANDARD</field>
                     <value name="ANGLE">
                       <shadow type="math_number" id="O^?,!:@x5!|lF3iVc@NQ">
                         <field name="NUM">0</field>
@@ -46,6 +54,7 @@
                                 </value>
                                 <next>
                                   <block type="mcu_car_move_hands" id="d?[X1cwT)AI])*r6b8qx">
+                                    <field name="TYPE">STANDARD</field>
                                     <field name="HAND">BOTH</field>
                                     <value name="PERCENT">
                                       <shadow type="math_number" id="bmk:obtU7Q3WGN,`kRyK">
@@ -66,6 +75,7 @@
                                         </value>
                                         <next>
                                           <block type="mcu_car_in_position" id="y93b;}6m/Qa4`=aN[#kl">
+                                            <field name="TYPE">STANDARD</field>
                                             <next>
                                               <block type="py_time_sleep" id="9jMg`SaMJ^:ZT#pi3_4Z">
                                                 <value name="SECONDS">

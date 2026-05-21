@@ -66,36 +66,43 @@ Blockly.Python.forBlock['mcu_car_stop'] = function(block, generator) {
 // --- Servo Helper Injection (MicroPython) ---
 var SERVO_CLASS_INJECT = `
 class PiCarServo:
-    _TRIM = {} 
+    _CONFIG = {} # pin: (min_us, max_us, max_angle, offset)
 
-    def __init__(self, pin_num, min_us=460, max_us=2400):
+    def __init__(self, pin_num, min_us=460, max_us=2400, max_angle=180, offset=0):
         self.pwm = machine.PWM(machine.Pin(pin_num), freq=50)
         self.pin_num = pin_num
-        _m1, _m2 = self._TRIM.get(pin_num, (min_us, max_us))
-        self.min_us = max(min(_m1, 2600), 400)
-        self.max_us = max(min(_m2, 2600), 400)
-        self.current_angle = 90
-        self.hand_range = 180
+        self.update_config(min_us, max_us, max_angle, offset)
+        self.current_angle = self.max_angle
+        self.hand_range = 180 
 
-    def set_angle(self, angle):
-        angle = max(min(angle, 180), 0)
-        self.current_angle = angle
-        _m1, _m2 = self._TRIM.get(self.pin_num, (self.min_us, self.max_us))
-        min_u = max(min(_m1, 2600), 400)
-        max_u = max(min(_m2, 2600), 400)
+    def update_config(self, min_us, max_us, max_angle, offset):
+        self.min_us = max(min(min_us, 2600), 400)
+        self.max_us = max(min(max_us, 2600), 400)
+        self.max_angle = max(min(max_angle, 360), 90)
+        self.offset = offset
+        PiCarServo._CONFIG[self.pin_num] = (self.min_us, self.max_us, self.max_angle, self.offset)
+
+    def set_angle(self, angle, is_car_action=False):
+        _conf = PiCarServo._CONFIG.get(self.pin_num, (self.min_us, self.max_us, self.max_angle, self.offset))
+        min_u, max_u, max_ang, off_v = _conf
         
-        us = min_u + (angle / 180 * (max_u - min_u))
-        # MicroPython duty_u16: us / 20000 * 65535
+        # 物理限位：永遠不得超過該舵機型號的物理極限 (如 180 或 270)
+        angle = max(min(angle, max_ang), 0)
+        
+        self.current_angle = angle
+        # 套用角度微調 (Offset)
+        final_angle = angle + off_v
+        us = min_u + (final_angle / max_ang * (max_u - min_u))
         self.pwm.duty_u16(int(us / 20000 * 65535))
 
-    def move_smooth(self, target_angle, speed):
-        PiCarServo.move_sync([self], [target_angle], speed)
+    def move_smooth(self, target_angle, speed, is_car_action=False):
+        PiCarServo.move_sync([self], [target_angle], speed, is_car_action)
 
     @staticmethod
-    def move_sync(servos, targets, speed):
+    def move_sync(servos, targets, speed, is_car_action=False):
         if speed >= 10:
             for i in range(len(servos)):
-                servos[i].set_angle(targets[i])
+                servos[i].set_angle(targets[i], is_car_action)
             return
         delay = (10 - max(min(speed, 9), 1)) * 0.011
         moving = True
@@ -106,7 +113,7 @@ class PiCarServo:
                 t = targets[i]
                 if s.current_angle != t:
                     step = 1 if t > s.current_angle else -1
-                    s.set_angle(s.current_angle + step)
+                    s.set_angle(s.current_angle + step, is_car_action)
                     moving = True
             if moving: time.sleep(delay)
 `;
@@ -116,51 +123,82 @@ Blockly.Python.forBlock['mcu_car_servo'] = function(block, generator) {
   generator.definitions_['import_time'] = 'import time';
   generator.definitions_['class_picar_servo'] = SERVO_CLASS_INJECT;
 
-  var pin_str = block.getFieldValue('PIN'); // "board.GP12"
+  var pin_str = block.getFieldValue('PIN');
   var pin_num = pin_str.replace('board.GP', '');
+  var type = block.getFieldValue('TYPE');
   var angle = generator.valueToCode(block, 'ANGLE', Blockly.Python.ORDER_ATOMIC) || '90';
 
-  generator.definitions_['init_servo_' + pin_num] = `
+  // 根據選單動態更新配置
+  var config_code = `update_config(460, 2400, 180, 0)`; // Default STANDARD
+  if (type === 'GEEK_270') {
+    config_code = `update_config(550, 2400, 270, 0)`;
+  } else if (type === 'GEEK_270_180') {
+    config_code = `update_config(550, 1783, 180, 0)`;
+  }
+
+  return `
 if 'servo_${pin_num}' not in globals():
     servo_${pin_num} = PiCarServo(${pin_num})
+servo_${pin_num}.${config_code}
+servo_${pin_num}.set_angle(${angle}, is_car_action=False)
 `;
-
-  return `servo_${pin_num}.set_angle(${angle})\n`;
 };
 
 Blockly.Python.forBlock['mcu_car_servo_setup'] = function(block, generator) {
   generator.definitions_['class_picar_servo'] = SERVO_CLASS_INJECT;
   
-  var hand_str = block.getFieldValue('HAND'); // "board.GP12"
+  var hand_str = block.getFieldValue('HAND');
   var pin_num = hand_str.replace('board.GP', '');
   var min = block.getFieldValue('MIN') || '460';
   var max = block.getFieldValue('MAX') || '2400';
+  var max_angle = block.getFieldValue('MAX_ANGLE') || '180';
+  var offset = block.getFieldValue('OFFSET') || '0';
   
-  var code = `PiCarServo._TRIM[${pin_num}] = (${min}, ${max})\n`;
-  code += `if 'servo_${pin_num}' in globals(): servo_${pin_num}.min_us, servo_${pin_num}.max_us = ${min}, ${max}\n`;
-  
-  return code;
+  return `
+if 'servo_${pin_num}' in globals():
+    servo_${pin_num}.update_config(${min}, ${max}, ${max_angle}, ${offset})
+else:
+    PiCarServo._CONFIG[${pin_num}] = (${min}, ${max}, ${max_angle}, ${offset})
+`;
 };
 
 Blockly.Python.forBlock['mcu_car_hand_range'] = function(block, generator) {
   generator.definitions_['class_picar_servo'] = SERVO_CLASS_INJECT;
-  generator.definitions_['init_servo_12'] = "if 'servo_12' not in globals(): servo_12 = PiCarServo(12)";
-  generator.definitions_['init_servo_13'] = "if 'servo_13' not in globals(): servo_13 = PiCarServo(13)";
-  
+  var type = block.getFieldValue('TYPE');
   var range = generator.valueToCode(block, 'RANGE', Blockly.Python.ORDER_ATOMIC) || '180';
-  return 'servo_12.hand_range = ' + range + '\nservo_13.hand_range = ' + range + '\n';
+  
+  var params = '460, 2400, 180'; // STANDARD
+  if (type === 'GEEK_270') params = '550, 2400, 270';
+  else if (type === 'GEEK_270_180') params = '550, 1783, 180';
+
+  var init_code = `if 'servo_12' not in globals(): servo_12 = PiCarServo(12, ${params})\nif 'servo_13' not in globals(): servo_13 = PiCarServo(13, ${params})`;
+
+  return `${init_code}\nservo_12.hand_range = ${range}\nservo_13.hand_range = ${range}\n`;
 };
 
 Blockly.Python.forBlock['mcu_car_in_position'] = function(block, generator) {
   generator.definitions_['import_machine'] = 'import machine';
   generator.definitions_['class_picar_servo'] = SERVO_CLASS_INJECT;
-  generator.definitions_['init_servo_12'] = "if 'servo_12' not in globals(): servo_12 = PiCarServo(12)";
-  generator.definitions_['init_servo_13'] = "if 'servo_13' not in globals(): servo_13 = PiCarServo(13)";
-  
-  return 'servo_12.set_angle(180)\nservo_13.set_angle(0)\n';
+  var type = block.getFieldValue('TYPE');
+
+  var params = '460, 2400, 180'; // STANDARD
+  if (type === 'GEEK_270') params = '550, 2400, 270';
+  else if (type === 'GEEK_270_180') params = '550, 1783, 180';
+
+  var init_code = `if 'servo_12' not in globals(): servo_12 = PiCarServo(12, ${params})\nif 'servo_13' not in globals(): servo_13 = PiCarServo(13, ${params})`;
+
+  return `
+${init_code}
+# 歸位點：鎖定張開位置 (SG90->0/180; GEEK->45/225)，不受 hand_range 影響
+_home_R = int((servo_13.max_angle - 180) / 2)
+_home_L = servo_12.max_angle - _home_R
+servo_12.set_angle(_home_L, is_car_action=True)
+servo_13.set_angle(_home_R, is_car_action=True)
+`;
 };
 
 Blockly.Python.forBlock['mcu_car_move_hands'] = function(block, generator) {
+  var type = block.getFieldValue('TYPE');
   var hand = block.getFieldValue('HAND');
   var percent = generator.valueToCode(block, 'PERCENT', Blockly.Python.ORDER_ATOMIC) || '50';
   var speed = generator.valueToCode(block, 'SPEED', Blockly.Python.ORDER_ATOMIC) || '8';
@@ -168,20 +206,29 @@ Blockly.Python.forBlock['mcu_car_move_hands'] = function(block, generator) {
   generator.definitions_['import_machine'] = 'import machine';
   generator.definitions_['import_time'] = 'import time';
   generator.definitions_['class_picar_servo'] = SERVO_CLASS_INJECT;
-  generator.definitions_['init_servo_12'] = "if 'servo_12' not in globals(): servo_12 = PiCarServo(12)";
-  generator.definitions_['init_servo_13'] = "if 'servo_13' not in globals(): servo_13 = PiCarServo(13)";
 
-  var code = '_p = max(min(' + percent + ', 100), 0) / 100.0\n' +
+  var params = '460, 2400, 180'; // SG90
+  if (type === 'GEEK_270') params = '550, 2400, 270';
+  else if (type === 'GEEK_270_180') params = '550, 1783, 180';
+
+  var init_code = `if 'servo_12' not in globals(): servo_12 = PiCarServo(12, ${params})\nif 'servo_13' not in globals(): servo_13 = PiCarServo(13, ${params})`;
+
+  var code = init_code + '\n' +
+             '_p = max(min(' + percent + ', 100), 0) / 100.0\n' +
              '_s = max(min(' + speed + ', 10), 1)\n' +
-             '_target_R = int(_p * servo_13.hand_range)\n' +
-             '_target_L = 180 - int(_p * servo_12.hand_range)\n';
+             '# 歸位基準點 (張開位)\n' +
+             '_home_R = int((servo_13.max_angle - 180) / 2)\n' +
+             '_home_L = servo_12.max_angle - _home_R\n' +
+             '# 以歸位點為起點旋出並進行「目標安全截斷」，防止平滑移動死鎖\n' +
+             '_target_R = max(0, min(_home_R + int(_p * servo_13.hand_range), servo_13.max_angle))\n' +
+             '_target_L = max(0, min(_home_L - int(_p * servo_12.hand_range), servo_12.max_angle))\n';
              
   if (hand === 'BOTH') {
-    code += 'PiCarServo.move_sync([servo_12, servo_13], [_target_L, _target_R], _s)\n';
+    code += 'PiCarServo.move_sync([servo_12, servo_13], [_target_L, _target_R], _s, is_car_action=True)\n';
   } else if (hand === 'RIGHT') {
-    code += 'servo_13.move_smooth(_target_R, _s)\n';
+    code += 'servo_13.move_smooth(_target_R, _s, is_car_action=True)\n';
   } else if (hand === 'LEFT') {
-    code += 'servo_12.move_smooth(_target_L, _s)\n';
+    code += 'servo_12.move_smooth(_target_L, _s, is_car_action=True)\n';
   }
   
   return code;

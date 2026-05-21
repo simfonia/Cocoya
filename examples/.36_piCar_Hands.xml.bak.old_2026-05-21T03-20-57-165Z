@@ -34,7 +34,7 @@
                     <field name="TYPE">STANDARD</field>
                     <value name="RANGE">
                       <shadow type="math_number" id="?azaVDV#/q}R?M=@7qEq">
-                        <field name="NUM">180</field>
+                        <field name="NUM">90</field>
                       </shadow>
                     </value>
                     <next>

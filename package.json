@@ -5,6 +5,9 @@
     "version": "0.7.6",
     "icon": "resources/extension_icon.png",
     "publisher": "simfonia",
+    "extensionKind": [
+        "ui"
+    ],
     "engines": {
         "vscode": "^1.75.0"
     },

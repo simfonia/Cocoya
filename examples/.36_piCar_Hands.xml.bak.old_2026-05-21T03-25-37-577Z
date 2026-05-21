@@ -31,15 +31,15 @@
                 <field name="OFFSET">0</field>
                 <next>
                   <block type="mcu_car_hand_range" id="$;z.SSr-/a8]y-@WBX}h">
-                    <field name="TYPE">STANDARD</field>
+                    <field name="TYPE">GEEK_270</field>
                     <value name="RANGE">
                       <shadow type="math_number" id="?azaVDV#/q}R?M=@7qEq">
-                        <field name="NUM">180</field>
+                        <field name="NUM">270</field>
                       </shadow>
                     </value>
                     <next>
                       <block type="mcu_car_in_position" id="O4:;`]})dce3H*y{v0!c">
-                        <field name="TYPE">STANDARD</field>
+                        <field name="TYPE">GEEK_270</field>
                         <next>
                           <block type="py_time_sleep" id="qJc2)bb{5(m),hd;M5l[">
                             <value name="SECONDS">
@@ -59,7 +59,7 @@
                                     <field name="PIN">board.GP20</field>
                                     <next>
                                       <block type="mcu_car_move_hands" id="/QTJJqqx?$87zRmx:4un">
-                                        <field name="TYPE">STANDARD</field>
+                                        <field name="TYPE">GEEK_270</field>
                                         <field name="HAND">BOTH</field>
                                         <value name="PERCENT">
                                           <shadow type="math_number" id="X=f,Vf.jdPSPc[o9QsU4">
@@ -80,7 +80,7 @@
                                             </value>
                                             <next>
                                               <block type="mcu_car_move_hands" id="4Mml;_i/wf-n_Db4m*3`">
-                                                <field name="TYPE">STANDARD</field>
+                                                <field name="TYPE">GEEK_270</field>
                                                 <field name="HAND">BOTH</field>
                                                 <value name="PERCENT">
                                                   <shadow type="math_number" id="wVdal_3x-HlQQ7vwJKH9">
