@@ -145,6 +145,19 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
      * 設定工作區變動監聽器
      */
     setupWorkspaceListeners: function() {
+        // --- BUG FIX: 解決積木拖拽粘性問題 (Sticky Drag) ---
+        // 當滑鼠從外部重新進入視窗時，如果沒按著按鍵，強制終止 Blockly 的所有手勢
+        window.addEventListener('mouseenter', (e) => {
+            if (e.buttons === 0 && this.workspace) {
+                const gesture = this.workspace.getGesture(e);
+                if (gesture) gesture.dispose();
+                // 強制結束所有可能的手勢狀態
+                if (Blockly.Gesture && Blockly.Gesture.allGestures_) {
+                    Blockly.Gesture.allGestures_.forEach(g => g.dispose());
+                }
+            }
+        });
+
         this.workspace.addChangeListener((event) => {
             if (event.type === 'selected' || event.type === Blockly.Events.SELECTED) {
                 if (window.CocoyaUI) window.CocoyaUI.syncSelection(event.newElementId);

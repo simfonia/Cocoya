@@ -147,7 +147,7 @@
                         }
                     });
 
-                    const stopEvents = ['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'touchend'];
+                    const stopEvents = ['click', 'mousedown', 'pointerdown', 'touchstart'];
                     stopEvents.forEach(eventName => {
                         container.addEventListener(eventName, (e) => e.stopPropagation());
                     });
