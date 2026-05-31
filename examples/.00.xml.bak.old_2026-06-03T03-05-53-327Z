@@ -14,7 +14,7 @@
         </value>
         <value name="SPEED">
           <shadow type="math_number" id="_8msUq@i:(.It]NE4tu)">
-            <field name="NUM">8</field>
+            <field name="NUM">10</field>
           </shadow>
         </value>
         <next>
@@ -35,7 +35,7 @@
                 </value>
                 <value name="SPEED">
                   <shadow type="math_number" id="Hc*xMI(tbVKk0/8nzct;">
-                    <field name="NUM">8</field>
+                    <field name="NUM">10</field>
                   </shadow>
                 </value>
                 <next>

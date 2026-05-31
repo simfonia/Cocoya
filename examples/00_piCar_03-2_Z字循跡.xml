@@ -1,0 +1,109 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
+  <block type="py_definition_zone" id="p%o^qm1mE*.CEB!5%_(W" x="10" y="10"></block>
+  <block type="py_function_def" id="G:+r:B_?9o[~9sUr!J{:" x="10" y="90">
+    <mutation params="0"></mutation>
+    <field name="NAME">tracker</field>
+    <statement name="DO">
+      <block type="py_logic_if" id="N?=7w;-d]nQ_Ty:xdVxB">
+        <mutation elif="0" else="1"></mutation>
+        <value name="IF0">
+          <block type="py_logic_compare" id="x3I/D%iF!$t?h~iU04|^">
+            <field name="OP">==</field>
+            <value name="A">
+              <shadow type="py_math_number" id="p5]P6Hvi2{lRk;TA/eaP">
+                <field name="NUM">0</field>
+              </shadow>
+              <block type="mcu_car_check_color" id="uU_pqtxr-^xI^P?`gp#x">
+                <field name="PIN">board.GP26</field>
+              </block>
+            </value>
+            <value name="B">
+              <shadow type="py_math_number" id="AHAkHxJRz(A(+-Y!Ne:z">
+                <field name="NUM">1</field>
+              </shadow>
+            </value>
+          </block>
+        </value>
+        <statement name="DO0">
+          <block type="py_coding_comment" id="}y^I.ZIa3Z8PRL=r+D,3">
+            <field name="TEXT">白色左轉</field>
+            <next>
+              <block type="mcu_car_motor" id="6nb,i{r0*uW]_@dXLe^i">
+                <value name="LEFT">
+                  <shadow type="math_number" id="fDXyO.p;VnkPc|HQs4$g">
+                    <field name="NUM">50</field>
+                  </shadow>
+                </value>
+                <value name="RIGHT">
+                  <shadow type="math_number" id="VjU`8:-BYzO.Cc{::Dyt">
+                    <field name="NUM">80</field>
+                  </shadow>
+                </value>
+              </block>
+            </next>
+          </block>
+        </statement>
+        <statement name="ELSE">
+          <block type="py_coding_comment" id="k|TB0NdsR=yDxslJ?]3R">
+            <field name="TEXT">黑色右轉</field>
+            <next>
+              <block type="mcu_car_motor" id=")vCW1RLufR+F*{=N[*_B">
+                <value name="LEFT">
+                  <shadow type="math_number" id="Rk(-[G)FCSqx[={rV!}n">
+                    <field name="NUM">80</field>
+                  </shadow>
+                </value>
+                <value name="RIGHT">
+                  <shadow type="math_number" id="y:Ob(=E7oSiR1JO%FE^*">
+                    <field name="NUM">50</field>
+                  </shadow>
+                </value>
+              </block>
+            </next>
+          </block>
+        </statement>
+      </block>
+    </statement>
+  </block>
+  <block type="mcu_main" id="=NJ]emz+oNaL~f(Z,1Hj" x="10" y="390">
+    <statement name="DO">
+      <block type="mcu_car_tone" id="L`4%Z%ua9ZHZOW;?#heL">
+        <value name="FREQ">
+          <shadow type="math_number" id="Y2;5?H({?kEV[xBJ(vkE">
+            <field name="NUM">440</field>
+          </shadow>
+        </value>
+        <value name="MS">
+          <shadow type="math_number" id="Kak0PjdLQ~6-lIgdE72j">
+            <field name="NUM">200</field>
+          </shadow>
+        </value>
+        <next>
+          <block type="mcu_car_wait_start" id="E])L?x{ob~G+(v(VJQ8(">
+            <field name="PIN">board.GP20</field>
+            <next>
+              <block type="py_coding_comment" id="8^%.X~h3zX5Fd(d%1vF^">
+                <field name="TEXT">開始Z字循跡</field>
+                <next>
+                  <block type="py_loop_while" id="jWxqT?]:4t;~#xxsXgjg">
+                    <value name="CONDITION">
+                      <block type="py_logic_boolean" id="{oyu?_nD!yCWSI7f3go{">
+                        <field name="BOOL">True</field>
+                      </block>
+                    </value>
+                    <statement name="DO">
+                      <block type="py_function_call" id=":e466/=~2cl_AS35oi83">
+                        <mutation args="0"></mutation>
+                        <field name="NAME">tracker</field>
+                      </block>
+                    </statement>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

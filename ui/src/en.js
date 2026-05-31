@@ -29,7 +29,7 @@
     "COLOUR_HUSKYLENS": "#1f5a71",
     "COLOUR_MCU_CAR": "#ee5b56",
     "COLOUR_MCU_CAR_MOTOR": "#ee5b56",
-    "COLOUR_MCU_CAR_SERVO": "#d40051",
+    "COLOUR_MCU_CAR_SERVO": "#bf6bf4",
     "COLOUR_MCU_CAR_MUSIC": "#de57ad",
     "COLOUR_MCU_CAR_LED": "#544eca",
     "COLOUR_MCU_CAR_SENSOR": "#b1b100",

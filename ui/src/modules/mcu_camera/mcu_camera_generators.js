@@ -11,9 +11,10 @@ if 'cam' not in globals():
         # Note: Pin definitions vary by firmware/board
         # This setup is for Seeed XIAO ESP32S3 Sense common firmware
         camera.init(0, format=camera.JPEG, framesize=camera.FRAME_QVGA)
-        cam = camera
+        globals()['cam'] = camera
     except Exception as e:
         print("Camera Init Failed:", e)
+if 'cam' in globals(): cam = globals()['cam']
 `;
   return code;
 };

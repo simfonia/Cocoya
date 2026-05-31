@@ -13,6 +13,8 @@
 - [x] **[Bug 修復]** 解決積木欄位輸入值未按 Enter 即點擊按鈕導致代碼未更新的問題 (2026-05-20)。
 - [x] **[功能開發]** 支援 Geek 270 度舵機，具備型號選單預設值與小車動作安全限位機制 (2026-05-20)。
 - [x] **[Bug 修復]** 解決 Geek 270 舵機歸位截斷、平滑移動死鎖與 Sticky Drag 問題 (2026-05-25)。
+- [x] **[Bug 修復]** 解決 MicroPython 模式下，積木 lazy init 導致的 `NameError: local variable referenced before assignment` 問題 (2026-05-31)。
+- [x] **[UI/UX]** 優化 Minimap 顯示，移除捲軸並實作滿版縮圖模式 (2026-05-31)。
 - [x] **[風格優化]** 將 Time 分類積木重構為 Python 函式描述風格 (2026-05-25)。
 
 ## [已完成] 里程碑 v6.0: 全面轉向 MicroPython
@@ -82,3 +84,38 @@
 
 ---
 *最後更新日期：2026-05-20 (修復積木欄位焦點未同步 Bug)*
+
+## [進行中] Dataset Manager 資料集管理器 (2026-05-28)
+- [x] **[規格]** 建立 `log/todo/dataset_manager_development_spec.md`，整理 Dataset Manager 開發流程、載入策略、Dataset Spec JSON 與分階段交付標準。
+- [x] **[Phase 1]** 建立 `ui/src/modules/dataset_manager/spec.js`，實作 `DatasetSpec`、Schema 偵測與驗證邏輯。
+- [x] **[Phase 1]** 建立 `ui/src/modules/dataset_manager/index.js`，以靜態 ESM 掛載 `window.CocoyaDataset`。
+- [x] **[Phase 1]** 更新 `ui/index.html`，將 Dataset Manager 載入順序放在 `bridge.js` 之後、`main.js` 之前。
+- [x] **[Phase 2]** 建立 Dataset Manager Modal UI、CSS 與 open/close/toggle 實作。
+- [x] **[Phase 3]** 實作 CSV/JSON 匯入與 Field Mapper。
+- [x] **[Phase 4]** 實作影像目錄批次匯入、縮圖網格 (Grid) 預覽、標籤自動提取與互動標註畫布。
+- [x] **[優化] Phase 3~4 技術債清理**：升級強健型 CSV Parser、實作 XSS 防護、解耦 Canvas 事件監聽並修正 Schema 套用邏輯 (2026-05-29)。
+- [x] **[Phase 5]** 實作 Dataset Runtime Sidecar 採集架構 (Sidecar Runtime)：
+    - [x] **[架構]** 整合 Python Sidecar 通訊，移除 Webview 攝影機依賴。
+    - [x] **[#trim]** 徹底移除 Legacy 採集腳本與語法歧義 (2026-05-31)。
+    - [x] **[UX]** 重構標籤管理介面，實作「方案 A」獨立新增按鈕模式。
+    - [x] **[修復]** 實作攝影機視窗手動關閉偵測與 UI 狀態非同步同步。
+- [x] **[Phase 6]** 實作資料集匯出與 ZIP 打包功能 (2026-06-03)：
+    - [x] 擴充 Python Sidecar 支援 `exportDataset` 指令。
+    - [x] Extension 端實作原生資料夾挑選器，支援路徑記憶 (`globalState`)。
+    - [x] **[修復]** 解決 Webview 401 錯誤 (透過動態磁碟根目錄許可與 CSP 優化)。
+    - [x] **[修復]** 實作匯出前自動檔案同步機制，確保 ZIP 包含完整影像。
+    - [x] UI 端整合匯出按鈕，保留 `safeBaseDir` 等智慧填寫邏輯。
+- [ ] **[Phase 7]** 對接 NVIDIA NGX Spark 雲端訓練介面。
+- [x] **[規範]** 優化專案根目錄 `.antigravity.md` 與 `AGENTS.md`，整合轉義字元與換行處理規範，並修正工作日誌副檔名為 `.html` (2026-06-04)。
+- [x] **[修復]** 實作 Dataset Manager 狀態與模式切換重構，包含 Type-Mode 選項關聯與切換時的主動硬體相機清理 (2026-06-04)。
+- [x] **[修復]** 解決補拍影像未匯出 Bug，優化 extension 與匯出的 baseDir 對齊為工作區根目錄，並優化補拍縮圖置前排列 (2026-06-04)。
+- [x] **[功能]** 新增「清除資料」按鈕，實作一鍵狀態與硬體快取重置，解決關閉後重啟之狀態殘留問題 (2026-06-04)。
+- [x] **[修復]** 實作標註畫布上下欄分割排版（資訊欄置上），修復 Flexbox 居中對齊導致列表溢出時滾動條無法捲動到頂部的 CSS Bug (2026-06-04)。
+- [x] **[功能]** 實作自駕車循線偵測標註功能，支援滑鼠拖曳與點按兩點雙模繪圖、起終點座標限幅貼齊邊界（適用於 BBox 與 Line），並重構 `spec.js` 移除違規的 spread operator `...` 語法以徹底對齊開發規範 (2026-06-04)。
+
+
+---
+*最後更新日期：2026-06-04 (重構標註版面與修復滾動 Bug)*
+
+
+

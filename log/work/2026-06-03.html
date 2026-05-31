@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>工作日誌 - 2026-06-03</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #FE2F89; border-bottom: 2px solid #FE2F89; }
+        h2 { color: #444; margin-top: 30px; }
+        .task-list { list-style: none; padding: 0; }
+        .task-item { margin-bottom: 10px; padding: 10px; background: #f9f9f9; border-left: 5px solid #ccc; }
+        .task-done { border-left-color: #4CAF50; }
+        .task-pending { border-left-color: #FF9800; }
+        .tech-deep-dive { background: #eee; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        code { background: #ddd; padding: 2px 5px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>工作日誌 - 2026-06-03</h1>
+    
+    <h2>今日進度總覽</h2>
+    <ul class="task-list">
+        <li class="task-item task-done"><strong>Dataset Manager Phase 6 實作</strong>: 完成資料集匯出與 ZIP 打包功能的完整鏈結。</li>
+        <li class="task-item task-done"><strong>Sidecar 指令擴充</strong>: 在 <code>dataset_sidecar.py</code> 中整合 <code>DatasetIO</code>，新增 <code>exportDataset</code> 指令處理 ZIP 壓縮。</li>
+        <li class="task-item task-done"><strong>Extension 指令對接</strong>: 於 <code>extension.ts</code> 實作 <code>handleDatasetExport</code>，負責自動生成 <code>dataset.json</code> 並彈出存檔對話框。</li>
+        <li class="task-item task-done"><strong>401 Unauthorized 終極修復</strong>: 透過動態將所有磁碟根目錄 (C:\, D:\ 等) 加入 <code>localResourceRoots</code>，徹底解決外部影像無法載入的問題。</li>
+        <li class="task-item task-done"><strong>路徑記憶與 UI 優化</strong>: 整合 VS Code <code>globalState</code> 記憶上次選取的資料夾，並修復了匯出按鈕的事件綁定與智慧填寫邏輯。</li>
+    </ul>
+
+    <h2>技術深挖 (Technical Deep Dive)</h2>
+    <div class="tech-deep-dive">
+        <h3>1. 解決 Webview 資源存取封鎖 (401 錯誤)</h3>
+        <p>VS Code Webview 對於工作區外的檔案有嚴格限制。原先僅許可延伸模組目錄，導致存放在其他位置的資料集圖片回傳 401 錯誤。最終解決方案是在 <code>activate</code> 時遍歷邏輯磁碟並加入 <code>localResourceRoots</code>，同時在 CSP 中優化 <code>img-src</code> 以相容 <code>webview.cspSource</code>。</p>
+        
+        <h3>2. 匯出前同步機制 (Pre-export Syncing)</h3>
+        <p>為了解決「匯出後只有 JSON」的問題，Host 端在執行 ZIP 打包前會先執行 <code>copyRecursiveSync</code>。此方法具備增量校驗（檢查檔案大小），能高效地將分散在各處的匯入樣本集中到專案暫存目錄，確保打包後的 ZIP 結構完整。</p>
+
+        <h3>3. Bridge 通訊層補完</h3>
+        <p>修復了 <code>BaseBridge</code> 缺失 <code>pickFolder</code> 方法的問題。確保前端 UI 透過統一的橋接介面調用原生功能，這符合專案的通訊抽象化原則，也有利於未來向 Tauri 獨立版移植。</p>
+    </div>
+
+    <h2>下次啟動方向 (Next Steps)</h2>
+    <ul>
+        <li><strong>Phase 7</strong>: 對接 NVIDIA NGX Spark 雲端訓練介面。</li>
+        <li>實作遠端環境診斷 (CUDA/Docker) 與資料集 ZIP 自動上傳流程。</li>
+    </ul>
+</body>
+</html>

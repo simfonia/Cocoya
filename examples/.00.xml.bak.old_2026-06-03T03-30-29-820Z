@@ -64,36 +64,41 @@
           </shadow>
         </value>
         <next>
-          <block type="mcu_car_in_position" id="W7aT@ecBhiL3$FsJ?l0#">
-            <field name="TYPE">STANDARD</field>
+          <block type="py_logic_if" id=":C5R:di3[f7lt3I67q5o">
+            <mutation elif="0" else="0"></mutation>
             <next>
-              <block type="mcu_car_tone" id="dly{{MjQ7bw)fA{8{G]=">
-                <value name="FREQ">
-                  <shadow type="math_number" id="7lBFk9_+H7G;@mSr%Tm6">
-                    <field name="NUM">440</field>
-                  </shadow>
-                </value>
-                <value name="MS">
-                  <shadow type="math_number" id="54(4;v#-l#Y8/hwj|v~Y">
-                    <field name="NUM">200</field>
-                  </shadow>
-                </value>
+              <block type="mcu_car_in_position" id="W7aT@ecBhiL3$FsJ?l0#">
+                <field name="TYPE">STANDARD</field>
                 <next>
-                  <block type="mcu_car_wait_start" id="Hgqrp_|[C_N=}i?.]qx,">
-                    <field name="PIN">board.GP20</field>
+                  <block type="mcu_car_tone" id="dly{{MjQ7bw)fA{8{G]=">
+                    <value name="FREQ">
+                      <shadow type="math_number" id="7lBFk9_+H7G;@mSr%Tm6">
+                        <field name="NUM">440</field>
+                      </shadow>
+                    </value>
+                    <value name="MS">
+                      <shadow type="math_number" id="54(4;v#-l#Y8/hwj|v~Y">
+                        <field name="NUM">200</field>
+                      </shadow>
+                    </value>
                     <next>
-                      <block type="py_loop_while" id="|s/Wn]^GaG@q}B3ua%x~">
-                        <value name="CONDITION">
-                          <block type="py_logic_boolean" id="p)o,QSlYc.q}NPPc1@en">
-                            <field name="BOOL">True</field>
+                      <block type="mcu_car_wait_start" id="Hgqrp_|[C_N=}i?.]qx,">
+                        <field name="PIN">board.GP20</field>
+                        <next>
+                          <block type="py_loop_while" id="|s/Wn]^GaG@q}B3ua%x~">
+                            <value name="CONDITION">
+                              <block type="py_logic_boolean" id="p)o,QSlYc.q}NPPc1@en">
+                                <field name="BOOL">True</field>
+                              </block>
+                            </value>
+                            <statement name="DO">
+                              <block type="py_function_call" id="RHD3DPuQ`q8!=}JdxcE!">
+                                <mutation args="0"></mutation>
+                                <field name="NAME">lefthook</field>
+                              </block>
+                            </statement>
                           </block>
-                        </value>
-                        <statement name="DO">
-                          <block type="py_function_call" id="RHD3DPuQ`q8!=}JdxcE!">
-                            <mutation args="0"></mutation>
-                            <field name="NAME">lefthook</field>
-                          </block>
-                        </statement>
+                        </next>
                       </block>
                     </next>
                   </block>

@@ -572,7 +572,22 @@ body.vscode-dark #panel-resizer.is-dragging {
     top: 60px !important;
     right: 10px !important;
     border-radius: 4px;
+    width: 200px !important;   /* 固定寬度 */
+    height: 150px !important;  /* 固定高度 */
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s !important;
+}
+
+/* 徹底移除 Minimap 內部的捲軸 */
+.blockly-minimap .blocklyMainWorkspaceScrollbar,
+.blockly-minimap .blocklyScrollbarHorizontal,
+.blockly-minimap .blocklyScrollbarVertical {
+    display: none !important;
+}
+
+/* 確保 Minimap SVG 填滿容器 */
+.blockly-minimap .blocklySvg {
+    width: 100% !important;
+    height: 100% !important;
 }
 
 .blockly-minimap.collapsed {
