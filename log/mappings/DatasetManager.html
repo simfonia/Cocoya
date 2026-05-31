@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>Cocoya Dataset Manager 模組規範</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1 { color: #FE2F89; border-bottom: 2px solid #FE2F89; padding-bottom: 10px; }
+        h2 { color: #555; margin-top: 30px; border-left: 4px solid #FE2F89; padding-left: 10px; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; font-family: monospace; }
+        pre { background: #f8f8f8; padding: 15px; border-radius: 5px; overflow-x: auto; border: 1px solid #ddd; }
+        .api-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .api-table th, .api-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .api-table th { background: #f2f2f2; color: #333; }
+        .status-tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; background: #eee; }
+        .status-stable { background: #d4edda; color: #155724; }
+    </style>
+</head>
+<body>
+    <h1>Cocoya Dataset Manager 模組規範</h1>
+    <p>本文件定義了 Cocoya 資料集管理器的核心 API、資料結構與視圖渲染邏輯。本模組採用<strong>核心引擎 (Spec) + 職責解耦組件</strong>架構。</p>
+
+    <h2>1. 核心類別: DatasetSpec</h2>
+    <p>位置: <code>ui/src/modules/dataset_manager/spec.js</code></p>
+    <table class="api-table">
+        <thead>
+            <tr><th>方法</th><th>描述</th><th>輸入/輸出</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>parseCSV(text)</code></td>
+                <td>靜態方法，將 CSV 字串轉換為物件陣列。</td>
+                <td>(String) -> Array&lt;Object&gt;</td>
+            </tr>
+            <tr>
+                <td><code>detectSchema(rows)</code></td>
+                <td>靜態方法，自動推斷欄位型別 (Int/Float/String) 並分配角色。</td>
+                <td>(Array) -> Object (Schema)</td>
+            </tr>
+            <tr>
+                <td><code>validate()</code></td>
+                <td>驗證目前 Spec 完整性。影像模式需有 label，表格模式需有 features。</td>
+                <td>() -> { ok, errors, warnings }</td>
+            </tr>
+            <tr>
+                <td><code>toJSON()</code></td>
+                <td>序列化為符合 NGX Spark 訓練格式的契約 JSON。</td>
+                <td>() -> Object</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>2. 全域 API: window.CocoyaDataset</h2>
+    <p>位置: <code>ui/src/modules/dataset_manager/index.js</code></p>
+    <table class="api-table">
+        <thead>
+            <tr><th>API</th><th>用途</th><th>狀態</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>open() / close()</code></td><td>開啟或關閉管理器 Modal。</td><td><span class="status-tag status-stable">Stable</span></td></tr>
+            <tr><td><code>getCurrentSpec()</code></td><td>獲取目前的 Spec 實體 (已同步 UI 狀態)。</td><td><span class="status-tag status-stable">Stable</span></td></tr>
+            <tr><td><code>removeAnnotation(idx)</code></td><td>在標註模式下移除特定索引的方框。</td><td><span class="status-tag">Phase 4</span></td></tr>
+        </tbody>
+    </table>
+
+    <h2>3. 視圖組件與標註互動</h2>
+    <ul>
+        <li><strong>UIComponents (ui_components.js)</strong>:
+            <ul>
+                <li><code>renderImageGrid</code>: 高效渲染影像縮圖牆，支援 <code>loading="lazy"</code> 與點擊回調。</li>
+                <li><code>renderLabelStats</code>: 渲染標籤樣本分佈統計，並基於名稱雜湊分配固定顏色。</li>
+            </ul>
+        </li>
+        <li><strong>UICanvas (ui_canvas.js)</strong>:
+            <ul>
+                <li>負責 Canvas 互動，支援 <code>bbox</code> (物件偵測方框) 與 <code>line</code> (自駕循線引導線) 兩種標註模式。</li>
+                <li><strong>雙模繪圖狀態機</strong>：在 <code>line</code> 模式下支援「滑鼠拖曳拉線」與「點擊起點再點擊終點」雙模。點擊起點後會進入 <code>drawingState = 1</code> 預覽拉伸線，再次點擊終點或距離大於 5px 的拖曳即可鎖定線段並產出。起點渲染為綠色圓圈，終點渲染為紅色圓圈並附帶前進方向箭頭。</li>
+                <li><strong>座標轉換與限幅 (Clamp)</strong>: 一律將滑鼠像素座標轉換為 0.0 ~ 1.0 的比例座標 (Normalized Coordinates)。藉由 <code>clamp(val, max)</code> 將 mousedown/mousemove/mouseup 的滑鼠座標強制限幅在畫布解析度邊界內，防止拉出影像邊界時產出越界的比例座標。此機制一體適用於方框 (BBox) 與線段 (Line) 標註。</li>
+            </ul>
+        </li>
+        <li><strong>UI Layout (ui_layout.js)</strong>:
+            <ul>
+                <li>負責資料集管理器 Modal DOM 事件管理與視圖重構。</li>
+                <li><strong>防禦性清除與重置</strong>：為防止重複渲染「← 返回列表」按鈕，在 <code>enterAnnotationMode</code> 時會防禦性移除已存在的按鈕。同時點擊「清除資料」按鈕時會主動執行 <code>exitAnnotationMode()</code> 卸載畫布事件監聽並移除返回按鈕，確保狀態乾淨重置。</li>
+            </ul>
+        </li>
+        <li><strong>Importer (importer.js)</strong>:
+            <ul>
+                <li>使用 <code>webkitdirectory</code> 繞過路徑存取限制，並以父目錄名作為自動標籤來源。</li>
+            </ul>
+        </li>
+    </ul>
+
+    <h2>4. 規範化路徑政策 (NGX Compatibility)</h2>
+    <pre>
+1. 專案名稱: 僅限 [a-zA-Z0-9_-]，中文將被自動過濾。
+2. 資料目錄: 一律由系統自動管理為 `dataset/[projectName]/`，不開放手動修改。
+3. 影像檔案: 採相對路徑存儲於 Spec，由 baseDir 提供根目錄。
+4. 描述欄位: 完全支援中文與 Unicode。
+    </pre>
+
+    <footer style="margin-top: 50px; font-size: 12px; color: #999; text-align: center;">
+        最後更新日期: 2026-05-28 | Cocoya AI 工程部
+    </footer>
+</body>
+</html>

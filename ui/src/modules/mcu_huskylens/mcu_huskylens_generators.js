@@ -43,9 +43,10 @@ if 'husky' not in globals():
     try:
         # Default I2C pins for RP2040 (GP5=SCL, GP4=SDA) or S3
         husky_i2c = machine.I2C(0, scl=machine.Pin(5), sda=machine.Pin(4), freq=100000)
-        husky = HuskyLensHelper(husky_i2c)
+        globals()['husky'] = HuskyLensHelper(husky_i2c)
     except Exception as e:
         print("HuskyLens Init Failed:", e)
+if 'husky' in globals(): husky = globals()['husky']
 `;
   return code;
 };

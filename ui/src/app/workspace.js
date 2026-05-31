@@ -51,12 +51,22 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             this.minimap = new MinimapClass(this.workspace);
             this.minimap.init();
 
+            // 強制關閉 Minimap 內部的捲軸功能 (JS 層級)
+            if (this.minimap.minimapWorkspace) {
+                this.minimap.minimapWorkspace.options.hasScrollbars = false;
+            }
+
             const originalMirror = this.minimap.mirror.bind(this.minimap);
             this.minimap.mirror = (event) => {
                 if (this.minimap._isPaused) return;
                 try {
                     if (event.type !== Blockly.Events.BLOCK_DELETE && event.blockId && !this.workspace.getBlockById(event.blockId)) return;
                     originalMirror(event);
+                    
+                    // 確保增量更新後依然維持滿版 (縮圖模式)
+                    if (this.minimap.minimapWorkspace && !event.isUiEvent) {
+                        this.minimap.minimapWorkspace.zoomToFit();
+                    }
                 } catch (e) { }
             };
 

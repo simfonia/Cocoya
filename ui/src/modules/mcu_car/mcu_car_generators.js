@@ -137,8 +137,8 @@ Blockly.Python.forBlock['mcu_car_servo'] = function(block, generator) {
   }
 
   return `
-if 'servo_${pin_num}' not in globals():
-    servo_${pin_num} = PiCarServo(${pin_num})
+if 'servo_${pin_num}' not in globals(): globals()['servo_${pin_num}'] = PiCarServo(${pin_num})
+servo_${pin_num} = globals()['servo_${pin_num}']
 servo_${pin_num}.${config_code}
 servo_${pin_num}.set_angle(${angle}, is_car_action=False)
 `;
@@ -171,7 +171,7 @@ Blockly.Python.forBlock['mcu_car_hand_range'] = function(block, generator) {
   if (type === 'GEEK_270') params = '550, 2400, 270';
   else if (type === 'GEEK_270_180') params = '550, 1783, 180';
 
-  var init_code = `if 'servo_12' not in globals(): servo_12 = PiCarServo(12, ${params})\nif 'servo_13' not in globals(): servo_13 = PiCarServo(13, ${params})`;
+  var init_code = `if 'servo_12' not in globals(): globals()['servo_12'] = PiCarServo(12, ${params})\nservo_12 = globals()['servo_12']\nif 'servo_13' not in globals(): globals()['servo_13'] = PiCarServo(13, ${params})\nservo_13 = globals()['servo_13']`;
 
   return `${init_code}\nservo_12.hand_range = ${range}\nservo_13.hand_range = ${range}\n`;
 };
@@ -185,7 +185,7 @@ Blockly.Python.forBlock['mcu_car_in_position'] = function(block, generator) {
   if (type === 'GEEK_270') params = '550, 2400, 270';
   else if (type === 'GEEK_270_180') params = '550, 1783, 180';
 
-  var init_code = `if 'servo_12' not in globals(): servo_12 = PiCarServo(12, ${params})\nif 'servo_13' not in globals(): servo_13 = PiCarServo(13, ${params})`;
+  var init_code = `if 'servo_12' not in globals(): globals()['servo_12'] = PiCarServo(12, ${params})\nservo_12 = globals()['servo_12']\nif 'servo_13' not in globals(): globals()['servo_13'] = PiCarServo(13, ${params})\nservo_13 = globals()['servo_13']`;
 
   return `
 ${init_code}
@@ -211,7 +211,7 @@ Blockly.Python.forBlock['mcu_car_move_hands'] = function(block, generator) {
   if (type === 'GEEK_270') params = '550, 2400, 270';
   else if (type === 'GEEK_270_180') params = '550, 1783, 180';
 
-  var init_code = `if 'servo_12' not in globals(): servo_12 = PiCarServo(12, ${params})\nif 'servo_13' not in globals(): servo_13 = PiCarServo(13, ${params})`;
+  var init_code = `if 'servo_12' not in globals(): globals()['servo_12'] = PiCarServo(12, ${params})\nservo_12 = globals()['servo_12']\nif 'servo_13' not in globals(): globals()['servo_13'] = PiCarServo(13, ${params})\nservo_13 = globals()['servo_13']`;
 
   var code = init_code + '\n' +
              '_p = max(min(' + percent + ', 100), 0) / 100.0\n' +

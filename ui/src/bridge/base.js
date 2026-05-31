@@ -100,6 +100,23 @@ export class BaseBridge {
     }
 
     /**
+     * 彈出資料夾選取視窗 (回傳 Promise<Object|null>)
+     */
+    pickFolder() {
+        const requestId = 'pickFolder_' + Date.now();
+        return new Promise((resolve) => {
+            const handler = (msg) => {
+                if (msg.command === 'pickFolderResponse' && msg.requestId === requestId) {
+                    this.offMessage(handler);
+                    resolve(msg.result);
+                }
+            };
+            this.onMessage(handler);
+            this.send('pickFolder', { requestId });
+        });
+    }
+
+    /**
      * 彈出確認視窗 (回傳 Promise<boolean>)
      */
     confirm(message) {

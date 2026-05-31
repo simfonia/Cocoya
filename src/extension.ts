@@ -3,7 +3,123 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as https from 'https';
 import * as os from 'os';
-import { exec } from 'child_process';
+import { exec, ChildProcess, spawn } from 'child_process';
+
+/**
+ * Dataset Manager Sidecar 進程管理器
+ * 負責啟動 Python 進程、維護 stdin/stdout 通訊與生命週期
+ */
+class DatasetSidecarManager {
+    private process: ChildProcess | null = null;
+    private context: vscode.ExtensionContext;
+    private pythonPath: string;
+    private callbacks: Map<string, (data: any) => void> = new Map();
+    private stdoutBuffer: string = ''; 
+    public onEvent: ((event: string, data: any) => void) | null = null;
+
+    constructor(context: vscode.ExtensionContext, pythonPath: string) {
+        this.context = context;
+        this.pythonPath = pythonPath;
+    }
+
+    /**
+     * 啟動 Sidecar 進程
+     */
+    public start(): boolean {
+        if (this.process) return true;
+
+        const scriptPath = vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'dataset_manager', 'dataset_sidecar.py').fsPath;
+        const workingDir = vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'dataset_manager').fsPath;
+
+        try {
+            // 使用 spawn 以便進行長期的 stdin/stdout 通訊
+            this.process = spawn(this.pythonPath, [scriptPath], {
+                cwd: workingDir,
+                env: Object.assign({}, process.env, { PYTHONIOENCODING: 'utf-8' })
+            });
+
+            this.process.stdout?.on('data', (data) => {
+                this.stdoutBuffer += data.toString();
+                const lines = this.stdoutBuffer.split('\n');
+                
+                // 保留最後一行（可能不完整），其餘皆為完整行
+                this.stdoutBuffer = lines.pop() || '';
+
+                for (const line of lines) {
+                    const trimmed = line.trim();
+                    if (!trimmed) continue;
+                    try {
+                        const msg = JSON.parse(trimmed);
+                        
+                        // 處理回應
+                        if (msg.type === 'response' && msg.requestId && this.callbacks.has(msg.requestId)) {
+                            const cb = this.callbacks.get(msg.requestId);
+                            if (cb) cb(msg);
+                            this.callbacks.delete(msg.requestId);
+                        } 
+                        // 處理非同步事件
+                        else if (msg.type === 'event' && msg.event && this.onEvent) {
+                            this.onEvent(msg.event, msg);
+                        }
+                    } catch (e) {
+                        // 這裡可能是 Python 的普通 print 輸出，若非 JSON 則忽略或記錄
+                        console.log('[Sidecar Log]', trimmed);
+                    }
+                }
+            });
+
+            this.process.stderr?.on('data', (data) => {
+                const str = data.toString().trim();
+                if (str.includes('[Sidecar Log]')) {
+                    console.log(str);
+                } else {
+                    console.error('[Sidecar Error]', str);
+                }
+            });
+
+            this.process.on('close', (code) => {
+                console.log(`[Sidecar] Process exited with code ${code}`);
+                this.process = null;
+            });
+
+            return true;
+        } catch (e) {
+            console.error('[Sidecar] Spawn failed', e);
+            return false;
+        }
+    }
+
+    /**
+     * 發送指令至 Sidecar
+     */
+    public send(command: string, data: any, callback?: (response: any) => void) {
+        if (!this.process) {
+            if (!this.start()) return;
+        }
+
+        const requestId = data.requestId || Math.random().toString(36).substring(7);
+        if (callback) {
+            this.callbacks.set(requestId, callback);
+        }
+
+        const msg = { command, requestId, ...data };
+        this.process?.stdin?.write(JSON.stringify(msg) + '\n');
+    }
+
+    /**
+     * 關閉 Sidecar
+     */
+    public stop() {
+        if (this.process) {
+            this.send('exit', {});
+            this.process.kill();
+            this.process = null;
+        }
+    }
+}
+
+// 全域管理器註冊表，用於清理
+const activeManagers: Set<CocoyaManager> = new Set();
 
 /**
  * Cocoya Extension 主管理器
@@ -16,6 +132,7 @@ export class CocoyaManager {
     private panel: vscode.WebviewPanel;
     private context: vscode.ExtensionContext;
     private lastDirtyState: boolean = false;
+    private sidecar: DatasetSidecarManager;
     
     // 雲端 AI 相關屬性
     private cloudAiEnabled: boolean = false;
@@ -24,13 +141,42 @@ export class CocoyaManager {
     constructor(context: vscode.ExtensionContext, panel: vscode.WebviewPanel) {
         this.context = context;
         this.panel = panel;
+        this.sidecar = new DatasetSidecarManager(context, this.getPythonPath());
+        
+        // 註冊事件轉發
+        this.sidecar.onEvent = (event, data) => {
+            if (event === 'cameraStatus') {
+                this.panel.webview.postMessage({ 
+                    command: 'datasetCameraStatus', 
+                    success: data.running 
+                });
+            }
+        };
+
         this.cloudAiEnabled = this.context.globalState.get<boolean>('cloudAiEnabled', false);
         this.setupMessageListener();
         this.scheduleUpdateCheck();
+
+        // [關鍵修正] 面板關閉時停止 Sidecar
+        this.panel.onDidDispose(() => {
+            console.log('[Extension] Panel disposed, stopping sidecar...');
+            this.sidecar.stop();
+            activeManagers.delete(this);
+        }, null, this.context.subscriptions);
+
+        activeManagers.add(this);
+
         // 初始重新整理序列埠
         setTimeout(() => this.handleRefreshSerialPorts(), 1000);
         // 初始化標題
         this.updateTitle();
+    }
+
+    /**
+     * 公開停止方法
+     */
+    public dispose() {
+        this.sidecar.stop();
     }
 
     /**
@@ -206,8 +352,280 @@ export class CocoyaManager {
                 case 'setCloudAiMode':
                     await this.handleSetCloudAiMode(message.enabled);
                     break;
+                case 'datasetStartCamera':
+                    this.sidecar.start();
+                    this.sidecar.send('startCamera', { deviceId: message.deviceId || 0 }, (resp) => {
+                        this.panel.webview.postMessage({ command: 'datasetCameraStatus', success: resp.success });
+                    });
+                    break;
+                case 'datasetStopCamera':
+                    this.sidecar.send('stopCamera', {});
+                    break;
+                case 'datasetCaptureImage':
+                    // 1. 決定基礎路徑 (優先使用工作區根目錄，避免 process.cwd() 指向 VS Code 安裝路徑導致權限或路徑混亂)
+                    const baseDir = (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)
+                        ? vscode.workspace.workspaceFolders[0].uri.fsPath
+                        : path.join(this.context.extensionPath, 'temp_scripts');
+
+                    const projectName = message.projectName || 'dataset';
+                    const label = message.label || 'unlabeled';
+                    const timestamp = Date.now();
+                    const savePath = message.savePath || path.join(baseDir, 'dataset', projectName, label, `${label}_${timestamp}.jpg`);
+                    
+                    console.log(`[Host] Requesting capture: ${savePath} (ID: ${message.requestId})`);
+                    
+                    // 關鍵修正：將 message.requestId 傳給 sidecar.send 的第二個參數（data 物件）
+                    this.sidecar.send('captureImage', { 
+                        savePath, 
+                        label,
+                        requestId: message.requestId // 確保 ID 跟著下去
+                    }, (resp) => {
+                        console.log(`[Host] Capture result received for ID: ${resp.requestId}`);
+                        this.panel.webview.postMessage({ 
+                            command: 'datasetCaptureResult', 
+                            ...resp 
+                        });
+                    });
+                    break;
+                case 'datasetExport':
+                    this.handleDatasetExport(message);
+                    break;
+                case 'pickFolder':
+                    this.handlePickFolder(message);
+                    break;
             }
         }, undefined, this.context.subscriptions);
+    }
+
+    /**
+     * 處理資料夾選取與掃描
+     */
+    private async handlePickFolder(message: any) {
+        const lastPath = this.context.globalState.get<string>('lastDatasetFolder');
+        const defaultUri = lastPath ? vscode.Uri.file(lastPath) : undefined;
+        
+        const uris = await vscode.window.showOpenDialog({
+            canSelectFolders: true,
+            canSelectFiles: false,
+            canSelectMany: false,
+            defaultUri: defaultUri,
+            title: '選取資料集資料夾'
+        });
+
+        if (uris && uris[0]) {
+            const folderPath = uris[0].fsPath;
+            await this.context.globalState.update('lastDatasetFolder', folderPath);
+            
+            const result = await this.scanDatasetFolder(folderPath);
+            this.panel.webview.postMessage({ 
+                command: 'pickFolderResponse', 
+                requestId: message.requestId, 
+                result: {
+                    path: folderPath,
+                    ...result
+                } 
+            });
+        } else {
+            this.panel.webview.postMessage({ 
+                command: 'pickFolderResponse', 
+                requestId: message.requestId, 
+                result: null 
+            });
+        }
+    }
+
+    /**
+     * 掃描資料集資料夾並轉換為 Webview 可用的 URI
+     */
+    private async scanDatasetFolder(folderPath: string) {
+        const images: any[] = [];
+        const labelCounts: { [key: string]: number } = {};
+        const labelMap: { [key: string]: number } = {};
+        let nextLabelId = 0;
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.bmp'];
+
+        const walk = (dir: string, relDir: string = '') => {
+            const entries = fs.readdirSync(dir, { withFileTypes: true });
+            for (const entry of entries) {
+                const fullPath = path.join(dir, entry.name);
+                const relPath = path.join(relDir, entry.name);
+                
+                if (entry.isDirectory()) {
+                    walk(fullPath, relPath);
+                } else {
+                    const ext = path.extname(entry.name).toLowerCase();
+                    if (imageExtensions.includes(ext)) {
+                        // 提取父目錄名作為標籤
+                        const parts = relDir.split(path.sep);
+                        const label = parts.length > 0 && parts[parts.length - 1] !== '' ? parts[parts.length - 1] : 'unlabeled';
+
+                        if (!labelCounts[label]) {
+                            labelCounts[label] = 0;
+                            labelMap[label] = nextLabelId++;
+                        }
+                        labelCounts[label]++;
+
+                        images.push({
+                            name: entry.name,
+                            path: relPath.replace(/\\/g, '/'), // 統一使用正斜槓
+                            label: label,
+                            blobUrl: this.panel.webview.asWebviewUri(vscode.Uri.file(fullPath)).toString()
+                        });
+                    }
+                }
+            }
+        };
+
+        try {
+            walk(folderPath);
+        } catch (e) {
+            console.error('[Extension] Scan folder failed', e);
+        }
+        
+        return { images, labelCounts, labelMap };
+    }
+
+    /**
+     * 處理資料集匯出
+     */
+    private async handleDatasetExport(message: any) {
+        console.log('[Host] Received datasetExport request', message.spec?.project?.name);
+        const spec = message.spec;
+        const projectName = spec.project?.name || 'dataset';
+        const sourceFolderPath = message.sourceFolderPath; 
+        
+        // 1. 決定基礎路徑 (優先使用工作區根目錄，確保與補拍相片儲存於同一基底目錄)
+        const baseDir = (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)
+            ? vscode.workspace.workspaceFolders[0].uri.fsPath
+            : path.join(this.context.extensionPath, 'temp_scripts');
+        
+        const datasetDir = path.join(baseDir, 'dataset', projectName);
+        const specPath = path.join(datasetDir, 'dataset.json');
+
+        try {
+            if (!fs.existsSync(datasetDir)) {
+                fs.mkdirSync(datasetDir, { recursive: true });
+            }
+
+            // 同步外部影像
+            if (sourceFolderPath && fs.existsSync(sourceFolderPath)) {
+                console.log(`[Host] Synchronizing imported images from ${sourceFolderPath} to ${datasetDir}`);
+                this.copyRecursiveSync(sourceFolderPath, datasetDir);
+            }
+
+            fs.writeFileSync(specPath, JSON.stringify(spec, null, 2));
+
+            const options: vscode.SaveDialogOptions = {
+                defaultUri: vscode.Uri.file(path.join(os.homedir(), `${projectName}.zip`)),
+                filters: { 'ZIP Archive': ['zip'] },
+                title: '匯出資料集'
+            };
+
+            const fileUri = await vscode.window.showSaveDialog(options);
+            if (!fileUri) return;
+
+            const outputZip = fileUri.fsPath;
+
+            this.sidecar.start();
+            this.sidecar.send('exportDataset', {
+                sourceDir: datasetDir,
+                outputZip: outputZip
+            }, (resp) => {
+                if (resp.success) {
+                    vscode.window.showInformationMessage(`資料集匯出成功: ${resp.path}`);
+                    this.panel.webview.postMessage({ command: 'datasetExportResult', success: true, path: resp.path });
+                } else {
+                    vscode.window.showErrorMessage(`資料集匯出失敗: ${resp.error}`);
+                    this.panel.webview.postMessage({ command: 'datasetExportResult', success: false, error: resp.error });
+                }
+            });
+
+        } catch (e: any) {
+            vscode.window.showErrorMessage(`匯出程序錯誤: ${e.message}`);
+            this.panel.webview.postMessage({ command: 'datasetExportResult', success: false, error: e.message });
+        }
+    }
+
+    /**
+     * 遞迴複製資料夾
+     */
+    private copyRecursiveSync(src: string, dest: string) {
+        const exists = fs.existsSync(src);
+        const stats = exists && fs.statSync(src);
+        const isDirectory = exists && stats && stats.isDirectory();
+        if (isDirectory) {
+            if (!fs.existsSync(dest)) fs.mkdirSync(dest);
+            fs.readdirSync(src).forEach((childItemName) => {
+                this.copyRecursiveSync(path.join(src, childItemName), path.join(dest, childItemName));
+            });
+        } else {
+            if (fs.existsSync(dest)) {
+                const srcStat = fs.statSync(src);
+                const destStat = fs.statSync(dest);
+                if (srcStat.size === destStat.size) return;
+            }
+            fs.copyFileSync(src, dest);
+        }
+    }
+
+    /**
+     * 使用 Python 抓取攝影機畫面 (Webview 權限受限時的備援方案)
+     */
+    private async handleCaptureImage(message: any) {
+        const pythonPath = this.getPythonPath();
+        const captureScript = `
+import cv2
+import base64
+import sys
+
+try:
+    cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        print("ERROR:無法開啟攝影機")
+        sys.exit(1)
+    
+    ret, frame = cap.read()
+    if ret:
+        _, buffer = cv2.imencode('.jpg', frame)
+        jpg_as_text = base64.b64encode(buffer).decode('utf-8')
+        print("DATA:" + jpg_as_text)
+    else:
+        print("ERROR:擷取失敗")
+    cap.release()
+except Exception as e:
+    print(f"ERROR:{str(e)}")
+`.trim();
+
+        const { execFile } = require('child_process');
+        execFile(pythonPath, ['-c', captureScript], (error: any, stdout: string) => {
+            if (error) {
+                this.panel.webview.postMessage({ 
+                    command: 'captureResponse', 
+                    requestId: message.requestId, 
+                    success: false, 
+                    error: error.message 
+                });
+                return;
+            }
+
+            const output = stdout.trim();
+            if (output.startsWith('DATA:')) {
+                const base64 = output.replace('DATA:', '');
+                this.panel.webview.postMessage({ 
+                    command: 'captureResponse', 
+                    requestId: message.requestId, 
+                    success: true, 
+                    base64: base64 
+                });
+            } else {
+                this.panel.webview.postMessage({ 
+                    command: 'captureResponse', 
+                    requestId: message.requestId, 
+                    success: false, 
+                    error: output.replace('ERROR:', '') 
+                });
+            }
+        });
     }
 
     // --- 訊息處理方法 ---
@@ -921,6 +1339,37 @@ print(json.dumps(results))
 
 export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('cocoya.openWorkspace', () => {
+        // 決定許可的資源根目錄
+        const roots: vscode.Uri[] = [
+            vscode.Uri.joinPath(context.extensionUri, 'ui'),
+            vscode.Uri.joinPath(context.extensionUri, 'resources'),
+            vscode.Uri.file(path.join(context.extensionPath, 'temp_scripts'))
+        ];
+        
+        // 加入工作區路徑
+        if (vscode.workspace.workspaceFolders) {
+            vscode.workspace.workspaceFolders.forEach(folder => {
+                roots.push(folder.uri);
+                // 加入工作區所在的磁碟根目錄
+                try {
+                    const driveRoot = path.parse(folder.uri.fsPath).root;
+                    if (driveRoot) roots.push(vscode.Uri.file(driveRoot));
+                } catch (e) {}
+            });
+        }
+
+        // 強力修復 401：加入常見的磁碟根目錄 (大小寫皆備)
+        const commonDrives = ['c', 'd', 'e', 'f', 'C', 'D', 'E', 'F'];
+        commonDrives.forEach(drive => {
+            try {
+                roots.push(vscode.Uri.file(`${drive}:/`));
+                roots.push(vscode.Uri.file(`${drive}:\\`));
+            } catch (e) {}
+        });
+        
+        // 加入系統根目錄 (在某些 VS Code 版本中有效)
+        roots.push(vscode.Uri.file('/'));
+
         const panel = vscode.window.createWebviewPanel(
             'cocoyaEditor', 
             'Cocoya Editor', 
@@ -928,9 +1377,7 @@ export function activate(context: vscode.ExtensionContext) {
             { 
                 enableScripts: true, 
                 retainContextWhenHidden: true, 
-                localResourceRoots: [
-                    vscode.Uri.joinPath(context.extensionUri, 'ui')
-                ] 
+                localResourceRoots: roots
             }
         );
         new CocoyaManager(context, panel);
@@ -944,8 +1391,8 @@ function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri): s
     const uiPath = vscode.Uri.joinPath(extensionUri, 'ui');
 
     const cspSource = webview.cspSource;
-    // 修正 csp 策略中的 cdnjs 路徑
-    const csp = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src ${cspSource} 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; connect-src ${cspSource} 'unsafe-inline' https://api.github.com; img-src ${cspSource} https: data: blob:; style-src ${cspSource} 'unsafe-inline' https://cdnjs.cloudflare.com; font-src ${cspSource};">`;
+    // 強化 CSP：移除過時的 vscode-resource:，改用標準的 cspSource
+    const csp = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src ${cspSource} 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; connect-src ${cspSource} 'unsafe-inline' https: https://api.github.com; img-src ${cspSource} https: data: blob:; style-src ${cspSource} 'unsafe-inline' https://cdnjs.cloudflare.com; font-src ${cspSource}; media-src ${cspSource} blob: data:; worker-src blob:;">`;
     
     html = html.replace('<head>', `<head>${csp}`);
     
@@ -960,4 +1407,10 @@ function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri): s
     return html;
 }
 
-export function deactivate() {}
+export function deactivate() {
+    console.log('[Extension] Deactivating, cleaning up managers...');
+    for (const manager of activeManagers) {
+        manager.dispose();
+    }
+    activeManagers.clear();
+}

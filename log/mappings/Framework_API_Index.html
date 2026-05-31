@@ -54,5 +54,18 @@ Blockly.Python.forBlock['py_function_def'] = function(block, generator) {
 };
     </pre>
 
+    <h2>3. 資料集管理 API (CocoyaDataset)</h2>
+    <p>用於管理 AI 資料集 Spec、影像標註與匯入流程。</p>
+    
+    <h3>3.1 開啟管理器</h3>
+    <pre>
+// 啟動 Modal 介面
+window.CocoyaDataset.open();
+
+// 獲取目前資料集規格
+const spec = window.CocoyaDataset.getCurrentSpec();
+console.log(spec.toJSON());
+    </pre>
+
 </body>
 </html>

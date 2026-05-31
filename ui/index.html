@@ -11,6 +11,7 @@
     
     <!-- 樣式表 (Vite 會處理) -->
     <link rel="stylesheet" href="/src/style.css">
+    <link rel="stylesheet" href="/src/modules/dataset_manager/dataset_manager.css">
 </head>
 <body class="cocoya-editor">
     <div id="resizer-overlay"></div>
@@ -117,6 +118,10 @@
                     <div class="toolbar-btn" id="btn-terminal" title="%{BKY_TLB_TERMINAL}">
                         <img src="src/icons/terminal_24dp_1F1F1F.png" class="normal-icon">
                         <img src="src/icons/terminal_24dp_FE2F89.png" class="hover-icon">
+                    </div>
+                    <div class="toolbar-btn" id="btn-dataset-manager" title="Dataset Manager">
+                        <img src="src/icons/dashboard_customize_24dp_1F1F1F.png" class="normal-icon">
+                        <img src="src/icons/dashboard_customize_24dp_FE2F89.png" class="hover-icon">
                     </div>
                     <div class="toolbar-btn" id="btn-update" title="%{BKY_TLB_UPDATE}">
                         <img src="src/icons/published_with_changes_24dp_1F1F1F.png" class="update-icon">
@@ -267,6 +272,7 @@
 
     <!-- 啟動橋樑與主程式 (ESM) -->
     <script type="module" src="src/bridge.js"></script>
+    <script type="module" src="src/modules/dataset_manager/index.js"></script>
     <script type="module" src="src/main.js"></script>
 </body>
 </html>

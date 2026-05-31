@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>工作日誌 - 2026-05-31</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #FE2F89; border-bottom: 2px solid #FE2F89; }
+        h2 { color: #444; margin-top: 30px; }
+        .task-list { list-style: none; padding: 0; }
+        .task-item { margin-bottom: 10px; padding: 10px; background: #f9f9f9; border-left: 5px solid #ccc; }
+        .task-done { border-left-color: #4CAF50; }
+        .task-pending { border-left-color: #FF9800; }
+        .tech-deep-dive { background: #eee; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        code { background: #ddd; padding: 2px 5px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>工作日誌 - 2026-05-31</h1>
+    
+    <h2>今日進度總覽</h2>
+    <ul class="task-list">
+        <li class="task-item task-done"><strong>系統還原與現狀診斷</strong>: Git 還原後重新掃描程式碼，確認 Sidecar 架構完整性。</li>
+        <li class="task-item task-done"><strong>#trim 程式碼修整</strong>: 移除過時的 <code>videoElement</code> 變數，並將所有程式邏輯中的擴充運算子 (<code>...</code>) 替換為 <code>Object.assign</code> 與 <code>Array.from</code>，消除語法歧義。</li>
+        <li class="task-item task-done"><strong>路徑對齊修復</strong>: 修正 <code>takeSnapshot</code> 與 <code>startBurst</code>，確保 <code>projectName</code> 正確傳遞至 Sidecar。</li>
+        <li class="task-item task-done"><strong>標籤系統強化</strong>: 補回「新標籤」輸入框，支援 Enter 確認，並修正統計更新時自動刪除空標籤的 Bug。</li>
+        <li class="task-item task-done"><strong>HSL 動態配色與日誌優化</strong>: 實作基於標籤名稱雜湊的 HSL 配色系統，並過濾 Sidecar 的 <code>stderr</code> 輸出以減少偽錯誤警告。</li>
+        <li class="task-item task-done"><strong>MicroPython 產生器 Bug 修復</strong>: 解決 <code>mcu_car</code>、<code>mcu_camera</code> 與 <code>mcu_huskylens</code> 在函式內 lazy init 導致的 <code>NameError</code> (UnboundLocalError)。</li>
+        <li class="task-item task-done"><strong>Minimap 顯示優化</strong>: 移除水平與垂直捲軸，強制設定 200x150 固定尺寸，並實作 <code>zoomToFit</code> 滿版縮圖模式。</li>
+    </ul>
+
+    <h2>技術深挖 (Technical Deep Dive)</h2>
+    <div class="tech-deep-dive">
+        <h3>1. 標籤持久化策略 (Label Map Persistence)</h3>
+        <p>原先 <code>updateStatsFromImages</code> 會根據影像樣本重新計算標籤清單，導致剛新增但無樣本的標籤遺失。現改採 <code>Object.assign({}, existingLabelMap)</code> 合併偵測到的標籤，確保 UI 新增的空類別能穩定存續。</p>
+        
+        <h3>2. HSL 配色之視覺辨識度</h3>
+        <p>捨棄靜態 Hex 配色，改用 <code>hsl(${h}, 75%, 45%)</code>。透過控制飽和度 (Saturation) 與亮度 (Lightness)，確保自動生成的顏色在深色/淺色模式下均具備極高的對比度與辨識度。</p>
+
+        <h3>3. Sidecar stderr 分流機制</h3>
+        <p>Python Sidecar 將非 JSON 日誌輸出至 <code>stderr</code> 是為了保持 <code>stdout</code> 協議純淨。Extension 端現在會識別 <code>[Sidecar Log]</code> 標籤進行分流，避免 VS Code 將開發日誌誤判為程式崩潰。 </p>
+
+        <h3>4. MicroPython 函式作用域與 Global 衝突</h3>
+        <p>在 Python 中，若函式內包含對變數的賦值（如 <code>var = ...</code>），該變數會被視為區域變數。原先 MicroPython 產生器的 Lazy Init 寫法 <code>if 'var' not in globals(): var = ...</code> 在變數已存在於全域時會跳過賦值，導致後續程式碼存取區域變數時拋出 <code>UnboundLocalError</code>。現統一改為 <code>if 'var' not in globals(): globals()['var'] = ...</code> 後接 <code>var = globals()['var']</code> 之安全模式，確保在全域與區域作用域下皆能正確存取實例。</p>
+    </div>
+
+    <h2>下次啟動方向 (Next Steps)</h2>
+    <ul>
+        <li><strong>Phase 6</strong>: 開始實作資料集匯出 (Export) 功能，整合 ZIP 打包邏輯。</li>
+        <li>對接 NVIDIA NGX Spark 雲端訓練介面。</li>
+    </ul>
+</body>
+</html>

@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>工作日誌 - 2026-06-04</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #FE2F89; border-bottom: 2px solid #FE2F89; }
+        h2 { color: #444; margin-top: 30px; }
+        .task-list { list-style: none; padding: 0; }
+        .task-item { margin-bottom: 10px; padding: 10px; background: #f9f9f9; border-left: 5px solid #ccc; }
+        .task-done { border-left-color: #4CAF50; }
+        .task-pending { border-left-color: #FF9800; }
+        .tech-deep-dive { background: #eee; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        code { background: #ddd; padding: 2px 5px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>工作日誌 - 2026-06-04</h1>
+    
+    <h2>今日進度總覽</h2>
+    <ul class="task-list">
+        <li class="task-item task-done"><strong>專案指南 (.antigravity.md / AGENTS.md) 優化</strong>: 檢視並修復從其他 AI agent 複製過來的指南檔案，將其更新為最適合 Antigravity 行為之格式。</li>
+        <li class="task-item task-done"><strong>省略號移除與規範對齊</strong>: 徹底移除了原有檔案中的 <code>...</code> 省略號，以遵守「嚴禁使用省略符號」的最高原則。</li>
+        <li class="task-item task-done"><strong>新增轉義字元與換行處理規範</strong>: 將 Blockly 產生器特別要求的「三層字串轉義機制」與「換行符號處理規範」整合至專案指南中，確保後續開發之程式碼生成穩定性。</li>
+        <li class="task-item task-done"><strong>日誌與備份保護原則整合</strong>: 於指南中載明 <code>log/</code> 檔案的 Append-Only 追加原則以及覆寫檔案前必須先備份至 <code>backup/</code> 資料夾並加入時間戳記之規範，並修正了工作日誌之格式描述（自 <code>.md</code> 更正為 <code>.html</code>）。</li>
+        <li class="task-item task-done"><strong>前置備份機制執行</strong>: 於覆寫前成功將原檔案備份至 <code>C:/Workspace/cocoya/backup/</code>，並附加 <code>20260604_092219</code> 時間戳記。</li>
+        <li class="task-item task-done"><strong>Dataset Manager 狀態與模式切換重構</strong>: 實作專案類型與來源模式的靜態映射關聯，於切換 Type 時動態重建 Mode 下拉選單，杜絕 Table 專案殘留 Live 模式的 Bug。</li>
+        <li class="task-item task-done"><strong>硬體資源主動釋放</strong>: 實作在切換專案類型或來源模式（例如 Live 轉 File）時，主動且確實地調用 <code>Sampler.stopCamera()</code> 與 <code>Sampler.stopBurst()</code>，以徹底解決背景攝影機資源與連拍排程洩漏問題。</li>
+        <li class="task-item task-done"><strong>補拍影像縮圖置前</strong>: 在 <code>ui_layout.js</code> 修正新採集影像陣列的插入機制，改採 <code>unshift</code> 插入開頭，使補拍的縮圖即時顯示在網格最前排以利審閱。</li>
+        <li class="task-item task-done"><strong>修復補拍影像未匯出 Bug</strong>: 重構 <code>src/extension.ts</code> 中的 <code>baseDir</code> 決策鏈。有工作區時優先對齊 vscode 工作區根目錄，防止 <code>process.cwd()</code> 因為指向 VS Code 系統目錄而引發寫入失敗或路徑同步失效。</li>
+        <li class="task-item task-done"><strong>新增「清除資料」按鈕與狀態重置邏輯</strong>: 於右上角關閉按鈕左側新增「清除資料」按鈕，點擊後會主動關閉相機、清空所有暫存影像與檔案資料、還原 Spec 為預設 table/file，並清理檔案 input 值與 Sampler 預覽快取，以便完全重頭開始。</li>
+        <li class="task-item task-done"><strong>標註介面重構為「上下水平分割（資訊欄置上）」</strong>: 將照片標註介面改為上下分割排版，並將「標註資訊欄」移至「照片預覽」上方，擴大筆電小螢幕使用者的標註空間。</li>
+        <li class="task-item task-done"><strong>修復標註列表無法捲動到最頂端 Bug</strong>: 將 <code>#annotation-list-ui</code> Flexbox 容器 of <code>align-content: center;</code> 修正為 <code>align-content: flex-start;</code>，解決 Flex 居中對齊於溢出時會把頂部內容擠出滾動範圍的經典問題。</li>
+        <li class="task-item task-done"><strong>實作自駕車循線偵測（Line Following）標註功能</strong>: 在畫布上實作了「起點到終點」引導線段的單圖單線標註功能，以綠色圓點標示起點、紅色圓點加方向箭頭標示終點；支援「滑鼠拖曳」與「點按兩下」兩種繪線模式，有效減輕小螢幕與筆電使用者的手部疲勞。</li>
+        <li class="task-item task-done"><strong>實作畫布邊界限幅防護（Clamp）</strong>: 在 mousedown/move/up 的滑鼠事件中加入 <code>clamp(val, max)</code> 運算，強制限幅滑鼠座標在畫布像素區間內。此防護一體適用於物件偵測（BBox 模式）與循線偵測（Line 模式），徹底避免產出越界的比例座標。</li>
+        <li class="task-item task-done"><strong>嚴格移除 Spread Operator 重構</strong>: 審查並重構 <code>ui/src/modules/dataset_manager/spec.js</code>，將所有違反「嚴禁使用 spread operator <code>...</code>」的語法全數改以 <code>Array.from()</code> 及 <code>Object.assign()</code> 替換，解決靜態代碼與規範之對齊問題。</li>
+        <li class="task-item task-done"><strong>執行專案完整建置與編譯測試</strong>: 成功在 <code>ui/</code> 目錄下執行 <code>npm run build</code>（前端 Vite 打包）與在根目錄下執行 <code>npm run compile</code>（VS Code 插件 TS 編譯），確保沒有任何語法與編譯錯誤。</li>
+    </ul>
+
+    <h2>技術深挖 (Technical Deep Dive)</h2>
+    <div class="tech-deep-dive">
+        <h3>1. 三層字串意識 (Three-Layer String Consciousness)</h3>
+        <p>在處理 Blockly 產生器與產出的 Python/MicroPython 代碼時，我們必須注意三層轉義：</p>
+        <ul>
+            <li><strong>第一層</strong>：Gemini API 傳輸的 Payload。</li>
+            <li><strong>第二層</strong>：寫入磁碟的產出器 <code>.js</code> 檔案。</li>
+            <li><strong>第三層</strong>：產出器執行後，回傳給 Blockly 的程式碼字串（最終寫入 <code>.py</code> 檔案）。</li>
+        </ul>
+        <p>在 <code>.js</code> 檔案中定義字串時，若含有 <code>\n</code>（換行符號），必須寫為 <code>\\n</code>，以防它在寫入磁碟時即被解譯為實體換行，導致 JS 語法錯誤（實體換行在單引號或雙引號中是不合法的）。反之，若在 JavaScript 中使用反單引號 (Template Literals)，則允許合法的實體換行，這也是在注入長篇 Python 代碼時最安全的方式。</p>
+        
+        <h3>2. 正規表達式雙重轉義</h3>
+        <p>當在 Java (PDE) 或 JavaScript 裡編寫 Regex（例如針對加號等特殊字元的 <code>split</code>），如果最終生成的代碼中需要反斜線（如 <code>\\+</code>），在產生器的 <code>.js</code> 中必須寫成四重轉義（<code>\\\\\\\\+</code>），才能確保在經歷多層轉換後依然正確解析為字面量。</p>
+        
+        <h3>3. 畫布座標限幅（Clamp）與防護設計</h3>
+        <p>在使用者標註（BBox 拉框或 Line 畫線）過程中，若滑鼠移出影像區域外，容易產生負值或大於 1.0 的非法比例座標。我們藉由在 <code>mousedown</code>、<code>mousemove</code>、<code>mouseup</code> 統一將滑鼠事件座標（相對於 Canvas bounding rect）經過：</p>
+        <code>const clamp = (val, max) => Math.max(0, Math.min(max, val));</code>
+        <p>進行截斷防護，才進行後續的比例座標計算（如 <code>x / canvas.width</code>）。如此一來，在 BBox 及 Line 模式下均能自動確保標註座標與寬高永遠精確貼齊影像邊緣，比例座標必然落在 <code>[0.0, 1.0]</code> 閉區間內，保障了後續 TinyML 模型訓練資料集的純淨度與合規性。</p>
+
+        <h3>4. 專案類型與來源模式之關聯狀態設計 (State Association Design)</h3>
+        <p>原先系統在切換專案類型（如 Image 切換到 Table）時，僅重設了內部的資料陣列，並未同步關聯更新 DOM。由於 <code>sourceMode</code> 的 DOM 下拉選單依然殘留 <code>live</code> 值，當 UI 調用 <code>syncSpecFromUI</code> 與 <code>refreshDynamicPanels</code> 時，系統會誤判目前為 Live 模式，進而錯誤重啟攝影機與連拍。</p>
+        <p>重構後，我們定義了 <code>TYPE_TO_MODES_MAP</code> 靜態映射。在 <code>typeSelect.onchange</code> 時動態更新並限制 <code>sourceMode</code> 的 options 清單；若先前選取值不相容，則強制回滾為支援的預設模式（如 table 僅支援 file 模式）。如此一來，UI 的 DOM 狀態與內部的 <code>DatasetSpec</code> 狀態達成了原子化同步，避免了跨模式狀態混亂與背景資源洩漏。</p>
+
+        <h3>5. 暫存與匯出路徑的 SSOT (單一事實來源) 設計</h3>
+        <p>原先在 <code>extension.ts</code> 的 <code>datasetCaptureImage</code> 與 <code>handleDatasetExport</code> 裡，暫存和打包檔案所參考的 <code>baseDir</code> 預設採用 <code>process.cwd()</code>。在 VS Code 插件執行環境中，<code>process.cwd()</code> 常指向 VS Code 安裝路徑（例如 <code>C:\Users\username\AppData\Local\Programs\Microsoft VS Code</code>），這不但在某些系統環境有防寫限制，也容易因為執行期路徑改變而造成寫入路徑與打包路徑脫節。</p>
+        <p>本次修正為：若當前已開啟工作區 (Workspace)，一律使用工作區根目錄 <code>vscode.workspace.workspaceFolders[0].uri.fsPath</code>；否則降級使用擴充功能暫存目錄。此舉保證了補拍與匯出路徑的 SSOT 同步，且影像資料檔案均穩健儲存在使用者的工作區專案資料夾下，不再遺失。</p>
+
+        <h3>6. Flexbox center overflow 滾動失效原理</h3>
+        <p>在 CSS Flexbox 佈局中，如果容器被設定為 <code>flex-wrap: wrap;</code> 且帶有垂直置中（如 <code>align-content: center;</code> 或 <code>align-items: center;</code>），一旦子元素的總高度大於容器的最大高度 (<code>max-height</code>) 產生溢出時，瀏覽器會把內容往上下兩個方向均等推開。這會導致位於上半部分的項目被推至容器邊界（即負座標區）之外。由於瀏覽器捲軸只能向正方向捲動，無法向負方向捲動，使用者將永遠無法透過滾輪或滾動條捲動到頂部的內容。將對齊改為 <code>flex-start;</code> 即可使溢出內容往單一方向排列，完美回復正常滾動。</p>
+    </div>
+
+    <h2>下次啟動方向 (Next Steps)</h2>
+    <ul>
+        <li><strong>循線標註實機驗證</strong>：請使用者於瀏覽器/IDE 中開啟 Dataset Manager，將專案類型切換為 <code>line_following</code>，實際測試畫線標註（拖曳與點擊）與清除資料，並匯出 dataset.json 檢查 line 標註欄位格式。</li>
+        <li><strong>Phase 7</strong>: 對接 NVIDIA NGX Spark 雲端訓練介面。</li>
+        <li>實作遠端環境診斷 (CUDA/Docker) 與資料集 ZIP 自動上傳流程。</li>
+    </ul>
+</body>
+</html>
