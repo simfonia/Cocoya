@@ -63,7 +63,37 @@
         </tbody>
     </table>
 
-    <h2>3. 視圖組件與標註互動</h2>
+    <h2>3. 遠端對接與雲端 AI 傳輸 (Cloud Sync APIs)</h2>
+    <p>本模組於「雲端 AI 模式」開啟且連線至遠端主機時，提供以下 Host/Webview 傳輸指令：</p>
+    <table class="api-table">
+        <thead>
+            <tr><th>指令 (Command)</th><th>傳輸方向</th><th>用途與資料結構</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>checkRemoteEnvironment</code></td>
+                <td>Webview ➔ Host (Extension)</td>
+                <td>觸發遠端 GPU 與 Docker 狀態檢查。</td>
+            </tr>
+            <tr>
+                <td><code>checkRemoteEnvironmentResult</code></td>
+                <td>Host (Extension) ➔ Webview</td>
+                <td>回傳診斷數據：<code>{ success, status: { cudaAvailable, gpuName, dockerRunning, gpuPassthrough, errors } }</code>。</td>
+            </tr>
+            <tr>
+                <td><code>datasetUploadArchive</code></td>
+                <td>Webview ➔ Host (Extension)</td>
+                <td>將本地資料集壓縮檔傳送至遠端：<code>{ zipData: [Base64], projectName }</code>。</td>
+            </tr>
+            <tr>
+                <td><code>datasetUploadResult</code></td>
+                <td>Host (Extension) ➔ Webview</td>
+                <td>回傳於遠端寫入沙盒並調用 Python <code>zipfile</code> 原位解壓縮之結果：<code>{ success, error }</code>。</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>4. 視圖組件與標註互動</h2>
     <ul>
         <li><strong>UIComponents (ui_components.js)</strong>:
             <ul>
@@ -91,7 +121,7 @@
         </li>
     </ul>
 
-    <h2>4. 規範化路徑政策 (NGX Compatibility)</h2>
+    <h2>5. 規範化路徑政策 (NGX Compatibility)</h2>
     <pre>
 1. 專案名稱: 僅限 [a-zA-Z0-9_-]，中文將被自動過濾。
 2. 資料目錄: 一律由系統自動管理為 `dataset/[projectName]/`，不開放手動修改。

@@ -122,7 +122,8 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             { id: 'cv2', name: 'opencv-python' },
             { id: 'mediapipe', name: 'mediapipe' },
             { id: 'PIL', name: 'Pillow (Image)' },
-            { id: 'serial', name: 'pyserial' }
+            { id: 'serial', name: 'pyserial' },
+            { id: 'esptool', name: 'esptool (Firmware)' }
         ];
 
         list.innerHTML = '';

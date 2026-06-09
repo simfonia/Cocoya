@@ -203,11 +203,6 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             if (!el) return;
             
             el.onclick = () => {
-                // BUG FIX: 強制關閉任何開啟中的積木輸入欄位 (WidgetDiv)，確保輸入值已寫回積木屬性
-                if (typeof Blockly !== 'undefined' && Blockly.getMainWorkspace()) {
-                    Blockly.hideChaff();
-                }
-
                 // 1. 處理外部連結 (更新按鈕)
                 if (id === 'btn-update') {
                     if (self.updateUrl && el.classList.contains('update-available')) {
@@ -246,18 +241,17 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                         if (terminalPauseBtn) terminalPauseBtn.classList.add('paused');
                     }
                     
-                    // 使用 CocoyaApp 處理過的乾淨代碼，確保行號與 Preview 一致且縮排正確
-                    // 注意：若剛執行 hideChaff()，lastCleanCode 可能因 300ms 延遲尚未更新，故此處應考慮手動產生或確保同步
+                    // [修正] 強制關閉輸入框並執行強制 UI 更新
+                    if (Blockly.getMainWorkspace()) Blockly.hideChaff();
+                    
                     let code = window.CocoyaApp.lastCleanCode;
                     if (typeof window.CocoyaApp.triggerCodeUpdateSync === 'function') {
-                        code = window.CocoyaApp.triggerCodeUpdateSync();
-                    } else {
-                        // 回退方案：手動執行與 triggerCodeUpdate 相同的清理邏輯
-                        let rawCode = Blockly.Python.workspaceToCode(Blockly.getMainWorkspace());
-                        rawCode = rawCode.replace(/^[a-zA-Z_][a-zA-Z0-9_]* = None(  # ID:.*)?\n/mg, '');
-                        rawCode = rawCode.replace(/\u0001ID:.*?\u0002/g, '');
-                        code = rawCode.trim();
+                        // 傳入 true 以無視 focus 保護強制渲染預覽
+                        code = window.CocoyaApp.triggerCodeUpdateSync(true);
                     }
+                    
+                    // 強制刷新 Minimap 確保縮圖一致
+                    if (window.CocoyaApp.refreshMinimap) window.CocoyaApp.refreshMinimap();
 
                     msg.code = code;
                     msg.platform = document.getElementById('platform-selector')?.value || 'PC';
@@ -368,7 +362,8 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                 // 改用專用的 pick 指令，在 VS Code 會呈現漂亮的 QuickPick
                 const model = await window.CocoyaBridge.pickMcuModel([
                     { id: 'MakerPi_RP2040', label: 'Maker Pi RP2040 (UF2 Mode)' },
-                    { id: 'XIAO_ESP32_S3', label: 'XIAO ESP32-S3 (UF2 Mode)' },
+                    { id: 'XIAO_ESP32_S3_SENSE_CAMERA', label: 'XIAO ESP32-S3 Sense (⚡ MicroPython)' },
+                    { id: 'XIAO_ESP32_S3_SENSE_FACTORY', label: 'XIAO ESP32-S3 Sense (⚙️ C++ Factory Webserver)' },
                     { id: 'custom', label: '⚡ 自訂韌體 / Custom UF2' }
                 ]);
                 
@@ -380,7 +375,14 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                             (Blockly.Msg['MSG_ASK_CLEAR_CODE'] || 'Do you want to clear code.py after burning?')
                         );
                     }
-                    window.CocoyaBridge.send('resetFirmware', { model, shouldClear });
+
+                    const port = document.getElementById('serial-selector')?.value || '';
+                    if (model.includes('SERIAL') && !port) {
+                        window.CocoyaBridge.alert(Blockly.Msg['MSG_SELECT_PORT'] || 'Please select a port first.');
+                        return;
+                    }
+
+                    window.CocoyaBridge.send('resetFirmware', { model, shouldClear, serialPort: port });
                 }
             };
         }

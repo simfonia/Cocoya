@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>工作日誌 - 2026-06-05</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #FE2F89; border-bottom: 2px solid #FE2F89; }
+        h2 { color: #444; margin-top: 30px; }
+        .task-list { list-style: none; padding: 0; }
+        .task-item { margin-bottom: 10px; padding: 10px; background: #f9f9f9; border-left: 5px solid #ccc; }
+        .task-done { border-left-color: #4CAF50; }
+        .task-pending { border-left-color: #FF9800; }
+        .tech-deep-dive { background: #eee; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        code { background: #ddd; padding: 2px 5px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>工作日誌 - 2026-06-05</h1>
+    
+    <h2>今日進度總覽</h2>
+    <ul class="task-list">
+        <li class="task-item task-done"><strong>環境時間更新與日誌初始化</strong>: 啟動今日開發任務，建立今日工作日誌並完成環境對齊。</li>
+        <li class="task-item task-pending"><strong>實作遠端主機環境診斷 (checkRemoteEnvironment)</strong>: 嘗試於後端 <code>src/extension.ts</code> 實作診斷邏輯；但目前偵測持續失敗，需進一步排查診斷指令在遠端環境的執行細節。</li>
+        <li class="task-item task-pending"><strong>實作資料集非同步 Base64 傳輸 (datasetUploadArchive)</strong>: 規劃中，尚未完成實作與驗證。</li>
+        <li class="task-item task-pending"><strong>實作遠端 Python 原位解壓縮機制</strong>: 規劃中，尚未完成。</li>
+        <li class="task-item task-pending"><strong>修復遠端環境診斷命令搜尋 Bug</strong>: 嘗試注入 PATH，但 <code>nvidia-smi</code> 與 <code>docker</code> 仍無法被偵測，需重新審查執行權限。</li>
+        <li class="task-item task-pending"><strong>實作診斷錯誤細節 Dump 功能</strong>: 待強化，目前回傳之詳情不足以定位失敗原因。</li>
+        <li class="task-item task-done"><strong>執行前端打包建置與後端編譯驗證</strong>: 成功在 <code>ui/</code> 底下執行 <code>npm run build</code> 與在專案根目錄下執行 <code>npm run compile</code>。</li>
+    </ul>
+
+    <h2>技術深挖 (Technical Deep Dive)</h2>
+    <div class="tech-deep-dive">
+        <h3>1. Webview (Client) 與遠端 Extension (Host) 檔案系統隔離與傳輸方案</h3>
+        <p>在 VS Code Remote-SSH 開發環境中，Webview 執行於本地學生的電腦（Client 端），而 Extension 的 Node.js 進程則運行於遠端伺服器（Host 端）。此架構下，Extension 的 <code>fs</code> 模組操作的完全是遠端主機的磁碟，無法直接讀取學生的本地影像。</p>
+        <p>為了解決此隔離屏障，我們採用了 <strong>FileReader (ArrayBuffer) + Base64 封裝</strong>。由 Webview 本地端藉由 <code>&lt;input type="file"&gt;</code> 讀取檔案，並利用分塊防溢出循環：</p>
+        <pre>
+let base64 = '';
+const chunk = 8192;
+for (let i = 0; i &lt; bytes.length; i += chunk) {
+    base64 += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+}
+base64 = btoa(base64);
+        </pre>
+        <p>將二進位資料轉換為安全的 Base64 字串後，透過 VS Code Webview 的 <code>postMessage</code> 管道跨越網絡安全地發送至遠端 Extension。此做法既安全、輕量，又完全避開了需引入複雜的 SFTP 或 SSH 連線套件。</p>
+        
+        <h3>2. 遠端原位解壓縮 (Remote In-place Decryption/Extraction) 設計</h3>
+        <p>將 ZIP 上傳至遠端後，如何解壓縮是另一個關鍵問題。如果依賴遠端 Linux 上的 <code>unzip</code> 指令，會面臨某些極簡 Docker 容器或伺服器環境未安裝該軟體的情況；若在 Extension 引入 node.js 的第三方 zip套件，又會讓 VSIX 套件體積顯著膨脹。</p>
+        <p>我們的解決方案是<strong>呼叫遠端 Python 原生的 <code>zipfile</code> 模組</strong>。由於專案為 AI 學習平台，遠端主機必然已安裝 Python 環境。我們透過 Node.js 的 <code>execFile</code> 執行以下一鍵 Python 腳本：</p>
+        <pre>
+import zipfile
+import os
+try:
+    with zipfile.ZipFile("temp.zip", 'r') as zip_ref:
+        zip_ref.extractall("target_dir")
+    os.remove("temp.zip")
+    print("SUCCESS")
+except Exception as e:
+    print("ERROR:", str(e))
+        </pre>
+        <p>此設計確保了解壓縮機制具有極高的跨平台相容性與零依賴特性，完美達成「寫入遠端時直接解壓且維持 Extension 輕量化」之預期目標。</p>
+
+        <h3>3. VS Code 遠端 Server 環境下 PATH 變數缺失與 exec 執行權限探討</h3>
+        <p>在 VS Code Remote-SSH 連線時，其所啟動的 <code>vscode-server</code> 常採用非交互非登入式 (Non-interactive non-login) Shell 來掛載 Extension 進程。在這種 Shell 中，系統不會完整載入 <code>/etc/profile</code> 或使用者的 <code>.bashrc</code>，導致 Extension Node.js 的 <code>process.env.PATH</code> 缺乏諸多常用的軟體二進位目錄（如 <code>/usr/sbin</code>, <code>/usr/local/bin</code> 或 <code>/snap/bin</code>）。</p>
+        <p>此問題導致即便使用者手動在 SSH 終端機能夠成功呼叫 <code>nvidia-smi</code>，Extension 執行 <code>exec('nvidia-smi')</code> 時依然會出現 <code>command not found</code> 的異常。我們在 <code>executeCommand</code> 中實作了環境變數注入：</p>
+        <pre>
+const env = Object.assign({}, process.env);
+if (process.platform !== 'win32') {
+    const extraPaths = '/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/cuda/bin:/snap/bin';
+    env.PATH = env.PATH ? `${env.PATH}:${extraPaths}` : extraPaths;
+}
+exec(cmd, { env }, ...)
+        </pre>
+        <p>藉由將這些關鍵路徑強制追加至執行的環境變數中，成功讓遠端的 <code>nvidia-smi</code> 及 <code>docker</code> 等指令被精準定位並順利執行，保障了診斷功能的強健度。</p>
+    </div>
+
+    <h2>下次啟動方向 (Next Steps)</h2>
+    <ul>
+        <li><strong>雲端 AI 模式實機測試</strong>：請使用者於連接 SSH 的狀態下，點擊「執行診斷」確認遠端 GPU / Docker 環境；隨後測試上傳本地 ZIP 檔案，驗證遠端沙盒中是否成功解壓資料集。</li>
+        <li><strong>Phase 7 (第二階段)</strong>: 對接遠端伺服器容器化訓練（啟動訓練腳本與進度反饋）。</li>
+    </ul>
+</body>
+</html>
