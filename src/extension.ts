@@ -315,7 +315,7 @@ export class CocoyaManager {
                     await this.handlePickMcuModel(message);
                     break;
                 case 'resetFirmware':
-                    await this.handleResetFirmware(message.model, message.shouldClear);
+                    await this.handleResetFirmware(message.model, message.shouldClear, message.serialPort);
                     break;
                 case 'openHelp':
                     this.handleOpenHelp(message.helpId);
@@ -323,12 +323,20 @@ export class CocoyaManager {
                 case 'eraseFilesystem':
                     await this.stopAllCocoyaTerminals();
                     const ePort = message.serialPort;
+                    if (!ePort) return;
+                    
                     const ePython = this.getPythonPath();
                     const eLang = vscode.env.language.startsWith('zh') ? 'zh-hant' : 'en';
-                    const eScript = vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'deploy_mcu.py').fsPath;
-                    const eTerminal = vscode.window.createTerminal('Cocoya Repair');
-                    eTerminal.sendText(`& "${ePython}" "${eScript}" "${ePort}" --erase-filesystem --lang ${eLang}`);
+                    const eTerminal = vscode.window.createTerminal('Cocoya Deep Repair');
                     eTerminal.show();
+
+                    // --- 關鍵邏輯：根據型號選擇抹除方案 ---
+                    // 為了簡化，目前我們先執行 esptool 抹除 (針對 S3 救磚最有效)
+                    eTerminal.sendText(`& "${ePython}" -m esptool --port ${ePort} erase-flash`);
+                    
+                    const infoMsg = this.localeMessages['MSG_ERASE_START_REFLASH'] || 
+                        (eLang === 'zh-hant' ? '已啟動硬體抹除。完成後請務必重新「重置韌體」！' : 'Hardware erase started. Please re-flash firmware after it completes!');
+                    vscode.window.showInformationMessage(infoMsg);
                     break;
                 case 'setupStableMode':
                     await this.stopAllCocoyaTerminals();
@@ -389,6 +397,12 @@ export class CocoyaManager {
                     break;
                 case 'datasetExport':
                     this.handleDatasetExport(message);
+                    break;
+                case 'datasetUploadArchive':
+                    await this.handleDatasetUploadArchive(message);
+                    break;
+                case 'checkRemoteEnvironment':
+                    await this.handleCheckRemoteEnvironment();
                     break;
                 case 'pickFolder':
                     this.handlePickFolder(message);
@@ -682,6 +696,154 @@ except Exception as e:
     }
 
     /**
+     * 處理遠端環境診斷 (CUDA/Docker)
+     */
+    private async handleCheckRemoteEnvironment() {
+        if (!vscode.env.remoteName) {
+            this.panel.webview.postMessage({
+                command: 'checkRemoteEnvironmentResult',
+                success: false,
+                error: 'Not in remote SSH environment'
+            });
+            return;
+        }
+
+        const result = {
+            cudaAvailable: false,
+            gpuName: '',
+            dockerRunning: false,
+            gpuPassthrough: false,
+            errors: [] as string[]
+        };
+
+        const executeCommand = (cmd: string): Promise<{ stdout: string; stderr: string; error: any }> => {
+            return new Promise((resolve) => {
+                // 合併常見的 Linux 二進位路徑到 PATH，解決非登入式 Shell PATH 缺失的問題
+                const env = Object.assign({}, process.env);
+                const isWindows = process.platform === 'win32';
+                if (!isWindows) {
+                    const extraPaths = '/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/cuda/bin:/snap/bin';
+                    env.PATH = env.PATH ? `${env.PATH}:${extraPaths}` : extraPaths;
+                }
+                exec(cmd, { env }, (error, stdout, stderr) => {
+                    resolve({ stdout, stderr, error });
+                });
+            });
+        };
+
+        // 1. 偵測 GPU (nvidia-smi)
+        const nvidiaSmi = await executeCommand('nvidia-smi --query-gpu=name --format=csv,noheader');
+        console.log('[CheckEnvironment] nvidia-smi result:', nvidiaSmi.error, nvidiaSmi.stdout, nvidiaSmi.stderr);
+        if (!nvidiaSmi.error) {
+            result.cudaAvailable = true;
+            result.gpuName = nvidiaSmi.stdout.trim() || 'NVIDIA GPU';
+        } else {
+            const detail = nvidiaSmi.error ? nvidiaSmi.error.message : nvidiaSmi.stderr;
+            result.errors.push(`無法偵測到 NVIDIA GPU。詳情: ${detail.trim()}`);
+        }
+
+        // 2. 偵測 Docker (docker info)
+        const dockerInfo = await executeCommand('docker info');
+        console.log('[CheckEnvironment] docker info result:', dockerInfo.error, dockerInfo.stdout, dockerInfo.stderr);
+        if (!dockerInfo.error) {
+            result.dockerRunning = true;
+        } else {
+            const detail = dockerInfo.error ? dockerInfo.error.message : dockerInfo.stderr;
+            result.errors.push(`Docker 服務未執行。詳情: ${detail.trim()}`);
+        }
+
+        // 3. 偵測 GPU Container Toolkit (--gpus)
+        const dockerHelp = await executeCommand('docker run --help');
+        console.log('[CheckEnvironment] docker run --help result:', dockerHelp.error, dockerHelp.stdout, dockerHelp.stderr);
+        if (!dockerHelp.error && dockerHelp.stdout.includes('--gpus')) {
+            result.gpuPassthrough = true;
+        } else {
+            const detail = dockerHelp.error ? dockerHelp.error.message : dockerHelp.stderr;
+            result.errors.push(`未偵測到 Docker --gpus 參數支援。詳情: ${detail.trim()}`);
+        }
+
+        this.panel.webview.postMessage({
+            command: 'checkRemoteEnvironmentResult',
+            success: true,
+            status: result
+        });
+    }
+
+    /**
+     * 處理資料集上傳與遠端 python 解壓
+     */
+    private async handleDatasetUploadArchive(message: any) {
+        const base64Data = message.zipData;
+        const projectName = message.projectName || 'dataset';
+        
+        if (!vscode.env.remoteName) {
+            vscode.window.showWarningMessage('目前非遠端 SSH 環境，無需上傳資料集。');
+            this.panel.webview.postMessage({ command: 'datasetUploadResult', success: false, error: 'Not in remote environment' });
+            return;
+        }
+
+        const machineId = this.getMachineId();
+        const homedir = os.homedir();
+        const targetDir = path.join(homedir, 'cocoya_ai', 'sessions', machineId, 'dataset', projectName);
+        const tempZipPath = path.join(homedir, 'cocoya_ai', 'sessions', machineId, 'dataset', `${projectName}_temp.zip`);
+
+        vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: `正在上傳並在遠端解壓縮資料集 ${projectName}...`,
+            cancellable: false
+        }, async (progress) => {
+            try {
+                // 確保目標資料夾存在
+                if (!fs.existsSync(path.dirname(tempZipPath))) {
+                    fs.mkdirSync(path.dirname(tempZipPath), { recursive: true });
+                }
+
+                // 1. 將 Base64 寫入暫存 ZIP 檔
+                const buffer = Buffer.from(base64Data, 'base64');
+                fs.writeFileSync(tempZipPath, buffer);
+                
+                // 2. 確保解壓縮的目標資料夾存在
+                if (!fs.existsSync(targetDir)) {
+                    fs.mkdirSync(targetDir, { recursive: true });
+                }
+
+                // 3. 呼叫 python 腳本在遠端進行解壓縮，解壓完畢後自動移除 zip
+                const pythonPath = this.getPythonPath();
+                const escapedZipPath = tempZipPath.replace(/\\/g, '/');
+                const escapedTargetDir = targetDir.replace(/\\/g, '/');
+                
+                const unzipScript = `
+import zipfile
+import os
+try:
+    with zipfile.ZipFile("${escapedZipPath}", 'r') as zip_ref:
+        zip_ref.extractall("${escapedTargetDir}")
+    os.remove("${escapedZipPath}")
+    print("SUCCESS")
+except Exception as e:
+    print("ERROR:", str(e))
+`.trim();
+
+                const { execFile } = require('child_process');
+                execFile(pythonPath, ['-c', unzipScript], (error: any, stdout: string) => {
+                    if (error || stdout.trim().startsWith('ERROR')) {
+                        const errMsg = error ? error.message : stdout.trim();
+                        vscode.window.showErrorMessage(`遠端資料集解壓失敗: ${errMsg}`);
+                        this.panel.webview.postMessage({ command: 'datasetUploadResult', success: false, error: errMsg });
+                    } else {
+                        vscode.window.showInformationMessage(`資料集 ${projectName} 成功同步至雲端沙盒！`);
+                        this.panel.webview.postMessage({ command: 'datasetUploadResult', success: true });
+                    }
+                });
+
+            } catch (e: any) {
+                vscode.window.showErrorMessage(`資料集上傳錯誤: ${e.message}`);
+                this.panel.webview.postMessage({ command: 'datasetUploadResult', success: false, error: e.message });
+            }
+        });
+    }
+
+    /**
      * 初始化遠端沙盒目錄
      */
     private async initializeRemoteSandbox() {
@@ -766,7 +928,7 @@ except Exception as e:
      */
     private async handleCheckEnvironment() {
         let pythonPath = this.context.globalState.get<string>('pythonPath', 'python');
-        const modules = ['cv2', 'mediapipe', 'PIL', 'serial'];
+        const modules = ['cv2', 'mediapipe', 'PIL', 'serial', 'esptool'];
         
         const checkScript = `
 import importlib.util
@@ -1199,7 +1361,13 @@ print(json.dumps(results))
         const terminal = vscode.window.terminals.find(t => t.name === 'Cocoya Execution');
         if (terminal) {
             terminal.show();
-            terminal.sendText('\u0003');
+            // 發送多次 Ctrl+C，第一次停掉電腦端的 Python，第二次以後停掉板子上的程式
+            terminal.sendText('\u0003\u0003\u0003');
+            
+            // 延遲一下再關閉，讓中斷訊號有時間傳出去
+            setTimeout(() => {
+                terminal.dispose();
+            }, 500);
         }
     }
 
@@ -1249,38 +1417,111 @@ print(json.dumps(results))
     }
 
     /**
-     * 執行韌體重置 (UF2 燒錄 + 自動清空 code.py)
+     * 執行韌體重置 (UF2 燒錄 或 Serial 燒錄)
      */
-    private async handleResetFirmware(model: string, shouldClear: boolean = true) {
+    private async handleResetFirmware(model: string, shouldClear: boolean = true, serialPort: string = '') {
+        // [關鍵修正] 燒錄前先關閉所有可能佔用序列埠的 Cocoya 終端機
+        await this.stopAllCocoyaTerminals();
+
         let srcPath: string | undefined;
-        let uf2FileName: string | undefined;
+        let firmwareFileName: string | undefined;
+        let isSerial = model.includes('SERIAL') || model.includes('CAMERA') || model.includes('FACTORY');
+        let flashSegments: { addr: string, path: string }[] = [];
 
         if (model === 'custom') {
             const uris = await vscode.window.showOpenDialog({
                 canSelectMany: false,
-                filters: { 'UF2 Firmware': ['uf2'] },
-                title: 'Select Custom UF2 Firmware'
+                filters: { 'Firmware': ['uf2', 'bin'] },
+                title: 'Select Custom Firmware'
             });
             if (uris && uris[0]) {
-                srcPath = uris[0].fsPath;
-                uf2FileName = path.basename(srcPath);
+                const sPath = uris[0].fsPath;
+                firmwareFileName = path.basename(sPath);
+                if (firmwareFileName.endsWith('.bin')) isSerial = true;
+                flashSegments.push({ addr: '0x0', path: sPath });
+                srcPath = sPath;
             } else return;
         } else {
-            const firmwareDir = path.join(this.context.extensionPath, 'resources', 'firmware', 'MicroPython', model);
+            // --- 關鍵對應：將 UI ID 映射到實際目錄 ---
+            let subDir = 'XIAO_ESP32_S3';
+            if (model.includes('CAMERA')) {
+                subDir = path.join('XIAO_ESP32_S3', 'Sense_microPython');
+            } else if (model.includes('FACTORY')) {
+                subDir = path.join('XIAO_ESP32_S3', 'Sense_Factory');
+            } else if (model.includes('RP2040')) {
+                subDir = 'MakerPi_RP2040';
+            }
+
+            const firmwareDir = path.join(this.context.extensionPath, 'resources', 'firmware', 'MicroPython', subDir);
             if (!fs.existsSync(firmwareDir)) {
                 vscode.window.showErrorMessage(`Firmware directory not found: ${firmwareDir}`);
                 return;
             }
-            const files = fs.readdirSync(firmwareDir);
-            const uf2File = files.find(f => f.endsWith('.uf2'));
-            if (!uf2File) {
-                vscode.window.showErrorMessage('No .uf2 file found in firmware directory.');
-                return;
+
+            // 檢查是否有專案組態檔 (支援多段燒錄)
+            const configPath = path.join(firmwareDir, 'project_config.json');
+            if (isSerial && fs.existsSync(configPath)) {
+                try {
+                    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+                    const projectKey = model.includes('SENSE') ? 'xiao_esp32_sense_factory' : 'xiao_esp32_factory';
+                    const files = config[projectKey];
+                    if (files) {
+                        for (const [addr, name] of Object.entries(files)) {
+                            const fPath = path.join(firmwareDir, name as string);
+                            if (fs.existsSync(fPath)) {
+                                flashSegments.push({ addr, path: fPath });
+                            }
+                        }
+                    }
+                } catch (e) {}
             }
-            srcPath = path.join(firmwareDir, uf2File);
-            uf2FileName = uf2File;
+
+            // 如果沒有組態，退回單一檔案模式
+            if (flashSegments.length === 0) {
+                const files = fs.readdirSync(firmwareDir);
+                if (isSerial) {
+                    const binFile = files.find(f => f.endsWith('.bin'));
+                    if (!binFile) {
+                        vscode.window.showErrorMessage('No .bin file found for serial mode.');
+                        return;
+                    }
+                    flashSegments.push({ addr: '0x0', path: path.join(firmwareDir, binFile) });
+                } else {
+                    const uf2File = files.find(f => f.endsWith('.uf2'));
+                    if (!uf2File) {
+                        vscode.window.showErrorMessage('No .uf2 file found in firmware directory.');
+                        return;
+                    }
+                    flashSegments.push({ addr: 'UF2', path: path.join(firmwareDir, uf2File) });
+                    firmwareFileName = uf2File;
+                }
+            }
         }
 
+        if (isSerial) {
+            // --- B 方案：Serial 模式 (esptool) ---
+            if (!serialPort) {
+                vscode.window.showErrorMessage('Please select a serial port first.');
+                return;
+            }
+
+            const pythonPath = this.getPythonPath();
+            const chip = model.includes('ESP32_S3') ? 'esp32s3' : 'auto';
+            const terminal = vscode.window.createTerminal('Cocoya Firmware Burn');
+            terminal.show();
+            
+            // 構建 esptool 指令，使用現代語法與高速鮑率
+            let cmd = `& "${pythonPath}" -m esptool --chip ${chip} --port ${serialPort} --baud 921600 --before default-reset --after hard-reset write-flash -z --flash-mode dio --flash-freq 80m --flash-size 8MB`;
+            for (const seg of flashSegments) {
+                cmd += ` ${seg.addr} "${seg.path}"`;
+            }
+
+            terminal.sendText(cmd);
+            return;
+        }
+
+        // --- A 方案：UF2 模式 (磁碟複製) ---
+        const uf2File = flashSegments[0];
         let burnTarget: string | null = null;
         const findDisk = (label: string) => {
             try {
@@ -1309,7 +1550,7 @@ print(json.dumps(results))
                 title: `Burning firmware...`,
                 cancellable: false
             }, async (progress) => {
-                const destPath = path.join(burnTarget!, uf2FileName!);
+                const destPath = path.join(burnTarget!, firmwareFileName!);
                 fs.copyFileSync(srcPath!, destPath);
                 
                 if (!shouldClear) {

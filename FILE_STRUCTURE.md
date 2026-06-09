@@ -18,7 +18,9 @@ C:\Workspace\cocoya\
 │       ├── 2026-05-04.md  # 重大修復：Tauri 多視窗關閉攔截與備份隔離
 │       ├── 2026-05-08.md  # [NEW] 建置自動化與 Rust 後端模組化
 │       ├── 2026-05-31.html # [NEW] 系統還原診斷與 Sidecar 架構 #trim 修整
-│       └── 2026-06-04.html # [NEW] 優化專案指南與規範同步
+│       ├── 2026-06-04.html # [NEW] 優化專案指南與規範同步
+│       └── 2026-06-05.html # [NEW] 初始化今日日誌與開發 context
+
 
 ├── ui/                    # 雙模共用前端根目錄 (Vite Project)
 │   ├── index.html         # Webview 與 Tauri 共用入口
@@ -85,10 +87,14 @@ C:\Workspace\cocoya\
 │           ├── file.rs    # 檔案讀寫、備份與鎖定
 │           ├── mcu.rs     # 硬體通訊、韌體與序列埠
 │           └── app.rs     # 視窗控制與系統資訊
-├── resources/             # 延伸模組靜態資源
-│   ├── deploy_mcu.py      # [ENHANCED] 強化擦除與監控邏輯
-│   ├── firmware/          # 韌體資源庫
-│   └── dataset_manager/   # [NEW] Dataset Runtime Sidecar (Python)
+│   ├── firmware/          # MCU 韌體資源
+│   │   └── MicroPython/   # MicroPython 韌體
+│   │       ├── MakerPi_RP2040/   # 內含 .uf2
+│   │       └── XIAO_ESP32_S3/    # 內含 .bin, .uf2, 及 project_config.json
+│   │           ├── Sense_microPython/  # 具備相機支援的 MicroPython
+│   │           └── Sense_Factory/      # 原廠出廠 C++ 韌體 (支援多段燒錄)
+│   ├── deploy_mcu.py      # [OPTIMIZED] 具備硬體感知與分塊寫入的部署工具
+│   └── extension_icon.png # 插件圖示
 │       ├── dataset_sidecar.py   # Sidecar 主進程與指令解析
 │       ├── camera_service.py    # OpenCV 攝影機預覽與擷取服務
 │       ├── dataset_io.py        # 資料集檔案存取與打包工具

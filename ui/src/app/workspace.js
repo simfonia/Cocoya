@@ -58,7 +58,10 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
 
             const originalMirror = this.minimap.mirror.bind(this.minimap);
             this.minimap.mirror = (event) => {
-                if (this.minimap._isPaused) return;
+                // [關鍵修正] 如果正在輸入文字，暫停 Minimap 同步，避免 Minimap 渲染奪走 WidgetDiv 焦點
+                const isInputActive = Blockly.WidgetDiv && Blockly.WidgetDiv.isVisible();
+                if (this.minimap._isPaused || isInputActive) return;
+                
                 try {
                     if (event.type !== Blockly.Events.BLOCK_DELETE && event.blockId && !this.workspace.getBlockById(event.blockId)) return;
                     originalMirror(event);
@@ -156,12 +159,10 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
      */
     setupWorkspaceListeners: function() {
         // --- BUG FIX: 解決積木拖拽粘性問題 (Sticky Drag) ---
-        // 當滑鼠從外部重新進入視窗時，如果沒按著按鍵，強制終止 Blockly 的所有手勢
         window.addEventListener('mouseenter', (e) => {
             if (e.buttons === 0 && this.workspace) {
                 const gesture = this.workspace.getGesture(e);
                 if (gesture) gesture.dispose();
-                // 強制結束所有可能的手勢狀態
                 if (Blockly.Gesture && Blockly.Gesture.allGestures_) {
                     Blockly.Gesture.allGestures_.forEach(g => g.dispose());
                 }
@@ -169,8 +170,13 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         });
 
         this.workspace.addChangeListener((event) => {
+            // [關鍵修正] 如果正在打字，立即跳過所有會影響焦點或重繪的非必要動作
+            const isInputActive = Blockly.WidgetDiv && Blockly.WidgetDiv.isVisible();
+            
             if (event.type === 'selected' || event.type === Blockly.Events.SELECTED) {
-                if (window.CocoyaUI) window.CocoyaUI.syncSelection(event.newElementId);
+                if (window.CocoyaUI && !isInputActive) {
+                    window.CocoyaUI.syncSelection(event.newElementId);
+                }
             }
 
             if (this.isInitializing || event.isUiEvent) return;
@@ -198,6 +204,14 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
      */
     triggerBlockStateUpdate: function() {
         if (this.stateUpdateTimer) clearTimeout(this.stateUpdateTimer);
+        
+        // [關鍵修正] 如果正在打字，延後檢查，避免 Enabled/Disabled 狀態切換導致積木重繪而丟失焦點
+        const isInputActive = Blockly.WidgetDiv && Blockly.WidgetDiv.isVisible();
+        if (isInputActive) {
+            this.stateUpdateTimer = setTimeout(() => this.triggerBlockStateUpdate(), 500);
+            return;
+        }
+
         this.stateUpdateTimer = setTimeout(() => {
             Blockly.Events.disable();
             try {
@@ -243,9 +257,10 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
 
     /**
      * [SYNC] 立即執行程式碼產出並同步 lastCleanCode (修復欄位焦點未更新 Bug)
+     * @param {boolean} forceUI 是否無視輸入狀態強制更新 UI (預覽與高亮)
      * @returns {string} 清理後的程式碼
      */
-    triggerCodeUpdateSync: function() {
+    triggerCodeUpdateSync: function(forceUI = false) {
         try {
             if (!this.workspace || typeof Blockly === 'undefined') return this.lastCleanCode;
             
@@ -254,9 +269,16 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             code = code.replace(/^[a-zA-Z_][a-zA-Z0-9_]* = None(  # ID:.*)?\n/mg, '');
             code = code.replace(/\u0001ID:.*?\u0002/g, '');
             
+            const isCodeChanged = code.trim() !== this.lastCleanCode;
             this.lastCleanCode = code.trim();
+
             if (window.CocoyaUI && window.CocoyaUI.renderPythonPreview) {
-                window.CocoyaUI.renderPythonPreview(this.lastCleanCode);
+                // [關鍵修正] 保護輸入焦點，除非是強制更新 (例如點擊執行按鈕)
+                const isInputActive = Blockly.WidgetDiv && Blockly.WidgetDiv.isVisible();
+                
+                if (forceUI || (!isInputActive && isCodeChanged)) {
+                    window.CocoyaUI.renderPythonPreview(this.lastCleanCode);
+                }
             }
             return this.lastCleanCode;
         } catch (e) {

@@ -81,7 +81,7 @@ import importlib.util
 import json
 import sys
 
-modules = ['cv2', 'mediapipe', 'PIL', 'serial']
+modules = ['cv2', 'mediapipe', 'PIL', 'serial', 'esptool']
 results = {}
 for m in modules:
     results[m] = importlib.util.find_spec(m) is not None
@@ -109,6 +109,7 @@ print(json.dumps(results))
         results.insert("mediapipe".to_string(), false);
         results.insert("PIL".to_string(), false);
         results.insert("serial".to_string(), false);
+        results.insert("esptool".to_string(), false);
         Ok(results)
     }
 }

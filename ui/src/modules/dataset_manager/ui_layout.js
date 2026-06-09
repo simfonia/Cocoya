@@ -487,6 +487,18 @@ function refreshDynamicPanels() {
     const isImage = projectType === 'image' || projectType === 'object_detection' || projectType === 'line_following';
     const isLive = sourceMode === 'live';
 
+    const isCloudAi = document.getElementById('cloud-ai-toggle')?.checked || false;
+
+    // 控制遠端環境診斷面板與上傳按鈕
+    const diagArea = modal.querySelector('#dataset-cloud-diagnostic-area');
+    const cloudUploadBtn = modal.querySelector('#dataset-cloud-upload-btn');
+    if (diagArea) {
+        diagArea.style.display = (isCloudAi && isImage) ? 'block' : 'none';
+    }
+    if (cloudUploadBtn) {
+        cloudUploadBtn.style.display = (isCloudAi && isImage && sourceMode === 'file') ? 'block' : 'none';
+    }
+
     // 1. 更新匯入/採集區域顯示
     modal.querySelector('#dataset-import-area-table').style.display = (isImage || isLive) ? 'none' : 'block';
     modal.querySelector('#dataset-import-area-image').style.display = (isImage && !isLive) ? 'block' : 'none';
@@ -760,6 +772,90 @@ function bindModalEvents(modal) {
         dirImportBtn.onclick = () => handleDirectoryImport();
     }
 
+    const cloudUploadBtn = modal.querySelector('#dataset-cloud-upload-btn');
+    const cloudZipInput = modal.querySelector('#dataset-cloud-zip-input');
+    if (cloudUploadBtn && cloudZipInput) {
+        cloudUploadBtn.onclick = () => cloudZipInput.click();
+        cloudZipInput.onchange = async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const status = modal.querySelector('#dataset-import-status');
+            if (status) status.textContent = '📦 正在讀取本地 ZIP 檔案...';
+
+            try {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const arrayBuffer = reader.result;
+                    const bytes = new Uint8Array(arrayBuffer);
+                    
+                    // 使用分塊轉換避免大數組的 Call Stack Exceeded 錯誤
+                    let base64 = '';
+                    const chunk = 8192;
+                    for (let i = 0; i < bytes.length; i += chunk) {
+                        base64 += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+                    }
+                    base64 = btoa(base64);
+
+                    if (status) status.textContent = '☁️ 正在上傳至遠端沙盒並解壓...';
+                    const projectName = getFormValue('projectName') || 'dataset';
+                    window.CocoyaBridge.send('datasetUploadArchive', {
+                        zipData: base64,
+                        projectName: projectName
+                    });
+                };
+                reader.readAsArrayBuffer(file);
+            } catch (err) {
+                if (status) status.textContent = `❌ 讀取失敗: ${err.message}`;
+            }
+        };
+    }
+
+    const cloudDiagnoseBtn = modal.querySelector('#dataset-cloud-diagnose-btn');
+    if (cloudDiagnoseBtn) {
+        cloudDiagnoseBtn.onclick = () => {
+            const diagResult = modal.querySelector('#dataset-cloud-diagnostic-result');
+            if (diagResult) diagResult.innerHTML = '正在進行遠端環境診斷...';
+            window.CocoyaBridge.send('checkRemoteEnvironment', {});
+        };
+    }
+
+    // 監聽 Extension 回傳的結果
+    const handleBridgeMessage = (msg) => {
+        const diagResult = modal.querySelector('#dataset-cloud-diagnostic-result');
+        const status = modal.querySelector('#dataset-import-status');
+
+        if (msg.command === 'checkRemoteEnvironmentResult') {
+            if (diagResult) {
+                if (msg.success) {
+                    const statusData = msg.status;
+                    let html = `<div style="margin-top: 4px;">`;
+                    html += `<strong>GPU</strong>: ${statusData.cudaAvailable ? `<span style="color:#4CAF50;">可用</span> (${statusData.gpuName})` : '<span style="color:#F44336;">無</span>'}<br>`;
+                    html += `<strong>Docker</strong>: ${statusData.dockerRunning ? '<span style="color:#4CAF50;">正常</span>' : '<span style="color:#F44336;">未啟動</span>'}<br>`;
+                    html += `<strong>GPU Passthrough</strong>: ${statusData.gpuPassthrough ? '<span style="color:#4CAF50;">支援 (--gpus)</span>' : '<span style="color:#F44336;">不支援</span>'}`;
+                    
+                    if (statusData.errors && statusData.errors.length > 0) {
+                        html += `<div style="color: #FF9800; margin-top: 4px; font-size: 10px;">⚠️ 診斷警告:<br>- ${statusData.errors.join('<br>- ')}</div>`;
+                    }
+                    html += `</div>`;
+                    diagResult.innerHTML = html;
+                } else {
+                    diagResult.innerHTML = `<span style="color: #F44336;">❌ 診斷失敗: ${msg.error}</span>`;
+                }
+            }
+        } else if (msg.command === 'datasetUploadResult') {
+            if (status) {
+                if (msg.success) {
+                    status.textContent = '✅ 資料集已成功上傳並在遠端解壓縮！';
+                    if (cloudZipInput) cloudZipInput.value = '';
+                } else {
+                    status.textContent = `❌ 上傳失敗: ${msg.error}`;
+                }
+            }
+        }
+    };
+    window.CocoyaBridge.onMessage(handleBridgeMessage);
+
     // 輔助函式：根據選取的專案類型動態更新來源模式 (Mode) 的選項
     function updateSourceModeOptions(projectType) {
         const sourceSelect = modal.querySelector('[name="sourceMode"]');
@@ -908,6 +1004,8 @@ function createModal() {
                     <div id="dataset-import-area-image" class="dataset-import-area" style="display: none;">
                         <button type="button" id="dataset-dir-import-btn" class="dataset-secondary-btn" style="width: 100%">選擇影像資料夾</button>
                         <input type="file" id="dataset-dir-input" webkitdirectory style="display: none;">
+                        <button type="button" id="dataset-cloud-upload-btn" class="dataset-secondary-btn" style="width: 100%; margin-top: 8px; background: #9c27b0; color: white; border: none; display: none;">☁️ 上傳本地資料集 (ZIP)</button>
+                        <input type="file" id="dataset-cloud-zip-input" accept=".zip" style="display: none;">
                     </div>
 
                     <div id="dataset-import-status" style="margin-top: 8px; font-size: 11px; color: #FE2F89; min-height: 15px;"></div>
@@ -924,6 +1022,16 @@ function createModal() {
                         <span>描述 (Description)</span>
                         <textarea name="description" rows="3" placeholder="專案詳細描述..."></textarea>
                     </label>
+
+                    <div id="dataset-cloud-diagnostic-area" style="display: none; margin-top: 12px; padding: 10px; background: #fdf6fb; border: 1px solid #e1bee7; border-radius: 6px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <span style="font-size: 12px; font-weight: bold; color: #9c27b0;">☁️ 遠端環境</span>
+                            <button type="button" id="dataset-cloud-diagnose-btn" class="dataset-small-btn" style="margin: 0; background: #9c27b0; color: white; border: none; padding: 2px 6px;">執行診斷</button>
+                        </div>
+                        <div id="dataset-cloud-diagnostic-result" style="font-size: 11px; color: #555; line-height: 1.4;">
+                            請點擊「執行診斷」檢查 GPU 與 Docker 環境。
+                        </div>
+                    </div>
                 </section>
 
                 <section class="dataset-panel dataset-schema-panel">

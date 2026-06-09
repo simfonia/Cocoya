@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>工作日誌 - 2026-06-07</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #FE2F89; border-bottom: 2px solid #FE2F89; }
+        h2 { color: #444; margin-top: 30px; }
+        .task-list { list-style: none; padding: 0; }
+        .task-item { margin-bottom: 10px; padding: 10px; background: #f9f9f9; border-left: 5px solid #ccc; }
+        .task-done { border-left-color: #4CAF50; }
+        .task-pending { border-left-color: #FF9800; }
+        .tech-deep-dive { background: #eee; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        code { background: #ddd; padding: 2px 5px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>工作日誌 - 2026-06-07</h1>
+    
+    <h2>今日進度總覽</h2>
+    <ul class="task-list">
+        <li class="task-item task-done"><strong>日誌修正與現況對齊</strong>: 修正 2026-06-05 之誤記，確認「遠端環境診斷」偵測失敗；同時確認「ZIP 打包」、「清除資料」及「MicroPython 範例專案測試」均已完成並更新紀錄。</li>
+        <li class="task-item task-done"><strong>實作重置韌體 B 方案 (ESP32-S3 Serial 模式)</strong>: 成功安裝 <code>esptool</code>，並完成 VSIX 與 Tauri 雙端的環境診斷、UI 選單對接與核心燒錄邏輯實作。</li>
+        <li class="task-item task-done"><strong>支援 Sense 多段韌體燒錄 (Factory Mode)</strong>: 實作 <code>project_config.json</code> 解析邏輯，支援一鍵恢復具備相機功能的 C++ 原廠韌體。</li>
+        <li class="task-item task-done"><strong>升級部署工具與硬體自動優化</strong>: 實作「主動式硬體偵測」(Active Detection)，針對 ESP32-S3 採用 128-byte 穩定分塊寫入，針對 RP2040 採用 1024-byte 極速模式。</li>
+        <li class="task-item task-done"><strong>實作互動式終端機 (Interactive REPL)</strong>: 讓 Cocoya 終端機能夠雙向通訊，使用者可直接輸入指令與板子互動。</li>
+        <li class="task-item task-done"><strong>徹底修復 UI 失焦 Bug (Silence Mode)</strong>: 透過在打字期間禁用 Minimap 同步、預覽渲染與孤兒檢查，解決了難纏的「打字即失焦」問題。</li>
+    </ul>
+
+    <h2>技術深挖 (Technical Deep Dive)</h2>
+    <div class="tech-deep-dive">
+        <h3>1. 智慧硬體同步 (Hardware-Aware Sync)</h3>
+        <p>為解決 ESP32-S3 Native USB 緩衝溢出問題，<code>deploy_mcu.py</code> 改採主動查詢 <code>sys.platform</code> 機制。精準識別硬體後，自動分配 128/1024 bytes 傳輸塊與 0.8/0.1s 同步延遲，兼顧了 S3 的極致穩定性與 RP2040 的高效率。</p>
+        <h3>2. UI 焦點保護機制：Silence Mode</h3>
+        <p>真兇為 Minimap 同步與 Orphan Check 頻繁觸發積木狀態變更，導致 <code>WidgetDiv</code> 單例輸入框關閉。透過判斷 <code>isVisible()</code> 暫停所有背景 UI 任務，達成了流暢的打字體驗，並在點擊「執行」時強制同步視覺狀態。</p>
+        <h3>3. 多檔案燒錄組態化</h3>
+        <p>針對 S3 Sense Factory 韌體，實作了基於 <code>project_config.json</code> 的多段燒錄邏輯（對齊 0x0, 0x8000, 0xe000, 0x10000），並將 <code>esptool</code> 指令全面橫線化（Dash-syntax）以消除棄用警告。</p>
+    </div>
+
+    <h2>下次啟動方向 (Next Steps)</h2>
+    <ul>
+        <li>實機測試具備相機支援之 MicroPython 韌體的 AI 積木控制（OpenCV/MediaPipe 串接）。</li>
+        <li>處理 macOS/Linux 的序列埠 Friendly Name 顯示優化。</li>
+        <li>待網路恢復後，繼續 Phase 7 的雲端 AI 對接任務。</li>
+    </ul>
+</body>
+</html>
