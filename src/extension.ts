@@ -16,10 +16,12 @@ class DatasetSidecarManager {
     private callbacks: Map<string, (data: any) => void> = new Map();
     private stdoutBuffer: string = ''; 
     public onEvent: ((event: string, data: any) => void) | null = null;
+    private outputChannel: vscode.OutputChannel;
 
     constructor(context: vscode.ExtensionContext, pythonPath: string) {
         this.context = context;
         this.pythonPath = pythonPath;
+        this.outputChannel = vscode.window.createOutputChannel("Cocoya Sidecar");
     }
 
     /**
@@ -31,6 +33,10 @@ class DatasetSidecarManager {
         const scriptPath = vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'dataset_manager', 'dataset_sidecar.py').fsPath;
         const workingDir = vscode.Uri.joinPath(this.context.extensionUri, 'resources', 'dataset_manager').fsPath;
 
+        this.outputChannel.appendLine(`[Sidecar Manager] Starting sidecar process...`);
+        this.outputChannel.appendLine(`[Sidecar Manager] Python Path: ${this.pythonPath}`);
+        this.outputChannel.appendLine(`[Sidecar Manager] Script Path: ${scriptPath}`);
+
         try {
             // 使用 spawn 以便進行長期的 stdin/stdout 通訊
             this.process = spawn(this.pythonPath, [scriptPath], {
@@ -39,7 +45,9 @@ class DatasetSidecarManager {
             });
 
             this.process.stdout?.on('data', (data) => {
-                this.stdoutBuffer += data.toString();
+                const raw = data.toString();
+                this.outputChannel.append(`[Sidecar stdout] ${raw}`);
+                this.stdoutBuffer += raw;
                 const lines = this.stdoutBuffer.split('\n');
                 
                 // 保留最後一行（可能不完整），其餘皆為完整行
@@ -70,6 +78,16 @@ class DatasetSidecarManager {
 
             this.process.stderr?.on('data', (data) => {
                 const str = data.toString().trim();
+                if (!str) return;
+
+                this.outputChannel.appendLine(`[Sidecar stderr] ${str}`);
+
+                // 忽略或降級常見的函式庫警告雜訊
+                if (str.includes('DeprecationWarning') || str.includes('UserWarning')) {
+                    console.warn('[Sidecar Warning]', str);
+                    return;
+                }
+
                 if (str.includes('[Sidecar Log]')) {
                     console.log(str);
                 } else {
@@ -78,12 +96,14 @@ class DatasetSidecarManager {
             });
 
             this.process.on('close', (code) => {
+                this.outputChannel.appendLine(`[Sidecar Manager] Process exited with code ${code}`);
                 console.log(`[Sidecar] Process exited with code ${code}`);
                 this.process = null;
             });
 
             return true;
-        } catch (e) {
+        } catch (e: any) {
+            this.outputChannel.appendLine(`[Sidecar Manager] Spawn failed: ${e.message || e}`);
             console.error('[Sidecar] Spawn failed', e);
             return false;
         }
@@ -94,7 +114,17 @@ class DatasetSidecarManager {
      */
     public send(command: string, data: any, callback?: (response: any) => void) {
         if (!this.process) {
-            if (!this.start()) return;
+            if (!this.start()) {
+                this.outputChannel.appendLine(`[Sidecar Manager] Failed to start sidecar, command "${command}" aborted.`);
+                if (callback) {
+                    callback({
+                        type: 'response',
+                        success: false,
+                        error: '無法啟動本地 Python Sidecar 服務。請確認 VS Code 中的 Python 環境路徑設定正確，且已安裝 Python。'
+                    });
+                }
+                return;
+            }
         }
 
         const requestId = data.requestId || Math.random().toString(36).substring(7);
@@ -102,7 +132,8 @@ class DatasetSidecarManager {
             this.callbacks.set(requestId, callback);
         }
 
-        const msg = { command, requestId, ...data };
+        const msg = Object.assign({ command, requestId }, data);
+        this.outputChannel.appendLine(`[Sidecar Manager] Sending command "${command}" (ID: ${requestId})`);
         this.process?.stdin?.write(JSON.stringify(msg) + '\n');
     }
 
@@ -389,10 +420,7 @@ export class CocoyaManager {
                         requestId: message.requestId // 確保 ID 跟著下去
                     }, (resp) => {
                         console.log(`[Host] Capture result received for ID: ${resp.requestId}`);
-                        this.panel.webview.postMessage({ 
-                            command: 'datasetCaptureResult', 
-                            ...resp 
-                        });
+                        this.panel.webview.postMessage(Object.assign({ command: 'datasetCaptureResult' }, resp));
                     });
                     break;
                 case 'datasetExport':
@@ -402,7 +430,7 @@ export class CocoyaManager {
                     await this.handleDatasetUploadArchive(message);
                     break;
                 case 'checkRemoteEnvironment':
-                    await this.handleCheckRemoteEnvironment();
+                    await this.handleCheckRemoteEnvironment(message);
                     break;
                 case 'pickFolder':
                     this.handlePickFolder(message);
@@ -434,10 +462,7 @@ export class CocoyaManager {
             this.panel.webview.postMessage({ 
                 command: 'pickFolderResponse', 
                 requestId: message.requestId, 
-                result: {
-                    path: folderPath,
-                    ...result
-                } 
+                result: Object.assign({ path: folderPath }, result) 
             });
         } else {
             this.panel.webview.postMessage({ 
@@ -677,167 +702,127 @@ except Exception as e:
      * 處理雲端 AI 模式切換
      */
     private async handleSetCloudAiMode(enabled: boolean) {
-        const isRemote = vscode.env.remoteName !== undefined;
-        if (enabled && !isRemote) {
-            vscode.window.showWarningMessage(
-                this.t('MSG_CLOUD_AI_REQUIRES_REMOTE') || 
-                'Cloud AI mode requires a Remote SSH connection. Please connect to your server first.'
-            );
-            this.panel.webview.postMessage({ command: 'cloudAiModeStatus', enabled: false });
-            return;
-        }
-
+        // 方案 C：本地 Sidecar 託管 SSH 連線，不再需要 Remote-SSH 環境
         this.cloudAiEnabled = enabled;
         this.context.globalState.update('cloudAiEnabled', enabled);
-
-        if (enabled) {
-            await this.initializeRemoteSandbox();
-        }
+        this.panel.webview.postMessage({ command: 'cloudAiModeStatus', enabled });
     }
 
     /**
      * 處理遠端環境診斷 (CUDA/Docker)
+     * 方案 C：透過本地 Python Sidecar (paramiko) 建立 SSH 連線，在遠端主機執行診斷指令
      */
-    private async handleCheckRemoteEnvironment() {
-        if (!vscode.env.remoteName) {
+    private async handleCheckRemoteEnvironment(message: any) {
+        const { host, port, username, password } = message;
+
+        if (!host || !username || !password) {
             this.panel.webview.postMessage({
                 command: 'checkRemoteEnvironmentResult',
                 success: false,
-                error: 'Not in remote SSH environment'
+                error: '缺少 SSH 連線資訊，請重新輸入主機、帳號與密碼。'
             });
             return;
         }
 
-        const result = {
-            cudaAvailable: false,
-            gpuName: '',
-            dockerRunning: false,
-            gpuPassthrough: false,
-            errors: [] as string[]
-        };
-
-        const executeCommand = (cmd: string): Promise<{ stdout: string; stderr: string; error: any }> => {
-            return new Promise((resolve) => {
-                // 合併常見的 Linux 二進位路徑到 PATH，解決非登入式 Shell PATH 缺失的問題
-                const env = Object.assign({}, process.env);
-                const isWindows = process.platform === 'win32';
-                if (!isWindows) {
-                    const extraPaths = '/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/cuda/bin:/snap/bin';
-                    env.PATH = env.PATH ? `${env.PATH}:${extraPaths}` : extraPaths;
-                }
-                exec(cmd, { env }, (error, stdout, stderr) => {
-                    resolve({ stdout, stderr, error });
+        this.sidecar.start();
+        this.sidecar.send('checkRemoteEnvironment', {
+            host,
+            port: port || 22,
+            username,
+            password
+        }, (resp) => {
+            // resp 包含 Sidecar 回傳的所有欄位（success, status, error 等）
+            if (resp.success) {
+                this.panel.webview.postMessage({
+                    command: 'checkRemoteEnvironmentResult',
+                    success: true,
+                    status: resp.status
                 });
-            });
-        };
-
-        // 1. 偵測 GPU (nvidia-smi)
-        const nvidiaSmi = await executeCommand('nvidia-smi --query-gpu=name --format=csv,noheader');
-        console.log('[CheckEnvironment] nvidia-smi result:', nvidiaSmi.error, nvidiaSmi.stdout, nvidiaSmi.stderr);
-        if (!nvidiaSmi.error) {
-            result.cudaAvailable = true;
-            result.gpuName = nvidiaSmi.stdout.trim() || 'NVIDIA GPU';
-        } else {
-            const detail = nvidiaSmi.error ? nvidiaSmi.error.message : nvidiaSmi.stderr;
-            result.errors.push(`無法偵測到 NVIDIA GPU。詳情: ${detail.trim()}`);
-        }
-
-        // 2. 偵測 Docker (docker info)
-        const dockerInfo = await executeCommand('docker info');
-        console.log('[CheckEnvironment] docker info result:', dockerInfo.error, dockerInfo.stdout, dockerInfo.stderr);
-        if (!dockerInfo.error) {
-            result.dockerRunning = true;
-        } else {
-            const detail = dockerInfo.error ? dockerInfo.error.message : dockerInfo.stderr;
-            result.errors.push(`Docker 服務未執行。詳情: ${detail.trim()}`);
-        }
-
-        // 3. 偵測 GPU Container Toolkit (--gpus)
-        const dockerHelp = await executeCommand('docker run --help');
-        console.log('[CheckEnvironment] docker run --help result:', dockerHelp.error, dockerHelp.stdout, dockerHelp.stderr);
-        if (!dockerHelp.error && dockerHelp.stdout.includes('--gpus')) {
-            result.gpuPassthrough = true;
-        } else {
-            const detail = dockerHelp.error ? dockerHelp.error.message : dockerHelp.stderr;
-            result.errors.push(`未偵測到 Docker --gpus 參數支援。詳情: ${detail.trim()}`);
-        }
-
-        this.panel.webview.postMessage({
-            command: 'checkRemoteEnvironmentResult',
-            success: true,
-            status: result
+            } else {
+                this.panel.webview.postMessage({
+                    command: 'checkRemoteEnvironmentResult',
+                    success: false,
+                    error: resp.error || 'SSH 診斷失敗'
+                });
+            }
         });
     }
 
+    private uploadBuffers: Map<string, Buffer[]> = new Map();
+
     /**
-     * 處理資料集上傳與遠端 python 解壓
+     * 處理資料集上傳（支援分塊傳輸）
+     * 方案 C：本地組裝 ZIP 後，交由本地 Python Sidecar (paramiko) 透過 SFTP 上傳至遠端並解壓
      */
     private async handleDatasetUploadArchive(message: any) {
-        const base64Data = message.zipData;
-        const projectName = message.projectName || 'dataset';
-        
-        if (!vscode.env.remoteName) {
-            vscode.window.showWarningMessage('目前非遠端 SSH 環境，無需上傳資料集。');
-            this.panel.webview.postMessage({ command: 'datasetUploadResult', success: false, error: 'Not in remote environment' });
+        const { fileId, chunkIndex, totalChunks, zipDataChunk, projectName, isLast,
+                host, port, username, password } = message;
+
+        if (!host || !username || !password) {
+            this.panel.webview.postMessage({
+                command: 'datasetUploadResult',
+                success: false,
+                error: '缺少 SSH 連線資訊，請重新開啟資料集管理員並輸入帳密。'
+            });
             return;
         }
 
-        const machineId = this.getMachineId();
-        const homedir = os.homedir();
-        const targetDir = path.join(homedir, 'cocoya_ai', 'sessions', machineId, 'dataset', projectName);
-        const tempZipPath = path.join(homedir, 'cocoya_ai', 'sessions', machineId, 'dataset', `${projectName}_temp.zip`);
+        // 初始化或獲取本地緩衝區
+        if (!this.uploadBuffers.has(fileId)) {
+            this.uploadBuffers.set(fileId, new Array(totalChunks));
+        }
+
+        const chunks = this.uploadBuffers.get(fileId)!;
+        chunks[chunkIndex] = Buffer.from(zipDataChunk, 'base64');
+
+        // 若不是最後一塊，繼續等待
+        if (!isLast) return;
+
+        // 最後一塊到達，開始在本地組裝 ZIP
+        const tempDir = path.join(this.context.extensionPath, 'temp_scripts');
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+        const localZipPath = path.join(tempDir, projectName + '_upload.zip');
 
         vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: `正在上傳並在遠端解壓縮資料集 ${projectName}...`,
+            title: '正在準備上傳資料集至雲端伺服器...',
             cancellable: false
         }, async (progress) => {
             try {
-                // 確保目標資料夾存在
-                if (!fs.existsSync(path.dirname(tempZipPath))) {
-                    fs.mkdirSync(path.dirname(tempZipPath), { recursive: true });
-                }
+                // 拼湊所有片段，寫入本地暫存 ZIP
+                const completeBuffer = Buffer.concat(chunks);
+                fs.writeFileSync(localZipPath, completeBuffer);
+                this.uploadBuffers.delete(fileId);
 
-                // 1. 將 Base64 寫入暫存 ZIP 檔
-                const buffer = Buffer.from(base64Data, 'base64');
-                fs.writeFileSync(tempZipPath, buffer);
-                
-                // 2. 確保解壓縮的目標資料夾存在
-                if (!fs.existsSync(targetDir)) {
-                    fs.mkdirSync(targetDir, { recursive: true });
-                }
+                progress.report({ message: '正在透過 SFTP 上傳至遠端...' });
 
-                // 3. 呼叫 python 腳本在遠端進行解壓縮，解壓完畢後自動移除 zip
-                const pythonPath = this.getPythonPath();
-                const escapedZipPath = tempZipPath.replace(/\\/g, '/');
-                const escapedTargetDir = targetDir.replace(/\\/g, '/');
-                
-                const unzipScript = `
-import zipfile
-import os
-try:
-    with zipfile.ZipFile("${escapedZipPath}", 'r') as zip_ref:
-        zip_ref.extractall("${escapedTargetDir}")
-    os.remove("${escapedZipPath}")
-    print("SUCCESS")
-except Exception as e:
-    print("ERROR:", str(e))
-`.trim();
-
-                const { execFile } = require('child_process');
-                execFile(pythonPath, ['-c', unzipScript], (error: any, stdout: string) => {
-                    if (error || stdout.trim().startsWith('ERROR')) {
-                        const errMsg = error ? error.message : stdout.trim();
-                        vscode.window.showErrorMessage(`遠端資料集解壓失敗: ${errMsg}`);
-                        this.panel.webview.postMessage({ command: 'datasetUploadResult', success: false, error: errMsg });
-                    } else {
-                        vscode.window.showInformationMessage(`資料集 ${projectName} 成功同步至雲端沙盒！`);
+                // 委託本地 Python Sidecar 透過 SFTP 上傳並在遠端解壓
+                this.sidecar.start();
+                this.sidecar.send('uploadDataset', {
+                    host,
+                    port: port || 22,
+                    username,
+                    password,
+                    projectName,
+                    localZipPath: localZipPath.replace(/\\/g, '/')
+                }, (resp) => {
+                    if (resp.success) {
+                        vscode.window.showInformationMessage('資料集 ' + projectName + ' 已成功上傳至雲端伺服器！');
                         this.panel.webview.postMessage({ command: 'datasetUploadResult', success: true });
+                    } else {
+                        vscode.window.showErrorMessage('上傳失敗: ' + (resp.error || '原因未知'));
+                        this.panel.webview.postMessage({
+                            command: 'datasetUploadResult',
+                            success: false,
+                            error: resp.error || '上傳失敗'
+                        });
                     }
                 });
 
             } catch (e: any) {
-                vscode.window.showErrorMessage(`資料集上傳錯誤: ${e.message}`);
+                vscode.window.showErrorMessage('資料集上傳錯誤: ' + e.message);
                 this.panel.webview.postMessage({ command: 'datasetUploadResult', success: false, error: e.message });
             }
         });

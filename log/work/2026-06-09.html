@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>工作日誌 - 2026-06-09</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 20px; }
+        h1 { color: #FE2F89; border-bottom: 2px solid #FE2F89; }
+        h2 { color: #444; margin-top: 30px; }
+        .task-list { list-style: none; padding: 0; }
+        .task-item { margin-bottom: 10px; padding: 10px; background: #f9f9f9; border-left: 5px solid #ccc; }
+        .task-done { border-left-color: #4CAF50; }
+        .task-pending { border-left-color: #FF9800; }
+        .tech-deep-dive { background: #eee; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        code { background: #ddd; padding: 2px 5px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>工作日誌 - 2026-06-09</h1>
+    
+    <h2>今日進度總覽</h2>
+    <ul class="task-list">
+        <li class="task-item task-pending"><strong>Phase 7: Cloud AI (NGX Spark) 專項對接啟動</strong>: 結束硬體優化階段，重新將研發重點轉向雲端訓練。</li>
+        <li class="task-item task-pending"><strong>遠端環境診斷偵錯 (checkRemoteEnvironment)</strong>: 分析為何診斷指令在遠端 SSH 環境下無法偵測到 GPU 與 Docker。</li>
+        <li class="task-item task-pending"><strong>Base64 分塊傳輸機制實作</strong>: 規劃並開發本地資料集 ZIP 透過 Bridge 上傳至遠端主機的穩定流程。</li>
+    </ul>
+
+    <h2>技術深挖 (Technical Deep Dive)</h2>
+    <div class="tech-deep-dive">
+        <p>尚未有深度紀錄。今日將重點研究 <code>Remote-SSH</code> 下的 Shell 環境變數繼承問題。</p>
+    </div>
+
+    <h2>下次啟動方向 (Next Steps)</h2>
+    <ul>
+        <li>測試遠端主機的 <code>docker run --gpus all</code> 權限。</li>
+        <li>實作 Webview 端的分塊讀檔與 Base64 轉換。</li>
+    </ul>
+</body>
+</html>

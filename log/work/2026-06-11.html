@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>Cocoya 工作日誌 2026-06-11</title></head>
+<body>
+<h1>2026-06-11 方案C後端閉環完成</h1>
+<h2>本次異動</h2>
+<ul>
+  <li>[完成] 抑制 Sidecar 警告雜訊 (dataset_sidecar.py) - 消除 paramiko 的 CryptographyDeprecationWarning 雜訊</li>
+  <li>[完成] 優化 Extension 訊息過濾 (extension.ts) - 將 Python 警告降級為 console.warn，避免誤導為 [Sidecar Error]</li>
+  <li>[完成] 優化 F5 啟動配置 (.vscode/launch.json) - 移除 Remote 選項，直跳本地開發</li>
+  <li>[完成] 移除前端「變更帳密」按鈕 (ui/src/modules/dataset_manager/ui_layout.js) - 避免學生誤操作</li>
+  <li>[完成] extension.ts handleSetCloudAiMode: 移除 Remote-SSH 強制前置檢查，方案C不需 vscode-server</li>
+  <li>[完成] extension.ts handleCheckRemoteEnvironment: 改寫為 this.sidecar.send(checkRemoteEnvironment, sshConfig)</li>
+  <li>[完成] extension.ts handleDatasetUploadArchive: 本地組合 ZIP 後委託 Sidecar 透過 SFTP 上傳並解壓</li>
+  <li>[修正] 移除 extension.ts 所有 spread operator，改用 Object.assign（共 3 處）</li>
+  <li>[修正] dataset_sidecar.py unzip_cmd 改為單行字串拼接，避免多行 bash 誤解析</li>
+  <li>[建置] TypeScript 編譯 (npm run compile) 與 Vite build (npm run build) 均無錯誤</li>
+</ul>
+<h2>技術深挖</h2>
+<p>SSH exec_command 的 unzip_cmd 必須是單行指令。triple-quote 多行字串在 bash 中換行被視為命令結束符，導致 python3 -c 只接收到第一行而失敗。改用單行字串拼接後，bash 能完整解析整條命令。</p>
+<h2>本次異動 (第二階段 - 問題修復)</h2>
+<ul>
+  <li>[完成] 解決切換 Cloud AI 模式無 SSH 輸入 UI 問題：將 SSH 帳密管理及對話框展示移植到全域 <code>window.CocoyaUI</code>。當工具列 Cloud AI 切換啟用時，強制彈出輸入 UI；若取消則將 Toggle 彈回。</li>
+  <li>[完成] 解決診斷/上傳無動靜與無報錯問題：為 <code>DatasetSidecarManager</code> 新增 <code>vscode.OutputChannel</code> (名稱為 <code>Cocoya Sidecar</code>)，將 Python 進程啟動、stdout、stderr 全部導向至輸出面板。</li>
+  <li>[完成] 健全錯誤機制：若 Sidecar 啟動失敗 (如 Python 環境路徑無效)，<code>sidecar.send()</code> 會主動回傳錯誤給 callback 轉發給前端，避免前端 webview 懸空等待。</li>
+  <li>[修正] 修正全域 SSH 對話框的模板字串錯誤：將 <code>dialogs.js</code> 中的 <code>\${</code> 改回 <code>${</code>，解決 Port 數值輸入框因字面量格式錯誤導致拋出 "cannot be parsed, or is out of range" 的卡死 Bug。</li>
+  <li>[修正] 解決對話框隱藏問題：在 <code>dialogs.js</code> 的 <code>showSshConfigDialog</code> 中，手動設定 <code>dialog.style.display = 'flex'</code>，以覆寫 <code>dataset-manager-overlay</code> 的 CSS 預設 <code>display: none</code>，使對話框順利顯現。</li>
+  <li>[建置] Vite 前端 (npm run build) 重新打包完全成功，語法與多餘右括號已全部修正。</li>
+</ul>
+<h2>技術深挖 (Technical Deep Dive)</h2>
+<p>
+  之前的「無動靜、無報錯」是由於 VS Code 後端與 Sidecar 溝通時，若 <code>spawn</code> 進程失敗（例如本地找不到 Python、或者路徑無效），<code>DatasetSidecarManager.send()</code> 函數直接 <code>return</code> 中斷執行，導致前端的 callback 永遠不會被呼叫。在這種情況下，Webview 的 loading 與 diagnostics 狀態不會改變，亦無 any 錯誤訊息。
+  此外，對話框在 DOM 中已成功建立，但由於 CSS 類別 <code>.dataset-manager-overlay</code> 預設了 <code>display: none</code>，使得動態建立的 SSH 輸入框在沒有被顯式設為 <code>display: flex</code> 時被保持隱藏。這兩點交互作用造成不論何處操作皆無反應。
+  我們將其改為：若啟動失敗，則在 <code>send()</code> 內建構一個虛擬的失敗回應並執行 callback，讓前端能顯示「無法啟動本地 Python Sidecar...」的提示。
+  同時在 <code>dialogs.js</code> 中手動為對話框設定 <code>display = 'flex'</code>。
+  另外，將所有 Stdout/Stderr 輸出接引到自訂的 <code>OutputChannel</code>，可讓開發者在 VS Code 的「輸出」面板中追蹤 paramiko 與 SFTP 的即時過程，提高系統可觀測性。
+</p>
+<h2>下次啟動方向 (Next Steps)</h2>
+<p>1. Reload VS Code 視窗載入最新的 Extension。</p>
+<p>2. 切換 Cloud AI 模式開關，確認會立即彈出 SSH 帳密輸入 Dialog；若取消，Toggle 應恢復未勾選狀態。</p>
+<p>3. 點擊「執行診斷」，若 Python 未設定或 paramiko 出錯，應能正常向前端回傳並顯示報錯。在「輸出」下拉選單選取 <code>Cocoya Sidecar</code> 即可看見完整日誌。</p>
+</body>
+</html>

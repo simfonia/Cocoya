@@ -6,7 +6,9 @@ import {
     initDatasetManagerUI,
     openDatasetManager,
     toggleDatasetManager,
-    removeAnnotation
+    removeAnnotation,
+    refreshDynamicPanels,
+    refreshPreview
 } from './ui_layout.js';
 
 const namespace = window.CocoyaDataset || {};
@@ -42,7 +44,9 @@ window.CocoyaDataset = Object.assign(namespace, {
     close: closeDatasetManager,
     toggle: toggleDatasetManager,
     getCurrentSpec: getCurrentDatasetSpec,
-    removeAnnotation: removeAnnotation
+    removeAnnotation: removeAnnotation,
+    refreshDynamicPanels: refreshDynamicPanels,
+    refreshPreview: refreshPreview
 });
 
 init();
