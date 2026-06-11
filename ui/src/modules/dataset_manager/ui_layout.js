@@ -153,7 +153,7 @@ function renderValidation(result) {
 }
 
 let refreshTimeout = null;
-function refreshPreview() {
+export function refreshPreview() {
     const modal = getModal();
     if (!modal) return;
 
@@ -478,7 +478,7 @@ function exitAnnotationMode() {
     refreshDynamicPanels();
 }
 
-function refreshDynamicPanels() {
+export function refreshDynamicPanels() {
     const modal = getModal();
     if (!modal) return;
 
@@ -780,45 +780,74 @@ function bindModalEvents(modal) {
             const file = e.target.files[0];
             if (!file) return;
 
-            const status = modal.querySelector('#dataset-import-status');
-            if (status) status.textContent = '📦 正在讀取本地 ZIP 檔案...';
+            window.CocoyaUI.ensureSshConfig(async (sshConfig) => {
+                const status = modal.querySelector('#dataset-import-status');
+                if (status) status.textContent = '📦 正在準備上傳本地 ZIP 檔案...';
 
-            try {
-                const reader = new FileReader();
-                reader.onload = () => {
-                    const arrayBuffer = reader.result;
-                    const bytes = new Uint8Array(arrayBuffer);
-                    
-                    // 使用分塊轉換避免大數組的 Call Stack Exceeded 錯誤
-                    let base64 = '';
-                    const chunk = 8192;
-                    for (let i = 0; i < bytes.length; i += chunk) {
-                        base64 += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
-                    }
-                    base64 = btoa(base64);
-
-                    if (status) status.textContent = '☁️ 正在上傳至遠端沙盒並解壓...';
+                try {
+                    const chunkSize = 65536; // 64KB 分塊
+                    const totalChunks = Math.ceil(file.size / chunkSize);
                     const projectName = getFormValue('projectName') || 'dataset';
-                    window.CocoyaBridge.send('datasetUploadArchive', {
-                        zipData: base64,
-                        projectName: projectName
-                    });
-                };
-                reader.readAsArrayBuffer(file);
-            } catch (err) {
-                if (status) status.textContent = `❌ 讀取失敗: ${err.message}`;
-            }
+                    const fileId = Math.random().toString(36).substring(7);
+
+                    for (let i = 0; i < totalChunks; i++) {
+                        const start = i * chunkSize;
+                        const end = Math.min(start + chunkSize, file.size);
+                        const blob = file.slice(start, end);
+                        
+                        const chunkBase64 = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = () => {
+                                const bytes = new Uint8Array(reader.result);
+                                let binary = '';
+                                for (let j = 0; j < bytes.length; j++) {
+                                    binary += String.fromCharCode(bytes[j]);
+                                }
+                                resolve(btoa(binary));
+                            };
+                            reader.onerror = reject;
+                            reader.readAsArrayBuffer(blob);
+                        });
+
+                        if (status) {
+                            const progress = Math.round(((i + 1) / totalChunks) * 100);
+                            status.textContent = `☁️ 正在上傳資料集... (${progress}%)`;
+                        }
+
+                        // 發送分塊訊息，合併 SSH 帳密資訊
+                        window.CocoyaBridge.send('datasetUploadArchive', Object.assign({
+                            fileId: fileId,
+                            chunkIndex: i,
+                            totalChunks: totalChunks,
+                            zipDataChunk: chunkBase64,
+                            projectName: projectName,
+                            isLast: (i === totalChunks - 1)
+                        }, sshConfig));
+
+                        // 稍微延遲避免阻塞 Webview UI
+                        if (i % 5 === 0) await new Promise(resolve => setTimeout(resolve, 50));
+                    }
+
+                    if (status) status.textContent = '⌛ 正在雲端進行解壓縮，請稍候...';
+                } catch (err) {
+                    if (status) status.textContent = `❌ 讀取失敗: ${err.message}`;
+                }
+            });
         };
     }
 
     const cloudDiagnoseBtn = modal.querySelector('#dataset-cloud-diagnose-btn');
     if (cloudDiagnoseBtn) {
         cloudDiagnoseBtn.onclick = () => {
-            const diagResult = modal.querySelector('#dataset-cloud-diagnostic-result');
-            if (diagResult) diagResult.innerHTML = '正在進行遠端環境診斷...';
-            window.CocoyaBridge.send('checkRemoteEnvironment', {});
+            window.CocoyaUI.ensureSshConfig((sshConfig) => {
+                const diagResult = modal.querySelector('#dataset-cloud-diagnostic-result');
+                if (diagResult) diagResult.innerHTML = '正在進行遠端環境診斷...';
+                window.CocoyaBridge.send('checkRemoteEnvironment', sshConfig);
+            });
         };
     }
+
+
 
     // 監聽 Extension 回傳的結果
     const handleBridgeMessage = (msg) => {
@@ -1026,7 +1055,9 @@ function createModal() {
                     <div id="dataset-cloud-diagnostic-area" style="display: none; margin-top: 12px; padding: 10px; background: #fdf6fb; border: 1px solid #e1bee7; border-radius: 6px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                             <span style="font-size: 12px; font-weight: bold; color: #9c27b0;">☁️ 遠端環境</span>
-                            <button type="button" id="dataset-cloud-diagnose-btn" class="dataset-small-btn" style="margin: 0; background: #9c27b0; color: white; border: none; padding: 2px 6px;">執行診斷</button>
+                            <div style="display: flex; gap: 4px;">
+                                <button type="button" id="dataset-cloud-diagnose-btn" class="dataset-small-btn" style="margin: 0; background: #9c27b0; color: white; border: none; padding: 2px 6px;">執行診斷</button>
+                            </div>
                         </div>
                         <div id="dataset-cloud-diagnostic-result" style="font-size: 11px; color: #555; line-height: 1.4;">
                             請點擊「執行診斷」檢查 GPU 與 Docker 環境。

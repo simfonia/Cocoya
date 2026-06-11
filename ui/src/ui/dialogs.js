@@ -139,5 +139,93 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             btnDiscard.onclick = () => { modal.style.display = 'none'; resolve('discard'); };
             btnCancel.onclick = () => { modal.style.display = 'none'; resolve('cancel'); };
         });
+    },
+
+    sshConfig: null,
+
+    showSshConfigDialog: function(onConfirm, onCancel) {
+        let dialog = document.getElementById('dataset-ssh-dialog');
+        if (dialog) dialog.remove();
+
+        dialog = document.createElement('div');
+        dialog.id = 'dataset-ssh-dialog';
+        dialog.className = 'dataset-manager-overlay';
+        dialog.style.zIndex = '10001';
+        dialog.style.display = 'flex';
+
+        const current = this.sshConfig || {};
+        const defaultHost = current.host || '192.168.3.8';
+        const defaultPort = current.port || '22';
+        const defaultUser = current.username || 'simfonia';
+
+        const escapeHtml = (val) => {
+            return String(val ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        };
+
+        dialog.innerHTML = `
+            <div class="dataset-manager-dialog" style="max-width: 400px; padding: 20px; background: white; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
+                <header class="dataset-manager-header" style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                    <h3 style="margin: 0; font-size: 14px; color: #9c27b0;">☁️ 連線至雲端訓練伺服器</h3>
+                </header>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px;">
+                        <span>主機 IP / Host</span>
+                        <input type="text" id="ssh-host" value="${escapeHtml(defaultHost)}" placeholder="例如 192.168.3.8" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px;">
+                    </label>
+                    <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px;">
+                        <span>連接埠 / Port</span>
+                        <input type="number" id="ssh-port" value="${escapeHtml(defaultPort)}" placeholder="預設 22" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px;">
+                    </label>
+                    <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px;">
+                        <span>使用者名稱 / Username</span>
+                        <input type="text" id="ssh-user" value="${escapeHtml(defaultUser)}" placeholder="例如 user" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px;">
+                    </label>
+                    <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px;">
+                        <span>密碼 / Password</span>
+                        <input type="password" id="ssh-pass" placeholder="輸入密碼" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px;">
+                    </label>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; border-top: 1px solid #eee; padding-top: 12px;">
+                    <button type="button" id="ssh-dialog-cancel" class="dataset-secondary-btn" style="margin: 0; padding: 6px 12px;">取消</button>
+                    <button type="button" id="ssh-dialog-confirm" class="dataset-small-btn" style="background: #9c27b0; color: white; border: none; margin: 0; padding: 6px 16px; font-weight: bold;">連線</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(dialog);
+
+        dialog.querySelector('#ssh-dialog-cancel').onclick = () => {
+            dialog.remove();
+            if (onCancel) onCancel();
+        };
+
+        dialog.querySelector('#ssh-dialog-confirm').onclick = () => {
+            const host = dialog.querySelector('#ssh-host').value.trim();
+            const port = parseInt(dialog.querySelector('#ssh-port').value.trim(), 10) || 22;
+            const username = dialog.querySelector('#ssh-user').value.trim();
+            const password = dialog.querySelector('#ssh-pass').value;
+
+            if (!host || !username || !password) {
+                alert('請填寫完整的主機 IP、使用者名稱與密碼！');
+                return;
+            }
+
+            this.sshConfig = { host, port, username, password };
+            dialog.remove();
+            if (onConfirm) onConfirm(this.sshConfig);
+        };
+    },
+
+    ensureSshConfig: function(onConfirm, onCancel) {
+        if (this.sshConfig && this.sshConfig.host && this.sshConfig.username && this.sshConfig.password) {
+            if (onConfirm) onConfirm(this.sshConfig);
+        } else {
+            this.showSshConfigDialog(onConfirm, onCancel);
+        }
     }
 });

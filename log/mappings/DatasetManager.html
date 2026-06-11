@@ -60,6 +60,7 @@
             <tr><td><code>open() / close()</code></td><td>開啟或關閉管理器 Modal。</td><td><span class="status-tag status-stable">Stable</span></td></tr>
             <tr><td><code>getCurrentSpec()</code></td><td>獲取目前的 Spec 實體 (已同步 UI 狀態)。</td><td><span class="status-tag status-stable">Stable</span></td></tr>
             <tr><td><code>removeAnnotation(idx)</code></td><td>在標註模式下移除特定索引的方框。</td><td><span class="status-tag">Phase 4</span></td></tr>
+            <tr><td><code>refreshDynamicPanels() / refreshPreview()</code></td><td>主動刷新資料管理器的動態面板與 Spec 預覽。</td><td><span class="status-tag status-stable">Stable</span></td></tr>
         </tbody>
     </table>
 
@@ -129,8 +130,34 @@
 4. 描述欄位: 完全支援中文與 Unicode。
     </pre>
 
+    <h2>6. 全域 SSH 帳密與對話框管理 API: window.CocoyaUI</h2>
+    <p>位置: <code>ui/src/ui/dialogs.js</code></p>
+    <p>本對話框為雲端 AI 模式所共享，暫存 SSH 連線資訊（不進行 localStorage 持久化以保證安全性），並提供全域輸入 Dialog 機制：</p>
+    <table class="api-table">
+        <thead>
+            <tr><th>API / 屬性</th><th>描述</th><th>型別 / 簽章</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>sshConfig</code></td>
+                <td>全域暫存的 SSH 連線憑證。網頁 Reload 或刷新後重置為 null。</td>
+                <td>Object: <code>{ host, port, username, password }</code></td>
+            </tr>
+            <tr>
+                <td><code>showSshConfigDialog(onConfirm, onCancel)</code></td>
+                <td>強制彈出 SSH 帳密輸入對話框，自動設定 <code>display = 'flex'</code>，並在使用者確認或取消時回傳。</td>
+                <td>(Function, Function) -> void</td>
+            </tr>
+            <tr>
+                <td><code>ensureSshConfig(onConfirm, onCancel)</code></td>
+                <td>檢查 <code>sshConfig</code> 是否存在，若無則呼叫 <code>showSshConfigDialog</code>，若有則直接觸發 <code>onConfirm</code>。</td>
+                <td>(Function, Function) -> void</td>
+            </tr>
+        </tbody>
+    </table>
+
     <footer style="margin-top: 50px; font-size: 12px; color: #999; text-align: center;">
-        最後更新日期: 2026-05-28 | Cocoya AI 工程部
+        最後更新日期: 2026-06-11 | Cocoya AI 工程部
     </footer>
 </body>
 </html>

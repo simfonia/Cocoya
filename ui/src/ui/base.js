@@ -183,14 +183,36 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
 
             cloudAiToggle.onchange = () => {
                 const enabled = cloudAiToggle.checked;
-                localStorage.setItem('cocoya_cloud_ai_enabled', enabled);
-                
-                // 通知後端模式切換
-                window.CocoyaBridge.send('setCloudAiMode', { enabled });
-                
-                // 視覺回饋：如果開啟但未連 SSH，給予警告提示（這部分後續由 Bridge 觸發）
                 if (enabled) {
-                    console.log('[UI] Cloud AI Mode Enabled');
+                    if (window.CocoyaUI && window.CocoyaUI.ensureSshConfig) {
+                        window.CocoyaUI.ensureSshConfig(
+                            (sshConfig) => {
+                                localStorage.setItem('cocoya_cloud_ai_enabled', 'true');
+                                window.CocoyaBridge.send('setCloudAiMode', { enabled: true });
+                                console.log('[UI] Cloud AI Mode Enabled with SSH Config');
+                                
+                                // 同步更新資料管理器中的動態顯示
+                                if (window.CocoyaDataset && window.CocoyaDataset.refreshDynamicPanels) {
+                                    window.CocoyaDataset.refreshDynamicPanels();
+                                }
+                            },
+                            () => {
+                                cloudAiToggle.checked = false;
+                                localStorage.setItem('cocoya_cloud_ai_enabled', 'false');
+                                window.CocoyaBridge.send('setCloudAiMode', { enabled: false });
+                            }
+                        );
+                    } else {
+                        localStorage.setItem('cocoya_cloud_ai_enabled', 'true');
+                        window.CocoyaBridge.send('setCloudAiMode', { enabled: true });
+                    }
+                } else {
+                    localStorage.setItem('cocoya_cloud_ai_enabled', 'false');
+                    window.CocoyaBridge.send('setCloudAiMode', { enabled: false });
+                    // 同步更新資料管理器中的動態顯示
+                    if (window.CocoyaDataset && window.CocoyaDataset.refreshDynamicPanels) {
+                        window.CocoyaDataset.refreshDynamicPanels();
+                    }
                 }
             };
         }
@@ -469,17 +491,17 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         if (!toggle || !window.CocoyaBridge) return;
 
         const isEnabled = localStorage.getItem('cocoya_cloud_ai_enabled') === 'true';
-        const isConnected = window.CocoyaBridge.capabilities.isRemoteConnected;
+        const hasSshConfig = !!(window.CocoyaUI && window.CocoyaUI.sshConfig);
         
-        console.log(`[UI] syncCloudAiToggle: stored=${isEnabled}, connected=${isConnected}`);
+        console.log(`[UI] syncCloudAiToggle: stored=${isEnabled}, hasSshConfig=${hasSshConfig}`);
 
-        // 如果設定開啟但實際上沒連 SSH，則強制關閉
-        if (isEnabled && !isConnected) {
-            console.warn('[UI] Sync: Disabling Cloud AI toggle (No remote connection)');
+        // 方案 C：如果設定開啟但實際上沒有 SSH 帳密（例如重啟或刷新），則強制關閉
+        if (isEnabled && !hasSshConfig) {
+            console.warn('[UI] Sync: Disabling Cloud AI toggle (No SSH credentials)');
             toggle.checked = false;
             localStorage.setItem('cocoya_cloud_ai_enabled', 'false');
             window.CocoyaBridge.send('setCloudAiMode', { enabled: false });
-        } else if (isEnabled && isConnected) {
+        } else if (isEnabled && hasSshConfig) {
             // 確保後端狀態同步
             window.CocoyaBridge.send('setCloudAiMode', { enabled: true });
         }
