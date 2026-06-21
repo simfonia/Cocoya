@@ -33,12 +33,12 @@ Blockly.Python.forBlock['py_definition_zone'] = function(block, generator) {
 Blockly.Python.forBlock['py_import'] = function(block, generator) {
   var lib = block.getFieldValue('LIB');
   generator.definitions_['import_' + lib] = 'import ' + lib;
-  return null;
+  return '';
 };
 
 Blockly.Python.forBlock['py_import_from'] = function(block, generator) {
   var lib = block.getFieldValue('LIB');
   var target = block.getFieldValue('TARGET');
   generator.definitions_['import_' + lib + '_' + target] = 'from ' + lib + ' import ' + target;
-  return null;
+  return '';
 };

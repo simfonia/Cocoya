@@ -1,0 +1,674 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
+  <variables>
+    <variable id="v_frame">frame</variable>
+    <variable id="v_results">results</variable>
+    <variable id="v_pose">pose</variable>
+    <variable id="v_p11">p11</variable>
+    <variable id="v_p15">p13</variable>
+    <variable id="v_p12">p12</variable>
+    <variable id="v_p16">p14</variable>
+    <variable id="v_dx_l">dx_l</variable>
+    <variable id="v_dy_l">dy_l</variable>
+    <variable id="v_dx_r">dx_r</variable>
+    <variable id="v_dy_r">dy_r</variable>
+    <variable id="v_rad_l">rad_l</variable>
+    <variable id="v_rad_r">rad_r</variable>
+    <variable id="v_theta">theta</variable>
+    <variable id="v_percent">percent</variable>
+  </variables>
+  <block type="py_definition_zone" id="def_root" deletable="false" x="10" y="10">
+    <statement name="DEFS">
+      <block type="py_coding_comment" id="cmt_intro">
+        <field name="TEXT">PC 端 MediaPipe 雙臂夾角即時控制器&amp;#10;1. 透過攝影機取得人體左肩左肘、右肩右肘連線夾角。&amp;#10;2. 雙手水平以下時為 0%，雙手抬起至垂直向上為 100%。&amp;#10;3. 即時發送百分比數值給 πCar。</field>
+        <next>
+          <block type="py_import" id="imp_math">
+            <field name="LIB">math</field>
+            <next>
+              <block type="py_ai_pose_init" id="pose_init">
+                <field name="MIN_CONF">0.5</field>
+                <next>
+                  <block type="py_io_serial_init" id="ser_init">
+                    <field name="BAUD">115200</field>
+                    <value name="PORT">
+                      <shadow type="py_text" id="port_name">
+                        <field name="TEXT">COM4</field>
+                      </shadow>
+                    </value>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+  <block type="py_main" id="main_root" deletable="false" x="10" y="250">
+    <statement name="DO">
+      <block type="py_ai_open_camera" id="open_cam">
+        <field name="INDEX">0</field>
+        <next>
+          <block type="py_loop_while" id="main_loop">
+            <value name="CONDITION">
+              <block type="py_logic_boolean" id="bool_true">
+                <field name="BOOL">True</field>
+              </block>
+            </value>
+            <statement name="DO">
+              <block type="py_ai_read_frame" id="read_f">
+                <field name="VAR" id="v_frame">frame</field>
+                <next>
+                  <block type="py_ai_flip_image" id="flip_f">
+                    <field name="VAR" id="v_frame">frame</field>
+                    <field name="CODE">1</field>
+                    <next>
+                      <block type="py_ai_pose_process" id="proc_p">
+                        <field name="VAR" id="v_results">results</field>
+                        <value name="FRAME">
+                          <block type="py_variables_get" id="get_f">
+                            <field name="VAR" id="v_frame">frame</field>
+                          </block>
+                        </value>
+                        <next>
+                          <block type="py_logic_if" id="if_pose">
+                            <mutation elif="0" else="0"></mutation>
+                            <value name="IF0">
+                              <block type="py_ai_pose_is_detected" id="is_det">
+                                <field name="VAR" id="v_results">results</field>
+                              </block>
+                            </value>
+                            <statement name="DO0">
+                              <block type="py_variables_set" id="set_pose">
+                                <field name="VAR" id="v_pose">pose</field>
+                                <value name="VALUE">
+                                  <block type="py_ai_pose_get_landmarks" id="get_lm">
+                                    <field name="VAR" id="v_results">results</field>
+                                  </block>
+                                </value>
+                                <next>
+                                  <block type="py_variables_set" id="set_p11">
+                                    <field name="VAR" id="v_p11">p11</field>
+                                    <value name="VALUE">
+                                      <block type="py_ai_pose_get_landmark_xy" id="xy_p11">
+                                        <field name="WIDTH">640</field>
+                                        <field name="HEIGHT">480</field>
+                                        <value name="LANDMARK">
+                                          <block type="py_ai_pose_get_landmark" id="lm_11">
+                                            <field name="INDEX">11</field>
+                                            <value name="POSE">
+                                              <block type="py_variables_get" id="get_pose_11">
+                                                <field name="VAR" id="v_pose">pose</field>
+                                              </block>
+                                            </value>
+                                          </block>
+                                        </value>
+                                      </block>
+                                    </value>
+                                    <next>
+                                      <block type="py_variables_set" id="set_p15">
+                                        <field name="VAR" id="v_p15">p13</field>
+                                        <value name="VALUE">
+                                          <block type="py_ai_pose_get_landmark_xy" id="xy_p15">
+                                            <field name="WIDTH">640</field>
+                                            <field name="HEIGHT">480</field>
+                                            <value name="LANDMARK">
+                                              <block type="py_ai_pose_get_landmark" id="lm_15">
+                                                <field name="INDEX">13</field>
+                                                <value name="POSE">
+                                                  <block type="py_variables_get" id="get_pose_15">
+                                                    <field name="VAR" id="v_pose">pose</field>
+                                                  </block>
+                                                </value>
+                                              </block>
+                                            </value>
+                                          </block>
+                                        </value>
+                                        <next>
+                                          <block type="py_variables_set" id="set_p12">
+                                            <field name="VAR" id="v_p12">p12</field>
+                                            <value name="VALUE">
+                                              <block type="py_ai_pose_get_landmark_xy" id="xy_p12">
+                                                <field name="WIDTH">640</field>
+                                                <field name="HEIGHT">480</field>
+                                                <value name="LANDMARK">
+                                                  <block type="py_ai_pose_get_landmark" id="lm_12">
+                                                    <field name="INDEX">12</field>
+                                                    <value name="POSE">
+                                                      <block type="py_variables_get" id="get_pose_12">
+                                                        <field name="VAR" id="v_pose">pose</field>
+                                                      </block>
+                                                    </value>
+                                                  </block>
+                                                </value>
+                                              </block>
+                                            </value>
+                                            <next>
+                                              <block type="py_variables_set" id="set_p16">
+                                                <field name="VAR" id="v_p16">p14</field>
+                                                <value name="VALUE">
+                                                  <block type="py_ai_pose_get_landmark_xy" id="xy_p16">
+                                                    <field name="WIDTH">640</field>
+                                                    <field name="HEIGHT">480</field>
+                                                    <value name="LANDMARK">
+                                                      <block type="py_ai_pose_get_landmark" id="lm_16">
+                                                        <field name="INDEX">14</field>
+                                                        <value name="POSE">
+                                                          <block type="py_variables_get" id="get_pose_16">
+                                                            <field name="VAR" id="v_pose">pose</field>
+                                                          </block>
+                                                        </value>
+                                                      </block>
+                                                    </value>
+                                                  </block>
+                                                </value>
+                                                <next>
+                                                  <block type="py_variables_set" id="set_dx_l">
+                                                    <field name="VAR" id="v_dx_l">dx_l</field>
+                                                    <value name="VALUE">
+                                                      <block type="py_math_arithmetic" id="sub_dx_l">
+                                                        <field name="OP">-</field>
+                                                        <value name="A">
+                                                          <block type="lists_getIndex" id="idx_p15_x">
+                                                            <mutation statement="false" at="true"></mutation>
+                                                            <field name="MODE">GET</field>
+                                                            <field name="WHERE">FROM_START</field>
+                                                            <value name="VALUE">
+                                                              <block type="py_variables_get" id="get_p15_dx">
+                                                                <field name="VAR" id="v_p15">p13</field>
+                                                              </block>
+                                                            </value>
+                                                            <value name="AT">
+                                                              <block type="math_number" id="num_1_l">
+                                                                <field name="NUM">1</field>
+                                                              </block>
+                                                            </value>
+                                                          </block>
+                                                        </value>
+                                                        <value name="B">
+                                                          <block type="lists_getIndex" id="idx_p11_x">
+                                                            <mutation statement="false" at="true"></mutation>
+                                                            <field name="MODE">GET</field>
+                                                            <field name="WHERE">FROM_START</field>
+                                                            <value name="VALUE">
+                                                              <block type="py_variables_get" id="get_p11_dx">
+                                                                <field name="VAR" id="v_p11">p11</field>
+                                                              </block>
+                                                            </value>
+                                                            <value name="AT">
+                                                              <block type="math_number" id="num_1_l2">
+                                                                <field name="NUM">1</field>
+                                                              </block>
+                                                            </value>
+                                                          </block>
+                                                        </value>
+                                                      </block>
+                                                    </value>
+                                                    <next>
+                                                      <block type="py_variables_set" id="set_dy_l">
+                                                        <field name="VAR" id="v_dy_l">dy_l</field>
+                                                        <value name="VALUE">
+                                                          <block type="py_math_arithmetic" id="sub_dy_l">
+                                                            <field name="OP">-</field>
+                                                            <value name="A">
+                                                              <block type="lists_getIndex" id="idx_p15_y">
+                                                                <mutation statement="false" at="true"></mutation>
+                                                                <field name="MODE">GET</field>
+                                                                <field name="WHERE">FROM_START</field>
+                                                                <value name="VALUE">
+                                                                  <block type="py_variables_get" id="get_p15_dy">
+                                                                    <field name="VAR" id="v_p15">p13</field>
+                                                                  </block>
+                                                                </value>
+                                                                <value name="AT">
+                                                                  <block type="math_number" id="num_2_l">
+                                                                    <field name="NUM">2</field>
+                                                                  </block>
+                                                                </value>
+                                                              </block>
+                                                            </value>
+                                                            <value name="B">
+                                                              <block type="lists_getIndex" id="idx_p11_y">
+                                                                <mutation statement="false" at="true"></mutation>
+                                                                <field name="MODE">GET</field>
+                                                                <field name="WHERE">FROM_START</field>
+                                                                <value name="VALUE">
+                                                                  <block type="py_variables_get" id="get_p11_dy">
+                                                                    <field name="VAR" id="v_p11">p11</field>
+                                                                  </block>
+                                                                </value>
+                                                                <value name="AT">
+                                                                  <block type="math_number" id="num_2_l2">
+                                                                    <field name="NUM">2</field>
+                                                                  </block>
+                                                                </value>
+                                                              </block>
+                                                            </value>
+                                                          </block>
+                                                        </value>
+                                                        <next>
+                                                          <block type="py_variables_set" id="set_dx_r">
+                                                            <field name="VAR" id="v_dx_r">dx_r</field>
+                                                            <value name="VALUE">
+                                                              <block type="py_math_arithmetic" id="sub_dx_r">
+                                                                <field name="OP">-</field>
+                                                                <value name="A">
+                                                                  <block type="lists_getIndex" id="idx_p16_x">
+                                                                    <mutation statement="false" at="true"></mutation>
+                                                                    <field name="MODE">GET</field>
+                                                                    <field name="WHERE">FROM_START</field>
+                                                                    <value name="VALUE">
+                                                                      <block type="py_variables_get" id="get_p16_dx">
+                                                                        <field name="VAR" id="v_p16">p14</field>
+                                                                      </block>
+                                                                    </value>
+                                                                    <value name="AT">
+                                                                      <block type="math_number" id="num_1_r">
+                                                                        <field name="NUM">1</field>
+                                                                      </block>
+                                                                    </value>
+                                                                  </block>
+                                                                </value>
+                                                                <value name="B">
+                                                                  <block type="lists_getIndex" id="idx_p12_x">
+                                                                    <mutation statement="false" at="true"></mutation>
+                                                                    <field name="MODE">GET</field>
+                                                                    <field name="WHERE">FROM_START</field>
+                                                                    <value name="VALUE">
+                                                                      <block type="py_variables_get" id="get_p12_dx">
+                                                                        <field name="VAR" id="v_p12">p12</field>
+                                                                      </block>
+                                                                    </value>
+                                                                    <value name="AT">
+                                                                      <block type="math_number" id="num_1_r2">
+                                                                        <field name="NUM">1</field>
+                                                                      </block>
+                                                                    </value>
+                                                                  </block>
+                                                                </value>
+                                                              </block>
+                                                            </value>
+                                                            <next>
+                                                              <block type="py_variables_set" id="set_dy_r">
+                                                                <field name="VAR" id="v_dy_r">dy_r</field>
+                                                                <value name="VALUE">
+                                                                  <block type="py_math_arithmetic" id="sub_dy_r">
+                                                                    <field name="OP">-</field>
+                                                                    <value name="A">
+                                                                      <block type="lists_getIndex" id="idx_p16_y">
+                                                                        <mutation statement="false" at="true"></mutation>
+                                                                        <field name="MODE">GET</field>
+                                                                        <field name="WHERE">FROM_START</field>
+                                                                        <value name="VALUE">
+                                                                          <block type="py_variables_get" id="get_p16_dy">
+                                                                            <field name="VAR" id="v_p16">p14</field>
+                                                                          </block>
+                                                                        </value>
+                                                                        <value name="AT">
+                                                                          <block type="math_number" id="num_2_r">
+                                                                            <field name="NUM">2</field>
+                                                                          </block>
+                                                                        </value>
+                                                                      </block>
+                                                                    </value>
+                                                                    <value name="B">
+                                                                      <block type="lists_getIndex" id="idx_p12_y">
+                                                                        <mutation statement="false" at="true"></mutation>
+                                                                        <field name="MODE">GET</field>
+                                                                        <field name="WHERE">FROM_START</field>
+                                                                        <value name="VALUE">
+                                                                          <block type="py_variables_get" id="get_p12_dy">
+                                                                            <field name="VAR" id="v_p12">p12</field>
+                                                                          </block>
+                                                                        </value>
+                                                                        <value name="AT">
+                                                                          <block type="math_number" id="num_2_r2">
+                                                                            <field name="NUM">2</field>
+                                                                          </block>
+                                                                        </value>
+                                                                      </block>
+                                                                    </value>
+                                                                  </block>
+                                                                </value>
+                                                                <next>
+                                                                  <block type="py_variables_set" id="set_rad_l">
+                                                                    <field name="VAR" id="v_rad_l">rad_l</field>
+                                                                    <value name="VALUE">
+                                                                      <block type="py_math_atan2" id="atan_l">
+                                                                        <value name="Y">
+                                                                          <block type="py_variables_get" id="get_dy_l">
+                                                                            <field name="VAR" id="v_dy_l">dy_l</field>
+                                                                          </block>
+                                                                        </value>
+                                                                        <value name="X">
+                                                                          <block type="py_variables_get" id="get_dx_l">
+                                                                            <field name="VAR" id="v_dx_l">dx_l</field>
+                                                                          </block>
+                                                                        </value>
+                                                                      </block>
+                                                                    </value>
+                                                                    <next>
+                                                                      <block type="py_variables_set" id="set_rad_r">
+                                                                        <field name="VAR" id="v_rad_r">rad_r</field>
+                                                                        <value name="VALUE">
+                                                                          <block type="py_math_atan2" id="atan_r">
+                                                                            <value name="Y">
+                                                                              <block type="py_variables_get" id="get_dy_r">
+                                                                                <field name="VAR" id="v_dy_r">dy_r</field>
+                                                                              </block>
+                                                                            </value>
+                                                                            <value name="X">
+                                                                              <block type="py_variables_get" id="get_dx_r">
+                                                                                <field name="VAR" id="v_dx_r">dx_r</field>
+                                                                              </block>
+                                                                            </value>
+                                                                          </block>
+                                                                        </value>
+                                                                        <next>
+                                                                          <block type="py_variables_set" id="set_theta">
+                                                                            <field name="VAR" id="v_theta">theta</field>
+                                                                            <value name="VALUE">
+                                                                              <block type="py_math_single" id="deg_diff">
+                                                                                <field name="OP">math.degrees</field>
+                                                                                <value name="NUM">
+                                                                                  <block type="py_math_single" id="abs_diff">
+                                                                                    <field name="OP">abs</field>
+                                                                                    <value name="NUM">
+                                                                                      <block type="py_math_arithmetic" id="sub_rad">
+                                                                                        <field name="OP">-</field>
+                                                                                        <value name="A">
+                                                                                          <block type="py_variables_get" id="get_rad_l">
+                                                                                            <field name="VAR" id="v_rad_l">rad_l</field>
+                                                                                          </block>
+                                                                                        </value>
+                                                                                        <value name="B">
+                                                                                          <block type="py_variables_get" id="get_rad_r">
+                                                                                            <field name="VAR" id="v_rad_r">rad_r</field>
+                                                                                          </block>
+                                                                                        </value>
+                                                                                      </block>
+                                                                                    </value>
+                                                                                  </block>
+                                                                                </value>
+                                                                              </block>
+                                                                            </value>
+                                                                            <next>
+                                                                              <block type="controls_if" id="if_theta_gt_180">
+                                                                                <value name="IF0">
+                                                                                  <block type="py_logic_compare" id="1~Mrtv)IWbGyR(2$7O[i">
+                                                                                    <field name="OP">&gt;</field>
+                                                                                    <value name="A">
+                                                                                      <block type="py_variables_get" id="get_theta_if">
+                                                                                        <field name="VAR" id="v_theta">theta</field>
+                                                                                      </block>
+                                                                                    </value>
+                                                                                    <value name="B">
+                                                                                      <block type="math_number" id="num_180">
+                                                                                        <field name="NUM">180</field>
+                                                                                      </block>
+                                                                                    </value>
+                                                                                  </block>
+                                                                                </value>
+                                                                                <statement name="DO0">
+                                                                                  <block type="py_variables_set" id="sub_theta_360">
+                                                                                    <field name="VAR" id="v_theta">theta</field>
+                                                                                    <value name="VALUE">
+                                                                                      <block type="py_math_arithmetic" id="sub_360_theta">
+                                                                                        <field name="OP">-</field>
+                                                                                        <value name="A">
+                                                                                          <block type="math_number" id="num_360">
+                                                                                            <field name="NUM">360</field>
+                                                                                          </block>
+                                                                                        </value>
+                                                                                        <value name="B">
+                                                                                          <block type="py_variables_get" id="get_theta_sub">
+                                                                                            <field name="VAR" id="v_theta">theta</field>
+                                                                                          </block>
+                                                                                        </value>
+                                                                                      </block>
+                                                                                    </value>
+                                                                                  </block>
+                                                                                </statement>
+                                                                                <next>
+                                                                                  <block type="py_logic_if" id="if_hands_down">
+                                                                                    <mutation elif="0" else="1"></mutation>
+                                                                                    <value name="IF0">
+                                                                                      <block type="py_logic_operation" id="and_hands_down">
+                                                                                        <field name="OP">and</field>
+                                                                                        <value name="A">
+                                                                                          <block type="py_logic_compare" id="p15_y_gt_p11_y">
+                                                                                            <field name="OP">&gt;</field>
+                                                                                            <value name="A">
+                                                                                              <block type="lists_getIndex" id="get_p15_y_val">
+                                                                                                <mutation statement="false" at="true"></mutation>
+                                                                                                <field name="MODE">GET</field>
+                                                                                                <field name="WHERE">FROM_START</field>
+                                                                                                <value name="VALUE">
+                                                                                                  <block type="py_variables_get" id="get_p15_y_check">
+                                                                                                    <field name="VAR" id="v_p15">p13</field>
+                                                                                                  </block>
+                                                                                                </value>
+                                                                                                <value name="AT">
+                                                                                                  <block type="math_number" id="num_2_check1">
+                                                                                                    <field name="NUM">2</field>
+                                                                                                  </block>
+                                                                                                </value>
+                                                                                              </block>
+                                                                                            </value>
+                                                                                            <value name="B">
+                                                                                              <block type="lists_getIndex" id="get_p11_y_val">
+                                                                                                <mutation statement="false" at="true"></mutation>
+                                                                                                <field name="MODE">GET</field>
+                                                                                                <field name="WHERE">FROM_START</field>
+                                                                                                <value name="VALUE">
+                                                                                                  <block type="py_variables_get" id="get_p11_y_check">
+                                                                                                    <field name="VAR" id="v_p11">p11</field>
+                                                                                                  </block>
+                                                                                                </value>
+                                                                                                <value name="AT">
+                                                                                                  <block type="math_number" id="num_2_check2">
+                                                                                                    <field name="NUM">2</field>
+                                                                                                  </block>
+                                                                                                </value>
+                                                                                              </block>
+                                                                                            </value>
+                                                                                          </block>
+                                                                                        </value>
+                                                                                        <value name="B">
+                                                                                          <block type="py_logic_compare" id="p16_y_gt_p12_y">
+                                                                                            <field name="OP">&gt;</field>
+                                                                                            <value name="A">
+                                                                                              <block type="lists_getIndex" id="get_p16_y_val">
+                                                                                                <mutation statement="false" at="true"></mutation>
+                                                                                                <field name="MODE">GET</field>
+                                                                                                <field name="WHERE">FROM_START</field>
+                                                                                                <value name="VALUE">
+                                                                                                  <block type="py_variables_get" id="get_p16_y_check">
+                                                                                                    <field name="VAR" id="v_p16">p14</field>
+                                                                                                  </block>
+                                                                                                </value>
+                                                                                                <value name="AT">
+                                                                                                  <block type="math_number" id="num_2_check3">
+                                                                                                    <field name="NUM">2</field>
+                                                                                                  </block>
+                                                                                                </value>
+                                                                                              </block>
+                                                                                            </value>
+                                                                                            <value name="B">
+                                                                                              <block type="lists_getIndex" id="get_p12_y_val">
+                                                                                                <mutation statement="false" at="true"></mutation>
+                                                                                                <field name="MODE">GET</field>
+                                                                                                <field name="WHERE">FROM_START</field>
+                                                                                                <value name="VALUE">
+                                                                                                  <block type="py_variables_get" id="get_p12_y_check">
+                                                                                                    <field name="VAR" id="v_p12">p12</field>
+                                                                                                  </block>
+                                                                                                </value>
+                                                                                                <value name="AT">
+                                                                                                  <block type="math_number" id="num_2_check4">
+                                                                                                    <field name="NUM">2</field>
+                                                                                                  </block>
+                                                                                                </value>
+                                                                                              </block>
+                                                                                            </value>
+                                                                                          </block>
+                                                                                        </value>
+                                                                                      </block>
+                                                                                    </value>
+                                                                                    <statement name="DO0">
+                                                                                      <block type="py_variables_set" id="percent_0">
+                                                                                        <field name="VAR" id="v_percent">percent</field>
+                                                                                        <value name="VALUE">
+                                                                                          <block type="math_number" id="num_0">
+                                                                                            <field name="NUM">0</field>
+                                                                                          </block>
+                                                                                        </value>
+                                                                                      </block>
+                                                                                    </statement>
+                                                                                    <statement name="ELSE">
+                                                                                      <block type="py_variables_set" id="percent_calc">
+                                                                                        <field name="VAR" id="v_percent">percent</field>
+                                                                                        <value name="VALUE">
+                                                                                          <block type="py_math_round" id="ku)RaB~W8!.f}TG3.a;W">
+                                                                                            <value name="NUM">
+                                                                                              <shadow type="py_math_number" id="vDB+wBHWlxEnxSE71(va" disabled-reasons="orphan">
+                                                                                                <field name="NUM">3.14</field>
+                                                                                              </shadow>
+                                                                                              <block type="py_math_arithmetic" id="mult_percent">
+                                                                                                <field name="OP">*</field>
+                                                                                                <value name="A">
+                                                                                                  <block type="py_math_arithmetic" id="div_percent">
+                                                                                                    <field name="OP">/</field>
+                                                                                                    <value name="A">
+                                                                                                      <block type="py_math_arithmetic" id="sub_theta">
+                                                                                                        <field name="OP">-</field>
+                                                                                                        <value name="A">
+                                                                                                          <block type="math_number" id="num_180_2">
+                                                                                                            <field name="NUM">180</field>
+                                                                                                          </block>
+                                                                                                        </value>
+                                                                                                        <value name="B">
+                                                                                                          <block type="py_variables_get" id="get_theta_final">
+                                                                                                            <field name="VAR" id="v_theta">theta</field>
+                                                                                                          </block>
+                                                                                                        </value>
+                                                                                                      </block>
+                                                                                                    </value>
+                                                                                                    <value name="B">
+                                                                                                      <block type="math_number" id="num_180_3">
+                                                                                                        <field name="NUM">180</field>
+                                                                                                      </block>
+                                                                                                    </value>
+                                                                                                  </block>
+                                                                                                </value>
+                                                                                                <value name="B">
+                                                                                                  <block type="math_number" id="num_100">
+                                                                                                    <field name="NUM">100</field>
+                                                                                                  </block>
+                                                                                                </value>
+                                                                                              </block>
+                                                                                            </value>
+                                                                                          </block>
+                                                                                        </value>
+                                                                                      </block>
+                                                                                    </statement>
+                                                                                    <next>
+                                                                                      <block type="py_io_serial_write" id="ser_write">
+                                                                                        <value name="DATA">
+                                                                                          <block type="py_variables_get" id="get_percent_send">
+                                                                                            <field name="VAR" id="v_percent">percent</field>
+                                                                                          </block>
+                                                                                        </value>
+                                                                                        <next>
+                                                                                          <block type="py_io_serial_flush" id="ser_flush">
+                                                                                            <next>
+                                                                                              <block type="py_time_sleep" id="throttle_sleep">
+                                                                                                <value name="SECONDS">
+                                                                                                  <shadow type="py_math_number" id="throttle_val">
+                                                                                                    <field name="NUM">0.05</field>
+                                                                                                  </shadow>
+                                                                                                </value>
+                                                                                                <next>
+                                                                                                  <block type="py_io_print" id="PcPV6?VHqxP@wBcf@E+B">
+                                                                                                    <value name="TEXT">
+                                                                                                      <shadow type="py_text" id="I@.#1x4n?!1{[!UC,`E]">
+                                                                                                        <field name="TEXT">Hello Cocoya!</field>
+                                                                                                      </shadow>
+                                                                                                      <block type="py_variables_get" id="Eka]kZ*9~[5CF!@+/toB">
+                                                                                                        <field name="VAR" id="v_percent">percent</field>
+                                                                                                      </block>
+                                                                                                    </value>
+                                                                                                    <next>
+                                                                                                      <block type="py_ai_pose_draw" id="draw_pose">
+                                                                                                        <field name="FRAME" id="v_frame">frame</field>
+                                                                                                        <field name="VAR" id="v_results">results</field>
+                                                                                                        <field name="LANDMARK_COLOR">#ff0000</field>
+                                                                                                        <field name="LINE_COLOR">#00ff00</field>
+                                                                                                      </block>
+                                                                                                    </next>
+                                                                                                  </block>
+                                                                                                </next>
+                                                                                              </block>
+                                                                                            </next>
+                                                                                          </block>
+                                                                                        </next>
+                                                                                      </block>
+                                                                                    </next>
+                                                                                  </block>
+                                                                                </next>
+                                                                              </block>
+                                                                            </next>
+                                                                          </block>
+                                                                        </next>
+                                                                      </block>
+                                                                    </next>
+                                                                  </block>
+                                                                </next>
+                                                              </block>
+                                                            </next>
+                                                          </block>
+                                                        </next>
+                                                      </block>
+                                                    </next>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </statement>
+                            <next>
+                              <block type="py_ai_show_image" id="show_img">
+                                <value name="IMAGE">
+                                  <block type="py_variables_get" id="get_f_show">
+                                    <field name="VAR" id="v_frame">frame</field>
+                                  </block>
+                                </value>
+                                <next>
+                                  <block type="py_ai_wait_key_break" id="wait_key">
+                                    <field name="KEY">q</field>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </statement>
+            <next>
+              <block type="py_ai_release_all" id="release_cam"></block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>
