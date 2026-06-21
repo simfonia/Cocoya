@@ -1,0 +1,126 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
+  <variables>
+    <variable id="v_line">line</variable>
+    <variable id="v_percent_val">percent_val</variable>
+  </variables>
+  <block type="py_definition_zone" id="def_root" deletable="false" x="10" y="10"></block>
+  <block type="mcu_main" id="main_root" deletable="false" x="10" y="90">
+    <statement name="DO">
+      <block type="mcu_car_hand_range" id="init_range">
+        <field name="TYPE">STANDARD</field>
+        <value name="RANGE">
+          <shadow type="math_number" id="val_range">
+            <field name="NUM">180</field>
+          </shadow>
+        </value>
+        <next>
+          <block type="mcu_car_in_position" id="go_home">
+            <field name="TYPE">STANDARD</field>
+            <next>
+              <block type="mcu_car_tone" id="beep_start">
+                <value name="FREQ">
+                  <shadow type="math_number" id="beep_freq">
+                    <field name="NUM">440</field>
+                  </shadow>
+                </value>
+                <value name="MS">
+                  <shadow type="math_number" id="beep_duration">
+                    <field name="NUM">200</field>
+                  </shadow>
+                </value>
+                <next>
+                  <block type="mcu_car_wait_start" id="ai_wait_start">
+                    <field name="PIN">board.GP20</field>
+                    <next>
+                      <block type="py_io_print" id="print_ready">
+                        <value name="TEXT">
+                          <shadow type="py_text" id="text_ready">
+                            <field name="TEXT">開始接收訊息</field>
+                          </shadow>
+                        </value>
+                        <next>
+                          <block type="py_loop_while" id="main_loop">
+                            <value name="CONDITION">
+                              <block type="py_logic_boolean" id="bool_true">
+                                <field name="BOOL">True</field>
+                              </block>
+                            </value>
+                            <statement name="DO">
+                              <block type="controls_if" id="if_serial">
+                                <value name="IF0">
+                                  <block type="py_io_serial_available" id="ser_avail"></block>
+                                </value>
+                                <statement name="DO0">
+                                  <block type="py_variables_set" id="read_line">
+                                    <field name="VAR" id="v_line">line</field>
+                                    <value name="VALUE">
+                                      <block type="py_io_serial_read" id="ser_read"></block>
+                                    </value>
+                                    <next>
+                                      <block type="controls_if" id="if_line_nonempty">
+                                        <value name="IF0">
+                                          <block type="py_logic_compare" id="cmp_line_nonempty">
+                                            <field name="OP">!=</field>
+                                            <value name="A">
+                                              <block type="py_variables_get" id="get_line_check">
+                                                <field name="VAR" id="v_line">line</field>
+                                              </block>
+                                            </value>
+                                            <value name="B">
+                                              <block type="py_text" id="empty_str">
+                                                <field name="TEXT"></field>
+                                              </block>
+                                            </value>
+                                          </block>
+                                        </value>
+                                        <statement name="DO0">
+                                          <block type="py_variables_set" id="cast_line">
+                                            <field name="VAR" id="v_percent_val">percent_val</field>
+                                            <value name="VALUE">
+                                              <block type="py_types_cast" id="cast_to_float">
+                                                <field name="TYPE">int</field>
+                                                <value name="VALUE">
+                                                  <block type="py_variables_get" id="get_line_val">
+                                                    <field name="VAR" id="v_line">line</field>
+                                                  </block>
+                                                </value>
+                                              </block>
+                                            </value>
+                                            <next>
+                                              <block type="mcu_car_move_hands" id="move_picar_hands">
+                                                <field name="TYPE">STANDARD</field>
+                                                <field name="HAND">BOTH</field>
+                                                <value name="PERCENT">
+                                                  <block type="py_variables_get" id="get_percent_val">
+                                                    <field name="VAR" id="v_percent_val">percent_val</field>
+                                                  </block>
+                                                </value>
+                                                <value name="SPEED">
+                                                  <shadow type="math_number" id="hands_speed">
+                                                    <field name="NUM">10</field>
+                                                  </shadow>
+                                                </value>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </statement>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </statement>
+                              </block>
+                            </statement>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

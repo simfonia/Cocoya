@@ -15,11 +15,11 @@
 
 ## [進行中] 雲端 AI 模型訓練 (NVIDIA NGX Spark 整合)
 - **核心方針**：利用本地 Python Sidecar 建立 SSH/SFTP 連線與遠端 GPU 伺服器通訊，實現跨 VSIX 與 Tauri 雙模通用、純本地除錯、高安全性的雲端訓練。
-- [ ] **[架構] VSIX 回歸 UI 模式**：修改 <code>package.json</code> 將 <code>extensionKind</code> 還原為 <code>["ui"]</code>，使 Extension 鎖定在本地執行以利除錯。
-- [ ] **[UI] 臨時安全授權 Dialog**：在開啟雲端 AI 模式或執行診斷時，彈出對話框讓使用者輸入 Host/User/Pass，僅保存在前端內存中而不持久化。
-- [ ] **[Sidecar] 實作 SSH/SFTP 通訊模組**：在本地 Python Sidecar 中使用 <code>paramiko</code> 庫，實作遠端指令執行與 SFTP 檔案傳輸。
-- [ ] **[功能] 遠端環境診斷 (CUDA/Docker)**：由本地 Sidecar 透過 SSH 執行遠端主機的 GPU 與 Docker 狀態檢查。
-- [ ] **[功能] 資料集 SFTP 傳輸與原位解壓**：本地 Sidecar 執行 ZIP 壓縮，並以 SFTP 直接上傳至遠端家目錄，隨後呼叫遠端 Python 自動解壓縮。
+- [x] **[架構] VSIX 回歸 UI 模式**：修改 <code>package.json</code> 將 <code>extensionKind</code> 還原為 <code>["ui"]</code>，使 Extension 鎖定在本地執行以利除錯。
+- [x] **[UI] 臨時安全授權 Dialog**：在開啟雲端 AI 模式或執行診斷時，彈出對話框讓使用者輸入 Host/User/Pass，僅保存在前端內存中而不持久化。
+- [x] **[Sidecar] 實作 SSH/SFTP 通訊模組**：在本地 Python Sidecar 中使用 <code>paramiko</code> 庫，實作遠端指令執行與 SFTP 檔案傳輸。
+- [x] **[功能] 遠端環境診斷 (CUDA/Docker)**：由本地 Sidecar 透過 SSH 執行遠端主機的 GPU 與 Docker 狀態檢查。
+- [x] **[功能] 資料集 SFTP 傳輸與原位解壓**：本地 Sidecar 執行 ZIP 壓縮，並以 SFTP 直接上傳至遠端家目錄，隨後呼叫遠端 Python 自動解壓縮。
 - [ ] **伺服器端容器化訓練**：建立基於 NGC TAO 鏡像的訓練容器與模板程式。
 - [ ] **推論與部署鏈**：支援雲端推論結果回傳與 `.tflite` 模型自動燒錄至 πCar。
 
@@ -28,7 +28,7 @@
 - [ ] **[功能] 重置韌體 Sidecar 化**：研究將 `esptool` 整合成 Tauri Sidecar 的可行性。
 
 ---
-*最後更新日期：2026-06-11 (重整 Cloud AI 方案 C 開發架構)*
+*最後更新日期：2026-06-20 (更新任務清單狀態)*
 
 ## [異動紀錄] 2026-06-11 方案 C 後端閉環完成
 - [x] **[Sidecar] 抑制警告雜訊**：在 <code>dataset_sidecar.py</code> 加入 warnings 抑制邏輯，消除 CryptographyDeprecationWarning。
@@ -50,4 +50,9 @@
 - [x] **[Extension] 修正 Sidecar 啟動失敗無反應問題 (extension.ts)**：若 <code>spawn</code> 進程失敗，在 <code>send()</code> 內主動回傳錯誤給前端，避免前端 webview 懸空等待。
 - [x] **[建置] Vite 前端重新 build 成功**：修復了因替換失誤多出來的語法錯誤括號，順利完成編譯。
 - [x] **[UI] 修正 SSH 輸入框模板字串變數解析**：將 <code>dialogs.js</code> 中的 <code>\${</code> 改回 <code>${</code>，修復 Port 等輸入框格式錯誤與卡死問題。
-- [x] **[UI] 解決 CSS 預設 display: none 隱藏對話框問題**：在 <code>dialogs.js</code> 的 <code>showSshConfigDialog</code> 中，手動設定 <code>dialog.style.display = 'flex'</code> 以覆寫 <code>dataset-manager-overlay</code> 類別的預設樣式，確保對話框正常顯現。
+- [x] **[UI] 解決 CSS 預設 display: none 隱藏對話框問題**：在 <code>dialogs.js</code> 的 <code>showSshConfigDialog</code> 中，手動設定 <code>dialog.style.display = 'flex'</code> 以覆寫 <code>dataset-manager-overlay</code> 類別 of 預設樣式，確保對話框正常顯現。
+
+## [異動紀錄] 2026-06-20 建立 Y姿勢雙臂即時控制範例
+- [x] **[範例] 實作 PC 控制端積木**：建立 `examples/38_YPose_PC_Control.xml` 積木專案。
+- [x] **[範例] 實作 piCar 接收端積木**：建立 `examples/39_YPose_piCar_Control.xml` 積木專案。
+- [x] **[範例] 撰寫使用文件**：在 `examples/README_YPose_Control.md` 提供詳細說明。

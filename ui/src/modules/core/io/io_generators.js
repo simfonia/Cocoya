@@ -27,21 +27,29 @@ Blockly.Python.forBlock['py_io_serial_init'] = function(block, generator) {
 Blockly.Python.forBlock['py_io_serial_read'] = function(block, generator) {
   if (generator.PLATFORM === 'MicroPython') {
     generator.definitions_['import_sys'] = 'import sys';
+    generator.definitions_['import_uselect'] = 'import uselect';
     generator.definitions_['func_get_latest_serial_mcu'] = `
+_cocoya_serial_buf = ""
 def cocoya_get_latest_serial():
-    import sys
     # MicroPython 讀取 stdin，排空至最新一筆
-    line = ""
-    while True:
-        # 這裡需要非阻塞讀取，通常透過 select 或 poll 實作，
-        # 為求教學簡單，暫以基本 read 取代或建議改用 print()
-        # 注意：MP 的 stdin.read() 會阻塞
-        break 
-    return line
+    # 這裡需要非阻塞讀取，通常透過 select 或 poll 實作
+    global _cocoya_serial_buf
+    latest = ""
+    poll = uselect.poll()
+    poll.register(sys.stdin, uselect.POLLIN)
+    while poll.poll(0):
+        ch = sys.stdin.read(1)
+        if ch == '\\n':
+            if _cocoya_serial_buf:
+                latest = _cocoya_serial_buf.strip()
+            _cocoya_serial_buf = ""
+        else:
+            _cocoya_serial_buf += ch
+    return latest
 `;
-    return ["sys.stdin.readline().strip()", Blockly.Python.ORDER_FUNCTION_CALL];
+    return ["cocoya_get_latest_serial()", Blockly.Python.ORDER_FUNCTION_CALL];
   }
-  // ... rest of method ...
+  
   generator.definitions_['func_get_latest_serial'] = `
 def cocoya_get_latest_serial(s):
     line = s.readline()

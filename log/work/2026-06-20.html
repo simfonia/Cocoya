@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head><meta charset="UTF-8"><title>Cocoya 工作日誌 2026-06-20</title></head>
+<body>
+<h1>2026-06-20 Y姿勢人體雙臂角度即時控制範例實作</h1>
+<h2>本次異動</h2>
+<ul>
+  <li>[完成] 建立 PC 端 MediaPipe 控制積木範例 (<a href="file:///C:/Workspace/cocoya/examples/人體姿勢控制πCar爪子/1-2_YPose_PC_Control.xml">1-2_YPose_PC_Control.xml</a>)：在 PC 平台下組合 OpenCV 相機讀取、MediaPipe Pose 姿態偵測、自訂 Python 角度運算、與 PC 串口發送（py_io_serial_write）積木。</li>
+  <li>[完成] 建立 MCU 端接收與控制積木範例 (<a href="file:///C:/Workspace/cocoya/examples/人體姿勢控制πCar爪子/1-1_YPose_piCar_Control.xml">1-1_YPose_piCar_Control.xml</a>)：在 MicroPython 平台下組合蜂鳴器提示、雙手舵機宣告、串口數據讀取、與非阻塞解析舵機驅動積木。</li>
+  <li>[完成] 撰寫詳細實作與步驟指引文檔 (<a href="file:///C:/Workspace/cocoya/examples/人體姿勢控制πCar爪子/README_YPose_Control.md">README_YPose_Control.md</a>)：說明人體角度計算、舵機映射邏輯與實地運行步驟。</li>
+  <li>[完成] 更新專案目錄結構描述檔 (<a href="file:///C:/Workspace/cocoya/FILE_STRUCTURE.md">FILE_STRUCTURE.md</a>)。</li>
+</ul>
+<h2>技術深挖 (Technical Deep Dive)</h2>
+<p>
+  1. <strong>夾角計算與水平過濾</strong>：我們使用左肩(11)-左腕(15)與右肩(12)-右腕(16)兩向量，透過 <code>math.atan2</code> 計算出各自相對於水平線的角度後求差值絕對值，得到兩臂線段的夾角 &theta;。當手肘 Y 座標大於肩膀（手在水平以下）時直接設為 0%；當高於水平線時，利用 <code>(180 - &theta;) / 180 * 100</code> 將夾角從 180°（平舉）至 0°（直立上舉）線性映射為 0%~100%。
+  2. <strong>無 Raw Code 積木的純化</strong>：本範例完全不使用 <code>py_coding_raw_*</code> 積木。在 PC 端透過 <code>py_ai_pose_get_landmark_xy</code> 與 <code>lists_getIndex</code> 直接提取特徵點的座標，配合數學運算與 <code>py_io_serial_write</code> 發送百分比；在 MCU 端則透過 <code>py_types_cast</code> 直接將接收到的序列埠文字行轉型為 <code>int</code>，傳入 <code>mcu_car_move_hands</code> 驅動舵機，大幅簡化積木複雜度。
+  3. <strong>MicroPython 串列埠接收</strong>：採用 <code>py_io_serial_available</code> 積木判斷是否有可讀資料，其底層在 MicroPython 會轉化為 <code>uselect.select([sys.stdin], [], [], 0)[0]</code>，實現非阻塞的串口數據監聽，避免對主控制流程造成延遲或死鎖。
+</p>
+<h2>下次啟動方向 (Next Steps)</h2>
+<p>1. <b>微調映射係數</b>：根據實體舵機的行程限制，可在 PC 端的 <code>angle_l_servo</code> 與 <code>angle_r_servo</code> 映射式中調整角度增益與偏置，以防舵機過載或死鎖。</p>
+</body>
+</html>

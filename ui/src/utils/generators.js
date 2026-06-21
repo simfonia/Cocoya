@@ -38,6 +38,8 @@
                 const nextBlock = (block.nextConnection && !opt_thisOnly) ? block.nextConnection.targetBlock() : null;
                 if (!block.isEnabled()) return nextBlock ? Blockly.Python.blockToCode(nextBlock) : '';
                 
+                if (code === null || code === undefined) code = '';
+                
                 const s = self.TAG_START;
                 const e = self.TAG_END;
                 

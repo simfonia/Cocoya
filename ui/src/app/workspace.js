@@ -283,6 +283,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             return this.lastCleanCode;
         } catch (e) {
             console.error('[Workspace] Sync Code Update failed:', e);
+            alert('Blockly to Python Error: ' + e.message + '\n' + e.stack);
             return this.lastCleanCode;
         }
     }

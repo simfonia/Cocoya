@@ -40,9 +40,12 @@
                   <block type="py_io_serial_available" id="av1"></block>
                 </value>
                 <statement name="DO0">
-                  <block type="variables_set" id="s1">
+                  <block type="py_variables_set" id=")PBUHT=10qIpuF]j.ruy">
                     <field name="VAR" id="v_data">received_data</field>
                     <value name="VALUE">
+                      <shadow type="py_math_number" id=".1H3Y($BdfM5Tz4^=vf]">
+                        <field name="NUM">0</field>
+                      </shadow>
                       <block type="py_io_serial_read" id="r1"></block>
                     </value>
                     <next>
@@ -56,7 +59,7 @@
                               </shadow>
                             </value>
                             <value name="ADD1">
-                              <block type="variables_get" id="g1">
+                              <block type="py_variables_get" id="J*XMJ.~|jX^=eJT+dE/}">
                                 <field name="VAR" id="v_data">received_data</field>
                               </block>
                             </value>
@@ -83,4 +86,3 @@
     </statement>
   </block>
 </xml>
-
