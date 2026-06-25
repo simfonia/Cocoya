@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>SSH/SFTP API 對照表 (paramiko) — Cocoya 專案</title>
+<style>
+body { font-family: 'Segoe UI', sans-serif; background: #f8f9fa; padding: 20px; }
+.container { max-width: 900px; margin: auto; background: #fff; padding: 24px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+h1 { color: #1a73e8; font-size: 24px; }
+h2 { font-size: 18px; color: #333; margin: 24px 0 12px; border-bottom: 1px solid #e0e0e0; padding-bottom: 4px; }
+table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 14px; }
+th, td { padding: 8px 12px; text-align: left; border: 1px solid #e0e0e0; }
+th { background: #e8f0fe; font-weight: 600; }
+code { background: #f0f0f0; padding: 2px 6px; border-radius: 3px; font-size: 13px; }
+pre { background: #1e1e1e; color: #d4d4d4; padding: 12px 16px; border-radius: 6px; overflow-x: auto; font-size: 13px; white-space: pre; }
+.bad { color: #d93025; font-weight: bold; }
+.good { color: #1e7e34; font-weight: bold; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>SSH/SFTP API 對照表 (paramiko)</h1>
+<p>專案: Cocoya · 用途: 透過 SSH/SFTP 與 DGX Spark 遠端通訊 · 最後更新: 2026-06-24</p>
+
+<h2>1. SSH 連線與認證</h2>
+<table>
+<tr><th>功能</th><th>寫法</th><th>說明</th></tr>
+<tr><td>建立 SSH 用戶端</td><td><code>ssh = paramiko.SSHClient()</code></td><td></td></tr>
+<tr><td>自動接受 host key</td><td><code>ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())</code></td><td>僅開發階段使用</td></tr>
+<tr><td>連線</td><td><code>ssh.connect(hostname, port, username, password, timeout=15)</code></td><td>timeout 建議設 15 秒</td></tr>
+</table>
+
+<h2>2. 執行遠端指令 (SSH exec_command)</h2>
+<table>
+<tr><th>情境</th><th>正確寫法</th><th>說明</th></tr>
+<tr>
+    <td>取得家目錄</td>
+    <td><code>ssh.exec_command('echo $HOME')</code></td>
+    <td>回傳如 <code>/home/simfonia</code></td>
+</tr>
+<tr>
+    <td>檢查路徑 (<code>~</code> 版本)</td>
+    <td><code>ssh.exec_command('eval ls "~/path"')</code></td>
+    <td class="good">需要 eval 展開 ~</td>
+</tr>
+<tr>
+    <td>檢查路徑 (絕對路徑)</td>
+    <td><code>ssh.exec_command('ls "/home/user/path"')</code></td>
+    <td class="good">最佳寫法</td>
+</tr>
+<tr>
+    <td>建立目錄</td>
+    <td><code>ssh.exec_command('mkdir -p "/abs/path"')</code></td>
+    <td></td></tr>
+<tr>
+    <td>讀取指令輸出</td>
+    <td><code>stdout.read().decode('utf-8').strip()</code></td>
+    <td></td></tr>
+<tr>
+    <td>檢查 exit status</td>
+    <td><code>stdout.channel.recv_exit_status()</code></td>
+    <td>0 = 成功</td></tr>
+</table>
+
+<h2>3. SFTP 檔案傳輸</h2>
+<table>
+<tr><th>功能</th><th>寫法</th><th>說明</th></tr>
+<tr><td>開啟 SFTP</td><td><code>sftp = ssh.open_sftp()</code></td><td></td></tr>
+<tr><td>檢查檔案存在</td><td><code>sftp.stat(remote_abs_path)</code></td><td>若不存在拋出 <code>FileNotFoundError</code></td></tr>
+<tr><td>上傳檔案</td><td><code>sftp.put(local_path, remote_abs_path)</code></td><td></td></tr>
+<tr><td>下載檔案</td><td><code>sftp.get(remote_abs_path, local_path)</code></td><td></td></tr>
+<tr><td>關閉 SFTP</td><td><code>sftp.close()</code></td><td></td></tr>
+</table>
+
+<div style="background:#fce8e6;padding:12px 16px;border-radius:6px;margin:12px 0;">
+<strong>❌ 重要陷阱：SFTP 不支援 ~ 路徑</strong><br>
+<code>sftp.stat('~/cocoya_ai/model.keras')</code> → <span class="bad">FileNotFoundError</span><br>
+必須先取得絕對路徑：<code>ssh.exec_command('echo $HOME')</code> → <code>/home/user/cocoya_ai/model.keras</code> → <code>sftp.stat('/home/user/cocoya_ai/model.keras')</code>
+</div>
+
+<h2>4. ZIP 打包注意事項</h2>
+<table>
+<tr><th>情境</th><th>正確寫法</th><th>錯誤寫法</th></tr>
+<tr>
+    <td>ZIP 內路徑（不上層）</td>
+    <td class="good"><code>arcname = os.path.relpath(filepath, DATASET_DIR)</code></td>
+    <td class="bad"><code>arcname = os.path.relpath(filepath, os.path.dirname(DATASET_DIR))</code></td>
+</tr>
+<tr>
+    <td>結果</td>
+    <td>ZIP 內：<code>rock/001.jpg</code></td>
+    <td>ZIP 內：<code>gesture_dataset/rock/001.jpg</code>（多一層）</td>
+</tr>
+</table>
+
+<h2>5. 跨平台主機名稱</h2>
+<table>
+<tr><th>平台</th><th>寫法</th><th>狀態</th></tr>
+<tr><td>跨平台（OK）</td><td><code>socket.gethostname()</code></td><td class="good">✅ Windows / Linux 皆可用</td></tr>
+<tr><td>Linux only</td><td><code>os.uname().nodename</code></td><td class="bad">❌ Windows 無此函式</td></tr>
+</table>
+
+<h2>6. Docker 容器執行模式</h2>
+<table>
+<tr><th>平台</th><th>基礎映像</th><th>TFLite 轉換</th></tr>
+<tr><td>DGX Spark (ARM64)</td><td><code>nvcr.io/nvidia/pytorch:25.04-py3</code></td><td class="bad">❌ 不可行（Keras bug）</td></tr>
+<tr><td>本地 PC (AMD64)</td><td><code>tensorflow/tensorflow:2.13.0</code></td><td class="good">✅ 可正常轉換</td></tr>
+</table>
+
+<p style="margin-top:24px;color:#888;font-size:13px;">本文件根據 Phase 5 MVP 驗證過程中的實際踩坑經驗整理。</p>
+</div>
+</body>
+</html>
