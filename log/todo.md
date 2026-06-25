@@ -13,22 +13,34 @@
 - [x] **[功能] 互動式 REPL**：終端機支援雙向通訊，允許直接輸入 Python 指令與 MCU 互動 (2026-06-07)。
 - [x] **[範例] 範例專案更新**：補完並測試 MicroPython 模式下的所有範例專案 (2026-06-07)。
 
-## [進行中] 雲端 AI 模型訓練 (NVIDIA NGX Spark 整合)
+## [進行中] 雲端 AI 模型訓練 (NVIDIA DGX Spark 整合)
 - **核心方針**：利用本地 Python Sidecar 建立 SSH/SFTP 連線與遠端 GPU 伺服器通訊，實現跨 VSIX 與 Tauri 雙模通用、純本地除錯、高安全性的雲端訓練。
 - [x] **[架構] VSIX 回歸 UI 模式**：修改 <code>package.json</code> 將 <code>extensionKind</code> 還原為 <code>["ui"]</code>，使 Extension 鎖定在本地執行以利除錯。
 - [x] **[UI] 臨時安全授權 Dialog**：在開啟雲端 AI 模式或執行診斷時，彈出對話框讓使用者輸入 Host/User/Pass，僅保存在前端內存中而不持久化。
 - [x] **[Sidecar] 實作 SSH/SFTP 通訊模組**：在本地 Python Sidecar 中使用 <code>paramiko</code> 庫，實作遠端指令執行與 SFTP 檔案傳輸。
 - [x] **[功能] 遠端環境診斷 (CUDA/Docker)**：由本地 Sidecar 透過 SSH 執行遠端主機的 GPU 與 Docker 狀態檢查。
 - [x] **[功能] 資料集 SFTP 傳輸與原位解壓**：本地 Sidecar 執行 ZIP 壓縮，並以 SFTP 直接上傳至遠端家目錄，隨後呼叫遠端 Python 自動解壓縮。
-- [ ] **伺服器端容器化訓練**：建立基於 NGC TAO 鏡像的訓練容器與模板程式。
+- [x] **[Phase 5] Python MVP 驗證完成**（2026-06-24）：完整驗證從資料收集到 DGX 訓練到本地推論的全鏈路。
+  - [x] 本地流程驗證：收集 → 訓練 (93~94%) → 推論
+  - [x] DGX 遠端驗證：上傳 → 容器化訓練 (94.68%) → 下載模型
+  - [x] πCar 整合腳本就緒（待實機測試）
+- [ ] **伺服器端容器化訓練**：建立基於 NGC 鏡像的訓練容器與模板程式（MVP 已驗證 NGC PyTorch 容器 + TensorFlow）。
 - [ ] **推論與部署鏈**：支援雲端推論結果回傳與 `.tflite` 模型自動燒錄至 πCar。
+- [ ] **手勢分類控制 πCar 音高 PBL**（詳見 `log/todo/hand_gesture_pitch_pbl_plan.md`）：
+  - [ ] **[Phase 1] 新增 ai_inference 模組**：共用積木 + classifier 積木（PC 平台）
+  - [ ] **[Phase 2] Sidecar 擴充訓練指令**：startTraining + downloadModel
+  - [ ] **[Phase 3] Docker 訓練容器模板**：基於 NGC PyTorch 容器（MVP 已驗證）
+  - [ ] **[Phase 4] PBL 範例積木專案**：PC 端推論 + MCU 端音效控制 XML
 
 ## [待辦] 其他優化
 - [ ] **[優化] 跨平台 Friendly Name**：實作 macOS/Linux 的序列埠名稱顯示優化。
+- [ ] **[優化] 刪除隱藏積木**：如 break out of loop。
 - [ ] **[功能] 重置韌體 Sidecar 化**：研究將 `esptool` 整合成 Tauri Sidecar 的可行性。
+- [ ] **[功能] Dataset manager 多部 webcam 選擇**。
+- [ ] **[功能] Dataset manager 刪除照片**。
 
 ---
-*最後更新日期：2026-06-20 (更新任務清單狀態)*
+*最後更新日期：2026-06-24 (完成 Phase 5 MVP 驗證，更新開發規範文件)*
 
 ## [異動紀錄] 2026-06-11 方案 C 後端閉環完成
 - [x] **[Sidecar] 抑制警告雜訊**：在 <code>dataset_sidecar.py</code> 加入 warnings 抑制邏輯，消除 CryptographyDeprecationWarning。
@@ -56,3 +68,10 @@
 - [x] **[範例] 實作 PC 控制端積木**：建立 `examples/38_YPose_PC_Control.xml` 積木專案。
 - [x] **[範例] 實作 piCar 接收端積木**：建立 `examples/39_YPose_piCar_Control.xml` 積木專案。
 - [x] **[範例] 撰寫使用文件**：在 `examples/README_YPose_Control.md` 提供詳細說明。
+
+## [異動紀錄] 2026-06-24 完成 Phase 5 MVP 驗證（手勢分類 PBL）
+- [x] **[MVP] 建立 9 個 Python 驗證腳本**：涵蓋本地訓練、DGX 訓練、πCar 整合完整鏈路。
+- [x] **[MVP] 本地 MobileNetV2 訓練驗證**：資料不平衡問題透過 Class Weight 解決，準確率達 93~94%。
+- [x] **[MVP] DGX Spark 遠端訓練驗證**：使用 NVIDIA NGC PyTorch 容器 + TensorFlow 2.16.1，準確率 94.68%。
+- [x] **[MVP] 本地 TFLite 轉換驗證**：ARM64 容器不支援 TFLite 轉換，需在本地 PC 進行 Float32 轉換。
+- [x] **[經驗] 建立開發規範文件**：`docs/mvp_development_guide.md` 記錄所有踩坑與解決方案。

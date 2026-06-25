@@ -4,6 +4,8 @@ C:\Workspace\cocoya\
 │   ├── system_spec.html   # 系統規格說明書 (v5.0 雙模架構版)
 │   ├── api_manifest.md    # 前端 API SSOT (Source of Truth)
 │   ├── backend_api_manifest.md # [NEW] 後端 Rust API SSOT
+│   ├── mvp_development_guide.md # AI 模組開發規範與踩坑記錄
+│   ├── docker_training_deployment_guide.html # DGX Docker 訓練容器建置指南
 │   ├── pico-w_pinout.png  # 原始腳位圖
 │   └── XIAO-ESP32-S3_pinout.jpg # 原始腳位圖
 ├── examples/              # 範例檔 (.xml)
@@ -12,14 +14,18 @@ C:\Workspace\cocoya\
 │   ├── handover.md        # 任務交接檔
 │   ├── todo.md            # 任務清單
 │   ├── todo/              # 任務規格與開發流程文件
-│   │   └── dataset_manager_development_spec.md # Dataset Manager 分階段開發規格
-│   └── work/              # 每日工作紀錄
-│       ├── 2026-05-03.md  # UI/UX 響應式佈局與收合面板實作
-│       ├── 2026-05-04.md  # 重大修復：Tauri 多視窗關閉攔截與備份隔離
-│       ├── 2026-05-08.md  # [NEW] 建置自動化與 Rust 後端模組化
-│       ├── 2026-05-31.html # [NEW] 系統還原診斷與 Sidecar 架構 #trim 修整
-│       ├── 2026-06-04.html # [NEW] 優化專案指南與規範同步
-│       └── 2026-06-05.html # [NEW] 初始化今日日誌與開發 context
+│   │   ├── dataset_manager_development_spec.md # Dataset Manager 分階段開發規格
+│   │   └── hand_gesture_pitch_pbl_plan.md # 手勢分類控制 πCar 音高 PBL 計畫
+│   ├── work/              # 每日工作紀錄
+│   │   ├── 2026-05-03.md  # UI/UX 響應式佈局與收合面板實作
+│   │   ├── 2026-05-04.md  # 重大修復：Tauri 多視窗關閉攔截與備份隔離
+│   │   ├── 2026-05-08.md  # [NEW] 建置自動化與 Rust 後端模組化
+│   │   ├── 2026-05-31.html # [NEW] 系統還原診斷與 Sidecar 架構 #trim 修整
+│   │   ├── 2026-06-04.html # [NEW] 優化專案指南與規範同步
+│   │   ├── 2026-06-05.html # [NEW] 初始化今日日誌與開發 context
+│   │   └── 2026-06-24.html # Phase 5 MVP 驗證 + DGX Spark Docker 建置
+│   └── mappings/          # 長期結構化知識庫（對照表）
+│       └── cocoya_ssh_sftp_api.html # SSH/SFTP API 使用對照表
 
 
 ├── ui/                    # 雙模共用前端根目錄 (Vite Project)
@@ -99,6 +105,34 @@ C:\Workspace\cocoya\
 │       ├── camera_service.py    # OpenCV 攝影機預覽與擷取服務
 │       ├── dataset_io.py        # 資料集檔案存取與打包工具
 │       └── media_pipe_service.py # AI 特徵提取服務 (MediaPipe)
+├── mvp_hand_gesture/      # Phase 5 MVP 手勢分類驗證腳本
+│   ├── 01_collect_dataset.py # 本地資料收集
+│   ├── 02_train_local.py    # 本地訓練 (MobileNetV2)
+│   ├── 03_inference_local.py # 本地推論測試
+│   ├── 04_upload_to_dgx.py  # 上傳資料集到 DGX
+│   ├── 05_train_on_dgx.py   # DGX Docker 訓練
+│   ├── 06_download_from_dgx.py # 下載模型
+│   ├── 07_inference_with_dgx_model.py # DGX 模型推論
+│   ├── 08_picar_receiver.py # πCar 接收端 (MicroPython)
+│   ├── 09_full_pipeline.py  # 完整流程整合
+│   ├── 訓練過程記錄.txt      # 訓練結果紀錄
+│   └── model/               # 本機模型輸出目錄
+│       ├── gesture_model.keras # Keras 原始模型
+│       ├── gesture_model.tflite # TFLite Float32 模型
+│       └── labels.txt         # 分類標籤
+├── resources/             # 靜態資源
+│   ├── deploy_mcu.py      # [OPTIMIZED] 具備硬體感知與分塊寫入的部署工具
+│   ├── extension_icon.png # 插件圖示
+│   ├── dataset_manager/   # Dataset Manager 模組
+│   │   └── train_templates/ # 訓練容器模板
+│   │       └── classifier/  # 手勢分類訓練模板
+│   │           ├── Dockerfile.train # Docker 映像定義
+│   │           ├── train_classifier.py # 訓練腳本
+│   │           └── requirements.txt # Python 套件需求
+│   ├── dataset_sidecar.py   # Sidecar 主進程與指令解析
+│   ├── camera_service.py    # OpenCV 攝影機預覽與擷取服務
+│   ├── dataset_io.py        # 資料集檔案存取與打包工具
+│   └── media_pipe_service.py # AI 特徵提取服務 (MediaPipe)
 ├── temp_scripts/          # 執行期間暫存目錄
 ├── package.json           # 根目錄設定
 └── tsconfig.json          # TS 編譯設定

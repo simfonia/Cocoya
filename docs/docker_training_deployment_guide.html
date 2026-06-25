@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cocoya DGX Spark Docker 訓練容器建置指南</title>
+    <style>
+        :root {
+            --primary: #1a73e8;
+            --success: #34a853;
+            --warning: #fbbc04;
+            --error: #ea4335;
+            --bg: #f8f9fa;
+            --card: #ffffff;
+            --text: #202124;
+            --code-bg: #1e1e1e;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+        }
+        .sidebar {
+            position: fixed;
+            left: 0; top: 0; bottom: 0;
+            width: 280px;
+            background: var(--card);
+            border-right: 1px solid #e0e0e0;
+            overflow-y: auto;
+            padding: 20px 0;
+            z-index: 100;
+        }
+        .sidebar h2 {
+            font-size: 16px;
+            padding: 0 20px;
+            margin-bottom: 16px;
+            color: var(--primary);
+        }
+        .sidebar a {
+            display: block;
+            padding: 8px 20px;
+            color: var(--text);
+            text-decoration: none;
+            font-size: 14px;
+            border-left: 3px solid transparent;
+            transition: all 0.2s;
+        }
+        .sidebar a:hover {
+            background: #e8f0fe;
+            border-left-color: var(--primary);
+            color: var(--primary);
+        }
+        .sidebar .section-label {
+            padding: 12px 20px 4px;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #666;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+        .main {
+            margin-left: 280px;
+            padding: 40px 60px;
+            max-width: 960px;
+        }
+        h1 {
+            font-size: 32px;
+            margin-bottom: 8px;
+            color: var(--primary);
+        }
+        .subtitle {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 40px;
+        }
+        h2 {
+            font-size: 24px;
+            margin: 48px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--primary);
+        }
+        h3 {
+            font-size: 18px;
+            margin: 32px 0 12px;
+            color: #333;
+        }
+        h4 {
+            font-size: 15px;
+            margin: 20px 0 8px;
+            color: #444;
+        }
+        p { margin-bottom: 12px; }
+        .code-block {
+            background: var(--code-bg);
+            color: #d4d4d4;
+            padding: 16px 20px;
+            border-radius: 8px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            overflow-x: auto;
+            overflow-y: auto;
+            margin: 16px 0;
+            position: relative;
+            white-space: pre;
+            word-wrap: normal;
+            tab-size: 4;
+            -moz-tab-size: 4;
+        }
+        .code-block code {
+            white-space: pre;
+        }
+        .code-block .comment { color: #6a9955; }
+        .code-block .keyword { color: #569cd6; }
+        .code-block .string { color: #ce9178; }
+        .code-block .func { color: #dcdcaa; }
+        .code-block .path { color: #4ec9b0; }
+        .info-box {
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin: 16px 0;
+            border-left: 4px solid;
+        }
+        .info-success { background: #e6f4ea; border-color: var(--success); }
+        .info-warning { background: #fef7e0; border-color: var(--warning); }
+        .info-error { background: #fce8e6; border-color: var(--error); }
+        .info-info { background: #e8f0fe; border-color: var(--primary); }
+        .info-box strong { display: block; margin-bottom: 4px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0;
+        }
+        th, td {
+            padding: 10px 14px;
+            text-align: left;
+            border: 1px solid #e0e0e0;
+        }
+        th {
+            background: #e8f0fe;
+            font-weight: 600;
+        }
+        tr:hover { background: #f5f5f5; }
+        .step {
+            background: var(--card);
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 20px 24px;
+            margin: 16px 0;
+        }
+        .step-number {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            width: 28px;
+            height: 28px;
+            line-height: 28px;
+            text-align: center;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 14px;
+            margin-right: 8px;
+        }
+        ul, ol { margin: 8px 0 8px 20px; }
+        li { margin-bottom: 4px; }
+        .file-tree {
+            font-family: 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.8;
+            background: #f5f5f5;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin: 12px 0;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 6px;
+        }
+        .badge-success { background: #e6f4ea; color: #1e7e34; }
+        .badge-error { background: #fce8e6; color: #d93025; }
+        .badge-warning { background: #fef7e0; color: #ea8600; }
+        @media (max-width: 800px) {
+            .sidebar { display: none; }
+            .main { margin-left: 0; padding: 20px; }
+        }
+        a.anchor { display: block; position: relative; top: -80px; visibility: hidden; }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>📘 目錄</h2>
+    <div class="section-label">前置作業</div>
+    <a href="#prereq">1. 環境需求</a>
+    <a href="#files">2. 檔案準備</a>
+    <div class="section-label">建置流程</div>
+    <a href="#upload">3. 上傳到 DGX</a>
+    <a href="#build">4. 建立 Docker 映像</a>
+    <a href="#verify">5. 驗證映像</a>
+    <div class="section-label">訓練與下載</div>
+    <a href="#train">6. 執行訓練</a>
+    <a href="#download">7. 下載模型</a>
+    <a href="#convert">8. 轉換 TFLite</a>
+    <div class="section-label">參考</div>
+    <a href="#troubleshoot">9. 常見問題</a>
+    <a href="#architecture">10. 架構說明</a>
+</div>
+
+<div class="main">
+
+<h1>DGX Spark Docker 訓練容器建置指南</h1>
+<p class="subtitle">完整記錄從檔案準備到模型下載的每一步驟，含踩坑經驗與解決方案</p>
+
+<!-- ==================== 1 ==================== -->
+<a class="anchor" id="prereq"></a>
+<h2>1. 環境需求</h2>
+
+<h3>1.1 DGX Spark 規格確認</h3>
+<table>
+    <tr><th>項目</th><th>規格</th><th>備註</th></tr>
+    <tr>
+        <td>CPU 架構</td>
+        <td><code>linux/arm64</code></td>
+        <td>非一般 PC 的 AMD64，所有 Docker 映像須為 ARM64</td>
+    </tr>
+    <tr>
+        <td>Docker</td>
+        <td>v24+</td>
+        <td>需支援 <code>--gpus all</code> 參數</td>
+    </tr>
+    <tr>
+        <td>NVIDIA Driver</td>
+        <td>535+</td>
+        <td>GPU 加速必要條件</td>
+    </tr>
+    <tr>
+        <td>Python</td>
+        <td>3.12</td>
+        <td>DGX Spark 預裝，位置 <code>/usr/bin/python3</code></td>
+    </tr>
+</table>
+
+<h3>1.2 本地端需求（Windows）</h3>
+<table>
+    <tr><th>項目</th><th>版本</th><th>用途</th></tr>
+    <tr><td>Python</td><td>3.10+</td><td>執行自動化腳本</td></tr>
+    <tr><td>paramiko</td><td>3.4+</td><td>SSH/SFTP 連線</td></tr>
+    <tr><td>tensorflow</td><td>2.13+</td><td>本地 TFLite 轉換</td></tr>
+</table>
+
+<div class="info-box info-info">
+    <strong>📌 關鍵注意</strong>
+    DGX Spark 是 ARM64 架構，<b>不要</b>使用 AMD64 的 TensorFlow 映像。<br>
+    官方建議使用 <code>nvcr.io/nvidia/pytorch:25.04-py3</code> 作為基礎映像。
+</div>
+
+<!-- ==================== 2 ==================== -->
+<a class="anchor" id="files"></a>
+<h2>2. 檔案準備</h2>
+
+<h3>2.1 訓練容器模板結構</h3>
+<p>在 Cocoya 專案中的位置：</p>
+
+<div class="file-tree">
+resources/dataset_manager/train_templates/classifier/<br>
+├── <span class="path">Dockerfile.train</span>      ← Docker 映像定義<br>
+├── <span class="path">train_classifier.py</span>    ← 訓練腳本（容器內執行）<br>
+└── <span class="path">requirements.txt</span>        ← Python 套件需求
+</div>
+
+<h3>2.2 Dockerfile.train 內容</h3>
+
+<div class="code-block">
+<span class="comment"># ✅ 使用 NVIDIA NGC ARM64 容器</span>
+<span class="keyword">FROM</span> nvcr.io/nvidia/pytorch:25.04-py3
+
+<span class="keyword">WORKDIR</span> /workspace
+
+<span class="comment"># 安裝 TensorFlow + 其他套件</span>
+<span class="keyword">RUN</span> pip install --no-cache-dir \
+    tensorflow==2.16.1 \
+    scikit-learn \
+    pillow \
+    matplotlib
+
+<span class="keyword">COPY</span> train_classifier.py .
+
+<span class="keyword">RUN</span> mkdir -p /output
+
+<span class="keyword">ENTRYPOINT</span> ["python", "train_classifier.py"]
+</div>
+
+<div class="info-box info-warning">
+    <strong>⚠️ 平台選擇關鍵</strong>
+    必須使用 <b>NGC 官方 ARM64 容器</b>，否則會出現 exec format error：<br>
+    <code>exec /bin/sh: exec format error</code>
+</div>
+
+<h3>2.3 train_classifier.py 核心邏輯</h3>
+
+<div class="step">
+    <p><span class="step-number">①</span> <strong>讀取資料集</strong> — 從 <code>/dataset</code> 讀取影像（子目錄名 = label）</p>
+    <p><span class="step-number">②</span> <strong>資料擴增</strong> — RandomFlip, Rotation, Zoom, Contrast, Brightness, Translation</p>
+    <p><span class="step-number">③</span> <strong>Class Weight 計算</strong> — <code>sklearn.utils.class_weight</code> 自動平衡</p>
+    <p><span class="step-number">④</span> <strong>MobileNetV2 轉移學習</strong> — ImageNet 預訓練權重</p>
+    <p><span class="step-number">⑤</span> <strong>訓練</strong> — 支援命令列參數 <code>--epochs</code>, <code>--batch_size</code>, <code>--lr</code></p>
+    <p><span class="step-number">⑥</span> <strong>儲存 Keras 模型</strong> — 輸出到 <code>/output/gesture_model.keras</code></p>
+    <p><span class="step-number">⑦</span> <strong>儲存 labels.txt</strong> — 輸出到 <code>/output/labels.txt</code></p>
+</div>
+
+<div class="info-box info-error">
+    <strong>❌ TFLite 轉換在 ARM64 不可行</strong>
+    TensorFlow 2.16 on ARM64 有 <code>keras_deps.get_call_context_function()</code> bug，<br>
+    容器內無法進行 TFLite 轉換。<b>TFLite 轉換需在本地 PC 進行</b>。
+</div>
+
+<!-- ==================== 3 ==================== -->
+<a class="anchor" id="upload"></a>
+<h2>3. 上傳訓練模板到 DGX</h2>
+
+<h3>3.1 手動上傳（無 SCP 時）</h3>
+<p>Windows PowerShell 沒有內建 <code>scp</code>，可透過 <code>sftp</code> 手動上傳：</p>
+
+<div class="code-block">
+<span class="comment"># 啟動 SFTP 連線</span>
+sftp your_username@your_dgx_host
+
+<span class="comment"># 進入 SFTP 後執行：</span>
+mkdir /tmp/classifier
+cd /tmp/classifier
+put resources\dataset_manager\train_templates\classifier\Dockerfile.train
+put resources\dataset_manager\train_templates\classifier\train_classifier.py
+put resources\dataset_manager\train_templates\classifier\requirements.txt
+exit
+</div>
+
+<h3>3.2 使用自動化腳本（04_upload_to_dgx.py）</h3>
+<p>上傳資料集到 DGX：</p>
+
+<div class="code-block">
+<span class="comment"># 上傳資料集（要先收集好照片）</span>
+cd mvp_hand_gesture
+python 04_upload_to_dgx.py
+
+<span class="comment"># 依序輸入：</span>
+DGX Host (e.g. 192.168.1.100): 192.168.3.8  <span class="comment">← 你的 DGX IP</span>
+SSH Port (22): 22
+Username: simfonia
+Password: ********
+</div>
+
+<div class="info-box info-success">
+    <strong>✅ 執行流程</strong>
+    <ol>
+        <li>將 <code>dataset/gesture_dataset/</code> 打包成 <code>gesture_dataset.zip</code></li>
+        <li>SFTP 上傳到 DGX 的 <code>~/cocoya_ai/sessions/{電腦名稱}/dataset/</code></li>
+        <li>遠端自動解壓縮後刪除 ZIP</li>
+        <li>本地 ZIP 也自動刪除</li>
+    </ol>
+</div>
+
+<div class="info-box info-warning">
+    <strong>⚠️ ZIP 內路徑陷阱</strong>
+    打包時 arcname 要<b>相對於資料集目錄本身</b>，避免產生雙層目錄：<br>
+    <code>arcname = os.path.relpath(filepath, DATASET_DIR)</code>  <!-- ✅ 正確 --><br>
+    <s><code>arcname = os.path.relpath(filepath, os.path.dirname(DATASET_DIR))</code></s>  <!-- ❌ 會多一層 -->
+</div>
+
+<!-- ==================== 4 ==================== -->
+<a class="anchor" id="build"></a>
+<h2>4. 建立 Docker 映像</h2>
+
+<h3>4.1 在 DGX 上執行</h3>
+
+<div class="step">
+    <p><span class="step-number">1</span> <strong>SSH 到 DGX</strong></p>
+    <div class="code-block">ssh your_username@your_dgx_host</div>
+</div>
+
+<div class="step">
+    <p><span class="step-number">2</span> <strong>進入目錄並確認檔案</strong></p>
+    <div class="code-block">
+cd /tmp/classifier
+ls -la
+<span class="comment"># 應該看到：</span>
+<span class="comment"># Dockerfile.train  train_classifier.py  requirements.txt</span></div>
+</div>
+
+<div class="step">
+    <p><span class="step-number">3</span> <strong>建立 Docker 映像</strong></p>
+    <div class="code-block">
+docker build -t cocoya-train-classifier <span class="keyword">-f Dockerfile.train</span> .
+
+<span class="comment"># 注意：檔案名稱是 Dockerfile.train，要用 -f 指定</span>
+<span class="comment"># 如果改名為 Dockerfile（無副檔名），則不需要 -f</span></div>
+</div>
+
+<div class="info-box info-warning">
+    <strong>⚠️ 檔案名稱陷阱</strong>
+    Docker 預設找 <code>Dockerfile</code>（無副檔名）。<br>
+    使用 <code>Dockerfile.train</code> 時必須加上 <code>-f Dockerfile.train</code> 參數。
+</div>
+
+<h3>4.2 Build 輸出範例</h3>
+
+<div class="code-block">
+<span class="comment"># 成功的 build 輸出：</span>
+[+] Building 5.2s (10/10) FINISHED
+ => [internal] load build definition from Dockerfile.train
+ => [internal] load metadata for nvcr.io/nvidia/pytorch:25.04-py3
+ => [1/5] FROM nvcr.io/nvidia/pytorch:25.04-py3
+ => [2/5] RUN pip install tensorflow==2.16.1 scikit-learn pillow matplotlib
+ => [3/5] COPY train_classifier.py .
+ => [4/5] RUN mkdir -p /output
+ => exporting to image
+ => => writing image sha256:919f0acf...
+ => => naming to docker.io/library/cocoya-train-classifier</div>
+
+<!-- ==================== 5 ==================== -->
+<a class="anchor" id="verify"></a>
+<h2>5. 驗證 Docker 映像</h2>
+
+<div class="code-block">
+docker images | grep cocoya-train-classifier
+
+<span class="comment"># 預期輸出：</span>
+cocoya-train-classifier   latest   919f0acf   <span class="string">5.2GB</span>   2 minutes ago</div>
+
+<div class="info-box info-info">
+    <strong>📌 映像大小說明</strong>
+    映像約 5.2GB（含 PyTorch + TensorFlow），這是正常大小。<br>
+    Docker 映像存在 DGX 本機，建一次即可讓所有學生共用。
+</div>
+
+<!-- ==================== 6 ==================== -->
+<a class="anchor" id="train"></a>
+<h2>6. 執行訓練</h2>
+
+<h3>6.1 手動執行 Docker 訓練</h3>
+
+<div class="code-block">
+docker run --gpus all --rm \
+  -v <span class="path">$(realpath ~/cocoya_ai/sessions/Info2-NB01/dataset/gesture_dataset)</span>:/dataset \
+  -v <span class="path">$(realpath ~/cocoya_ai/sessions/Info2-NB01/models/gesture_dataset)</span>:/output \
+  cocoya-train-classifier \
+  --epochs 30 --batch_size 32 --input_size 224 --lr 0.001</div>
+
+<h3>6.2 使用自動化腳本（05_train_on_dgx.py）</h3>
+
+<div class="code-block">
+cd mvp_hand_gesture
+python 05_train_on_dgx.py
+
+<span class="comment"># 輸入 SSH 資訊後，腳本會自動：</span>
+<span class="comment"># 1. 檢查資料集是否存在</span>
+<span class="comment"># 2. 檢查 Docker + GPU 狀態</span>
+<span class="comment"># 3. 建立輸出目錄</span>
+<span class="comment"># 4. 啟動訓練容器</span>
+<span class="comment"># 5. 即時顯示訓練進度</span></div>
+
+<h3>6.3 訓練輸出範例</h3>
+
+<div class="code-block">
+<span class="comment"># 訓練過程：</span>
+Epoch 1/30
+10/10 ━━━━━━━━━━━━━━━━ 15s 1s/step - accuracy: 0.45 - loss: 1.25
+                   - val_accuracy: 0.62 - val_loss: 0.89
+...
+Epoch 30/30
+10/10 ━━━━━━━━━━━━━━━━ 15s 1s/step - accuracy: 0.96 - loss: 0.12
+                   - val_accuracy: 0.95 - val_loss: 0.26
+
+<span class="comment"># 訓練完成：</span>
+<span class="func">訓練完成!</span> 耗時: 107.9 秒
+<span class="func">驗證準確率:</span> 94.68%
+
+儲存 Keras 模型...
+✅ Keras 模型已儲存: <span class="path">/output/gesture_model.keras</span>  (9455.9 KB)
+Labels 已儲存: <span class="path">/output/labels.txt</span>  (0.0 KB)
+
+✅ 訓練完成！產出檔案:
+  gesture_model.keras (9455.9 KB)
+  gesture_model.tflite (0.0 KB)    <span class="comment">← 只是舊檔案，不理會</span>
+  labels.txt (0.0 KB)</div>
+
+<div class="info-box info-success">
+    <strong>✅ 94% 準確率</strong>
+    經過 30 epochs + Class Weight 平衡 + 加強版 Data Augmentation，<br>
+    4 分類（none/paper/rock/scissors）可達 94% 驗證準確率。
+</div>
+
+<!-- ==================== 7 ==================== -->
+<a class="anchor" id="download"></a>
+<h2>7. 下載模型到本地</h2>
+
+<h3>7.1 使用自動化腳本（06_download_from_dgx.py）</h3>
+
+<div class="code-block">
+cd mvp_hand_gesture
+python 06_download_from_dgx.py
+</div>
+
+<h3>7.2 SSH 路徑處理（關鍵！）</h3>
+<p>SFTP <b>不支援</b> <code>~</code> 路徑展開，必須使用絕對路徑：</p>
+
+<div class="code-block">
+<span class="comment"># ❌ 錯誤寫法：</span>
+sftp.stat('~/cocoya_ai/models/model.keras')  <span class="comment"># FileNotFoundError</span>
+
+<span class="comment"># ✅ 正確寫法：先取得絕對路徑</span>
+stdin, stdout, stderr = ssh.exec_command('echo $HOME')
+homedir = stdout.read().decode('utf-8').strip()
+abs_path = f"{homedir}/cocoya_ai/models/model.keras"
+sftp.stat(abs_path)  <span class="comment"># 正常運作</span>
+</div>
+
+<h3>7.3 本地模型目錄</h3>
+
+<div class="code-block">
+<span class="comment"># 下載完成後的本地目錄：</span>
+mvp_hand_gesture/model/
+├── gesture_model.keras    (9.3 MB)  <span class="comment">← 從 DGX 下載</span>
+├── gesture_model.tflite   (8.5 MB)  <span class="comment">← 本地轉換的 Float32 版</span>
+└── labels.txt             (25 B)   <span class="comment">← none/paper/rock/scissors</span></div>
+
+<!-- ==================== 8 ==================== -->
+<a class="anchor" id="convert"></a>
+<h2>8. 在本地轉換 TFLite</h2>
+
+<p>由於 DGX（ARM64）上 TensorFlow 的 TFLite 轉換有 bug，轉換需在本地 PC（AMD64）進行。</p>
+
+<div class="code-block">
+python -c "
+import tensorflow as tf
+
+model = tf.keras.models.load_model('model/gesture_model.keras')
+
+converter = tf.lite.TFLiteConverter.from_keras_model(model)
+tflite_model = converter.convert()
+
+with open('model/gesture_model.tflite', 'wb') as f:
+    f.write(tflite_model)
+
+print(f'TFLite 模型已儲存: model/gesture_model.tflite ({len(tflite_model)/1024:.1f} KB)')
+"</div>
+
+<div class="info-box info-info">
+    <strong>📌 三個模型的用途</strong>
+    <table>
+        <tr><th>檔案</th><th>大小</th><th>用途</th></tr>
+        <tr><td><code>gesture_model.keras</code></td><td>~9 MB</td><td>保留用於後續再訓練</td></tr>
+        <tr><td><code>gesture_model.tflite</code></td><td>~8.5 MB</td><td>✅ <b>部署用</b>（Float32 版）</td></tr>
+    </table>
+</div>
+
+<!-- ==================== 9 ==================== -->
+<a class="anchor" id="troubleshoot"></a>
+<h2>9. 常見問題與解決方案</h2>
+
+<h3>9.1 Docker Build 失敗</h3>
+
+<div class="info-box info-error">
+    <strong>❌ exec /bin/sh: exec format error</strong>
+    原因：使用了 AMD64 的容器映像（如 <code>tensorflow/tensorflow:2.13.0-gpu</code>）<br>
+    解決：改用 ARM64 映像，如 <code>nvcr.io/nvidia/pytorch:25.04-py3</code>
+</div>
+
+<div class="info-box info-error">
+    <strong>❌ open /Dockerfile: no such file or directory</strong>
+    原因：檔案名稱是 <code>Dockerfile.train</code>，不是 <code>Dockerfile</code><br>
+    解決：加上 <code>-f Dockerfile.train</code> 參數
+</div>
+
+<h3>9.2 TFLite 轉換失敗</h3>
+
+<div class="info-box info-error">
+    <strong>❌ 'NoneType' object is not callable</strong>
+    錯誤訊息：<br>
+    <code>File ".../tflite_keras_util.py", line 188, in _wrapped_model<br>
+    with keras_deps.get_call_context_function()().enter(...)<br>
+    TypeError: 'NoneType' object is not callable</code><br><br>
+    原因：TensorFlow 2.16 on ARM64 的 Keras 相容性 bug<br>
+    解決：在容器內<b>只存 Keras 模型</b>，TFLite 轉換在本地 PC 進行
+</div>
+
+<h3>9.3 SFTP 下載失敗</h3>
+
+<div class="info-box info-error">
+    <strong>❌ FileNotFoundError: gesture_model.keras 不存在於遠端</strong>
+    原因：使用 <code>~</code> 在 SFTP 路徑中，無法展開<br>
+    解決：先透過 SSH 取得絕對路徑（<code>echo $HOME</code>），再用絕對路徑進行 SFTP 操作
+</div>
+
+<h3>9.4 主機名稱錯誤</h3>
+
+<div class="info-box info-error">
+    <strong>❌ Unknown_PC 路徑</strong>
+    原因：<code>os.uname().nodename</code> 在 Windows 上不存在<br>
+    解決：改用 <code>socket.gethostname()</code>
+</div>
+
+<h3>9.5 資料集路徑雙層</h3>
+
+<div class="info-box info-warning">
+    <strong>⚠️ 遠端變成 ~/dataset/gesture_dataset/gesture_dataset/</strong>
+    原因：ZIP 打包時 arcname 使用了 <code>os.path.dirname(DATASET_DIR)</code><br>
+    解決：改為 <code>os.path.relpath(filepath, DATASET_DIR)</code>
+</div>
+
+<h3>9.6 labels.txt 寫入 one-hot 陣列</h3>
+
+<div class="info-box info-warning">
+    <strong>⚠️ labels.txt 內容變成 [0. 0. 1. 0.] 等陣列</strong>
+    原因：Class Weight 計算的 for 迴圈覆蓋了 <code>labels</code> 變數：<br>
+    <code>for _, labels in train_ds:  # 覆蓋！</code><br>
+    解決：改用不同變數名稱 <code>for _, label_batch in train_ds:</code>
+</div>
+
+<!-- ==================== 10 ==================== -->
+<a class="anchor" id="architecture"></a>
+<h2>10. 架構說明</h2>
+
+<h3>10.1 完整流程圖</h3>
+
+<div class="code-block">
+<span class="comment">┌─────────────┐    ┌──────────────┐    ┌──────────────┐</span>
+<span class="comment">│  本地 PC     │    │   DGX Spark  │    │   πCar       │</span>
+<span class="comment">│  (AMD64)    │    │   (ARM64)    │    │   (RP2040)   │</span>
+<span class="comment">└──────┬──────┘    └──────┬───────┘    └──────┬───────┘</span>
+       │                      │                      │
+       │  ① 收集資料集         │                      │
+       │  dataset/*.jpg       │                      │
+       │                      │                      │
+       │  ② ZIP 打包 ────────→│  ③ 解壓縮            │
+       │                      │                      │
+       │  ⑤ Docker build      │  ④ 訓練容器          │
+       │  (只傳腳本)          │  NGC PyTorch + TF    │
+       │                      │                      │
+       │  ⑦ 下載模型 ←───────│  ⑥ 儲存 .keras       │
+       │                      │                      │
+       │  ⑧ TFLite 轉換      │                      │
+       │  ⑨ 即時推論 ────────→│─────────→│  ⑩ Serial 控制音高│
+       │                      │                      │
+<span class="comment">└─────────────────────┘</span></div>
+
+<h3>10.2 Docker 映像共用原則</h3>
+
+<div class="info-box info-success">
+    <strong>✅ 建一次，所有人共用</strong>
+    <code>cocoya-train-classifier</code> 映像只需在 DGX 上建立一次。<br>
+    所有學生的差異僅在於<b>資料集</b>（透過 <code>-v</code> 掛載不同目錄），而非訓練環境。
+</div>
+
+<div class="code-block">
+<span class="comment"># 學生 A 訓練</span>
+docker run --gpus all -v /path/A/dataset:/dataset -v /path/A/output:/output cocoya-train-classifier
+
+<span class="comment"># 學生 B（共用同一映像）</span>
+docker run --gpus all -v /path/B/dataset:/dataset -v /path/B/output:/output cocoya-train-classifier</div>
+
+<h3>10.3 備份/遷移 Docker 映像</h3>
+
+<div class="code-block">
+<span class="comment"># 匯出映像到檔案</span>
+docker save cocoya-train-classifier -o cocoya-train-classifier.tar
+
+<span class="comment"># 在另一台機器載入</span>
+docker load -i cocoya-train-classifier.tar</div>
+
+<hr style="margin: 48px 0; border: none; border-top: 1px solid #e0e0e0;">
+
+<p style="text-align: center; color: #888; font-size: 14px;">
+    Cocoya 專案 · 文件版本 1.0 · 最後更新 2026-06-24
+</p>
+
+</div>
+
+</body>
+</html>
