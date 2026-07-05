@@ -113,7 +113,8 @@
         <li><a href="#deployment">8. 硬體部署系統 (MCU)</a></li>
         <li><a href="#regex">9. 積木定位技術 (Regex)</a></li>
         <li><a href="#ai-spec">10. AI 視覺模組規範 (MediaPipe)</a></li>
-        <li><a href="#indent-spec">11. 縮排與代碼產生規範</a></li>
+        <li><a href="#ai-inference">11. AI 推論與訓練模組規範</a></li>
+        <li><a href="#indent-spec">12. 縮排與代碼產生規範</a></li>
         <li><a href="#async-dialogs">12. 非同步對話框機制 (Bridge)</a></li>
         <li><a href="#variable-mgmt">13. 變數管理與動態回調</a></li>
         <li><a href="#quote-spec">14. 產生器引號規範</a></li>
@@ -224,6 +225,19 @@
             <li><strong>模組語系:</strong> 位於 <code>modules/[moduleId]/i18n/[lang].js</code>，僅定義該模組特有的積木文字。</li>
         </ul>
         <p>載入器會在載入積木前，優先嘗試載入對應的模組語系檔。</p>
+
+        <h3>佔位符與 Blockly 解析規範 (Placeholder Resolution)</h3>
+        <p>Blockly 解析 <code>%{BKY_XXX}</code> 佔位符時，會自動去掉 <code>BKY_</code> 前綴，然後查詢 <code>Blockly.Msg["XXX"]</code>。因此：</p>
+        <ul>
+            <li><strong>toolbox.xml:</strong> 必須使用 <code>%{BKY_XXX}</code> 格式（有 <code>BKY_</code> 前綴）。</li>
+            <li><strong>Blockly.Msg 定義:</strong> 必須定義 <code>Blockly.Msg["XXX"]</code>（無 <code>BKY_</code> 前綴）。</li>
+        </ul>
+        <p>範例：</p>
+        <pre><code class="language-xml"><category name="%{BKY_CAT_AI_INFERENCE}" colour="%{BKY_COLOUR_AI_INFERENCE}"></code></pre>
+        <pre><code class="language-javascript">// 正確定義
+Blockly.Msg["CAT_AI_INFERENCE"] = "AI 推論";
+Blockly.Msg["COLOUR_AI_INFERENCE"] = "#9C27B0";</code></pre>
+        <p>這樣 Blockly 解析 <code>%{BKY_CAT_AI_INFERENCE}</code> → 查詢 <code>Blockly.Msg["CAT_AI_INFERENCE"]</code> → 正常顯示「AI 推論」。</p>
     </section>
 
     <section id="platform">
@@ -306,19 +320,99 @@ Blockly.Python.scrub_ = function(block, code, opt_thisOnly) {
         <p>為了確保 MediaPipe 與 OpenCV 的整合穩定性，AI 模組須遵循以下實作標準：</p>
         <ul>
             <li><strong>物件導向初始化:</strong> 產生器必須完整產出初始化代碼（包含 <code>import</code>、<code>mp.solutions</code> 初始化），以便使用者在全域定義區直接使用。</li>
-            <li><strong>座標歸一化 (Normalization):</strong> 
+            <li><strong>座標歸一化 (Normalization):</strong>
                 <ul>
                     <li>原始資料傳回 MediaPipe 座標 (0.0 - 1.0)。</li>
                     <li>提供專用的 <code>get_landmark_xy</code> 積木進行像素轉換。</li>
                 </ul>
             </li>
-            <li><strong>強型別連線檢查 (Type Safety):</strong> 
+            <li><strong>強型別連線檢查 (Type Safety):</strong>
                 <ul>
                     <li>偵測結果使用 <code>HandLandmarks</code> 與 <code>Landmark</code> 自定義類型。</li>
                     <li>確保「取得特徵點」積木與「座標轉換」積木之間的連線安全性。</li>
                 </ul>
             </li>
         </ul>
+    </section>
+
+    <section id="ai-inference">
+        <h2>11. AI 推論與訓練模組規範 (Template-Based Architecture)</h2>
+        <p>為了實現模組化、可維護且易於擴展的 AI 訓練系統，Cocoya 採用基於外部 Python 模板的架構設計。</p>
+
+        <h3>A. 模板化訓練系統 (Template-Based Training)</h3>
+        <p>訓練邏輯完全外部化到 <code>resources/train_templates/</code> 目錄，每個任務類型獨立維護：</p>
+        <div class="file-tree">
+            resources/train_templates/<br>
+            ├── classifier/<br>
+            │   └── classifier_train.py<br>
+            ├── detector/<br>
+            │   └── detector_train.py<br>
+            └── line_follower/<br>
+                └── line_follower_train.py<br>
+        </div>
+
+        <h3>B. 統一介面規範 (Unified Interface)</h3>
+        <p>所有訓練模板必須遵循統一的命令列介面：</p>
+        <pre><code class="language-bash">python classifier_train.py \
+    --dataset_dir <path> \
+    --output_dir <path> \
+    --epochs <number> \
+    --batch_size <number> \
+    --learning_rate <float> \
+    --project_name <string></code></pre>
+
+        <h3>C. 產生器路由邏輯 (Generator Routing)</h3>
+        <p>JavaScript 產生器僅負責參數驗證與模板呼叫：</p>
+        <pre><code class="language-javascript">// 根據任務類型選擇模板
+if (task_type == "classifier") {
+    script_name = "classifier_train.py";
+} else if (task_type == "detector") {
+    script_name = "detector_train.py";
+}
+
+// 呼叫 subprocess 執行
+cmd = [
+    sys.executable,
+    script_path,
+    "--dataset_dir", dataset,
+    "--output_dir", output_dir,
+    "--epochs", str(config["epochs"]),
+    ...
+];
+result = subprocess.run(cmd, capture_output=True, text=True, shell=True);</code></pre>
+
+        <h3>D. 跨平台兼容性 (Cross-Platform Compatibility)</h3>
+        <p>使用 <code>shell=True</code> 參數確保在 Windows、Git Bash、macOS 和 Linux 下均能正常執行：</p>
+        <pre><code class="language-python"># 支援 Windows & Unix-like 系統
+result = subprocess.run(cmd, capture_output=True, text=True, shell=True)</code></pre>
+
+        <h3>E. 結果回傳格式 (Result Format)</h3>
+        <p>訓練模板必須在執行結束時輸出 JSON 格式的結果：</p>
+        <pre><code class="language-json">RESULT: {
+    "success": true,
+    "projectName": "gesture_classifier",
+    "modelDir": "model/",
+    "epochs": 50,
+    "batchSize": 32,
+    "learningRate": 0.001,
+    "accuracy": 0.935
+}</code></pre>
+
+        <h3>F. 模板開發規範 (Template Standards)</h3>
+        <ul>
+            <li><strong>獨立性:</strong> 每個模板必須能獨立執行，不依賴 Cocoya 環境</li>
+            <li><strong>參數驗證:</strong> 必須包含完整的參數驗證與錯誤訊息</li>
+            <li><strong>進度回饋:</strong> 提供詳細的訓練進度與結果輸出</li>
+            <li><strong>模型輸出:</strong> 必須產出標準格式的 TFLite 模型與 labels.txt</li>
+        </ul>
+
+        <h3>G. 版本控制與相容性 (Versioning)</h3>
+        <p>模板版本號記錄在 <code>resources/train_templates/version.json</code>：</p>
+        <pre><code class="language-json">{
+    "classifier": "1.0.0",
+    "detector": "0.1.0",
+    "line_follower": "0.0.1"
+}</code></pre>
     </section>
 
     <section id="indent-spec">
@@ -339,7 +433,7 @@ Blockly.Python.scrub_ = function(block, code, opt_thisOnly) {
     </section>
 
     <section id="async-dialogs">
-        <h2>12. 非同步對話框機制 (Bridge)</h2>
+        <h2>13. 非同步對話框機制 (Bridge)</h2>
         <p>由於 VS Code Webview 禁止使用同步的 <code>window.prompt()</code>, <code>confirm()</code> 與 <code>alert()</code>，系統實作了一套跨端非同步橋樑：</p>
         <ul>
             <li><strong>核心技術:</strong> 透過 <code>Blockly.dialog.setPrompt()</code> 與 <code>setConfirm()</code> 攔截核心事件。</li>

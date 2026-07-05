@@ -54,19 +54,25 @@ class CameraService:
                 # waitKey 是必須的，否則視窗不會渲染
                 key = cv2.waitKey(1) & 0xFF
                 if key == ord('q'):
+                    self.running = False
                     break
                 
                 # 偵測視窗關閉 (X 按鈕)
                 try:
                     # 在某些系統上，關閉視窗會讓這個屬性變為 -1 或 0
                     if cv2.getWindowProperty(self.window_name, cv2.WND_PROP_VISIBLE) < 1:
+                        self.running = False
                         break 
                 except:
+                    self.running = False
                     break
             else:
                 time.sleep(0.01)
         
-        self.running = False
+        # 確保釋放攝影機資源
+        if self.cap:
+            self.cap.release()
+            self.cap = None
         cv2.destroyAllWindows()
 
     def capture(self, save_path=None):

@@ -90,15 +90,33 @@
 
                 <!-- 右側群組：Serial 與 執行 -->
                 <div class="toolbar-group">
-                    <!-- 雲端 AI 模式開關 -->
-                    <div id="cloud-ai-container" class="cloud-ai-wrapper" style="display: none;">
-                        <span class="cloud-ai-label">Cloud AI</span>
-                        <label class="switch">
-                            <input type="checkbox" id="cloud-ai-toggle">
-                            <span class="slider round"></span>
-                        </label>
+                    <!-- AI 功能下拉選單 (僅 PC 模式顯示) -->
+                    <div class="toolbar-dropdown" id="ai-dropdown" style="display: none;">
+                        <div class="toolbar-btn" id="btn-ai-menu" title="AI 功能">
+                            <img src="src/icons/psychology_24dp_1F1F1F.png" class="normal-icon">
+                            <img src="src/icons/psychology_24dp_FE2F89.png" class="hover-icon">
+                        </div>
+                        <div class="dropdown-content ai-dropdown-content">
+                            <div class="dropdown-item" id="btn-cloud-ai-toggle">
+                                <span style="flex: 1;">☁️ 遠端訓練</span>
+                                <span id="cloud-ai-status" style="color: #999; font-size: 11px;">○</span>
+                            </div>
+                            <div class="dropdown-separator"></div>
+                            <div class="dropdown-item" id="btn-dataset-manager-dropdown">
+                                <img src="src/icons/dataset_24dp_FE2F89.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                <span>📊 資料集管理</span>
+                            </div>
+                            <div class="dropdown-item" id="btn-training-result">
+                                <img src="src/icons/data_exploration_24dp_FE2F89.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                <span>📈 訓練結果</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="toolbar-separator" id="cloud-ai-separator" style="display: none;"></div>
+
+                    <div class="toolbar-separator" id="ai-dropdown-separator" style="display: none;"></div>
+                    
+                    <!-- 隱藏的 checkbox 用於向後相容 (dataset_manager 模組依賴此元素) -->
+                    <input type="checkbox" id="cloud-ai-toggle" style="display: none;">
                     
                     <div class="toolbar-btn" id="btn-refresh-serial" title="%{BKY_TLB_SERIAL_REFRESH}">
                         <img src="src/icons/connect_serial_24dp_1F1F1F.png" class="normal-icon">
@@ -118,10 +136,6 @@
                     <div class="toolbar-btn" id="btn-terminal" title="%{BKY_TLB_TERMINAL}">
                         <img src="src/icons/terminal_24dp_1F1F1F.png" class="normal-icon">
                         <img src="src/icons/terminal_24dp_FE2F89.png" class="hover-icon">
-                    </div>
-                    <div class="toolbar-btn" id="btn-dataset-manager" title="Dataset Manager">
-                        <img src="src/icons/dashboard_customize_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="src/icons/dashboard_customize_24dp_FE2F89.png" class="hover-icon">
                     </div>
                     <div class="toolbar-btn" id="btn-update" title="%{BKY_TLB_UPDATE}">
                         <img src="src/icons/published_with_changes_24dp_1F1F1F.png" class="update-icon">
@@ -180,6 +194,7 @@
                     </select>
                 </div>
             </div>
+            <div id="block-type-info" style="display: none; padding: 4px 12px; font-size: 11px; color: #FE2F89; background: #FFF0F5; border-bottom: 1px solid #FDE0E8; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
             <div id="codeContent"></div>
         </div>
     </div>

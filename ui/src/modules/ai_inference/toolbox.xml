@@ -1,0 +1,24 @@
+<category name="%{BKY_CAT_AI_INFERENCE}" colour="%{BKY_COLOUR_AI_INFERENCE}">
+    <!-- 訓練相關積木 -->
+    <block type="py_ai_train_run">
+        <field name="DATASET_DIR">dataset/classifier_dataset</field>
+        <field name="MODEL_DIR">model/classifier_dataset</field>
+        <field name="EPOCHS">20</field>
+        <field name="BATCH_SIZE">32</field>
+        <field name="LEARNING_RATE">0.001</field>
+        <field name="TASK_TYPE">classifier</field>
+        <field name="BACKEND">auto</field>
+    </block>
+    
+    <!-- 推論相關積木（未來擴充） -->
+    <block type="py_ai_model_init">
+        <field name="MODEL_PATH">model.tflite</field>
+    </block>
+    <block type="py_ai_model_predict">
+        <value name="FRAME">
+            <block type="variables_get">
+                <field name="VAR">input_data</field>
+            </block>
+        </value>
+    </block>
+</category>

@@ -57,7 +57,9 @@ export const Sampler = {
      * 停止攝影機
      */
     stopCamera() {
-        console.log('[Sampler] Stopping Sidecar Camera...');
+        if (!this.state.isCamRunning) {
+            return; // 防止重複停止
+        }
         window.CocoyaBridge.send('datasetStopCamera', {});
         this.state.isCamRunning = false; // 更新狀態
         this.stopBurst();

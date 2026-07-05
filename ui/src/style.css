@@ -928,6 +928,35 @@ body.vscode-high-contrast .btn-close {
     background: #555;
 }
 
+/* --- AI 下拉選單 (psychology icon) --- */
+#ai-dropdown {
+    display: none;
+}
+
+.ai-dropdown-content {
+    min-width: 180px;
+}
+
+.ai-dropdown-content .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#cloud-ai-status {
+    font-weight: bold;
+    min-width: 16px;
+    text-align: center;
+}
+
+#cloud-ai-status.enabled {
+    color: #4caf50;
+}
+
+#cloud-ai-status.disabled {
+    color: #999;
+}
+
 /* --- 雲端 AI 模式開關 --- */
 .cloud-ai-wrapper {
     display: flex;
@@ -999,6 +1028,7 @@ input:checked + .slider {
 input:focus + .slider {
     box-shadow: 0 0 1px #FE2F89;
 }
+
 
 input:checked + .slider:before {
     transform: translateX(16px);

@@ -44,6 +44,24 @@ class DatasetSidecarManager {
                 env: Object.assign({}, process.env, { PYTHONIOENCODING: 'utf-8' })
             });
 
+            // 檢查程序是否立即退出（錯誤代碼 9009 = 找不到檔案）
+            this.process.on('error', (err) => {
+                this.outputChannel.appendLine(`[Sidecar Manager] Failed to start: ${err.message}`);
+                this.outputChannel.appendLine(`[Sidecar Manager] Please check:`);
+                this.outputChannel.appendLine(`[Sidecar Manager]   1. Python path: ${this.pythonPath}`);
+                this.outputChannel.appendLine(`[Sidecar Manager]   2. Script path: ${scriptPath}`);
+                this.outputChannel.appendLine(`[Sidecar Manager]   3. Working dir: ${workingDir}`);
+                vscode.window.showErrorMessage(`無法啟動 Dataset Manager：Python 執行檔或腳本遺失。請在設定中確認 Python 路徑。`);
+            });
+
+            this.process.on('close', (code) => {
+                if (code === 9009) {
+                    this.outputChannel.appendLine(`[Sidecar Manager] ERROR: Python executable not found (exit code 9009)`);
+                    this.outputChannel.appendLine(`[Sidecar Manager] Current pythonPath: ${this.pythonPath}`);
+                    this.outputChannel.appendLine(`[Sidecar Manager] Please set Python path via: Cocoya: Set Python Path`);
+                }
+            });
+
             this.process.stdout?.on('data', (data) => {
                 const raw = data.toString();
                 this.outputChannel.append(`[Sidecar stdout] ${raw}`);
@@ -172,7 +190,9 @@ export class CocoyaManager {
     constructor(context: vscode.ExtensionContext, panel: vscode.WebviewPanel) {
         this.context = context;
         this.panel = panel;
-        this.sidecar = new DatasetSidecarManager(context, this.getPythonPath());
+        
+        const pythonPath = this.getPythonPath();
+        this.sidecar = new DatasetSidecarManager(context, pythonPath);
         
         // 註冊事件轉發
         this.sidecar.onEvent = (event, data) => {
@@ -429,46 +449,82 @@ export class CocoyaManager {
                 case 'datasetUploadArchive':
                     await this.handleDatasetUploadArchive(message);
                     break;
+                case 'openDatasetManager':
+                    this.handleOpenDatasetManager();
+                    break;
+                case 'startTraining':
+                    await this.handleStartTraining(message);
+                    break;
                 case 'checkRemoteEnvironment':
                     await this.handleCheckRemoteEnvironment(message);
                     break;
                 case 'pickFolder':
                     this.handlePickFolder(message);
                     break;
+                case 'openTrainingReport':
+                    this.handleOpenTrainingReport(message);
+                    break;
+                case 'openLatestTrainingReport':
+                    this.handleOpenLatestTrainingReport();
+                    break;
             }
         }, undefined, this.context.subscriptions);
+    }
+
+    /**
+     * 開啟 Dataset Manager
+     */
+    private handleOpenDatasetManager() {
+        // 傳送訊息給前端，開啟 Dataset Manager overlay
+        this.panel.webview.postMessage({ command: 'openDatasetManager' });
     }
 
     /**
      * 處理資料夾選取與掃描
      */
     private async handlePickFolder(message: any) {
+        const { requestId, fieldName } = message;
         const lastPath = this.context.globalState.get<string>('lastDatasetFolder');
-        const defaultUri = lastPath ? vscode.Uri.file(lastPath) : undefined;
         
-        const uris = await vscode.window.showOpenDialog({
-            canSelectFolders: true,
-            canSelectFiles: false,
-            canSelectMany: false,
-            defaultUri: defaultUri,
-            title: '選取資料集資料夾'
-        });
-
-        if (uris && uris[0]) {
-            const folderPath = uris[0].fsPath;
-            await this.context.globalState.update('lastDatasetFolder', folderPath);
-            
-            const result = await this.scanDatasetFolder(folderPath);
-            this.panel.webview.postMessage({ 
-                command: 'pickFolderResponse', 
-                requestId: message.requestId, 
-                result: Object.assign({ path: folderPath }, result) 
+        try {
+            // 開啟資料夾選擇對話框
+            const defaultUri = lastPath ? vscode.Uri.file(lastPath) : undefined;
+            const uris = await vscode.window.showOpenDialog({
+                canSelectFolders: true,
+                canSelectFiles: false,
+                canSelectMany: false,
+                defaultUri: defaultUri,
+                title: '選取資料集資料夾'
             });
-        } else {
-            this.panel.webview.postMessage({ 
-                command: 'pickFolderResponse', 
-                requestId: message.requestId, 
-                result: null 
+
+            if (uris && uris[0]) {
+                const folderPath = uris[0].fsPath;
+                
+                // 儲存最後選擇的路徑
+                await this.context.globalState.update('lastDatasetFolder', folderPath);
+                
+                // 回傳路徑給前端
+                this.panel.webview.postMessage({
+                    command: 'folderSelected',
+                    requestId: requestId,
+                    fieldName: fieldName,
+                    path: folderPath
+                });
+            } else {
+                this.panel.webview.postMessage({
+                    command: 'folderSelected',
+                    requestId: requestId,
+                    fieldName: fieldName,
+                    error: '使用者取消選擇'
+                });
+            }
+        } catch (e: any) {
+            vscode.window.showErrorMessage('選擇資料夾失敗: ' + e.message);
+            this.panel.webview.postMessage({
+                command: 'folderSelected',
+                requestId: requestId,
+                fieldName: fieldName,
+                error: e.message
             });
         }
     }
@@ -708,6 +764,12 @@ except Exception as e:
         this.panel.webview.postMessage({ command: 'cloudAiModeStatus', enabled });
     }
 
+    private async handleSetRemoteMode(enabled: boolean) {
+        this.cloudAiEnabled = enabled;
+        this.context.globalState.update('cloudAiEnabled', enabled);
+        this.panel.webview.postMessage({ command: 'cloudAiModeStatus', enabled });
+    }
+
     /**
      * 處理遠端環境診斷 (CUDA/Docker)
      * 方案 C：透過本地 Python Sidecar (paramiko) 建立 SSH 連線，在遠端主機執行診斷指令
@@ -826,6 +888,91 @@ except Exception as e:
                 this.panel.webview.postMessage({ command: 'datasetUploadResult', success: false, error: e.message });
             }
         });
+    }
+
+    /**
+     * 處理模型訓練請求（本地或遠端）
+     */
+    private async handleStartTraining(message: any) {
+        const { projectName, taskType, backend, sshConfig, datasetDir, outputDir } = message;
+
+        // 決定資料集與輸出路徑
+        const baseDir = (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)
+            ? vscode.workspace.workspaceFolders[0].uri.fsPath
+            : path.join(this.context.extensionPath, 'temp_scripts');
+
+        const finalDatasetDir = datasetDir || path.join(baseDir, 'dataset', projectName);
+        const finalOutputDir = outputDir || path.join(baseDir, 'model', projectName);
+
+        console.log(`[Training] Starting training:`);
+        console.log(`[Training]   projectName: ${projectName}`);
+        console.log(`[Training]   baseDir: ${baseDir}`);
+        console.log(`[Training]   datasetDir: ${finalDatasetDir}`);
+        console.log(`[Training]   outputDir: ${finalOutputDir}`);
+        console.log(`[Training]   backend: ${backend}`);
+
+        if (backend === 'local') {
+            // 本地訓練模式
+            this.sidecar.start();
+            this.sidecar.send('trainLocal', {
+                projectName,
+                taskType,
+                datasetDir: finalDatasetDir,
+                outputDir: finalOutputDir,
+                hyperparams: {
+                    epochs: 30,
+                    batchSize: 32,
+                    learningRate: 0.001
+                }
+            }, (resp) => {
+                if (resp.success) {
+                    console.log(`[Training] Training completed successfully:`);
+                    console.log(`[Training]   modelDir: ${resp.modelDir}`);
+                    console.log(`[Training]   reportPath: ${resp.reportPath}`);
+                    console.log(`[Training]   curvePath: ${resp.curvePath}`);
+                    
+                    vscode.window.showInformationMessage(`訓練完成！模型已儲存至: ${resp.modelDir}`);
+                    this.panel.webview.postMessage({
+                        command: 'trainingComplete',
+                        success: true,
+                        modelDir: resp.modelDir,
+                        projectName: resp.projectName,
+                        accuracy: resp.accuracy,
+                        epochs: resp.epochs,
+                        curvePath: resp.curvePath,
+                        historyPath: resp.historyPath,
+                        reportPath: resp.reportPath
+                    });
+                } else {
+                    console.error(`[Training] Training failed:`, resp.error);
+                    vscode.window.showErrorMessage('訓練失敗: ' + (resp.error || '未知錯誤'));
+                    this.panel.webview.postMessage({
+                        command: 'trainingError',
+                        success: false,
+                        error: resp.error || '訓練失敗'
+                    });
+                }
+            });
+
+            // 監聽訓練過程中的事件
+            this.sidecar.onEvent = (event, data) => {
+                if (event === 'trainingLog') {
+                    this.panel.webview.postMessage({
+                        command: 'trainingLog',
+                        message: data.message
+                    });
+                }
+            };
+
+        } else if (backend === 'dgx' || backend === 'remote') {
+            // 遠端訓練模式（未來實作）
+            vscode.window.showWarningMessage('遠端訓練功能開發中，請使用本地訓練模式。');
+            this.panel.webview.postMessage({
+                command: 'trainingError',
+                success: false,
+                error: '遠端訓練功能尚未開放'
+            });
+        }
     }
 
     /**
@@ -1322,7 +1469,24 @@ print(json.dumps(results))
             terminal.sendText(`cd "${projectDir}"`);
         }
 
-        terminal.sendText(`& "${pythonPath}" "${tempFilePath}"`);
+        // 智慧偵測終端機 shell 類型，使用正確的語法
+        const shell = (vscode as any).env?.shell || '';
+        const isBashLike = shell.includes('bash') || shell.includes('git-bash') || shell.includes('zsh');
+        const isPowerShell = shell.includes('powershell') || shell.includes('pwsh');
+        
+        let runCmd: string;
+        if (isBashLike) {
+            // Git Bash / WSL / Linux / Mac：直接執行
+            runCmd = `"${pythonPath}" "${tempFilePath}"`;
+        } else if (isPowerShell || process.platform === 'win32') {
+            // PowerShell：使用呼叫運算子 &
+            runCmd = `& "${pythonPath}" "${tempFilePath}"`;
+        } else {
+            // CMD 或其他：使用 start 命令
+            runCmd = `start "" "${pythonPath}" "${tempFilePath}"`;
+        }
+        
+        terminal.sendText(runCmd);
         this.panel.webview.postMessage({ command: 'runCompleted' });
     }
 
@@ -1552,6 +1716,165 @@ print(json.dumps(results))
         }
     }
 
+    /**
+     * 用系統預設瀏覽器開啟 HTML 訓練報告
+     * 使用 openExternal 讓 HTML 在瀏覽器中開啟，而非 VS Code 編輯器
+     */
+    private handleOpenTrainingReport(message: any) {
+        const reportPath = message.path;
+        if (!reportPath || !fs.existsSync(reportPath)) {
+            vscode.window.showErrorMessage('找不到訓練報告檔案: ' + (reportPath || ''));
+            return;
+        }
+        
+        console.log(`[TrainingReport] Opening report in browser:`);
+        console.log(`[TrainingReport]   path: ${reportPath}`);
+        
+        // 檢查是否包含中文路徑
+        const hasChinesePath = /[\u4e00-\u9fa5]/.test(reportPath);
+        
+        // 如果包含中文路徑，直接顯示提示（不使用 openExternal，因為一定會失敗）
+        if (hasChinesePath) {
+            this.showChinesePathError(reportPath);
+            return;
+        }
+        
+        // 使用 vscode.env.openExternal 開啟
+        vscode.env.openExternal(vscode.Uri.file(reportPath)).then((success: boolean) => {
+            if (!success) {
+                console.error(`[TrainingReport] openExternal returned false`);
+                vscode.window.showErrorMessage(`開啟失敗，請手動開啟檔案：\n${reportPath}`);
+            } else {
+                console.log(`[TrainingReport] Successfully opened in browser`);
+            }
+        }, (err: any) => {
+            console.error(`[TrainingReport] openExternal failed:`, err);
+            vscode.window.showErrorMessage(`開啟失敗，請手動開啟檔案：\n${reportPath}\n\n錯誤：${err.message || '未知錯誤'}`);
+        });
+    }
+    
+    /**
+     * 顯示中文路徑錯誤提示
+     */
+    private showChinesePathError(reportPath: string) {
+        const errorMsg = `開啟訓練報告失敗！
+
+原因：路徑或檔名包含中文，導致無法直接開啟。
+
+解決方案：
+1. 將專案資料夾移到英文路徑，例如：
+   C:/Workspace/training/
+   
+2. 自行開啟：
+   ${reportPath}
+
+3. 建議：專案資料夾中的路徑及檔名都以英文命名。`;
+        
+        vscode.window.showErrorMessage(errorMsg, { modal: true });
+    }
+
+    /**
+     * 開啟目前專案 model 目錄下最新的訓練報告
+     * 由 AI 下拉選單的「訓練結果」按鈕觸發
+     */
+    private async handleOpenLatestTrainingReport() {
+        // 決定專案根目錄：
+        // 1. 優先使用當前開啟的 Cocoya 專案檔案所在目錄
+        // 2. 其次使用 VS Code 工作區第一個資料夾
+        // 3. 最後退回 temp_scripts
+        let baseDir: string;
+        if (this.currentFilePath) {
+            // 當前有開啟 Cocoya 專案檔，使用該檔案所在目錄
+            baseDir = path.dirname(this.currentFilePath);
+            console.log(`[TrainingReport] Using current project dir: ${baseDir}`);
+        } else if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+            // 沒有開啟專案檔，但工作區有資料夾
+            baseDir = vscode.workspace.workspaceFolders[0].uri.fsPath;
+            console.log(`[TrainingReport] Using workspace folder: ${baseDir}`);
+        } else {
+            // 完全沒有上下文，退回 temp_scripts
+            baseDir = path.join(this.context.extensionPath, 'temp_scripts');
+            console.log(`[TrainingReport] Using fallback temp_scripts: ${baseDir}`);
+        }
+
+        const modelDir = path.join(baseDir, 'model');
+        console.log(`[TrainingReport] Searching in modelDir: ${modelDir}`);
+        
+        if (!fs.existsSync(modelDir)) {
+            const msg = `尚無訓練結果，請先執行訓練。\n(搜尋路徑: ${modelDir})`;
+            vscode.window.showInformationMessage(msg);
+            console.log(`[TrainingReport] modelDir does not exist: ${modelDir}`);
+            return;
+        }
+
+        // 搜尋所有子目錄下的 _training_report.html
+        const reportFiles: string[] = [];
+        const walk = (dir: string) => {
+            try {
+                const entries = fs.readdirSync(dir, { withFileTypes: true });
+                for (const entry of entries) {
+                    const fullPath = path.join(dir, entry.name);
+                    if (entry.isDirectory()) {
+                        walk(fullPath);
+                    } else if (entry.name.endsWith('_training_report.html')) {
+                        reportFiles.push(fullPath);
+                    }
+                }
+            } catch (e) {
+                // 忽略權限錯誤
+            }
+        };
+        walk(modelDir);
+
+        console.log(`[TrainingReport] Found ${reportFiles.length} report(s):`, reportFiles);
+
+        if (reportFiles.length === 0) {
+            const msg = `尚無訓練結果，請先執行訓練。\n(搜尋路徑: ${modelDir})`;
+            vscode.window.showInformationMessage(msg);
+            console.log(`[TrainingReport] No reports found in: ${modelDir}`);
+            return;
+        }
+
+        // 依修改時間排序，取最新的
+        reportFiles.sort((a, b) => fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs);
+        
+        // 如果有多個報告，顯示 QuickPick 讓使用者選擇
+        if (reportFiles.length > 1) {
+            console.log(`[TrainingReport] Multiple reports found, showing picker...`);
+            const items = reportFiles.map(filePath => {
+                const projectName = path.basename(path.dirname(filePath));
+                const mtime = fs.statSync(filePath).mtime;
+                const timeStr = mtime.toLocaleString('zh-TW', { 
+                    month: 'short', 
+                    day: 'numeric', 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                return {
+                    label: projectName,
+                    description: timeStr,
+                    path: filePath
+                };
+            });
+
+            const selected = await vscode.window.showQuickPick(items, {
+                placeHolder: `找到 ${reportFiles.length} 個訓練報告，請選擇要開啟的項目：`
+            });
+
+            if (selected) {
+                console.log(`[TrainingReport] User selected: ${selected.path}`);
+                this.handleOpenTrainingReport({ path: selected.path });
+            } else {
+                console.log(`[TrainingReport] User cancelled selection`);
+            }
+        } else {
+            // 只有一個報告，直接開啟
+            const latest = reportFiles[0];
+            console.log(`[TrainingReport] Opening only report: ${latest}`);
+            this.handleOpenTrainingReport({ path: latest });
+        }
+    }
+
     private isNewerVersion(curr: string, late: string): boolean {
         const c = curr.split('.').map(Number);
         const l = late.split('.').map(Number);
@@ -1564,6 +1887,19 @@ print(json.dumps(results))
 }
 
 export function activate(context: vscode.ExtensionContext) {
+    context.subscriptions.push(vscode.commands.registerCommand('cocoya.setPythonPath', async () => {
+        const uris = await vscode.window.showOpenDialog({ 
+            canSelectMany: false, 
+            filters: { 'Executables': ['exe'] }, 
+            title: 'Select python.exe' 
+        });
+        if (uris && uris[0]) {
+            const newPath = uris[0].fsPath;
+            await context.globalState.update('pythonPath', newPath);
+            vscode.window.showInformationMessage(`Python path updated: ${newPath}`);
+        }
+    }));
+    
     context.subscriptions.push(vscode.commands.registerCommand('cocoya.openWorkspace', () => {
         // 決定許可的資源根目錄
         const roots: vscode.Uri[] = [

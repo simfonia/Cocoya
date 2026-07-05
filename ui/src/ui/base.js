@@ -167,6 +167,14 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             if (closeBtn) closeBtn.style.display = caps.canClose ? 'flex' : 'none';
             if (terminalToggleBtn) terminalToggleBtn.style.display = caps.hasTerminal ? 'flex' : 'none';
             
+            // AI 下拉選單：僅在具備雲端感知能力 (VSIX) 且非 Tauri 時顯示
+            const aiDropdown = document.getElementById('ai-dropdown');
+            const aiDropdownSeparator = document.getElementById('ai-dropdown-separator');
+            if (aiDropdown && caps.isRemoteAware && !caps.isTauri) {
+                aiDropdown.style.display = 'inline-block';
+                if (aiDropdownSeparator) aiDropdownSeparator.style.display = 'block';
+            }
+            
             // 雲端 AI 模式：僅在具備雲端感知能力 (VSIX) 且非 Tauri 時顯示
             if (cloudAiContainer && caps.isRemoteAware && !caps.isTauri) {
                 cloudAiContainer.style.display = 'flex';
@@ -174,40 +182,39 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             }
         }
 
-        // --- 雲端 AI 模式：事件處理 ---
+        // --- 遠端訓練模式：事件處理 ---
         const cloudAiToggle = document.getElementById('cloud-ai-toggle');
         if (cloudAiToggle) {
             // 僅設定初始顯示，不要在此處進行「連線校準」以免時間差誤刪 localStorage
-            const isCloudAiEnabled = localStorage.getItem('cocoya_cloud_ai_enabled') === 'true';
-            cloudAiToggle.checked = isCloudAiEnabled;
+            const isRemoteModeEnabled = localStorage.getItem('cocoya_remote_mode_enabled') === 'true';
+            cloudAiToggle.checked = isRemoteModeEnabled;
 
             cloudAiToggle.onchange = () => {
                 const enabled = cloudAiToggle.checked;
                 if (enabled) {
-                    if (window.CocoyaUI && window.CocoyaUI.ensureSshConfig) {
-                        window.CocoyaUI.ensureSshConfig(
-                            (sshConfig) => {
-                                localStorage.setItem('cocoya_cloud_ai_enabled', 'true');
-                                window.CocoyaBridge.send('setCloudAiMode', { enabled: true });
-                                console.log('[UI] Cloud AI Mode Enabled with SSH Config');
-                                
-                                // 同步更新資料管理器中的動態顯示
-                                if (window.CocoyaDataset && window.CocoyaDataset.refreshDynamicPanels) {
-                                    window.CocoyaDataset.refreshDynamicPanels();
-                                }
-                            },
-                            () => {
-                                cloudAiToggle.checked = false;
-                                localStorage.setItem('cocoya_cloud_ai_enabled', 'false');
-                                window.CocoyaBridge.send('setCloudAiMode', { enabled: false });
-                            }
-                        );
-                    } else {
-                        localStorage.setItem('cocoya_cloud_ai_enabled', 'true');
-                        window.CocoyaBridge.send('setCloudAiMode', { enabled: true });
-                    }
+                                    if (window.CocoyaUI && window.CocoyaUI.ensureSshConfig) {
+                                        window.CocoyaUI.ensureSshConfig(
+                                            (sshConfig) => {
+                                                localStorage.setItem('cocoya_remote_mode_enabled', 'true');
+                                                window.CocoyaBridge.send('setCloudAiMode', { enabled: true });
+                                                
+                                                // 同步更新資料管理器中的動態顯示
+                                                if (window.CocoyaDataset && window.CocoyaDataset.refreshDynamicPanels) {
+                                                    window.CocoyaDataset.refreshDynamicPanels();
+                                                }
+                                            },
+                                            () => {
+                                                cloudAiToggle.checked = false;
+                                                localStorage.setItem('cocoya_remote_mode_enabled', 'false');
+                                                window.CocoyaBridge.send('setCloudAiMode', { enabled: false });
+                                            }
+                                        );
+                                    } else {
+                                        localStorage.setItem('cocoya_remote_mode_enabled', 'true');
+                                        window.CocoyaBridge.send('setCloudAiMode', { enabled: true });
+                                    }
                 } else {
-                    localStorage.setItem('cocoya_cloud_ai_enabled', 'false');
+                    localStorage.setItem('cocoya_remote_mode_enabled', 'false');
                     window.CocoyaBridge.send('setCloudAiMode', { enabled: false });
                     // 同步更新資料管理器中的動態顯示
                     if (window.CocoyaDataset && window.CocoyaDataset.refreshDynamicPanels) {
@@ -423,8 +430,205 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             };
         }
 
+        // 綁定訓練按鈕
+        const trainBtn = document.getElementById('btn-train');
+        if (trainBtn) {
+            trainBtn.onclick = async () => {
+                if (self.showTrainingDialog) {
+                    const config = await new Promise((resolve) => {
+                        self.showTrainingDialog({
+                            onConfirm: resolve,
+                            onCancel: () => resolve(null)
+                        });
+                    });
+                    
+                    if (!config) {
+                        return;
+                    }
+                    
+                    // 顯示 loading
+                    if (self.showLoadingModal) {
+                        self.showLoadingModal(config.backend === 'dgx' ? '正在上傳資料集至 DGX...' : '正在啟動本地訓練...');
+                    }
+                    
+                    try {
+                        // 根據後端選擇處理訓練
+                        let trainingConfig = {
+                            projectName: config.projectName,
+                            taskType: config.taskType,
+                            backend: config.backend
+                        };
+                        
+                        if (config.backend === 'dgx') {
+                            // DGX 模式：需要 SSH 設定
+                            if (self.ensureSshConfig) {
+                                const sshConfig = await new Promise((resolve) => {
+                                    self.ensureSshConfig(resolve, () => resolve(null));
+                                });
+                                
+                                if (!sshConfig) {
+                                    console.log('[UI] DGX training cancelled (no SSH config)');
+                                    if (self.hideLoadingModal) self.hideLoadingModal();
+                                    return;
+                                }
+                                
+                                trainingConfig.sshConfig = sshConfig;
+                            }
+                        }
+                        
+                        // 使用 Bridge API 開始訓練
+                        const result = await window.CocoyaBridge.startTraining(trainingConfig);
+                        
+                        if (result.success) {
+                            // 顯示訓練結果浮動視窗
+                            if (self.showTrainingResultPanel) {
+                                self.showTrainingResultPanel(result);
+                            }
+                        } else {
+                            if (window.CocoyaBridge.alert) {
+                                window.CocoyaBridge.alert('訓練失敗: ' + (result.error || '未知錯誤'));
+                            }
+                        }
+                    } catch (error) {
+                        console.error('[UI] Training error:', error);
+                        if (window.CocoyaBridge.alert) {
+                            window.CocoyaBridge.alert('訓練過程發生錯誤: ' + error.message);
+                        }
+                    } finally {
+                        if (self.hideLoadingModal) {
+                            self.hideLoadingModal();
+                        }
+                    }
+                }
+            };
+        }
+
         bind('btn-run', 'runCode');
         bind('btn-update', 'checkUpdate');
+
+        // --- AI 下拉選單邏輯 ---
+        const aiDropdown = document.getElementById('ai-dropdown');
+        const aiMenuBtn = document.getElementById('btn-ai-menu');
+        const aiDropdownContent = document.querySelector('.ai-dropdown-content');
+        let aiDropdownLocked = false; // 點擊鎖定狀態
+
+        if (aiDropdown && aiMenuBtn && aiDropdownContent) {
+            // Hover 顯示（僅當未鎖定時）
+            aiMenuBtn.addEventListener('mouseenter', () => {
+                if (!aiDropdownLocked) {
+                    aiDropdownContent.style.display = 'block';
+                }
+            });
+
+            // 滑鼠離開選單區域時，若未鎖定則隱藏
+            aiDropdown.addEventListener('mouseleave', () => {
+                if (!aiDropdownLocked) {
+                    aiDropdownContent.style.display = 'none';
+                }
+            });
+
+            // 點擊鎖定/解鎖
+            aiMenuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                aiDropdownLocked = !aiDropdownLocked;
+                aiDropdownContent.style.display = aiDropdownLocked ? 'block' : 'none';
+            });
+
+            // 點擊選單項目後自動關閉
+            const dropdownItems = aiDropdownContent.querySelectorAll('.dropdown-item');
+            dropdownItems.forEach(item => {
+                item.addEventListener('click', () => {
+                    aiDropdownLocked = false;
+                    aiDropdownContent.style.display = 'none';
+                });
+            });
+        }
+
+        // --- 遠端訓練切換（AI 下拉選單中的第一個項目）---
+        const cloudAiToggleDropdown = document.getElementById('btn-cloud-ai-toggle');
+        const cloudAiStatus = document.getElementById('cloud-ai-status');
+        if (cloudAiToggleDropdown && cloudAiStatus) {
+            cloudAiToggleDropdown.addEventListener('click', async () => {
+                const currentEnabled = localStorage.getItem('cocoya_remote_mode_enabled') === 'true';
+                const newEnabled = !currentEnabled;
+
+                if (newEnabled) {
+                    // 開啟時需要 SSH 設定
+                    if (self.ensureSshConfig) {
+                        const sshConfig = await new Promise((resolve) => {
+                            self.ensureSshConfig(resolve, () => resolve(null));
+                        });
+                        
+                        if (!sshConfig) {
+                            console.log('[UI] Remote training cancelled (no SSH config)');
+                            return;
+                        }
+                        
+                        localStorage.setItem('cocoya_remote_mode_enabled', 'true');
+                        window.CocoyaBridge.send('setCloudAiMode', { enabled: true });
+                        cloudAiStatus.textContent = '●';
+                        cloudAiStatus.className = 'enabled';
+                    }
+                } else {
+                    // 關閉遠端訓練
+                    localStorage.setItem('cocoya_remote_mode_enabled', 'false');
+                    window.CocoyaBridge.send('setCloudAiMode', { enabled: false });
+                    cloudAiStatus.textContent = '○';
+                    cloudAiStatus.className = 'disabled';
+                }
+            });
+
+            // 初始化狀態
+            const isRemoteEnabled = localStorage.getItem('cocoya_remote_mode_enabled') === 'true';
+            cloudAiStatus.textContent = isRemoteEnabled ? '●' : '○';
+            cloudAiStatus.className = isRemoteEnabled ? 'enabled' : 'disabled';
+        }
+
+        // --- 資料集管理按鈕（AI 下拉選單）---
+        const datasetManagerBtn = document.getElementById('btn-dataset-manager-dropdown');
+        if (datasetManagerBtn) {
+            datasetManagerBtn.addEventListener('click', () => {
+                if (window.CocoyaBridge) {
+                    window.CocoyaBridge.send('openDatasetManager');
+                }
+            });
+        }
+
+        // --- 監聽 Dataset Manager 開啟事件 ---
+        if (window.CocoyaBridge) {
+            window.CocoyaBridge.onMessage((msg) => {
+                if (msg.command === 'openDatasetManager') {
+                    if (window.CocoyaDataset && window.CocoyaDataset.open) {
+                        window.CocoyaDataset.open();
+                    }
+                } else if (msg.command === 'trainingComplete') {
+                    // 訓練完成，開啟 HTML 訓練報告
+                    if (self.showTrainingResultPanel && msg.success) {
+                        self.showTrainingResultPanel({
+                            projectName: msg.projectName,
+                            accuracy: msg.accuracy,
+                            epochs: msg.epochs,
+                            curvePath: msg.curvePath,
+                            historyPath: msg.historyPath,
+                            modelDir: msg.modelDir,
+                            reportPath: msg.reportPath
+                        });
+                    }
+                }
+            });
+        }
+
+        // --- 訓練結果按鈕（AI 下拉選單）---
+        // 改為開啟目前專案 model 目錄下的 _training_report.html
+        const trainingResultBtn = document.getElementById('btn-training-result');
+        if (trainingResultBtn) {
+            trainingResultBtn.addEventListener('click', () => {
+                // 由後端搜尋目前專案的 model 目錄下最新的報告
+                if (window.CocoyaBridge) {
+                    window.CocoyaBridge.send('openLatestTrainingReport');
+                }
+            });
+        }
 
         // 綁定診斷按鈕
         const diagBtn = document.getElementById('btn-diagnose');
@@ -485,25 +689,38 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
 
     /**
      * 環境就緒後的雲端模式校準 (由 AppController 觸發)
+     * 注意：舊的 #cloud-ai-toggle 已移至 AI 下拉選單，此函式僅保留向後相容
      */
     syncCloudAiToggle: function() {
-        const toggle = document.getElementById('cloud-ai-toggle');
-        if (!toggle || !window.CocoyaBridge) return;
+        // 舊的 toggle 已刪除，改為檢查 AI 下拉選單中的狀態
+        const cloudAiStatus = document.getElementById('cloud-ai-status');
+        if (!cloudAiStatus || !window.CocoyaBridge) return;
 
-        const isEnabled = localStorage.getItem('cocoya_cloud_ai_enabled') === 'true';
+        const isEnabled = localStorage.getItem('cocoya_remote_mode_enabled') === 'true';
         const hasSshConfig = !!(window.CocoyaUI && window.CocoyaUI.sshConfig);
-        
-        console.log(`[UI] syncCloudAiToggle: stored=${isEnabled}, hasSshConfig=${hasSshConfig}`);
 
         // 方案 C：如果設定開啟但實際上沒有 SSH 帳密（例如重啟或刷新），則強制關閉
         if (isEnabled && !hasSshConfig) {
-            console.warn('[UI] Sync: Disabling Cloud AI toggle (No SSH credentials)');
-            toggle.checked = false;
-            localStorage.setItem('cocoya_cloud_ai_enabled', 'false');
+            localStorage.setItem('cocoya_remote_mode_enabled', 'false');
+            cloudAiStatus.textContent = '○';
+            cloudAiStatus.className = 'disabled';
             window.CocoyaBridge.send('setCloudAiMode', { enabled: false });
         } else if (isEnabled && hasSshConfig) {
             // 確保後端狀態同步
+            cloudAiStatus.textContent = '●';
+            cloudAiStatus.className = 'enabled';
             window.CocoyaBridge.send('setCloudAiMode', { enabled: true });
+        } else {
+            // 確保 UI 狀態正確
+            cloudAiStatus.textContent = '○';
+            cloudAiStatus.className = 'disabled';
         }
+    },
+
+    /**
+     * 向後相容：保留空殼
+     */
+    updateTrainingResultButton: function() {
+        // 不再需要動態啟用/禁用按鈕
     }
 });

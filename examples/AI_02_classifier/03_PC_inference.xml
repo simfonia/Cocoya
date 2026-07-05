@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <!-- 初始化模型 -->
+  <block type="py_ai_model_init" x="10" y="10">
+    <field name="MODEL_PATH">model/classifier_model</field>
+    <next>
+      <!-- 開啟攝影機 -->
+      <block type="opencv_video_capture">
+        <field name="DEVICE_ID">0</field>
+        <field name="VAR">cap</field>
+        <next>
+          <!-- 主迴圈 -->
+          <block type="controls_whileTrue">
+            <statement name="DO">
+              <!-- 讀取影格 -->
+              <block type="opencv_read_frame">
+                <field name="VAR">cap</field>
+                <field name="VAR2">frame</field>
+                <next>
+                  <!-- 進行推論 -->
+                  <block type="py_ai_model_predict">
+                    <value name="FRAME">
+                      <block type="variables_get">
+                        <field name="VAR">frame</field>
+                      </block>
+                    </value>
+                    <next>
+                      <!-- 顯示結果 -->
+                      <block type="opencv_imshow">
+                        <field name="WINNAME">Classifier</field>
+                        <value name="IMAGE">
+                          <block type="variables_get">
+                            <field name="VAR">frame</field>
+                          </block>
+                        </value>
+                        <next>
+                          <!-- 檢查信心度 -->
+                          <block type="controls_if">
+                            <value name="IF0">
+                              <block type="logic_compare">
+                                <field name="OP">GT</field>
+                                <value name="A">
+                                  <block type="py_ai_model_predict_confidence"></block>
+                                </value>
+                                <value name="B">
+                                  <shadow type="math_number">
+                                    <field name="NUM">0.75</field>
+                                  </shadow>
+                                </value>
+                              </block>
+                            </value>
+                            <statement name="DO0">
+                              <!-- 發送類別至 MCU -->
+                              <block type="serial_write">
+                                <field name="PORT">Serial</field>
+                                <value name="DATA">
+                                  <block type="py_ai_model_predict_class_id"></block>
+                                </value>
+                              </block>
+                            </statement>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </statement>
+          </block>
+        </next>
+      </block>
+    </next>
+  </block>
+</xml>

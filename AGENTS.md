@@ -1,4 +1,4 @@
-# Cocoya 專案指南 (Codex AGENTS.md)
+# Cocoya 專案指南 (Codex/Copilot AGENTS.md)
 
 ## 專案概述
 Cocoya 是一個針對 Python AI 視覺的教學工具。它透過 Blockly 產生 PC 端的 Python (AI) 與 MCU 端的 MicroPython (Hardware) 代碼。
