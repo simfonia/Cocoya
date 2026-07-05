@@ -54,6 +54,7 @@
                 Blockly.Events.disable();
                 try {
                     allTypes.forEach(type => {
+                        if (!this._defCache.has(type)) return;
                         try {
                             let searchBlob = type.toLowerCase();
                             const blockDef = Blockly.Blocks[type];

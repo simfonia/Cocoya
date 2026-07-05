@@ -60,6 +60,8 @@
     "CAT_AI_HAND": "手勢偵測",
     "CAT_AI_FACE": "臉部網格",
     "CAT_AI_POSE": "姿勢偵測",
+    "CAT_AI_INFERENCE": "AI 推論",
+    "COLOUR_AI_INFERENCE": "#9C27B0",
     "CAT_HARDWARE": "硬體控制",
     "CAT_MCU_CAMERA": "AI 相機",
     "CAT_HUSKYLENS": "HuskyLens",
@@ -90,6 +92,7 @@
     "TLB_UPDATE": "檢查更新",
     "TLB_STOP": "關閉編輯器",
     "TLB_STOP_PROGRAM": "停止執行",
+    "TLB_CLOSE_EDITOR": "關閉編輯器",
     "TLB_TERMINAL": "開啟/關閉終端機",
     "TLB_TOGGLE_CODE": "開啟/關閉程式碼預覽",
     "TLB_PAUSE_SCROLL": "暫停自動捲動",
@@ -102,6 +105,10 @@
     "TLB_MODE_PC": "💻 Python (PC)",
     "TLB_MODE_MCU": "📟 MicroPython (MCU)",
     "TLB_DIAGNOSE": "檢查 Python 套件需求",
+    "TLB_AI_MENU": "AI 功能",
+    "TLB_AI_REMOTE_TRAINING": "遠端訓練",
+    "TLB_AI_DATASET_MANAGER": "資料集管理",
+    "TLB_AI_TRAINING_RESULT": "訓練結果",
 
     // 環境診斷
     "DIAG_TITLE": "環境診斷與安裝助手",
@@ -146,6 +153,14 @@
     "MSG_RELOAD_TO_APPLY": "設定已儲存。請重新啟動編輯器以套用變更。",
     "MSG_ERASE_FS_CONFIRM": "【警告】：這將強制終止目前的程式並清空 MCU 內的所有使用者檔案（main.py 等），資料將消失且無法復原！\n\n確定要執行深度修復嗎？",
     "MSG_CLOUD_AI_REQUIRES_REMOTE": "雲端 AI 模式需要 Remote SSH 連線。請先連線至您的伺服器，再開啟此開關。",
+    "MSG_NO_TRAINING_RESULT": "尚無訓練結果，請先執行訓練。",
+    "MSG_TRAINING_RESULT_TITLE": "訓練結果",
+    "MSG_TRAINING_RESULT_PROJECT": "專案名稱",
+    "MSG_TRAINING_RESULT_ACCURACY": "驗證準確率",
+    "MSG_TRAINING_RESULT_EPOCHS": "訓練輪數",
+    "MSG_TRAINING_RESULT_MODEL_DIR": "模型目錄",
+    "MSG_OPEN_MODEL_FOLDER": "開啟模型目錄",
+    "MSG_TRAINING_RESULT_CLOSE": "關閉",
 
     // Python 核心關鍵字
     "PY_DEF": "def",

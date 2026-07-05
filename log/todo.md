@@ -25,12 +25,58 @@
   - [x] DGX 遠端驗證：上傳 → 容器化訓練 (94.68%) → 下載模型
   - [x] πCar 整合腳本就緒（待實機測試）
 - [ ] **伺服器端容器化訓練**：建立基於 NGC 鏡像的訓練容器與模板程式（MVP 已驗證 NGC PyTorch 容器 + TensorFlow）。
-- [ ] **推論與部署鏈**：支援雲端推論結果回傳與 `.tflite` 模型自動燒錄至 πCar。
-- [ ] **手勢分類控制 πCar 音高 PBL**（詳見 `log/todo/hand_gesture_pitch_pbl_plan.md`）：
-  - [ ] **[Phase 1] 新增 ai_inference 模組**：共用積木 + classifier 積木（PC 平台）
-  - [ ] **[Phase 2] Sidecar 擴充訓練指令**：startTraining + downloadModel
-  - [ ] **[Phase 3] Docker 訓練容器模板**：基於 NGC PyTorch 容器（MVP 已驗證）
-  - [ ] **[Phase 4] PBL 範例積木專案**：PC 端推論 + MCU 端音效控制 XML
+- [ ] **推論與部署鏈**：支援雲端推論結果回傳與 <code>.tflite</code> 模型自動燒錄至 πCar。
+- [x] **[Phase 1] 訓練後端選擇 UI**（2026-06-25）：對話框 + 工具列按鈕 + localStorage 記住選擇
+- [x] **[Phase 2] 本地訓練功能**（2026-06-25）：Sidecar trainLocal + Tauri start_training + Extension handleStartTraining
+- [x] **[Phase 2.5] 通用化架構重構**（2026-06-25）：
+  - [x] 移除訓練按鈕，改為純積木控制
+  - [x] 「Cloud AI」改名為「遠端訓練」
+  - [x] 建立通用訓練模板系統（<code>resources/train_templates/</code>）
+  - [x] 移除對 MVP 腳本的依賴
+  - [x] Dataset Manager icon 更新為 <code>dataset_24dp_1F1F1F.png</code>
+- [x] **[Phase 3] 訓練積木模組開發**（2026-06-25）：
+  - [x] 建立 <code>ai_inference/</code> 模組（2 個訓練積木）
+  - [x] 實作 <code>py_ai_train_init</code>（訓練配置）
+  - [x] 實作 <code>py_ai_train_run</code>（執行訓練）
+  - [x] 加入 i18n 支援（英文 + 中文）
+  - [x] 註冊至 core_manifest.json
+  - [x] 前端編譯測試通過
+  - [x] 修復 i18n key 名稱（<code>COLOUR_AI_INFERENCE</code>）
+  - [x] 修復 message0 args 數量錯誤（中英文）
+- [x] **[Phase 4] 推論積木模組開發**：建立 ai_inference 推論模組（2 個積木：init + predict）
+  - [x] 建立 <code>ai_inference/</code> 模組積木定義（init + predict）
+  - [x] 實作 <code>py_ai_model_init</code> / <code>py_ai_model_predict</code> 產生器
+  - [x] 修正 input 名稱一致性（FRAME 與 INPUT）
+  - [x] 修正 output 類型（Tuple）以符合 value block 語義
+  - [x] 補齊 i18n（en / zh-hant）
+  - [x] 註冊至 core_manifest.json
+- [x] **[Phase 3 重構] 訓練積木合併與重構**（2026-06-29）：
+  - [x] 合併 `py_ai_train_init` + `py_ai_train_run` 為單一 `py_ai_train_run` 積木
+  - [x] 完全重寫為手動 `appendDummyInput()` 方式，解決欄位衝突
+  - [x] 積木標題改為「影像訓練」(vision training)
+  - [x] 移除不支援的 `FieldButton`
+  - [x] 模型路徑改為唯讀標籤，自動從資料集路徑提取
+  - [x] 更新產生器邏輯，注入 `train_model()` 函式
+  - [x] 移除冗餘的 `--model_dir` 參數（訓練腳本簡化）
+  - [x] 模型檔名使用專案名稱（非寫死 `gesture_` 前綴）
+  - [x] labels.txt 加上專案名稱前綴保持一致
+  - [x] 更新中英文 i18n 與詳細 tooltip
+  - [x] 刪除已移除的訓練配置積木 i18n key
+  - [x] 路徑選擇對話框整合（extension.ts handlePickFolder）
+  - [x] 修正多項錯誤（i18n 佔位符、FieldButton、參數名稱衝突）
+
+- [ ] **[Phase 5] PBL 範例積木專案測試**：僅測試 02（訓練），03（推論）與 04（MCU 控制）尚未測試
+
+## [異動紀錄] 2026-07-05 訓練結果改為 HTML 報告，移除複雜 Modal
+- [x] **[訓練腳本] 產出 HTML 訓練報告**：`classifier_train.py` 在訓練完成後額外產出 `{project_name}_training_report.html`，內嵌 base64 曲線圖、摘要統計與可展開的 JSON 歷史資料。
+- [x] **[UI] 移除訓練結果 Modal**：刪除 `dialogs.js` 中的 `showTrainingResultPanel` 複雜浮動視窗（含拖曳、圖片載入、按鈕狀態管理），改為直接以系統瀏覽器開啟 HTML 報告。
+- [x] **[UI] 簡化訓練結果按鈕**：`base.js` 中的「訓練結果」按鈕改為向後端發送 `openLatestTrainingReport` 指令，由後端搜尋 `model/` 目錄下最新的報告。
+- [x] **[Extension] 新增 openTrainingReport / openLatestTrainingReport 指令**：`extension.ts` 實作用系統瀏覽器開啟 HTML 報告，以及遞迴搜尋最新報告的邏輯。
+- [x] **[Sidecar] 傳遞 reportPath**：`dataset_sidecar.py` 的 `trainLocal` 回應中加入 `reportPath` 欄位。
+- [x] **[CSS] 清理**：移除 `style.css` 中約 200 行的訓練結果 Modal 樣式。
+- [x] **[Bug Fix] 中文路徑問題**：加入中文路徑檢測，當路徑包含中文時顯示友善的錯誤提示（避免 0x2 錯誤）。
+- [x] **[Bug Fix] 專案路徑判斷**：`handleOpenLatestTrainingReport` 優先使用 `currentFilePath` 所在目錄，而非 `workspaceFolders[0]`。
+- [x] **[PBL 專案重命名]**：將 `examples/影像分類控制piCarl音效/` 改名為 `examples/AI_02_classifier/`，所有中文檔名改為英文檔名。
 
 ## [待辦] 其他優化
 - [ ] **[優化] 跨平台 Friendly Name**：實作 macOS/Linux 的序列埠名稱顯示優化。
@@ -40,38 +86,4 @@
 - [ ] **[功能] Dataset manager 刪除照片**。
 
 ---
-*最後更新日期：2026-06-24 (完成 Phase 5 MVP 驗證，更新開發規範文件)*
-
-## [異動紀錄] 2026-06-11 方案 C 後端閉環完成
-- [x] **[Sidecar] 抑制警告雜訊**：在 <code>dataset_sidecar.py</code> 加入 warnings 抑制邏輯，消除 CryptographyDeprecationWarning。
-- [x] **[Extension] 優化 stderr 過濾**：修改 <code>extension.ts</code>，將 Deprecation/UserWarning 分類為 console.warn，避免誤報為錯誤。
-- [x] **[環境] 優化 F5 啟動配置**：移除 <code>launch.json</code> 中的 Remote 配置，解決啟動時彈出選單問題。
-- [x] **[UI] 移除「變更帳密」按鈕**：避免學生誤操作（ui_layout.js）。
-- [x] **[Extension] handleSetCloudAiMode 簡化**：移除舊有 Remote-SSH 強制檢查，本地 UI Kind 即可啟用雲端 AI 模式。
-- [x] **[Extension] handleCheckRemoteEnvironment 改寫**：從 exec 本地命令改為委託 this.sidecar.send('checkRemoteEnvironment', sshConfig) 透過 paramiko SSH 執行。
-- [x] **[Extension] handleDatasetUploadArchive 改寫**：本地組裝 ZIP 後，委託 this.sidecar.send('uploadDataset', ...) 透過 SFTP 上傳至遠端並解壓。
-- [x] **[Extension] 移除所有 spread operator**：改用 Object.assign，符合專案規範。
-- [x] **[Sidecar] 修正 unzip_cmd**：改用單行 python3 -c '...' 格式，避免多行 triple-quote 在 SSH exec_command 中被 bash 誤解析。
-- [x] **[架構] VSIX 已確認回歸 UI 模式 (extensionKind: [ ui])**，不再需要 Remote-SSH 環境。
-- [x] **[建置] TypeScript 編譯與 Vite build 均無錯誤**。
-
-## [異動紀錄] 2026-06-11 解決 Cloud AI 模式無彈窗與診斷無回應問題
-- [x] **[UI] 移植 SSH 帳密對話框至全域 (dialogs.js)**：在 <code>window.CocoyaUI</code> 新增全域 <code>sshConfig</code>、<code>showSshConfigDialog</code> 與 <code>ensureSshConfig</code>。
-- [x] **[UI] 切換 Cloud AI 模式強制彈窗 (base.js)**：當使用者在工具列開啟 Cloud AI 開關時，強制彈出輸入對話框；若取消則 Toggle 彈回 false，避免未設定即啟用。
-- [x] **[Extension] 新增 VS Code OutputChannel (extension.ts)**：建立名為 " Cocoya Sidecar\ 的輸出通道，將 Sidecar 執行過程、stdout 與 stderr 全部寫入。
-- [x] **[Extension] 修正 Sidecar 啟動失敗無反應問題 (extension.ts)**：若 <code>spawn</code> 進程失敗，在 <code>send()</code> 內主動回傳錯誤給前端，避免前端 webview 懸空等待。
-- [x] **[建置] Vite 前端重新 build 成功**：修復了因替換失誤多出來的語法錯誤括號，順利完成編譯。
-- [x] **[UI] 修正 SSH 輸入框模板字串變數解析**：將 <code>dialogs.js</code> 中的 <code>\${</code> 改回 <code>${</code>，修復 Port 等輸入框格式錯誤與卡死問題。
-- [x] **[UI] 解決 CSS 預設 display: none 隱藏對話框問題**：在 <code>dialogs.js</code> 的 <code>showSshConfigDialog</code> 中，手動設定 <code>dialog.style.display = 'flex'</code> 以覆寫 <code>dataset-manager-overlay</code> 類別 of 預設樣式，確保對話框正常顯現。
-
-## [異動紀錄] 2026-06-20 建立 Y姿勢雙臂即時控制範例
-- [x] **[範例] 實作 PC 控制端積木**：建立 `examples/38_YPose_PC_Control.xml` 積木專案。
-- [x] **[範例] 實作 piCar 接收端積木**：建立 `examples/39_YPose_piCar_Control.xml` 積木專案。
-- [x] **[範例] 撰寫使用文件**：在 `examples/README_YPose_Control.md` 提供詳細說明。
-
-## [異動紀錄] 2026-06-24 完成 Phase 5 MVP 驗證（手勢分類 PBL）
-- [x] **[MVP] 建立 9 個 Python 驗證腳本**：涵蓋本地訓練、DGX 訓練、πCar 整合完整鏈路。
-- [x] **[MVP] 本地 MobileNetV2 訓練驗證**：資料不平衡問題透過 Class Weight 解決，準確率達 93~94%。
-- [x] **[MVP] DGX Spark 遠端訓練驗證**：使用 NVIDIA NGC PyTorch 容器 + TensorFlow 2.16.1，準確率 94.68%。
-- [x] **[MVP] 本地 TFLite 轉換驗證**：ARM64 容器不支援 TFLite 轉換，需在本地 PC 進行 Float32 轉換。
-- [x] **[經驗] 建立開發規範文件**：`docs/mvp_development_guide.md` 記錄所有踩坑與解決方案。
+*最後更新日期：2026-07-05 (訓練結果改為 HTML 報告，移除複雜 Modal)*

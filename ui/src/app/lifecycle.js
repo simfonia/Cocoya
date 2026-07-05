@@ -36,22 +36,45 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
      */
     buildToolboxXml: async function(manifest, mediaUri, platform, lang) {
         const toolboxes = await CocoyaLoader.loadModules(manifest, mediaUri, platform, lang);
-        const coreXml = [];
-        const aiXml = [];
-        const otherXml = [];
 
+        const GROUP_CONFIG = {
+            core: { container: null, sepBefore: false },
+            ai_vision: { container: 'BKY_CAT_AI', colour: 'BKY_COLOUR_AI', sepBefore: true },
+            ai_inference: { container: null, sepBefore: false },
+            hardware: { container: null, sepBefore: true }
+        };
+        const GROUP_ORDER = ['core', 'ai_vision', 'ai_inference', 'hardware'];
+
+        const groups = {};
         toolboxes.forEach(mod => {
-            const filteredXml = CocoyaUtils.filterToolboxXML(mod.xml, platform);
-            if (mod.id.startsWith('core/')) coreXml.push(filteredXml);
-            else if (mod.id.startsWith('cv_') || mod.id.startsWith('ai_')) aiXml.push(filteredXml);
-            else otherXml.push(filteredXml);
+            const meta = (manifest.modules || []).find(item => item.id === mod.id);
+            const group = (meta && meta.group) || 'other';
+            if (!groups[group]) groups[group] = [];
+            groups[group].push(CocoyaUtils.filterToolboxXML(mod.xml, platform));
         });
 
-        let finalXml = `<xml>${coreXml.join('')}<sep></sep>`;
-        if (aiXml.length > 0) {
-            finalXml += `<category name="%{BKY_CAT_AI}" colour="%{BKY_COLOUR_AI}">${aiXml.join('')}</category>`;
-        }
-        finalXml += `${otherXml.join('')}</xml>`;
+        let finalXml = '<xml>';
+
+        GROUP_ORDER.forEach(groupKey => {
+            if (!groups[groupKey]) return;
+            const mods = groups[groupKey];
+            const config = GROUP_CONFIG[groupKey] || {};
+            if (mods.join('').trim().length === 0) return;
+
+            if (config.sepBefore && finalXml !== '<xml>') {
+                finalXml += '<sep></sep>';
+            }
+
+            if (config.container) {
+                finalXml += '<category name="%{' + config.container + '}" colour="%{' + (config.colour || config.container.replace('BKY_CAT_', 'BKY_COLOUR_')) + '}">';
+                finalXml += mods.join('');
+                finalXml += '</category>';
+            } else {
+                finalXml += mods.join('');
+            }
+        });
+
+        finalXml += '</xml>';
         return finalXml;
     },
 

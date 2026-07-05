@@ -1,0 +1,14 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
+  <block type="py_main" id="BW|{#2:o27$w}?+)8k5f" x="30" y="90">
+    <statement name="DO">
+      <block type="py_ai_train_run" id="Y8]DzD?F[#5O_V_}^Ye0">
+        <field name="DATASET_DIR">dataset/classifier_dataset</field>
+        <field name="EPOCHS">5</field>
+        <field name="BATCH_SIZE">32</field>
+        <field name="LEARNING_RATE">0.001</field>
+        <field name="TASK_TYPE">classifier</field>
+        <field name="BACKEND">auto</field>
+      </block>
+    </statement>
+  </block>
+</xml>

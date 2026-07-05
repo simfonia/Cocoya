@@ -54,6 +54,8 @@
     "CAT_AI_HAND": "Hand Tracking",
     "CAT_AI_FACE": "Face Mesh",
     "CAT_AI_POSE": "Pose Detection",
+    "CAT_AI_INFERENCE": "AI Inference",
+    "COLOUR_AI_INFERENCE": "#9C27B0",
     "CAT_HARDWARE": "Hardware",
     "CAT_MCU_CAMERA": "AI Camera",
     "CAT_HUSKYLENS": "HuskyLens",
@@ -87,6 +89,7 @@
     "TLB_UPDATE": "Check for Updates",
     "TLB_STOP": "Close Editor",
     "TLB_STOP_PROGRAM": "Stop Program",
+    "TLB_CLOSE_EDITOR": "Close Editor",
     "TLB_TERMINAL": "Toggle Terminal",
     "TLB_TOGGLE_CODE": "Toggle Code Preview",
     "TLB_PAUSE_SCROLL": "Pause Auto-scroll",
@@ -99,6 +102,10 @@
     "TLB_MODE_PC": "💻 Python (PC)",
     "TLB_MODE_MCU": "📟 MicroPython (MCU)",
     "TLB_DIAGNOSE": "Check Python Package Requirements",
+    "TLB_AI_MENU": "AI Features",
+    "TLB_AI_REMOTE_TRAINING": "Remote Training",
+    "TLB_AI_DATASET_MANAGER": "Dataset Manager",
+    "TLB_AI_TRAINING_RESULT": "Training Results",
 
     // Environment Diagnosis
     "DIAG_TITLE": "Environment Diagnostic Assistant",
@@ -146,6 +153,14 @@
 
     "MSG_ERASE_FS_CONFIRM": "WARNING: This will force stop the program and ERASE ALL USER FILES (main.py, etc.) on the MCU. This cannot be undone! Continue?",
     "MSG_CLOUD_AI_REQUIRES_REMOTE": "Cloud AI mode requires a Remote SSH connection. Please connect to your server first.",
+    "MSG_NO_TRAINING_RESULT": "No training results yet. Please run training first.",
+    "MSG_TRAINING_RESULT_TITLE": "Training Results",
+    "MSG_TRAINING_RESULT_PROJECT": "Project Name",
+    "MSG_TRAINING_RESULT_ACCURACY": "Validation Accuracy",
+    "MSG_TRAINING_RESULT_EPOCHS": "Epochs",
+    "MSG_TRAINING_RESULT_MODEL_DIR": "Model Directory",
+    "MSG_OPEN_MODEL_FOLDER": "Open Model Folder",
+    "MSG_TRAINING_RESULT_CLOSE": "Close",
     
     // Syntax (Basic)
     "PY_DEF": "def",

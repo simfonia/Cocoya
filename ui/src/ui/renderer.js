@@ -105,6 +105,21 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
     syncSelection: function(blockId) {
         document.querySelectorAll('.highlight-line').forEach(el => el.classList.remove('highlight-line'));
         
+        const infoBar = document.getElementById('block-type-info');
+        if (!blockId) {
+            if (infoBar) infoBar.style.display = 'none';
+            return;
+        }
+
+        // 顯示積木 type ID
+        const block = Blockly.getMainWorkspace().getBlockById(blockId);
+        if (block && infoBar) {
+            infoBar.textContent = 'Type: ' + block.type;
+            infoBar.style.display = 'block';
+        } else if (infoBar) {
+            infoBar.style.display = 'none';
+        }
+
         const range = this.blockToRangeMap.get(blockId);
         if (range && this.lineDoms.length > 0) {
             // 高亮範圍內的所有行

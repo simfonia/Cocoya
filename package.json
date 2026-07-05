@@ -28,6 +28,11 @@
                 "command": "cocoya.openWorkspace",
                 "title": "Cocoya: Open Workspace",
                 "category": "Cocoya"
+            },
+            {
+                "command": "cocoya.setPythonPath",
+                "title": "Cocoya: Set Python Path",
+                "category": "Cocoya"
             }
         ],
         "menus": {

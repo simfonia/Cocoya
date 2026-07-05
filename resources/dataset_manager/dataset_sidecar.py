@@ -6,7 +6,7 @@ import threading
 import warnings
 
 # 抑制 CryptographyDeprecationWarning 與一般 DeprecationWarning 雜訊
-# 這些警告來自 paramiko 依賴庫，但不影響功能，且會導致 VSCode Console 出現 [Sidecar Error]
+# 這些警告來自 paramiko 相依函式庫，但不影響功能，且會導致 VSCode Console 出現 [Sidecar Error]
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 try:
     # 嘗試導入特定的警告類別以精確抑制
@@ -277,6 +277,104 @@ class DatasetSidecar:
 
                     threading.Thread(target=do_upload, daemon=True).start()
                 
+                elif command == "trainLocal":
+                    project_name = msg.get("projectName", "training_project")
+                    task_type = msg.get("taskType", "classifier")
+                    dataset_dir = msg.get("datasetDir", "")
+                    output_dir = msg.get("outputDir", "")
+                    hyperparams = msg.get("hyperparams", {})
+                    
+                    print(f"[Sidecar Log] Starting local training: {project_name} ({task_type})", file=sys.stderr)
+                    
+                    def do_train():
+                        try:
+                            import subprocess
+                            import sys
+                            
+                            # 通用訓練腳本路徑（使用實際的訓練腳本）
+                            script_path = os.path.join(os.path.dirname(__file__), "..", "..", "train_templates", task_type, "classifier_train.py")
+                            
+                            if not os.path.exists(script_path):
+                                self.send_response(request_id, {
+                                    "success": False,
+                                    "error": f"訓練模板不存在: {script_path}"
+                                })
+                                return
+                            
+                            # 準備命令列參數
+                            cmd = [
+                                sys.executable,
+                                script_path,
+                                f"--project_name={project_name}",
+                                f"--dataset_dir={dataset_dir}",
+                                f"--output_dir={output_dir}",
+                                f"--model_type=mobilenetv2",
+                                f"--epochs={hyperparams.get('epochs', 30)}",
+                                f"--batch_size={hyperparams.get('batchSize', 32)}",
+                                f"--learning_rate={hyperparams.get('learningRate', 0.001)}"
+                            ]
+                            
+                            print(f"[Sidecar Log] Executing: {' '.join(cmd)}", file=sys.stderr)
+                            
+                            # 執行訓練腳本
+                            process = subprocess.Popen(
+                                cmd,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE,
+                                text=True,
+                                bufsize=1,
+                                universal_newlines=True
+                            )
+                            
+                            # 解析訓練結果
+                            training_result = {
+                                "success": False,
+                                "modelDir": output_dir,
+                                "projectName": project_name
+                            }
+                            
+                            # 即時傳送輸出到前端
+                            for line in process.stdout:
+                                line = line.strip()
+                                self.send_event("trainingLog", {"message": line})
+                                
+                                # 解析 RESULT JSON
+                                if line.startswith("RESULT:"):
+                                    try:
+                                        result_json = line.split("RESULT:", 1)[1].strip()
+                                        training_result = json.loads(result_json)
+                                    except Exception as e:
+                                        print(f"[Sidecar Log] Failed to parse RESULT JSON: {e}", file=sys.stderr)
+                            
+                            process.wait()
+                            
+                            if process.returncode == 0 and training_result.get("success"):
+                                # 訓練成功，回傳完整結果
+                                self.send_response(request_id, {
+                                    "success": True,
+                                    "modelDir": training_result.get("modelDir", output_dir),
+                                    "projectName": training_result.get("projectName", project_name),
+                                    "accuracy": training_result.get("accuracy"),
+                                    "epochs": training_result.get("epochs"),
+                                    "curvePath": training_result.get("curvePath"),
+                                    "historyPath": training_result.get("historyPath"),
+                                    "reportPath": training_result.get("reportPath")
+                                })
+                            else:
+                                stderr_output = process.stderr.read()
+                                self.send_response(request_id, {
+                                    "success": False,
+                                    "error": f"訓練失敗 (exit code {process.returncode}): {stderr_output}"
+                                })
+                                
+                        except Exception as e:
+                            self.send_response(request_id, {
+                                "success": False,
+                                "error": f"訓練過程發生錯誤: {str(e)}"
+                            })
+                    
+                    threading.Thread(target=do_train, daemon=True).start()
+
                 elif command == "exit":
                     self.camera.stop()
                     self.running = False

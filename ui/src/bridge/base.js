@@ -173,4 +173,45 @@ export class BaseBridge {
             this.send('pickMcuModel', { options, requestId });
         });
     }
+
+    /**
+     * 開始訓練模型（本地或 DGX）
+     * @param {Object} config - 訓練配置
+     * @param {string} config.projectName - 專案名稱
+     * @param {string} config.taskType - 任務類型
+     * @param {string} config.backend - 訓練後端 ('local' 或 'dgx')
+     * @param {Object} [config.sshConfig] - SSH 配置（DGX 模式需要）
+     * @returns {Promise<Object>} 訓練結果
+     */
+    startTraining(config) {
+        const requestId = 'train_' + Date.now();
+        return new Promise((resolve) => {
+            const handler = (msg) => {
+                if (msg.command === 'trainingComplete' && msg.requestId === requestId) {
+                    this.offMessage(handler);
+                    resolve({ success: true, ...msg });
+                } else if (msg.command === 'trainingError' && msg.requestId === requestId) {
+                    this.offMessage(handler);
+                    resolve({ success: false, error: msg.error });
+                }
+            };
+            this.onMessage(handler);
+            this.send('startTraining', { ...config, requestId });
+        });
+    }
+
+    /**
+     * 監聽訓練日誌（用於即時顯示訓練進度）
+     * @param {Function} callback - 回調函式，接收日誌訊息
+     */
+    onTrainingLog(callback) {
+        const handler = (msg) => {
+            if (msg.command === 'trainingLog') {
+                callback(msg.message);
+            }
+        };
+        this.onMessage(handler);
+        // 返回取消監聽的函式
+        return () => this.offMessage(handler);
+    }
 }
