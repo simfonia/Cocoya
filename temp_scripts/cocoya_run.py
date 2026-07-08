@@ -64,7 +64,7 @@ if __name__ == "__main__":  # S_ID:BW|{#2:o27$w}?+)8k5f
         model_dir='model/classifier_dataset',
         task_type='classifier',
         backend='remote' if False else 'local',
-        epochs=20,
+        epochs=5,
         batch_size=32,
         learning_rate=0.001
     )  # E_ID:Y8]DzD?F[#5O_V_}^Ye0  # E_ID:BW|{#2:o27$w}?+)8k5f
