@@ -24,8 +24,9 @@
   - [x] 本地流程驗證：收集 → 訓練 (93~94%) → 推論
   - [x] DGX 遠端驗證：上傳 → 容器化訓練 (94.68%) → 下載模型
   - [x] πCar 整合腳本就緒（待實機測試）
-- [ ] **伺服器端容器化訓練**：建立基於 NGC 鏡像的訓練容器與模板程式（MVP 已驗證 NGC PyTorch 容器 + TensorFlow）。
-- [ ] **推論與部署鏈**：支援雲端推論結果回傳與 <code>.tflite</code> 模型自動燒錄至 πCar。
+- [ ] **[遠端訓練] SSH/Sidecar 整合**：實作 `extension.ts` 中 `backend === 'remote'` 的分支，透過本地 Sidecar (paramiko) 在遠端主機執行 `classifier_train.py`。
+- [ ] **[遠端訓練] 容器化訓練腳本**：建立基於 NGC 鏡像的訓練容器與模板程式，確保遠端環境與本地一致。(MVP 已驗證 NGC PyTorch 容器 + TensorFlow, 開發時可參考 mvp_hand_gesture 資料夾中的程式碼）。
+- [ ] **[遠端訓練] 推論與部署鏈**：支援雲端推論結果回傳與 <code>.tflite</code> 模型自動燒錄至 πCar。
 - [x] **[Phase 1] 訓練後端選擇 UI**（2026-06-25）：對話框 + 工具列按鈕 + localStorage 記住選擇
 - [x] **[Phase 2] 本地訓練功能**（2026-06-25）：Sidecar trainLocal + Tauri start_training + Extension handleStartTraining
 - [x] **[Phase 2.5] 通用化架構重構**（2026-06-25）：
@@ -77,6 +78,7 @@
 - [x] **[Bug Fix] 中文路徑問題**：加入中文路徑檢測，當路徑包含中文時顯示友善的錯誤提示（避免 0x2 錯誤）。
 - [x] **[Bug Fix] 專案路徑判斷**：`handleOpenLatestTrainingReport` 優先使用 `currentFilePath` 所在目錄，而非 `workspaceFolders[0]`。
 - [x] **[PBL 專案重命名]**：將 `examples/影像分類控制piCarl音效/` 改名為 `examples/AI_02_classifier/`，所有中文檔名改為英文檔名。
+- [x] **[PBL 專案檔名英文化]**：03_PC端推論控制.xml → 03_PC_inference.xml，04_MCU端音效控制.xml → 04_MCU_sound_control.xml
 
 ## [待辦] 其他優化
 - [ ] **[優化] 跨平台 Friendly Name**：實作 macOS/Linux 的序列埠名稱顯示優化。
@@ -86,4 +88,4 @@
 - [ ] **[功能] Dataset manager 刪除照片**。
 
 ---
-*最後更新日期：2026-07-05 (訓練結果改為 HTML 報告，移除複雜 Modal)*
+*最後更新日期：2026-07-07 (PBL 範例專案英文化)*
