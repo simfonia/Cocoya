@@ -1,0 +1,176 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
+  <variables>
+    <variable id="i_var">i</variable>
+  </variables>
+  <block type="py_coding_comment" id="c01" x="10" y="10">
+    <field name="TEXT">for 迴圈入門 — LED 跑馬燈&amp;#10;for 迴圈讓變數 i 從 start 跑到 stop-1&amp;#10;每次跑一步，執行 DO 裡面的程式</field>
+  </block>
+  <block type="py_definition_zone" id="dz01" x="10" y="110"></block>
+  <block type="mcu_main" id="main01" x="10" y="190">
+    <statement name="DO">
+      <block type="py_coding_comment" id="c02">
+        <field name="TEXT">等待按鈕1 按下才開始</field>
+        <next>
+          <block type="mcu_car_wait_start" id="ws01">
+            <field name="PIN">board.GP20</field>
+            <next>
+              <block type="py_coding_comment" id="c03">
+                <field name="TEXT">=== 無窮迴圈，持續執行跑馬燈 ===</field>
+                <next>
+                  <block type="py_loop_while" id="wl01">
+                    <value name="CONDITION">
+                      <block type="py_logic_boolean" id="lb01">
+                        <field name="BOOL">True</field>
+                      </block>
+                    </value>
+                    <statement name="DO">
+                      <block type="py_coding_comment" id="c04">
+                        <field name="TEXT">LED 依序亮起（0 → 7）</field>
+                        <next>
+                          <block type="py_loop_for_range" id="fr01">
+                            <field name="VAR" id="i_var">i</field>
+                            <value name="START">
+                              <shadow type="py_math_number" id="mn01">
+                                <field name="NUM">0</field>
+                              </shadow>
+                            </value>
+                            <value name="STOP">
+                              <shadow type="py_math_number" id="mn02">
+                                <field name="NUM">8</field>
+                              </shadow>
+                            </value>
+                            <value name="STEP">
+                              <shadow type="py_math_number" id="mn03">
+                                <field name="NUM">1</field>
+                              </shadow>
+                            </value>
+                            <statement name="DO">
+                              <block type="py_coding_comment" id="c05">
+                                <field name="TEXT">點亮第 i 顆藍色指示燈</field>
+                                <next>
+                                  <block type="mcu_car_set_led_io" id="io01">
+                                    <value name="PIN">
+                                      <shadow type="py_math_number" id="mn04">
+                                        <field name="NUM">0</field>
+                                      </shadow>
+                                      <block type="py_variables_get" id="vg01">
+                                        <field name="VAR" id="i_var">i</field>
+                                      </block>
+                                    </value>
+                                    <value name="STATE">
+                                      <shadow type="py_logic_boolean" id="lb02">
+                                        <field name="BOOL">True</field>
+                                      </shadow>
+                                    </value>
+                                    <next>
+                                      <block type="py_coding_comment" id="c06">
+                                        <field name="TEXT">除錯用：取消註解可看到 i 的值</field>
+                                        <next>
+                                          <block type="py_io_print" id="ta6Y_%TVY;6*(:)fGZ!I" disabled-reasons="MANUALLY_DISABLED">
+                                            <value name="TEXT">
+                                              <shadow type="py_text" id="(d{cH0:4lPV2/D(n.lH)">
+                                                <field name="TEXT">Hello Cocoya!</field>
+                                              </shadow>
+                                              <block type="py_variables_get" id="%Xq;|#Bh53,e#o|(ggMn">
+                                                <field name="VAR" id="i_var">i</field>
+                                              </block>
+                                            </value>
+                                            <next>
+                                              <block type="py_time_sleep" id="ts01">
+                                                <value name="SECONDS">
+                                                  <shadow type="py_math_number" id="mn05">
+                                                    <field name="NUM">0.5</field>
+                                                  </shadow>
+                                                </value>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </statement>
+                            <next>
+                              <block type="py_coding_comment" id="c08">
+                                <field name="TEXT">LED 依序熄滅（7 → 0）</field>
+                                <next>
+                                  <block type="py_loop_for_range" id="fr02">
+                                    <field name="VAR" id="i_var">i</field>
+                                    <value name="START">
+                                      <shadow type="py_math_number" id="mn06">
+                                        <field name="NUM">7</field>
+                                      </shadow>
+                                    </value>
+                                    <value name="STOP">
+                                      <shadow type="py_math_number" id="mn07">
+                                        <field name="NUM">-1</field>
+                                      </shadow>
+                                    </value>
+                                    <value name="STEP">
+                                      <shadow type="py_math_number" id="mn08">
+                                        <field name="NUM">-1</field>
+                                      </shadow>
+                                    </value>
+                                    <statement name="DO">
+                                      <block type="py_coding_comment" id="c09">
+                                        <field name="TEXT">熄滅第 i 顆指示燈</field>
+                                        <next>
+                                          <block type="mcu_car_set_led_io" id="io02">
+                                            <value name="PIN">
+                                              <shadow type="py_math_number" id="mn09">
+                                                <field name="NUM">0</field>
+                                              </shadow>
+                                              <block type="py_variables_get" id="vg02">
+                                                <field name="VAR" id="i_var">i</field>
+                                              </block>
+                                            </value>
+                                            <value name="STATE">
+                                              <shadow type="py_logic_boolean" id="lb03">
+                                                <field name="BOOL">False</field>
+                                              </shadow>
+                                            </value>
+                                            <next>
+                                              <block type="py_io_print" id="[(([x)5iI-trI]$wpW#?" disabled-reasons="MANUALLY_DISABLED">
+                                                <value name="TEXT">
+                                                  <shadow type="py_text" id="(d{cH0:4lPV2/D(n.lH)">
+                                                    <field name="TEXT">Hello Cocoya!</field>
+                                                  </shadow>
+                                                  <block type="py_variables_get" id="R;:5a?Hr,0XO}rr1,XRW">
+                                                    <field name="VAR" id="i_var">i</field>
+                                                  </block>
+                                                </value>
+                                                <next>
+                                                  <block type="py_time_sleep" id="ts02">
+                                                    <value name="SECONDS">
+                                                      <shadow type="py_math_number" id="mn10">
+                                                        <field name="NUM">0.5</field>
+                                                      </shadow>
+                                                    </value>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </statement>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </statement>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

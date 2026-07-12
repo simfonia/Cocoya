@@ -216,7 +216,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             Blockly.Events.disable();
             try {
                 const topBlocks = this.workspace.getTopBlocks(false);
-                const allowedTypes = ['py_main', 'mcu_main', 'py_definition_zone', 'py_function_def'];
+                const allowedTypes = ['py_main', 'mcu_main', 'py_definition_zone', 'py_function_def', 'py_coding_comment'];
                 topBlocks.forEach(root => {
                     const isAllowed = allowedTypes.includes(root.type) || root.type.startsWith('procedures_def');
                     root.getDescendants(false).forEach(block => {

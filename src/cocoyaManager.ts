@@ -221,11 +221,17 @@ export class CocoyaManager {
                 case 'setCloudAiMode':
                     await this.envOps.handleSetCloudAiMode(message.enabled);
                     break;
+                case 'datasetListCameras':
+                    this.datasetOps.handleDatasetListCameras(message);
+                    break;
                 case 'datasetStartCamera':
                     this.datasetOps.handleDatasetStartCamera(message);
                     break;
                 case 'datasetStopCamera':
                     this.datasetOps.handleDatasetStopCamera();
+                    break;
+                case 'datasetDeleteImage':
+                    this.datasetOps.handleDatasetDeleteImage(message);
                     break;
                 case 'datasetCaptureImage':
                     this.datasetOps.handleDatasetCaptureImage(message);

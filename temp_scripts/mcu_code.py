@@ -1,60 +1,26 @@
+import sys
+import uselect
 import machine
 import time
-import uselect
-import sys
 
 
-class PiCarServo:
-    _CONFIG = {} # pin: (min_us, max_us, max_angle, offset)
-
-    def __init__(self, pin_num, min_us=460, max_us=2400, max_angle=180, offset=0):
-        self.pwm = machine.PWM(machine.Pin(pin_num), freq=50)
-        self.pin_num = pin_num
-        self.update_config(min_us, max_us, max_angle, offset)
-        self.current_angle = self.max_angle
-        self.hand_range = 180
-
-    def update_config(self, min_us, max_us, max_angle, offset):
-        self.min_us = max(min(min_us, 2600), 400)
-        self.max_us = max(min(max_us, 2600), 400)
-        self.max_angle = max(min(max_angle, 360), 90)
-        self.offset = offset
-        PiCarServo._CONFIG[self.pin_num] = (self.min_us, self.max_us, self.max_angle, self.offset)
-
-    def set_angle(self, angle, is_car_action=False):
-        _conf = PiCarServo._CONFIG.get(self.pin_num, (self.min_us, self.max_us, self.max_angle, self.offset))
-        min_u, max_u, max_ang, off_v = _conf
-
-        # 物理限位：永遠不得超過該舵機型號的物理極限 (如 180 或 270)
-        angle = max(min(angle, max_ang), 0)
-
-        self.current_angle = angle
-        # 套用角度微調 (Offset)
-        final_angle = angle + off_v
-        us = min_u + (final_angle / max_ang * (max_u - min_u))
-        self.pwm.duty_u16(int(us / 20000 * 65535))
-
-    def move_smooth(self, target_angle, speed, is_car_action=False):
-        PiCarServo.move_sync([self], [target_angle], speed, is_car_action)
-
-    @staticmethod
-    def move_sync(servos, targets, speed, is_car_action=False):
-        if speed >= 10:
-            for i in range(len(servos)):
-                servos[i].set_angle(targets[i], is_car_action)
-            return
-        delay = (10 - max(min(speed, 9), 1)) * 0.011
-        moving = True
-        while moving:
-            moving = False
-            for i in range(len(servos)):
-                s = servos[i]
-                t = targets[i]
-                if s.current_angle != t:
-                    step = 1 if t > s.current_angle else -1
-                    s.set_angle(s.current_angle + step, is_car_action)
-                    moving = True
-            if moving: time.sleep(delay)
+_cocoya_serial_buf = ""
+def cocoya_get_latest_serial():
+    # MicroPython 讀取 stdin，排空至最新一筆
+    # 這裡需要非阻塞讀取，通常透過 select 或 poll 實作
+    global _cocoya_serial_buf
+    latest = ""
+    poll = uselect.poll()
+    poll.register(sys.stdin, uselect.POLLIN)
+    while poll.poll(0):
+        ch = sys.stdin.read(1)
+        if ch == '\n':
+            if _cocoya_serial_buf:
+                latest = _cocoya_serial_buf.strip()
+            _cocoya_serial_buf = ""
+        else:
+            _cocoya_serial_buf += ch
+    return latest
 
 class MusicEngine:
     def __init__(self, pin_num):
@@ -99,67 +65,22 @@ class MusicEngine:
 
 if 'music' not in globals(): music = MusicEngine(22)
 
-if 'btn_20' not in globals():
-    btn_20 = machine.Pin(20, machine.Pin.IN, machine.Pin.PULL_UP)
 
-_cocoya_serial_buf = ""
-def cocoya_get_latest_serial():
-    global _cocoya_serial_buf
-    latest = ""
-    poll = uselect.poll()
-    poll.register(sys.stdin, uselect.POLLIN)
-    while poll.poll(0):
-        ch = sys.stdin.read(1)
-        if ch == '\n':
-            if _cocoya_serial_buf:
-                latest = _cocoya_serial_buf.strip()
-            _cocoya_serial_buf = ""
-        else:
-            _cocoya_serial_buf += ch
-    return latest
-
-
-
+# Serial initialized via REPL (default)  # S_ID:kI/.N1;]+Q~]iA@S%-Fc  # E_ID:kI/.N1;]+Q~]iA@S%-Fc  # S_ID:def_root  # E_ID:def_root
 
 # --- MicroPython Main Program ---  # S_ID:main_root
 time.sleep(0.2)  # Short boot delay for serial stability
-if 'servo_12' not in globals(): globals()['servo_12'] = PiCarServo(12, 460, 2400, 180)  # S_ID:init_range
-servo_12 = globals()['servo_12']
-if 'servo_13' not in globals(): globals()['servo_13'] = PiCarServo(13, 460, 2400, 180)
-servo_13 = globals()['servo_13']
-servo_12.hand_range = 180
-servo_13.hand_range = 180  # E_ID:init_range
-  # S_ID:go_home
-if 'servo_12' not in globals(): globals()['servo_12'] = PiCarServo(12, 460, 2400, 180)
-servo_12 = globals()['servo_12']
-if 'servo_13' not in globals(): globals()['servo_13'] = PiCarServo(13, 460, 2400, 180)
-servo_13 = globals()['servo_13']
-# 歸位點：鎖定張開位置 (SG90->0/180; GEEK->45/225)，不受 hand_range 影響
-_home_R = int((servo_13.max_angle - 180) / 2)
-_home_L = servo_12.max_angle - _home_R
-servo_12.set_angle(_home_L, is_car_action=True)
-servo_13.set_angle(_home_R, is_car_action=True)  # E_ID:go_home
-music.play(440, 200)  # S_ID:beep_start  # E_ID:beep_start
-print("等待按鍵中...")  # S_ID:ai_wait_start
-while btn_20.value():
-    time.sleep(0.01)
-time.sleep(0.5)  # E_ID:ai_wait_start
-print('開始接收訊息')  # S_ID:print_ready  # E_ID:print_ready
-while True:  # S_ID:main_loop
-    if uselect.select([sys.stdin], [], [], 0)[0]:  # S_ID:if_serial
-        line = cocoya_get_latest_serial()  # S_ID:read_line  # E_ID:read_line
-        if line != '':  # S_ID:if_line_nonempty
-            percent_val = int(line)  # S_ID:cast_line  # E_ID:cast_line
-            if 'servo_12' not in globals(): globals()['servo_12'] = PiCarServo(12, 460, 2400, 180)  # S_ID:move_picar_hands
-            servo_12 = globals()['servo_12']
-            if 'servo_13' not in globals(): globals()['servo_13'] = PiCarServo(13, 460, 2400, 180)
-            servo_13 = globals()['servo_13']
-            _p = max(min(percent_val, 100), 0) / 100.0
-            _s = max(min(10, 10), 1)
-            # 歸位基準點 (張開位)
-            _home_R = int((servo_13.max_angle - 180) / 2)
-            _home_L = servo_12.max_angle - _home_R
-            # 以歸位點為起點旋出並進行「目標安全截斷」，防止平滑移動死鎖
-            _target_R = max(0, min(_home_R + int(_p * servo_13.hand_range), servo_13.max_angle))
-            _target_L = max(0, min(_home_L - int(_p * servo_12.hand_range), servo_12.max_angle))
-            PiCarServo.move_sync([servo_12, servo_13], [_target_L, _target_R], _s, is_car_action=True)  # E_ID:move_picar_hands  # E_ID:if_line_nonempty  # E_ID:if_serial  # E_ID:main_loop  # E_ID:main_root
+while True:  # S_ID:D_Rt)Ya5?|^hd|8p=n/l
+    gesture_data = cocoya_get_latest_serial()  # S_ID:bTUn,=@Iy}tdCK3Ff?(A  # E_ID:bTUn,=@Iy}tdCK3Ff?(A
+    if gesture_data != '':  # S_ID:h$Auh?:kSG?hQ,F@qS~.
+        if gesture_data == 'rock':  # S_ID:}ey{Nh(-2,@s23;ZK93_
+            _dur = (60000 / music.tempo) * 1.0  # S_ID:)X/Wo??nrysL!B!+^g.b
+            music.play(music.get_freq("C", 4), int(_dur))  # E_ID:)X/Wo??nrysL!B!+^g.b
+        elif gesture_data == 'scissors':
+            _dur = (60000 / music.tempo) * 1.0  # S_ID:)Eam!:jNDckMJSCA8=KS
+            music.play(music.get_freq("E", 4), int(_dur))  # E_ID:)Eam!:jNDckMJSCA8=KS
+        elif gesture_data == 'paper':
+            _dur = (60000 / music.tempo) * 1.0  # S_ID:3b(=vaa^{!lNb6Odf|w.
+            music.play(music.get_freq("G", 4), int(_dur))  # E_ID:3b(=vaa^{!lNb6Odf|w.
+        else:
+            music.buzzer.duty_u16(0)  # S_ID:{uFzc/?Br[%$j(DRynkU  # E_ID:{uFzc/?Br[%$j(DRynkU  # E_ID:}ey{Nh(-2,@s23;ZK93_  # E_ID:h$Auh?:kSG?hQ,F@qS~.  # E_ID:D_Rt)Ya5?|^hd|8p=n/l  # E_ID:main_root

@@ -1,0 +1,23 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
+  <block type="py_definition_zone" id="fZIf/kj)qz,ZyK:aZlMV" x="100" y="20"></block>
+  <block type="mcu_main" id=":iaVv|K(}.pHeOdi={MR" x="100" y="200">
+    <statement name="DO">
+      <block type="py_time_sleep" id="jA=oY;84;hyJp/-u!T{2">
+        <value name="SECONDS">
+          <shadow type="py_math_number" id="[~:xcz`vvh:tohXO~*|Q">
+            <field name="NUM">1</field>
+          </shadow>
+        </value>
+        <next>
+          <block type="py_io_print" id="[sQ+Y{wspL40$m)wh`hv">
+            <value name="TEXT">
+              <shadow type="py_text" id="@Kc@dJl?FboJo+2gv*Ug">
+                <field name="TEXT">Hello Cocoya!</field>
+              </shadow>
+            </value>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

@@ -20,7 +20,8 @@ const state = {
     isOpen: false,
     images: [], // 儲存匯入的影像資訊
     tableRows: [], // 儲存匯入的表格資料 (前幾筆)
-    sourceFolderPath: null // 儲存來源資料夾路徑
+    sourceFolderPath: null, // 儲存來源資料夾路徑
+    _savedGridScrollTop: 0  // 進入標註模式前保留的縮圖捲動位置
 };
 
 function optionList(values, selected) {
@@ -401,6 +402,11 @@ function enterAnnotationMode(image, index) {
     const previewHeader = modal?.querySelector('.dataset-preview-panel .dataset-panel-title div');
     if (!previewContent || !previewHeader) return;
 
+    // 進入標註前，先保存目前縮圖網格的捲動位置到 state
+    const imagePreview = modal.querySelector('#dataset-image-preview');
+    const grid = imagePreview?.querySelector('.dataset-image-grid');
+    state._savedGridScrollTop = grid ? grid.scrollTop : 0;
+
     const existingBackBtn = modal.querySelector('#dataset-annotation-back');
     if (existingBackBtn) {
         existingBackBtn.remove();
@@ -554,6 +560,11 @@ export function refreshDynamicPanels() {
             addSampleFromSampler(blob);
         };
 
+        // 自動列舉可用攝影機 (但僅在清單為空時)
+        if (Sampler.state.cameraList.length === 0) {
+            Sampler.listCameras();
+        }
+
         UIComponents.renderSamplerView(samplerView, {
             labels,
             onLabelChange: (l) => {
@@ -572,7 +583,7 @@ export function refreshDynamicPanels() {
             },
             onSnapshot: () => handleSamplerSnapshot(),
             onBurstToggle: () => handleSamplerBurstToggle(),
-            onStartCamera: () => Sampler.startCamera(null), 
+            onStartCamera: () => Sampler.startCamera(Sampler.state.selectedDeviceId), 
             onStopCamera: () => Sampler.stopCamera()
         });
 
@@ -580,13 +591,28 @@ export function refreshDynamicPanels() {
         Sampler.stopCamera();
     }
 
-    // 顯示影像或表格預覽
+    // 顯示影像或表格預覽（保留 scrollTop 避免回到列表或刪除時縮圖捲回最上方）
     if (isImage || isLive) {
         const imagePreview = modal.querySelector('#dataset-image-preview');
+
+        // 決定 scrollTop 值：先取 state._savedGridScrollTop（從標註模式返回），
+        // 若無則嘗試現有 grid 的 scrollTop（刪除照片時保留），最後為 0
+        const oldGrid = imagePreview.querySelector('.dataset-image-grid');
+        const savedScrollTop = (state._savedGridScrollTop > 0) ? state._savedGridScrollTop : (oldGrid ? oldGrid.scrollTop : 0);
+        // 使用過後清空，避免下次 refreshDynamicPanels 誤用
+        state._savedGridScrollTop = 0;
+
         imagePreview.style.display = state.images.length ? 'block' : 'none';
         UIComponents.renderImageGrid(imagePreview, state.images, {
-            onImageClick: (img, idx) => enterAnnotationMode(img, idx)
+            onImageClick: (img, idx) => enterAnnotationMode(img, idx),
+            onDeleteImage: (idx) => handleDeleteImage(idx)
         });
+
+        // 恢復捲動位置
+        const newGrid = imagePreview.querySelector('.dataset-image-grid');
+        if (newGrid && state.images.length > 0 && savedScrollTop > 0) {
+            newGrid.scrollTop = savedScrollTop;
+        }
     } else {
         const tablePreview = modal.querySelector('#dataset-table-preview');
         tablePreview.style.display = state.tableRows.length ? 'block' : 'none';
@@ -606,6 +632,63 @@ async function handleSamplerSnapshot() {
     } catch (e) {
         if (status) status.textContent = `❌ 採集失敗: ${e.message}`;
     }
+}
+
+/**
+ * 刪除指定索引的照片
+ */
+function handleDeleteImage(index) {
+    const removed = state.images[index];
+    if (!removed) return;
+
+    // 計算實際檔案路徑並通知後端刪除實體檔案
+    if (state.sourceFolderPath && removed.path) {
+        const fullPath = state.sourceFolderPath.replace(/\\/g, '/') + '/' + removed.path;
+        window.CocoyaBridge.send('datasetDeleteImage', { filePath: fullPath });
+    }
+
+    // 釋放 blobUrl 避免記憶體洩漏
+    if (removed.blobUrl) {
+        URL.revokeObjectURL(removed.blobUrl);
+    }
+
+    // 從陣列中移除
+    state.images.splice(index, 1);
+
+    // 更新統計與 Spec
+    updateStatsFromImages();
+
+    // 刷新 UI（保留 scrollTop 避免刪除後縮圖捲回最上方）
+    const modal = getModal();
+    if (modal) {
+        const structureContent = modal.querySelector('#dataset-structure-content');
+        if (structureContent) {
+            UIComponents.renderLabelStats(structureContent, state.spec.toJSON().stats);
+        }
+
+        const imagePreview = modal.querySelector('#dataset-image-preview');
+        if (imagePreview) {
+            // 記錄目前的捲動位置
+            const grid = imagePreview.querySelector('.dataset-image-grid');
+            const scrollTop = grid ? grid.scrollTop : 0;
+
+            if (state.images.length === 0) {
+                imagePreview.style.display = 'none';
+            }
+            UIComponents.renderImageGrid(imagePreview, state.images, {
+                onImageClick: (img, idx) => enterAnnotationMode(img, idx),
+                onDeleteImage: (idx) => handleDeleteImage(idx)
+            });
+
+            // 恢復捲動位置（renderImageGrid 會重建 DOM，需要重新查詢 grid）
+            const newGrid = imagePreview.querySelector('.dataset-image-grid');
+            if (newGrid) {
+                newGrid.scrollTop = scrollTop;
+            }
+        }
+    }
+
+    refreshPreview();
 }
 
 function handleSamplerBurstToggle() {
@@ -653,7 +736,8 @@ function addSampleFromSampler(blob) {
         if (imagePreview) {
             imagePreview.style.display = 'block'; // 確保網格容器是顯示的
             UIComponents.renderImageGrid(imagePreview, state.images, {
-                onImageClick: (img, idx) => enterAnnotationMode(img, idx)
+                onImageClick: (img, idx) => enterAnnotationMode(img, idx),
+                onDeleteImage: (idx) => handleDeleteImage(idx)
             });
         }
     }

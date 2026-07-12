@@ -1,0 +1,279 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
+  <block type="py_coding_comment" id="c01" x="10" y="10">
+    <field name="TEXT">if-elif-else（單選）— 前面的條件會攔截後面！&amp;#10;就像單選題：選了 A 就不會再看 B/C/D&amp;#10;注意：同時按兩個按鈕時，只會執行第一個符合的！</field>
+  </block>
+  <block type="py_definition_zone" id="dz01" x="10" y="110"></block>
+  <block type="mcu_main" id="main01" x="10" y="190">
+    <statement name="DO">
+      <block type="py_coding_comment" id="c02">
+        <field name="TEXT">等待按鈕1 按下才開始</field>
+        <next>
+          <block type="mcu_car_wait_start" id="ws01">
+            <field name="PIN">board.GP20</field>
+            <next>
+              <block type="py_coding_comment" id="c03">
+                <field name="TEXT">=== 無窮迴圈 ===</field>
+                <next>
+                  <block type="py_loop_while" id="wl01">
+                    <value name="CONDITION">
+                      <block type="py_logic_boolean" id="lb01">
+                        <field name="BOOL">True</field>
+                      </block>
+                    </value>
+                    <statement name="DO">
+                      <block type="py_coding_comment" id="c04">
+                        <field name="TEXT">一個 if-elif-else，三個條件只會執行一個&amp;#10;❗️重點：同時按兩顆按鈕，永遠只亮 LED0 + Do音&amp;#10;   因為按鈕1 在前面 if 就被攔截了，後面不再檢查</field>
+                        <next>
+                          <block type="py_logic_if" id="li01">
+                            <mutation elif="2" else="1"></mutation>
+                            <value name="IF0">
+                              <block type="mcu_car_button_pressed" id="bp01">
+                                <field name="PIN">board.GP20</field>
+                              </block>
+                            </value>
+                            <statement name="DO0">
+                              <block type="py_coding_comment" id="c05">
+                                <field name="TEXT">✅ 條件1成立：按鈕1 按下（優先權最高）&amp;#10;即使按鈕2 也按著，也只執行這裡！</field>
+                                <next>
+                                  <block type="mcu_car_set_led_io" id="io01">
+                                    <value name="PIN">
+                                      <shadow type="py_math_number" id="mn01">
+                                        <field name="NUM">0</field>
+                                      </shadow>
+                                    </value>
+                                    <value name="STATE">
+                                      <shadow type="py_logic_boolean" id="lb02">
+                                        <field name="BOOL">True</field>
+                                      </shadow>
+                                    </value>
+                                    <next>
+                                      <block type="mcu_car_tone" id="tn01">
+                                        <value name="FREQ">
+                                          <shadow type="py_math_number" id="mn02">
+                                            <field name="NUM">262</field>
+                                          </shadow>
+                                        </value>
+                                        <value name="MS">
+                                          <shadow type="py_math_number" id="mn03">
+                                            <field name="NUM">200</field>
+                                          </shadow>
+                                        </value>
+                                        <next>
+                                          <block type="py_io_print" id="pr01" disabled-reasons="MANUALLY_DISABLED">
+                                            <value name="TEXT">
+                                              <shadow type="py_text" id="pt01">
+                                                <field name="TEXT">Hello Cocoya!</field>
+                                              </shadow>
+                                              <block type="py_text" id="pt02">
+                                                <field name="TEXT">按鈕1 優先！後面不再檢查</field>
+                                              </block>
+                                            </value>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </statement>
+                            <value name="IF1">
+                              <block type="mcu_car_button_pressed" id="bp02">
+                                <field name="PIN">board.GP21</field>
+                              </block>
+                            </value>
+                            <statement name="DO1">
+                              <block type="py_coding_comment" id="c06">
+                                <field name="TEXT">✅ 條件2成立：只有「按鈕1 沒按」且「按鈕2 按下」時才執行</field>
+                                <next>
+                                  <block type="mcu_car_set_led_io" id="io02">
+                                    <value name="PIN">
+                                      <shadow type="py_math_number" id="mn04">
+                                        <field name="NUM">7</field>
+                                      </shadow>
+                                    </value>
+                                    <value name="STATE">
+                                      <shadow type="py_logic_boolean" id="lb03">
+                                        <field name="BOOL">True</field>
+                                      </shadow>
+                                    </value>
+                                    <next>
+                                      <block type="mcu_car_tone" id="tn02">
+                                        <value name="FREQ">
+                                          <shadow type="py_math_number" id="mn05">
+                                            <field name="NUM">330</field>
+                                          </shadow>
+                                        </value>
+                                        <value name="MS">
+                                          <shadow type="py_math_number" id="mn06">
+                                            <field name="NUM">200</field>
+                                          </shadow>
+                                        </value>
+                                        <next>
+                                          <block type="py_io_print" id="pr02" disabled-reasons="MANUALLY_DISABLED">
+                                            <value name="TEXT">
+                                              <shadow type="py_text" id="pt03">
+                                                <field name="TEXT">Hello Cocoya!</field>
+                                              </shadow>
+                                              <block type="py_text" id="pt04">
+                                                <field name="TEXT">按鈕2 被執行（因為按鈕1 沒按）</field>
+                                              </block>
+                                            </value>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </statement>
+                            <value name="IF2">
+                              <block type="py_logic_operation" id="lo01">
+                                <field name="OP">and</field>
+                                <value name="A">
+                                  <block type="mcu_car_button_pressed" id="bp03">
+                                    <field name="PIN">board.GP20</field>
+                                  </block>
+                                </value>
+                                <value name="B">
+                                  <block type="mcu_car_button_pressed" id="bp04">
+                                    <field name="PIN">board.GP21</field>
+                                  </block>
+                                </value>
+                              </block>
+                            </value>
+                            <statement name="DO2">
+                              <block type="py_coding_comment" id="c07">
+                                <field name="TEXT">❌ 這條「永遠不會被執行」！&amp;#10;因為按鈕1 在前面 if 就先被攔截了&amp;#10;這就是 if-elif（單選）的特性！</field>
+                                <next>
+                                  <block type="mcu_car_set_led_io" id="io03">
+                                    <value name="PIN">
+                                      <shadow type="py_math_number" id="mn07">
+                                        <field name="NUM">0</field>
+                                      </shadow>
+                                    </value>
+                                    <value name="STATE">
+                                      <shadow type="py_logic_boolean" id="lb04">
+                                        <field name="BOOL">True</field>
+                                      </shadow>
+                                    </value>
+                                    <next>
+                                      <block type="mcu_car_set_led_io" id="io04">
+                                        <value name="PIN">
+                                          <shadow type="py_math_number" id="mn08">
+                                            <field name="NUM">7</field>
+                                          </shadow>
+                                        </value>
+                                        <value name="STATE">
+                                          <shadow type="py_logic_boolean" id="lb05">
+                                            <field name="BOOL">True</field>
+                                          </shadow>
+                                        </value>
+                                        <next>
+                                          <block type="mcu_car_tone" id="tn03">
+                                            <value name="FREQ">
+                                              <shadow type="py_math_number" id="mn09">
+                                                <field name="NUM">392</field>
+                                              </shadow>
+                                            </value>
+                                            <value name="MS">
+                                              <shadow type="py_math_number" id="mn10">
+                                                <field name="NUM">200</field>
+                                              </shadow>
+                                            </value>
+                                            <next>
+                                              <block type="py_io_print" id="pr03" disabled-reasons="MANUALLY_DISABLED">
+                                                <value name="TEXT">
+                                                  <shadow type="py_text" id="pt05">
+                                                    <field name="TEXT">Hello Cocoya!</field>
+                                                  </shadow>
+                                                  <block type="py_text" id="pt06">
+                                                    <field name="TEXT">❌ 兩個按鈕都按？永遠不會到這裡！</field>
+                                                  </block>
+                                                </value>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </statement>
+                            <statement name="ELSE">
+                              <block type="py_coding_comment" id="c08">
+                                <field name="TEXT">兩個按鈕都沒按 → 全部熄滅、關閉蜂鳴器</field>
+                                <next>
+                                  <block type="mcu_car_set_led_io" id="io05">
+                                    <value name="PIN">
+                                      <shadow type="py_math_number" id="mn11">
+                                        <field name="NUM">0</field>
+                                      </shadow>
+                                    </value>
+                                    <value name="STATE">
+                                      <shadow type="py_logic_boolean" id="lb06">
+                                        <field name="BOOL">False</field>
+                                      </shadow>
+                                    </value>
+                                    <next>
+                                      <block type="mcu_car_set_led_io" id="io06">
+                                        <value name="PIN">
+                                          <shadow type="py_math_number" id="mn12">
+                                            <field name="NUM">7</field>
+                                          </shadow>
+                                        </value>
+                                        <value name="STATE">
+                                          <shadow type="py_logic_boolean" id="lb07">
+                                            <field name="BOOL">False</field>
+                                          </shadow>
+                                        </value>
+                                        <next>
+                                          <block type="mcu_car_no_tone" id="nt01">
+                                            <next>
+                                              <block type="py_io_print" id="pr04" disabled-reasons="MANUALLY_DISABLED">
+                                                <value name="TEXT">
+                                                  <shadow type="py_text" id="pt07">
+                                                    <field name="TEXT">Hello Cocoya!</field>
+                                                  </shadow>
+                                                  <block type="py_text" id="pt08">
+                                                    <field name="TEXT">沒按任何按鈕</field>
+                                                  </block>
+                                                </value>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </statement>
+                            <next>
+                              <block type="py_coding_comment" id="c09">
+                                <field name="TEXT">❓ 思考題：同時按住兩顆按鈕，會亮什麼燈？為什麼？&amp;#10;答案：只亮 LED0（Do音），因為條件1攔截了後面全部！&amp;#10;對比範例5的多個 if，同時按可以亮兩盞燈</field>
+                                <next>
+                                  <block type="py_time_sleep" id="ts01">
+                                    <value name="SECONDS">
+                                      <shadow type="py_math_number" id="mn13">
+                                        <field name="NUM">0.1</field>
+                                      </shadow>
+                                    </value>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </statement>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

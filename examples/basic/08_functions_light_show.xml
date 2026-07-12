@@ -1,0 +1,275 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
+  <variables>
+    <variable id="i_var">i</variable>
+  </variables>
+  <block type="py_coding_comment" id="c01" x="10" y="10">
+    <field name="TEXT">函式入門 — 自訂聲光表演&amp;#10;函式就像「打包好的動作」，取個名字就能重複使用&amp;#10;def blink_all(): 定義閃燈函式&amp;#10;def play_beep(): 定義音效函式&amp;#10;主程式只需呼叫函式名稱即可執行</field>
+  </block>
+  <block type="py_definition_zone" id="dz01" x="10" y="150"></block>
+  <block type="py_function_def" id="fd01" x="10" y="230">
+    <mutation params="0"></mutation>
+    <field name="NAME">blink_all</field>
+    <statement name="DO">
+      <block type="py_coding_comment" id="c02">
+        <field name="TEXT">讓 LED0-2 同時閃爍 3 次</field>
+        <next>
+          <block type="py_loop_for_range" id="fr01">
+            <field name="VAR" id="i_var">i</field>
+            <value name="START">
+              <shadow type="py_math_number" id="mn01">
+                <field name="NUM">0</field>
+              </shadow>
+            </value>
+            <value name="STOP">
+              <shadow type="py_math_number" id="mn02">
+                <field name="NUM">3</field>
+              </shadow>
+            </value>
+            <value name="STEP">
+              <shadow type="py_math_number" id="mn03">
+                <field name="NUM">1</field>
+              </shadow>
+            </value>
+            <statement name="DO">
+              <block type="mcu_car_set_led_io" id="io01">
+                <value name="PIN">
+                  <shadow type="py_math_number" id="mn04">
+                    <field name="NUM">0</field>
+                  </shadow>
+                </value>
+                <value name="STATE">
+                  <shadow type="py_logic_boolean" id="lb01">
+                    <field name="BOOL">True</field>
+                  </shadow>
+                </value>
+                <next>
+                  <block type="mcu_car_set_led_io" id="io02">
+                    <value name="PIN">
+                      <shadow type="py_math_number" id="mn05">
+                        <field name="NUM">1</field>
+                      </shadow>
+                    </value>
+                    <value name="STATE">
+                      <shadow type="py_logic_boolean" id="lb02">
+                        <field name="BOOL">True</field>
+                      </shadow>
+                    </value>
+                    <next>
+                      <block type="mcu_car_set_led_io" id="io03">
+                        <value name="PIN">
+                          <shadow type="py_math_number" id="mn06">
+                            <field name="NUM">2</field>
+                          </shadow>
+                        </value>
+                        <value name="STATE">
+                          <shadow type="py_logic_boolean" id="lb03">
+                            <field name="BOOL">True</field>
+                          </shadow>
+                        </value>
+                        <next>
+                          <block type="py_time_sleep" id="ts01">
+                            <value name="SECONDS">
+                              <shadow type="py_math_number" id="mn07">
+                                <field name="NUM">0.2</field>
+                              </shadow>
+                            </value>
+                            <next>
+                              <block type="mcu_car_set_led_io" id="io04">
+                                <value name="PIN">
+                                  <shadow type="py_math_number" id="mn08">
+                                    <field name="NUM">0</field>
+                                  </shadow>
+                                </value>
+                                <value name="STATE">
+                                  <shadow type="py_logic_boolean" id="lb04">
+                                    <field name="BOOL">False</field>
+                                  </shadow>
+                                </value>
+                                <next>
+                                  <block type="mcu_car_set_led_io" id="io05">
+                                    <value name="PIN">
+                                      <shadow type="py_math_number" id="mn09">
+                                        <field name="NUM">1</field>
+                                      </shadow>
+                                    </value>
+                                    <value name="STATE">
+                                      <shadow type="py_logic_boolean" id="lb05">
+                                        <field name="BOOL">False</field>
+                                      </shadow>
+                                    </value>
+                                    <next>
+                                      <block type="mcu_car_set_led_io" id="io06">
+                                        <value name="PIN">
+                                          <shadow type="py_math_number" id="mn10">
+                                            <field name="NUM">2</field>
+                                          </shadow>
+                                        </value>
+                                        <value name="STATE">
+                                          <shadow type="py_logic_boolean" id="lb06">
+                                            <field name="BOOL">False</field>
+                                          </shadow>
+                                        </value>
+                                        <next>
+                                          <block type="py_time_sleep" id="ts02">
+                                            <value name="SECONDS">
+                                              <shadow type="py_math_number" id="mn11">
+                                                <field name="NUM">0.2</field>
+                                              </shadow>
+                                            </value>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </statement>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+  <block type="py_function_def" id="fd02" x="10" y="690">
+    <mutation params="0"></mutation>
+    <field name="NAME">play_beep</field>
+    <statement name="DO">
+      <block type="py_coding_comment" id="c03">
+        <field name="TEXT">依序發出 Do (262Hz)、Mi (330Hz)、Sol (392Hz)</field>
+        <next>
+          <block type="mcu_car_tone" id="tn01">
+            <value name="FREQ">
+              <shadow type="py_math_number" id="mn12">
+                <field name="NUM">262</field>
+              </shadow>
+            </value>
+            <value name="MS">
+              <shadow type="py_math_number" id="mn13">
+                <field name="NUM">200</field>
+              </shadow>
+            </value>
+            <next>
+              <block type="py_time_sleep" id="ts03">
+                <value name="SECONDS">
+                  <shadow type="py_math_number" id="mn14">
+                    <field name="NUM">0.1</field>
+                  </shadow>
+                </value>
+                <next>
+                  <block type="mcu_car_tone" id="tn02">
+                    <value name="FREQ">
+                      <shadow type="py_math_number" id="mn15">
+                        <field name="NUM">330</field>
+                      </shadow>
+                    </value>
+                    <value name="MS">
+                      <shadow type="py_math_number" id="mn16">
+                        <field name="NUM">200</field>
+                      </shadow>
+                    </value>
+                    <next>
+                      <block type="py_time_sleep" id="ts04">
+                        <value name="SECONDS">
+                          <shadow type="py_math_number" id="mn17">
+                            <field name="NUM">0.1</field>
+                          </shadow>
+                        </value>
+                        <next>
+                          <block type="mcu_car_tone" id="tn03">
+                            <value name="FREQ">
+                              <shadow type="py_math_number" id="mn18">
+                                <field name="NUM">392</field>
+                              </shadow>
+                            </value>
+                            <value name="MS">
+                              <shadow type="py_math_number" id="mn19">
+                                <field name="NUM">200</field>
+                              </shadow>
+                            </value>
+                            <next>
+                              <block type="py_time_sleep" id="ts05">
+                                <value name="SECONDS">
+                                  <shadow type="py_math_number" id="mn20">
+                                    <field name="NUM">0.2</field>
+                                  </shadow>
+                                </value>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+  <block type="mcu_main" id="main01" x="10" y="1010">
+    <statement name="DO">
+      <block type="mcu_car_wait_start" id=",ejau81+Q1t9LSqirlNv">
+        <field name="PIN">board.GP20</field>
+        <next>
+          <block type="py_coding_comment" id="c05">
+            <field name="TEXT">=== 無窮迴圈：重複表演 ===</field>
+            <next>
+              <block type="py_loop_while" id="wl01">
+                <value name="CONDITION">
+                  <block type="py_logic_boolean" id="lb07">
+                    <field name="BOOL">True</field>
+                  </block>
+                </value>
+                <statement name="DO">
+                  <block type="py_coding_comment" id="c06">
+                    <field name="TEXT">呼叫 blink_all 函式 — LED 閃 3 次</field>
+                    <next>
+                      <block type="py_function_call" id="fc01">
+                        <mutation args="0"></mutation>
+                        <field name="NAME">blink_all</field>
+                        <next>
+                          <block type="py_coding_comment" id="c07">
+                            <field name="TEXT">呼叫 play_beep 函式 — Do Mi Sol</field>
+                            <next>
+                              <block type="py_function_call" id="fc02">
+                                <mutation args="0"></mutation>
+                                <field name="NAME">play_beep</field>
+                                <next>
+                                  <block type="py_coding_comment" id="c08">
+                                    <field name="TEXT">休息 1 秒後再來一次</field>
+                                    <next>
+                                      <block type="py_time_sleep" id="ts06">
+                                        <value name="SECONDS">
+                                          <shadow type="py_math_number" id="mn21">
+                                            <field name="NUM">1</field>
+                                          </shadow>
+                                        </value>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </statement>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

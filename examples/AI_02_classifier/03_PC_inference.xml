@@ -1,63 +1,164 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<xml xmlns="https://developers.google.com/blockly/xml">
-  <!-- 初始化模型 -->
-  <block type="py_ai_model_init" x="10" y="10">
-    <field name="MODEL_PATH">model/classifier_model</field>
-    <next>
-      <!-- 開啟攝影機 -->
-      <block type="opencv_video_capture">
-        <field name="DEVICE_ID">0</field>
-        <field name="VAR">cap</field>
+<xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
+  <variables>
+    <variable id="0ziPlF+=m/XXXuxJ*,?w">frame</variable>
+    <variable id="d{642QY1EqHl#`PF*{Y,">result</variable>
+  </variables>
+  <block type="py_definition_zone" id="TW939Xfqdz=i#~l%IE4." x="10" y="10">
+    <statement name="DEFS">
+      <block type="py_import" id="(cK#0sY,L`*ppy@z|Tq}">
+        <field name="LIB">cv2</field>
         <next>
-          <!-- 主迴圈 -->
-          <block type="controls_whileTrue">
+          <block type="py_ai_model_init" id="ZNXsCDVS3xfW;ngq2tGO">
+            <field name="MODEL_PATH">model/classifier_dataset</field>
+            <next>
+              <block type="py_io_serial_init" id="ser_init">
+                <field name="BAUD">115200</field>
+                <value name="PORT">
+                  <shadow type="py_text" id="D*Zip}rI]P03#YTPAXOr">
+                    <field name="TEXT">COM4</field>
+                  </shadow>
+                </value>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+  <block type="py_main" id="Iv8!zE5oU-Rl`?clOlTb" x="10" y="170">
+    <statement name="DO">
+      <block type="py_ai_open_camera" id="iRYRZaR*kFmX0F^.f:6(">
+        <field name="INDEX">0</field>
+        <next>
+          <block type="py_loop_while" id="}-:W1Y^n+:5GawnA#_5a">
+            <value name="CONDITION">
+              <block type="py_logic_boolean" id="{|B7A_3`/[(nlk[%!G[s">
+                <field name="BOOL">True</field>
+              </block>
+            </value>
             <statement name="DO">
-              <!-- 讀取影格 -->
-              <block type="opencv_read_frame">
-                <field name="VAR">cap</field>
-                <field name="VAR2">frame</field>
+              <block type="py_ai_read_frame" id="O6YLd|SE2C-U8Z3{e;Ao">
+                <field name="VAR" id="0ziPlF+=m/XXXuxJ*,?w">frame</field>
                 <next>
-                  <!-- 進行推論 -->
-                  <block type="py_ai_model_predict">
-                    <value name="FRAME">
-                      <block type="variables_get">
-                        <field name="VAR">frame</field>
+                  <block type="py_variables_set" id="U+gFSS1wGn5gBjMBy|+/">
+                    <field name="VAR" id="d{642QY1EqHl#`PF*{Y,">result</field>
+                    <value name="VALUE">
+                      <shadow type="py_math_number" id="4xg,:k=Lx2D%*.$zL{7F">
+                        <field name="NUM">0</field>
+                      </shadow>
+                      <block type="py_ai_model_predict" id="KmdFH$6wtyt##wlCYbh:">
+                        <value name="FRAME">
+                          <block type="py_variables_get" id="#[i;-73*q1%xM(Gp$4-(">
+                            <field name="VAR" id="0ziPlF+=m/XXXuxJ*,?w">frame</field>
+                          </block>
+                        </value>
                       </block>
                     </value>
                     <next>
-                      <!-- 顯示結果 -->
-                      <block type="opencv_imshow">
-                        <field name="WINNAME">Classifier</field>
-                        <value name="IMAGE">
-                          <block type="variables_get">
-                            <field name="VAR">frame</field>
-                          </block>
-                        </value>
+                      <block type="py_ai_flip_image" id="v*FxVv,Xxz#}FiLX9!bl">
+                        <field name="VAR" id="0ziPlF+=m/XXXuxJ*,?w">frame</field>
+                        <field name="CODE">1</field>
                         <next>
-                          <!-- 檢查信心度 -->
-                          <block type="controls_if">
-                            <value name="IF0">
-                              <block type="logic_compare">
-                                <field name="OP">GT</field>
-                                <value name="A">
-                                  <block type="py_ai_model_predict_confidence"></block>
-                                </value>
-                                <value name="B">
-                                  <shadow type="math_number">
-                                    <field name="NUM">0.75</field>
-                                  </shadow>
-                                </value>
+                          <block type="py_ai_show_image" id="Q4mK*/c?A#;[mr{u(,=B">
+                            <value name="IMAGE">
+                              <block type="py_variables_get" id="Lqin*dk$fqD[Ur48FHgf">
+                                <field name="VAR" id="0ziPlF+=m/XXXuxJ*,?w">frame</field>
                               </block>
                             </value>
-                            <statement name="DO0">
-                              <!-- 發送類別至 MCU -->
-                              <block type="serial_write">
-                                <field name="PORT">Serial</field>
-                                <value name="DATA">
-                                  <block type="py_ai_model_predict_class_id"></block>
+                            <next>
+                              <block type="py_logic_if" id="}XIen7s?y-~K.YJ#7u*)">
+                                <mutation elif="0" else="1"></mutation>
+                                <value name="IF0">
+                                  <block type="py_logic_compare" id="hd1fAn9/51p@Pz7GDyI2">
+                                    <field name="OP">&gt;</field>
+                                    <value name="A">
+                                      <shadow type="py_math_number" id="u+zj]di=/RiZjwLVWt%Z">
+                                        <field name="NUM">0</field>
+                                      </shadow>
+                                      <block type="py_types_get_item" id="MD=75bhYtoM+W9mkLvX+">
+                                        <value name="OBJ">
+                                          <block type="py_variables_get" id="GrMhf}hRjJP!FB*QZ1ti">
+                                            <field name="VAR" id="d{642QY1EqHl#`PF*{Y,">result</field>
+                                          </block>
+                                        </value>
+                                        <value name="INDEX">
+                                          <shadow type="py_math_number" id="emrDSe(dS+5(TXx1{n+[">
+                                            <field name="NUM">1</field>
+                                          </shadow>
+                                        </value>
+                                      </block>
+                                    </value>
+                                    <value name="B">
+                                      <shadow type="py_math_number" id="2k0D*.OKG6H!}S)b*a@;">
+                                        <field name="NUM">0.75</field>
+                                      </shadow>
+                                    </value>
+                                  </block>
                                 </value>
+                                <statement name="DO0">
+                                  <block type="py_io_serial_write" id=")_KTI-zsE33#tdL,?Gda">
+                                    <value name="DATA">
+                                      <block type="py_types_get_item" id="XkJ]F?4x^|aB[a3i78|s">
+                                        <value name="OBJ">
+                                          <block type="py_variables_get" id=".*](^r^/rl%@7VGvL(`v">
+                                            <field name="VAR" id="d{642QY1EqHl#`PF*{Y,">result</field>
+                                          </block>
+                                        </value>
+                                        <value name="INDEX">
+                                          <shadow type="math_number" id="7izX((~66mI|#T.N}njT">
+                                            <field name="NUM">0</field>
+                                          </shadow>
+                                        </value>
+                                      </block>
+                                    </value>
+                                    <next>
+                                      <block type="py_io_print" id=")vJ2fkMz@S_X+OIuUW,^">
+                                        <value name="TEXT">
+                                          <shadow type="py_text" id="k_:j%F`u]4o(f-,%]DB%">
+                                            <field name="TEXT">Hello Cocoya!</field>
+                                          </shadow>
+                                          <block type="py_types_get_item" id="4Lg2(J1}2LPK6M$,3clr">
+                                            <value name="OBJ">
+                                              <block type="py_variables_get" id="C{6x{W;a`t!rY?MG8p}(">
+                                                <field name="VAR" id="d{642QY1EqHl#`PF*{Y,">result</field>
+                                              </block>
+                                            </value>
+                                            <value name="INDEX">
+                                              <shadow type="math_number" id="MOi|70/0,@=ktlO.=+NI">
+                                                <field name="NUM">0</field>
+                                              </shadow>
+                                            </value>
+                                          </block>
+                                        </value>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </statement>
+                                <statement name="ELSE">
+                                  <block type="py_io_print" id="`[6E=?sH$t^Ij(Y2:uYS">
+                                    <value name="TEXT">
+                                      <shadow type="py_text" id="k_:j%F`u]4o(f-,%]DB%">
+                                        <field name="TEXT">Not sure!</field>
+                                      </shadow>
+                                    </value>
+                                  </block>
+                                </statement>
+                                <next>
+                                  <block type="py_time_sleep" id="|bTqz/E)Ay]S2V)PWh[}">
+                                    <value name="SECONDS">
+                                      <shadow type="py_math_number" id="Q7+/HHi6?9npJ,0tu]i:">
+                                        <field name="NUM">0.2</field>
+                                      </shadow>
+                                    </value>
+                                    <next>
+                                      <block type="py_ai_wait_key_break" id="E)!0^ha28O~xD3.4T|}C">
+                                        <field name="KEY">q</field>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
                               </block>
-                            </statement>
+                            </next>
                           </block>
                         </next>
                       </block>
@@ -69,6 +170,6 @@
           </block>
         </next>
       </block>
-    </next>
+    </statement>
   </block>
 </xml>

@@ -101,14 +101,24 @@ export class BaseBridge {
 
     /**
      * 彈出資料夾選取視窗 (回傳 Promise<Object|null>)
+     * 回傳物件包含 { path, images, labelCounts, labelMap }
      */
     pickFolder() {
         const requestId = 'pickFolder_' + Date.now();
         return new Promise((resolve) => {
             const handler = (msg) => {
-                if (msg.command === 'pickFolderResponse' && msg.requestId === requestId) {
+                if (msg.command === 'folderSelected' && msg.requestId === requestId) {
                     this.offMessage(handler);
-                    resolve(msg.result);
+                    if (msg.error) {
+                        resolve(null);
+                    } else {
+                        resolve({
+                            path: msg.path,
+                            images: msg.images || [],
+                            labelCounts: msg.labelCounts || {},
+                            labelMap: msg.labelMap || {}
+                        });
+                    }
                 }
             };
             this.onMessage(handler);

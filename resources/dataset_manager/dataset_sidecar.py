@@ -66,7 +66,11 @@ class DatasetSidecar:
                 command = msg.get("command")
                 request_id = msg.get("requestId")
                 
-                if command == "startCamera":
+                if command == "listCameras":
+                    cameras = CameraService.list_cameras()
+                    self.send_response(request_id, {"success": True, "cameras": cameras})
+                
+                elif command == "startCamera":
                     device_id = msg.get("deviceId", 0)
                     success = self.camera.start(device_id)
                     self.send_response(request_id, {"success": success})

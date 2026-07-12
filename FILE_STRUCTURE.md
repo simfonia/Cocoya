@@ -9,6 +9,18 @@ C:\Workspace\cocoya\
 │   ├── pico-w_pinout.png  # 原始腳位圖
 │   └── XIAO-ESP32-S3_pinout.jpg # 原始腳位圖
 ├── examples/              # 範例檔 (.xml)
+│   ├── basic/              # Python 入門範例（MicroPython MCU 模式）
+│   │   ├── 01_Hello Cocoya.xml  # 基礎 Hello World (print + sleep)
+│   │   ├── 02_for loop.xml      # for 迴圈入門
+│   │   ├── 03_for_loop_LED.xml  # for 迴圈 LED 跑馬燈
+│   │   ├── 04_while_button_buzzer.xml # while 迴圈 + 按鈕控制蜂鳴器
+│   │   ├── 05_multi_if_buttons.xml   # 多個 if (多選) 按鈕控制
+│   │   ├── 06_if_elif_else_priority.xml # if-elif-else (單選) 條件攔截
+│   │   ├── 07_variables_counter.xml   # 變數計數器 (累加式 LED)
+│   │   └── 08_functions_light_show.xml # 函式定義與聲光表演
+│   ├── πCar/               # πCar 小車控制範例
+│   ├── AI_01_Pose_piCar/   # AI 姿勢辨識控制 πCar
+│   └── AI_02_classifier/   # AI 影像分類控制 πCar
 ├── log/                   # 專案日誌與任務追蹤
 │   ├── details.md         # 技術細節與 API 踩坑紀錄
 │   ├── handover.md        # 任務交接檔
@@ -77,7 +89,16 @@ C:\Workspace\cocoya\
 │   │   └── core_manifest.json # 模組載入清單
 │   └── package.json       # Vite 設定
 ├── src/                   # Extension 後端 (TypeScript)
-│   └── extension.ts       # 擴充功能管理器
+│   ├── extension.ts       # 進入點：activate/deactivate + webview 內容組裝
+│   ├── cocoyaManager.ts   # CocoyaManager 主類別 + 訊息分發
+│   ├── sidecarManager.ts  # DatasetSidecarManager：Python 進程生命週期
+│   └── handlers/          # 業務邏輯處理器
+│       ├── trainingOps.ts   # 訓練：startTraining, openTrainingReport, openLatestTrainingReport
+│       ├── fileOps.ts       # 檔案：new/open/save/saveAs/backup/recovery
+│       ├── firmwareOps.ts   # 韌體：resetFirmware, eraseFilesystem, setupStableMode
+│       ├── datasetOps.ts    # 資料集：capture/export/upload/scan/pickFolder
+│       ├── serialOps.ts     # 序列埠：refreshPorts, serialMonitor, setPythonPath
+│       └── envOps.ts        # 環境：checkEnvironment, installModule, runCode, checkUpdate
 ├── src-tauri/             # Tauri 後端專案 (Rust)
 │   ├── Cargo.toml         # Rust 專案配置
 │   ├── tauri.conf.json    # Tauri 應用配置 (含安裝與資源設定)
