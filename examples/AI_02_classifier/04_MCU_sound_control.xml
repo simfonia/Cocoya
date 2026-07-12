@@ -1,164 +1,145 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<xml xmlns="https://developers.google.com/blockly/xml">
-  <!-- 初始化 -->
-  <block type="mcu_setup" x="10" y="10">
-    <next>
-      <!-- 初始化 Serial -->
-      <block type="serial_init">
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
+  <variables>
+    <variable id="]/amHkkU#]%Rlg-|^vhT">gesture_data</variable>
+  </variables>
+  <block type="py_definition_zone" id="def_root" deletable="false" x="10" y="10">
+    <statement name="DEFS">
+      <block type="py_io_serial_init" id="kI/.N1;]+Q~]iA@S%-Fc">
         <field name="BAUD">115200</field>
-        <next>
-          <!-- 初始化蜂鳴器 -->
-          <block type="buzzer_setup">
-            <field name="PIN">21</field>
+        <value name="PORT">
+          <shadow type="py_text" id="}i[=_5#W6G5u{yD22PW3">
+            <field name="TEXT">COM4</field>
+          </shadow>
+        </value>
+      </block>
+    </statement>
+  </block>
+  <block type="mcu_main" id="main_root" deletable="false" x="10" y="110">
+    <statement name="DO">
+      <block type="py_loop_while" id="D_Rt)Ya5?|^hd|8p=n/l">
+        <value name="CONDITION">
+          <block type="py_logic_boolean" id="ck8a,1,3rjj0aIDg{y7s">
+            <field name="BOOL">True</field>
+          </block>
+        </value>
+        <statement name="DO">
+          <block type="py_variables_set" id="bTUn,=@Iy}tdCK3Ff?(A">
+            <field name="VAR" id="]/amHkkU#]%Rlg-|^vhT">gesture_data</field>
+            <value name="VALUE">
+              <block type="py_io_serial_read" id="RIezx7?oaFtWAUx4O`=("></block>
+            </value>
             <next>
-              <!-- 初始化 LED -->
-              <block type="led_setup">
-                <field name="PIN">25</field>
-                <next>
-                  <!-- 主迴圈 -->
-                  <block type="controls_whileTrue">
-                    <statement name="DO">
-                      <!-- 讀取 Serial 資料 -->
-                      <block type="serial_read">
-                        <field name="VAR">gesture_data</field>
-                        <next>
-                          <!-- 檢查是否有資料 -->
-                          <block type="controls_if">
-                            <value name="IF0">
-                              <block type="logic_compare">
-                                <field name="OP">NEQ</field>
-                                <value name="A">
-                                  <block type="variables_get">
-                                    <field name="VAR">gesture_data</field>
-                                  </block>
-                                </value>
-                                <value name="B">
-                                  <shadow type="text">
-                                    <field name="TEXT"></field>
-                                  </shadow>
-                                </value>
-                              </block>
-                            </value>
-                            <statement name="DO0">
-                              <!-- 轉換為數字 -->
-                              <block type="variables_set">
-                                <field name="VAR">gesture_id</field>
-                                <value name="VALUE">
-                                  <block type="math_number_cast">
-                                    <value name="NUM">
-                                      <block type="variables_get">
-                                        <field name="VAR">gesture_data</field>
-                                      </block>
-                                    </value>
-                                  </block>
-                                </value>
-                                <next>
-                                  <!-- 判斷手勢類別 -->
-                                  <block type="controls_if">
-                                    <value name="IF0">
-                                      <block type="logic_compare">
-                                        <field name="OP">EQ</field>
-                                        <value name="A">
-                                          <block type="variables_get">
-                                            <field name="VAR">gesture_id</field>
-                                          </block>
-                                        </value>
-                                        <value name="B">
-                                          <shadow type="math_number">
-                                            <field name="NUM">0</field>
-                                          </shadow>
-                                        </value>
-                                      </block>
-                                    </value>
-                                    <statement name="DO0">
-                                      <!-- 手勢 0: Do (262Hz) -->
-                                      <block type="buzzer_tone">
-                                        <field name="FREQ">262</field>
-                                        <field name="DURATION">500</field>
-                                      </block>
-                                      <next>
-                                        <block type="led_on">
-                                          <field name="PIN">25</field>
-                                        </block>
-                                      </next>
-                                    </statement>
-                                    <next>
-                                      <block type="controls_if">
-                                        <value name="IF0">
-                                          <block type="logic_compare">
-                                            <field name="OP">EQ</field>
-                                            <value name="A">
-                                              <block type="variables_get">
-                                                <field name="VAR">gesture_id</field>
-                                              </block>
-                                            </value>
-                                            <value name="B">
-                                              <shadow type="math_number">
-                                                <field name="NUM">1</field>
-                                              </shadow>
-                                            </value>
-                                          </block>
-                                        </value>
-                                        <statement name="DO0">
-                                          <!-- 手勢 1: Re (294Hz) -->
-                                          <block type="buzzer_tone">
-                                            <field name="FREQ">294</field>
-                                            <field name="DURATION">500</field>
-                                          </block>
-                                          <next>
-                                            <block type="led_on">
-                                              <field name="PIN">25</field>
-                                            </block>
-                                          </next>
-                                        </statement>
-                                        <next>
-                                          <block type="controls_if">
-                                            <value name="IF0">
-                                              <block type="logic_compare">
-                                                <field name="OP">EQ</field>
-                                                <value name="A">
-                                                  <block type="variables_get">
-                                                    <field name="VAR">gesture_id</field>
-                                                  </block>
-                                                </value>
-                                                <value name="B">
-                                                  <shadow type="math_number">
-                                                    <field name="NUM">2</field>
-                                                  </shadow>
-                                                </value>
-                                              </block>
-                                            </value>
-                                            <statement name="DO0">
-                                              <!-- 手勢 2: Mi (330Hz) -->
-                                              <block type="buzzer_tone">
-                                                <field name="FREQ">330</field>
-                                                <field name="DURATION">500</field>
-                                              </block>
-                                              <next>
-                                                <block type="led_on">
-                                                  <field name="PIN">25</field>
-                                                </block>
-                                              </next>
-                                            </statement>
-                                          </block>
-                                        </next>
-                                      </block>
-                                    </next>
-                                  </block>
-                                </next>
-                              </block>
-                            </statement>
+              <block type="py_logic_if" id="h$Auh?:kSG?hQ,F@qS~.">
+                <mutation elif="0" else="0"></mutation>
+                <value name="IF0">
+                  <block type="py_logic_compare" id="ER#ijlI4aW~Um!~%+FBj">
+                    <field name="OP">!=</field>
+                    <value name="A">
+                      <block type="py_variables_get" id=")^!w+*mK(Y_Nn5+_Rs9_">
+                        <field name="VAR" id="]/amHkkU#]%Rlg-|^vhT">gesture_data</field>
+                      </block>
+                    </value>
+                    <value name="B">
+                      <shadow type="py_text" id="^Yr+lpYRSfA.CJej1+f,">
+                        <field name="TEXT"></field>
+                      </shadow>
+                    </value>
+                  </block>
+                </value>
+                <statement name="DO0">
+                  <block type="py_logic_if" id="}ey{Nh(-2,@s23;ZK93_">
+                    <mutation elif="2" else="1"></mutation>
+                    <value name="IF0">
+                      <block type="py_logic_compare" id="CLz50s-yxSCHPlm3QP[u">
+                        <field name="OP">==</field>
+                        <value name="A">
+                          <block type="py_variables_get" id="lg%D?Aks2iu@:0d/Iq4-">
+                            <field name="VAR" id="]/amHkkU#]%Rlg-|^vhT">gesture_data</field>
                           </block>
-                        </next>
+                        </value>
+                        <value name="B">
+                          <shadow type="math_number" id="bzs()@#`4W6]l=t0IU6g">
+                            <field name="NUM">0</field>
+                          </shadow>
+                          <block type="py_text" id="M6^#B]}44F@Gu9r?TzpM">
+                            <field name="TEXT">rock</field>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                    <statement name="DO0">
+                      <block type="mcu_car_play_note" id=")X/Wo??nrysL!B!+^g.b">
+                        <field name="NOTE">C</field>
+                        <field name="OCTAVE">4</field>
+                        <field name="DURATION">1.0</field>
+                        <field name="DOTTED">FALSE</field>
+                        <field name="TRIPLET">FALSE</field>
                       </block>
                     </statement>
+                    <value name="IF1">
+                      <block type="py_logic_compare" id=";X+{0x1*OP[W1[dl24bz">
+                        <field name="OP">==</field>
+                        <value name="A">
+                          <block type="py_variables_get" id="$(?PPwclFK-O?{Nh.02l">
+                            <field name="VAR" id="]/amHkkU#]%Rlg-|^vhT">gesture_data</field>
+                          </block>
+                        </value>
+                        <value name="B">
+                          <shadow type="math_number" id="bzs()@#`4W6]l=t0IU6g">
+                            <field name="NUM">0</field>
+                          </shadow>
+                          <block type="py_text" id="bLJX5_l$o]M2es+{mVo1">
+                            <field name="TEXT">scissors</field>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                    <statement name="DO1">
+                      <block type="mcu_car_play_note" id=")Eam!:jNDckMJSCA8=KS">
+                        <field name="NOTE">E</field>
+                        <field name="OCTAVE">4</field>
+                        <field name="DURATION">1.0</field>
+                        <field name="DOTTED">FALSE</field>
+                        <field name="TRIPLET">FALSE</field>
+                      </block>
+                    </statement>
+                    <value name="IF2">
+                      <block type="py_logic_compare" id="Sc.p!OVKHOX1|+doLk.!">
+                        <field name="OP">==</field>
+                        <value name="A">
+                          <block type="py_variables_get" id="/p%BRvh]M%2~@RMf%aWh">
+                            <field name="VAR" id="]/amHkkU#]%Rlg-|^vhT">gesture_data</field>
+                          </block>
+                        </value>
+                        <value name="B">
+                          <shadow type="math_number" id="bzs()@#`4W6]l=t0IU6g">
+                            <field name="NUM">0</field>
+                          </shadow>
+                          <block type="py_text" id="Q([2W.phpzB]sFiNk}U=">
+                            <field name="TEXT">paper</field>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                    <statement name="DO2">
+                      <block type="mcu_car_play_note" id="3b(=vaa^{!lNb6Odf|w.">
+                        <field name="NOTE">G</field>
+                        <field name="OCTAVE">4</field>
+                        <field name="DURATION">1.0</field>
+                        <field name="DOTTED">FALSE</field>
+                        <field name="TRIPLET">FALSE</field>
+                      </block>
+                    </statement>
+                    <statement name="ELSE">
+                      <block type="mcu_car_no_tone" id="{uFzc/?Br[%$j(DRynkU"></block>
+                    </statement>
                   </block>
-                </next>
+                </statement>
               </block>
             </next>
           </block>
-        </next>
+        </statement>
       </block>
-    </next>
+    </statement>
   </block>
 </xml>

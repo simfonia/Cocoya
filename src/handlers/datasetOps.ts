@@ -34,11 +34,18 @@ export class DatasetOpsHandler {
             if (uris && uris[0]) {
                 const folderPath = uris[0].fsPath;
                 await this.manager.context.globalState.update('lastDatasetFolder', folderPath);
+                
+                // 掃描資料夾取得影像資訊、標籤統計與對照表
+                const { images, labelCounts, labelMap } = await this.scanDatasetFolder(folderPath);
+                
                 this.manager.panel.webview.postMessage({
                     command: 'folderSelected',
                     requestId: requestId,
                     fieldName: fieldName,
-                    path: folderPath
+                    path: folderPath,
+                    images: images,
+                    labelCounts: labelCounts,
+                    labelMap: labelMap
                 });
             } else {
                 this.manager.panel.webview.postMessage({
@@ -250,6 +257,17 @@ export class DatasetOpsHandler {
         });
     }
 
+    public handleDatasetListCameras(message: any) {
+        this.manager.sidecar.start();
+        this.manager.sidecar.send('listCameras', {}, (resp: any) => {
+            this.manager.panel.webview.postMessage({
+                command: 'datasetCameraListResult',
+                success: resp.success,
+                cameras: resp.cameras || []
+            });
+        });
+    }
+
     public handleDatasetStartCamera(message: any) {
         this.manager.sidecar.start();
         this.manager.sidecar.send('startCamera', { deviceId: message.deviceId || 0 }, (resp: any) => {
@@ -259,6 +277,42 @@ export class DatasetOpsHandler {
 
     public handleDatasetStopCamera() {
         this.manager.sidecar.send('stopCamera', {});
+    }
+
+    public handleDatasetDeleteImage(message: any) {
+        const filePath = message.filePath;
+        if (!filePath) {
+            this.manager.panel.webview.postMessage({
+                command: 'datasetDeleteImageResult',
+                success: false,
+                error: '缺少檔案路徑'
+            });
+            return;
+        }
+        try {
+            if (fs.existsSync(filePath)) {
+                fs.unlinkSync(filePath);
+                console.log(`[Host] Deleted image file: ${filePath}`);
+                this.manager.panel.webview.postMessage({
+                    command: 'datasetDeleteImageResult',
+                    success: true
+                });
+            } else {
+                // 檔案可能來自外部資料夾、或已被其他方式刪除 — 視為成功
+                console.log(`[Host] Image file not found (may be external): ${filePath}`);
+                this.manager.panel.webview.postMessage({
+                    command: 'datasetDeleteImageResult',
+                    success: true
+                });
+            }
+        } catch (e: any) {
+            console.error(`[Host] Failed to delete image: ${filePath}`, e);
+            this.manager.panel.webview.postMessage({
+                command: 'datasetDeleteImageResult',
+                success: false,
+                error: e.message
+            });
+        }
     }
 
     public handleDatasetCaptureImage(message: any) {

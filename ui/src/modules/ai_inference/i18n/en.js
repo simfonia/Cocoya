@@ -28,6 +28,6 @@ Blockly.Msg["AI_BACKEND_REMOTE"] = "remote";
 
 // Inference Blocks
 Blockly.Msg["AI_MODEL_INIT"] = "init model %1";
-Blockly.Msg["AI_MODEL_INIT_TOOLTIP"] = "Load TFLite model";
+Blockly.Msg["AI_MODEL_INIT_TOOLTIP"] = "Load a trained TFLite model for inference\n\nField descriptions:\n• Model Path: Path to the .tflite model file\n  Supports relative/absolute paths\n  e.g. model/classifier_model\n\nNotes:\n• Automatically loads corresponding labels file\n• Labels file naming: {model name}_labels.txt\n• Model file naming: {model name}.tflite\n• Returns a model object for prediction";
 Blockly.Msg["AI_MODEL_PREDICT"] = "predict %1";
-Blockly.Msg["AI_MODEL_PREDICT_TOOLTIP"] = "Run inference on image";
+Blockly.Msg["AI_MODEL_PREDICT_TOOLTIP"] = "Run inference on an image frame\n\nInput:\n• FRAME: Image frame (numpy array from OpenCV)\n\nOutput:\n• Tuple (label, confidence)\n  - label: Predicted class name (string)\n  - confidence: Prediction confidence (float 0-1)\n\nUsage:\n• Use with py_types_get_item to extract values\n• Index 0: class label\n• Index 1: confidence score\n\nExample:\n  result = predict(frame)\n  class_id = result[0]\n  confidence = result[1]";

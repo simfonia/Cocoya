@@ -1,0 +1,68 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
+  <variables>
+    <variable id="U!T-@VPz.I%l#e}Ezue@">i</variable>
+  </variables>
+  <block type="py_definition_zone" id="fZIf/kj)qz,ZyK:aZlMV" x="100" y="20"></block>
+  <block type="mcu_main" id=":iaVv|K(}.pHeOdi={MR" x="100" y="200">
+    <statement name="DO">
+      <block type="py_time_sleep" id="jA=oY;84;hyJp/-u!T{2">
+        <value name="SECONDS">
+          <shadow type="py_math_number" id="[~:xcz`vvh:tohXO~*|Q">
+            <field name="NUM">1</field>
+          </shadow>
+        </value>
+        <next>
+          <block type="py_loop_for_range" id="$9z5Li|S/35]$:Utd8;{">
+            <field name="VAR" id="U!T-@VPz.I%l#e}Ezue@">i</field>
+            <value name="START">
+              <shadow type="py_math_number" id="4iW#0]JQ$Q,/_+p${0;6">
+                <field name="NUM">0</field>
+              </shadow>
+            </value>
+            <value name="STOP">
+              <shadow type="py_math_number" id="`]S`aW]{(Wr_}%FglX~N">
+                <field name="NUM">10</field>
+              </shadow>
+            </value>
+            <value name="STEP">
+              <shadow type="py_math_number" id="|!Upw9GDdDVps`H=GJom">
+                <field name="NUM">1</field>
+              </shadow>
+            </value>
+            <statement name="DO">
+              <block type="py_io_print" id="[sQ+Y{wspL40$m)wh`hv">
+                <value name="TEXT">
+                  <shadow type="py_text" id="@Kc@dJl?FboJo+2gv*Ug">
+                    <field name="TEXT">Hello Cocoya!</field>
+                  </shadow>
+                  <block type="py_text_join" id="L1o1yXoVj6LjY5-^`kY=">
+                    <mutation items="2"></mutation>
+                    <value name="ADD0">
+                      <shadow type="py_text" id="X%6hld`3WErXNkui^S+*">
+                        <field name="TEXT">Hello Cocoya -</field>
+                      </shadow>
+                    </value>
+                    <value name="ADD1">
+                      <block type="py_variables_get" id="a^e7eR~P?e.@zC%2MgUR">
+                        <field name="VAR" id="U!T-@VPz.I%l#e}Ezue@">i</field>
+                      </block>
+                    </value>
+                  </block>
+                </value>
+                <next>
+                  <block type="py_time_sleep" id="T;^TiHS(pFawpUNn+@7j">
+                    <value name="SECONDS">
+                      <shadow type="py_math_number" id="LcJEQ}yEXCwc-DwSXCPX">
+                        <field name="NUM">1</field>
+                      </shadow>
+                    </value>
+                  </block>
+                </next>
+              </block>
+            </statement>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

@@ -1,18 +1,21 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
   <variables>
-    <variable id="v_data">data_list</variable>
-    <variable id="v_scores">scores_dict</variable>
-    <variable id="v_sorted">sorted_result</variable>
     <variable id="v_input">user_input</variable>
+    <variable id="v_data">data_list</variable>
+    <variable id="v_sorted">sorted_result</variable>
+    <variable id="v_scores">scores_dict</variable>
   </variables>
   <block type="py_main" id="main_root" x="20" y="20">
     <statement name="DO">
       <block type="py_coding_comment" id="c1">
         <field name="TEXT">1. 型別轉換與運算</field>
         <next>
-          <block type="variables_set" id="s1">
+          <block type="py_variables_set" id="pwa(@ZkRLu42KRnrd1QR">
             <field name="VAR" id="v_input">user_input</field>
             <value name="VALUE">
+              <shadow type="py_math_number" id="ze`C`ygj0oYX{r4`^nxf">
+                <field name="NUM">0</field>
+              </shadow>
               <block type="py_io_input" id="in1">
                 <value name="PROMPT">
                   <shadow type="py_text" id="t1">
@@ -37,7 +40,7 @@
                         <value name="VALUE">
                           <block type="py_types_type_of" id="type1">
                             <value name="VALUE">
-                              <block type="variables_get" id="g1">
+                              <block type="py_variables_get" id="yqNd}PK4AhT~cJVq%/Nq">
                                 <field name="VAR" id="v_input">user_input</field>
                               </block>
                             </value>
@@ -67,7 +70,7 @@
                               <block type="py_types_cast" id="cast2">
                                 <field name="TYPE">int</field>
                                 <value name="VALUE">
-                                  <block type="variables_get" id="g2">
+                                  <block type="py_variables_get" id="OoyCoD4VNicR+Bm_zXhr">
                                     <field name="VAR" id="v_input">user_input</field>
                                   </block>
                                 </value>
@@ -86,9 +89,12 @@
                       <block type="py_coding_comment" id="c2">
                         <field name="TEXT">2. 清單操作與排序</field>
                         <next>
-                          <block type="variables_set" id="s2">
+                          <block type="py_variables_set" id="L^#%z[b}OlyK=Mg;pCVC">
                             <field name="VAR" id="v_data">data_list</field>
                             <value name="VALUE">
+                              <shadow type="py_math_number" id="naaJrYOSL!Ohxal~K6zh">
+                                <field name="NUM">0</field>
+                              </shadow>
                               <block type="py_type_list" id="l1">
                                 <mutation items="3"></mutation>
                                 <value name="ADD0">
@@ -111,7 +117,7 @@
                             <next>
                               <block type="py_types_list_append" id="ap1">
                                 <value name="LIST">
-                                  <block type="variables_get" id="g3">
+                                  <block type="py_variables_get" id="1;h-jN-d_1e8xEkVIe6C">
                                     <field name="VAR" id="v_data">data_list</field>
                                   </block>
                                 </value>
@@ -121,13 +127,16 @@
                                   </block>
                                 </value>
                                 <next>
-                                  <block type="variables_set" id="s3">
+                                  <block type="py_variables_set" id="_JoiDu;gJWB##CSakVF$">
                                     <field name="VAR" id="v_sorted">sorted_result</field>
                                     <value name="VALUE">
+                                      <shadow type="py_math_number" id="zHkO|38W|@$4jEL*Fj^q">
+                                        <field name="NUM">0</field>
+                                      </shadow>
                                       <block type="py_types_sorted" id="sort1">
                                         <field name="REVERSE">False</field>
                                         <value name="VALUE">
-                                          <block type="variables_get" id="g4">
+                                          <block type="py_variables_get" id="XwaN#pO}A%XgWE;{E2AA">
                                             <field name="VAR" id="v_data">data_list</field>
                                           </block>
                                         </value>
@@ -144,7 +153,7 @@
                                               </shadow>
                                             </value>
                                             <value name="ADD1">
-                                              <block type="variables_get" id="g5">
+                                              <block type="py_variables_get" id="/9-0R]P|UVZ):bd3RIw-">
                                                 <field name="VAR" id="v_sorted">sorted_result</field>
                                               </block>
                                             </value>
@@ -154,9 +163,12 @@
                                           <block type="py_coding_comment" id="c3">
                                             <field name="TEXT">3. 字典與包含判斷</field>
                                             <next>
-                                              <block type="variables_set" id="s4">
+                                              <block type="py_variables_set" id="y=MB+pYn%/jeXL(8xNuR">
                                                 <field name="VAR" id="v_scores">scores_dict</field>
                                                 <value name="VALUE">
+                                                  <shadow type="py_math_number" id=")]@IO!l:V?TQ}!J//,xu">
+                                                    <field name="NUM">0</field>
+                                                  </shadow>
                                                   <block type="py_type_dict" id="d1">
                                                     <mutation items="2"></mutation>
                                                     <value name="KEY0">
@@ -192,7 +204,7 @@
                                                           </block>
                                                         </value>
                                                         <value name="OBJ">
-                                                          <block type="variables_get" id="g6">
+                                                          <block type="py_variables_get" id="QobpcLw$qF{-%g;1+E_w">
                                                             <field name="VAR" id="v_scores">scores_dict</field>
                                                           </block>
                                                         </value>
@@ -211,7 +223,7 @@
                                                             <value name="ADD1">
                                                               <block type="py_types_get_item" id="gi1">
                                                                 <value name="OBJ">
-                                                                  <block type="variables_get" id="g7">
+                                                                  <block type="py_variables_get" id="a/s`zd[GU,F3T@XQ?Raz">
                                                                     <field name="VAR" id="v_scores">scores_dict</field>
                                                                   </block>
                                                                 </value>
@@ -239,7 +251,7 @@
                                                             <value name="ADD1">
                                                               <block type="py_types_len" id="l2">
                                                                 <value name="VALUE">
-                                                                  <block type="variables_get" id="g8">
+                                                                  <block type="py_variables_get" id="L)i*O@z{7:(@LD:Bm%7_">
                                                                     <field name="VAR" id="v_scores">scores_dict</field>
                                                                   </block>
                                                                 </value>
@@ -275,4 +287,3 @@
     </statement>
   </block>
 </xml>
-

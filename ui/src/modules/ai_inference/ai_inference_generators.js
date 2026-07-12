@@ -123,27 +123,43 @@ Blockly.Python.forBlock['py_ai_model_init'] = function(block, generator) {
       '                from tensorflow import lite as tflite\n' +
       '            except ImportError:\n' +
       '                print("Error: install tflite-runtime"); sys.exit(1)\n' +
-      '        model_path = model_path + (".tflite" if not model_path.endswith(".tflite") else "")\n' +
+      '        # 智能搜尋模型檔案\n' +
+      '        if not model_path.endswith(".tflite"):\n' +
+      '            # 如果路徑是目錄，在裡面搜尋 .tflite 檔案\n' +
+      '            if os.path.isdir(model_path):\n' +
+      '                import glob\n' +
+      '                tflite_files = glob.glob(os.path.join(model_path, "*.tflite"))\n' +
+      '                if tflite_files:\n' +
+      '                    if len(tflite_files) > 1:\n' +
+      '                        print(f"警告: 找到多個模型檔案，使用第一個: {tflite_files[0]}")\n' +
+      '                    model_path = tflite_files[0]\n' +
+      '                else:\n' +
+      '                    # 如果目錄中沒有 .tflite 檔案，嘗試原本的邏輯\n' +
+      '                    model_path = model_path + ".tflite"\n' +
       '        d = os.path.dirname(model_path)\n' +
-      '        lbl = os.path.join(d, "labels.txt")\n' +
+      '        lbl = os.path.join(d, os.path.basename(d) + "_labels.txt")\n' +
       '        if not os.path.exists(model_path): raise FileNotFoundError("Model: " + model_path)\n' +
       '        if not os.path.exists(lbl): raise FileNotFoundError("Labels: " + lbl)\n' +
-      '        it = tflite.Interpreter(model_path=model_path)\n' +
-      '        it.allocate_tensors(); i = it.get_input_details(); o = it.get_output_details()\n' +
-      '        isf = i[0]["dtype"] == np.float32\n' +
-      '        ls = [line.strip() for line in open(lbl)]\n' +
-      '        def predict(frame):\n' +
-      '            s = i[0]["shape"][1]\n' +
-      '            d2 = cv2.resize(frame, (s, s))\n' +
-      '            d2 = d2.astype(np.float32)/255.0 if isf else d2.astype(np.uint8)\n' +
-      '            d2 = np.expand_dims(d2, axis=0)\n' +
-      '            it.set_tensor(i[0]["index"], d2); it.invoke()\n' +
-      '            out = it.get_tensor(o[0]["index"])[0]\n' +
-      '            out = out.astype(np.float32)/255.0 if not isf else out\n' +
-      '            cid = int(np.argmax(out)); conf = float(out[cid])\n' +
-      '            lb = ls[cid] if cid < len(ls) else "class_" + str(cid)\n' +
-      '            return (lb, conf)\n' +
-      '        return predict\n' +
+      '        self.it = tflite.Interpreter(model_path=model_path)\n' +
+      '        self.it.allocate_tensors(); self.i = self.it.get_input_details(); self.o = self.it.get_output_details()\n' +
+      '        self.isf = self.i[0]["dtype"] == np.float32\n' +
+      '        self.ls = [line.strip() for line in open(lbl)]\n' +
+      '    \n' +
+      '    def _predict(self, frame):\n' +
+      '        import numpy as np\n' +
+      '        # 檢查 frame 是否有效\n' +
+      '        if frame is None or frame.size == 0:\n' +
+      '            return ("none", 0.0)\n' +
+      '        s = self.i[0]["shape"][1]\n' +
+      '        d2 = cv2.resize(frame, (s, s))\n' +
+      '        d2 = d2.astype(np.float32)/255.0 if self.isf else d2.astype(np.uint8)\n' +
+      '        d2 = np.expand_dims(d2, axis=0)\n' +
+      '        self.it.set_tensor(self.i[0]["index"], d2); self.it.invoke()\n' +
+      '        out = self.it.get_tensor(self.o[0]["index"])[0]\n' +
+      '        out = out.astype(np.float32)/255.0 if not self.isf else out\n' +
+      '        cid = int(np.argmax(out)); conf = float(out[cid])\n' +
+      '        lb = self.ls[cid] if cid < len(self.ls) else "class_" + str(cid)\n' +
+      '        return (lb, conf)\n' +
       '    \n' +
       '    def predict(self, frame):\n' +
       '        return self._predict(frame)';

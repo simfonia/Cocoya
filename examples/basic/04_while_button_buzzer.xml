@@ -1,0 +1,136 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
+  <block type="py_coding_comment" id="c01" x="10" y="10">
+    <field name="TEXT">while 迴圈入門 — 按鈕控制蜂鳴器與 LED&amp;#10;while 條件成立時，重複執行 DO 裡面的內容&amp;#10;while True 就是「永遠執行」</field>
+  </block>
+  <block type="py_definition_zone" id="dz01" x="10" y="110"></block>
+  <block type="mcu_main" id="main01" x="10" y="190">
+    <statement name="DO">
+      <block type="py_coding_comment" id="c02">
+        <field name="TEXT">等待按鈕1 按下才開始</field>
+        <next>
+          <block type="mcu_car_wait_start" id="ws01">
+            <field name="PIN">board.GP20</field>
+            <next>
+              <block type="py_coding_comment" id="c03">
+                <field name="TEXT">=== 無窮迴圈 ===</field>
+                <next>
+                  <block type="py_loop_while" id="wl01">
+                    <value name="CONDITION">
+                      <block type="py_logic_boolean" id="lb01">
+                        <field name="BOOL">True</field>
+                      </block>
+                    </value>
+                    <statement name="DO">
+                      <block type="py_coding_comment" id="c04">
+                        <field name="TEXT">檢查按鈕1 是否被按下</field>
+                        <next>
+                          <block type="py_logic_if" id="li01">
+                            <mutation elif="0" else="1"></mutation>
+                            <value name="IF0">
+                              <block type="mcu_car_button_pressed" id="bp01">
+                                <field name="PIN">board.GP20</field>
+                              </block>
+                            </value>
+                            <statement name="DO0">
+                              <block type="py_coding_comment" id="c05">
+                                <field name="TEXT">按下時：蜂鳴器響 + LED0 亮</field>
+                                <next>
+                                  <block type="mcu_car_tone" id="tn01">
+                                    <value name="FREQ">
+                                      <shadow type="py_math_number" id="mn01">
+                                        <field name="NUM">440</field>
+                                      </shadow>
+                                    </value>
+                                    <value name="MS">
+                                      <shadow type="py_math_number" id="mn02">
+                                        <field name="NUM">200</field>
+                                      </shadow>
+                                    </value>
+                                    <next>
+                                      <block type="mcu_car_set_led_io" id="io01">
+                                        <value name="PIN">
+                                          <shadow type="py_math_number" id="mn03">
+                                            <field name="NUM">0</field>
+                                          </shadow>
+                                        </value>
+                                        <value name="STATE">
+                                          <shadow type="py_logic_boolean" id="lb02">
+                                            <field name="BOOL">True</field>
+                                          </shadow>
+                                        </value>
+                                        <next>
+                                          <block type="py_io_print" id="pr01" disabled-reasons="MANUALLY_DISABLED">
+                                            <value name="TEXT">
+                                              <shadow type="py_text" id="pt01">
+                                                <field name="TEXT">Hello Cocoya!</field>
+                                              </shadow>
+                                              <block type="py_text" id="pt02">
+                                                <field name="TEXT">按鈕1 按下</field>
+                                              </block>
+                                            </value>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </statement>
+                            <statement name="ELSE">
+                              <block type="py_coding_comment" id="c08">
+                                <field name="TEXT">放開時：關閉蜂鳴器 + LED0 滅</field>
+                                <next>
+                                  <block type="mcu_car_no_tone" id="nt01">
+                                    <next>
+                                      <block type="mcu_car_set_led_io" id="io02">
+                                        <value name="PIN">
+                                          <shadow type="py_math_number" id="mn04">
+                                            <field name="NUM">0</field>
+                                          </shadow>
+                                        </value>
+                                        <value name="STATE">
+                                          <shadow type="py_logic_boolean" id="lb03">
+                                            <field name="BOOL">False</field>
+                                          </shadow>
+                                        </value>
+                                        <next>
+                                          <block type="py_io_print" id="pr02" disabled-reasons="MANUALLY_DISABLED">
+                                            <value name="TEXT">
+                                              <shadow type="py_text" id="pt03">
+                                                <field name="TEXT">Hello Cocoya!</field>
+                                              </shadow>
+                                              <block type="py_text" id="pt04">
+                                                <field name="TEXT">按鈕1 放開</field>
+                                              </block>
+                                            </value>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </statement>
+                            <next>
+                              <block type="py_time_sleep" id="ts01">
+                                <value name="SECONDS">
+                                  <shadow type="py_math_number" id="mn05">
+                                    <field name="NUM">0.1</field>
+                                  </shadow>
+                                </value>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </statement>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

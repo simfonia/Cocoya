@@ -96,7 +96,7 @@ Blockly.Blocks['py_io_serial_flush'] = {
       "previousStatement": null,
       "nextStatement": null,
       "colour": Blockly.Msg["COLOUR_IO"],
-      "tooltip": "%{BKY_IO_SERIAL_READ_TOOLTIP}"
+      "tooltip": "%{BKY_IO_SERIAL_FLUSH_TOOLTIP}"
     });
   }
 };

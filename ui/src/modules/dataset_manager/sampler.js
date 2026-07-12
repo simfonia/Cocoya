@@ -12,7 +12,9 @@ export const Sampler = {
         burstInterval: 500, 
         targetLabel: '',
         onSampleCaptured: null,
-        onStatusChanged: null // 新增：狀態變更回調
+        onStatusChanged: null,
+        cameraList: [],        // 可用的攝影機清單 [{id, name}]
+        selectedDeviceId: 0    // 目前選擇的攝影機 ID
     },
 
     /**
@@ -31,6 +33,44 @@ export const Sampler = {
                 }
             }
         });
+    },
+
+    /**
+     * 列舉可用攝影機 (呼叫 Sidecar)
+     */
+    async listCameras() {
+        console.log('[Sampler] Requesting camera list...');
+        return new Promise((resolve) => {
+            const onceHandler = (event) => {
+                const message = event.data;
+                if (message.command === 'datasetCameraListResult') {
+                    window.removeEventListener('message', onceHandler);
+                    if (message.success && message.cameras) {
+                        this.state.cameraList = message.cameras;
+                        // 如果目前選擇的 deviceId 不在清單中，重設為第一個
+                        if (this.state.cameraList.length > 0) {
+                            const exists = this.state.cameraList.some(c => c.id === this.state.selectedDeviceId);
+                            if (!exists) {
+                                this.state.selectedDeviceId = this.state.cameraList[0].id;
+                            }
+                        }
+                    } else {
+                        this.state.cameraList = [];
+                    }
+                    resolve(this.state.cameraList);
+                }
+            };
+            window.addEventListener('message', onceHandler);
+            window.CocoyaBridge.send('datasetListCameras', {});
+        });
+    },
+
+    /**
+     * 設定選擇的攝影機 (切換後不會自動啟動)
+     */
+    setCameraDevice(deviceId) {
+        this.state.selectedDeviceId = deviceId;
+        console.log('[Sampler] Camera device selected:', deviceId);
     },
 
     /**

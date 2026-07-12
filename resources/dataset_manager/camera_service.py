@@ -13,6 +13,53 @@ class CameraService:
         self.thread = None
         self.window_name = "Cocoya Dataset Preview"
 
+    @staticmethod
+    def list_cameras(max_test=10):
+        """列舉系統中所有可用的攝影機裝置
+        
+        依序測試 index 0 ~ max_test-1，回傳可用的裝置清單。
+        暫時重導 stderr 以抑制 OpenCV 對不存在的 index 的錯誤訊息。
+        """
+        # 暫時重導 stderr 到 devnull 抑制 OpenCV 的 obsensor 錯誤輸出
+        try:
+            import os as _os
+            _stderr_fd = _os.dup(2)
+            _devnull_fd = _os.open(_os.devnull, _os.O_WRONLY)
+            _os.dup2(_devnull_fd, 2)
+            _os.close(_devnull_fd)
+        except:
+            _stderr_fd = None
+
+        available = []
+        try:
+            for i in range(max_test):
+                try:
+                    cap = cv2.VideoCapture(i)
+                    if cap.isOpened():
+                        ret, _ = cap.read()
+                        if ret:
+                            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                            name = f"Camera {i} ({width}x{height})"
+                            available.append({
+                                "id": i,
+                                "name": name
+                            })
+                        cap.release()
+                except:
+                    pass
+        finally:
+            # 還原 stderr
+            if _stderr_fd is not None:
+                try:
+                    import os as _os
+                    _os.dup2(_stderr_fd, 2)
+                    _os.close(_stderr_fd)
+                except:
+                    pass
+
+        return available
+
     def start(self, device_id=0):
         if self.running:
             return True

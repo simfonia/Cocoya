@@ -35,7 +35,8 @@ export const UIComponents = {
                     const color = this.getLabelColor(label);
                     return `
                     <div class="dataset-image-item" data-index="${index}" title="${escapeHTML(img.path)}">
-                        <div class="dataset-image-thumb">
+                        <button type="button" class="dataset-image-delete-btn" data-index="${index}" title="刪除照片">×</button>
+                        <div class="dataset-image-thumb" data-index="${index}">
                             ${img.blobUrl ? `<img src="${img.blobUrl}" loading="lazy">` : '<div class="dataset-thumb-placeholder">?</div>'}
                         </div>
                         <div class="dataset-image-info">
@@ -50,10 +51,20 @@ export const UIComponents = {
         `;
 
         if (options.onImageClick) {
-            container.querySelectorAll('.dataset-image-item').forEach(item => {
+            container.querySelectorAll('.dataset-image-thumb').forEach(item => {
                 item.onclick = () => {
                     const index = parseInt(item.dataset.index);
                     options.onImageClick(images[index], index);
+                };
+            });
+        }
+
+        if (options.onDeleteImage) {
+            container.querySelectorAll('.dataset-image-delete-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    const index = parseInt(btn.dataset.index);
+                    options.onDeleteImage(index);
                 };
             });
         }
@@ -99,7 +110,7 @@ export const UIComponents = {
     renderSamplerView(container, options = {}) {
         if (!container) return;
 
-        const { isCamRunning, lastPreviewUrl, targetLabel } = Sampler.state;
+        const { isCamRunning, lastPreviewUrl, targetLabel, cameraList, selectedDeviceId } = Sampler.state;
 
         container.innerHTML = `
             <div class="dataset-sampler-container">
@@ -118,6 +129,17 @@ export const UIComponents = {
                 </div>
                 
                 <div class="dataset-sampler-controls">
+                    <div class="dataset-sampler-row">
+                        <div id="dataset-sampler-camera-group" style="display: flex; align-items: center; gap: 5px; margin-bottom: 6px;">
+                            <label style="display: flex; align-items: center; gap: 5px; margin-bottom: 0; font-size: 11px;">
+                                <span>📷 攝影機:</span>
+                                <select id="dataset-sampler-camera-select" style="font-size: 11px; padding: 2px 4px;">
+                                    ${cameraList.map(c => `<option value="${c.id}" ${c.id === selectedDeviceId ? 'selected' : ''}>${escapeHTML(c.name)}</option>`).join('')}
+                                </select>
+                            </label>
+                            <button type="button" id="dataset-sampler-refresh-cameras" class="dataset-icon-btn" title="重新掃描攝影機" style="font-size: 14px;">🔄</button>
+                        </div>
+                    </div>
                     <div class="dataset-sampler-row">
                         <div id="dataset-sampler-label-group" style="display: flex; align-items: center; flex: 1;">
                             <label style="flex: 1; display: flex; align-items: center; gap: 5px; margin-bottom: 0;">
@@ -173,6 +195,34 @@ export const UIComponents = {
         const mainActions = container.querySelector('#dataset-sampler-main-actions');
         const settings = container.querySelector('#dataset-sampler-settings');
         const hint = container.querySelector('#dataset-sampler-hint');
+
+        // 攝影機選擇與重新整理
+        const cameraSelect = container.querySelector('#dataset-sampler-camera-select');
+        const refreshCamerasBtn = container.querySelector('#dataset-sampler-refresh-cameras');
+
+        if (cameraSelect) {
+            cameraSelect.onchange = () => {
+                const deviceId = parseInt(cameraSelect.value);
+                Sampler.setCameraDevice(deviceId);
+                console.log('[UIComponents] Camera device changed to:', deviceId);
+            };
+        }
+
+        if (refreshCamerasBtn) {
+            refreshCamerasBtn.onclick = async () => {
+                refreshCamerasBtn.disabled = true;
+                refreshCamerasBtn.textContent = '⏳';
+                console.log('[UIComponents] Refreshing camera list...');
+                const cameras = await Sampler.listCameras();
+                if (cameraSelect) {
+                    cameraSelect.innerHTML = cameras.map(c => 
+                        `<option value="${c.id}" ${c.id === Sampler.state.selectedDeviceId ? 'selected' : ''}>${escapeHTML(c.name)}</option>`
+                    ).join('');
+                }
+                refreshCamerasBtn.disabled = false;
+                refreshCamerasBtn.textContent = '🔄';
+            };
+        }
 
         // 切換模式函式
         const setAddMode = (isAdd) => {

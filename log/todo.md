@@ -1,4 +1,4 @@
-# Cocoya 專案任務清單 (Todo List)
+﻿# Cocoya 專案任務清單 (Todo List)
 **專案名稱**：Cocoya (Code, Compute, Yield AI)
 **核心目標**：建立一個以 Blockly 為介面，幫助 Python 初學者進入 AI 世界的 VSCode extension 與獨立桌面應用程式。
 
@@ -25,7 +25,7 @@
   - [x] DGX 遠端驗證：上傳 → 容器化訓練 (94.68%) → 下載模型
   - [x] πCar 整合腳本就緒（待實機測試）
 - [ ] **[遠端訓練] SSH/Sidecar 整合**：實作 `extension.ts` 中 `backend === 'remote'` 的分支，透過本地 Sidecar (paramiko) 在遠端主機執行 `classifier_train.py`。
-- [ ] **[遠端訓練] 容器化訓練腳本**：建立基於 NGC 鏡像的訓練容器與模板程式，確保遠端環境與本地一致。(MVP 已驗證 NGC PyTorch 容器 + TensorFlow, 開發時可參考 mvp_hand_gesture 資料夾中的程式碼）。
+- [ ] **[遠端訓練] 容器化訓練腳本**：建立基於 DGC 鏡像的訓練容器與模板程式，確保遠端環境與本地一致。(MVP 已驗證 DGC PyTorch 容器 + TensorFlow, 開發時可參考 mvp_hand_gesture 資料夾中的程式碼）。
 - [ ] **[遠端訓練] 推論與部署鏈**：支援雲端推論結果回傳與 <code>.tflite</code> 模型自動燒錄至 πCar。
 - [x] **[Phase 1] 訓練後端選擇 UI**（2026-06-25）：對話框 + 工具列按鈕 + localStorage 記住選擇
 - [x] **[Phase 2] 本地訓練功能**（2026-06-25）：Sidecar trainLocal + Tauri start_training + Extension handleStartTraining
@@ -66,7 +66,8 @@
   - [x] 路徑選擇對話框整合（extension.ts handlePickFolder）
   - [x] 修正多項錯誤（i18n 佔位符、FieldButton、參數名稱衝突）
 
-- [ ] **[Phase 5] PBL 範例積木專案測試**：僅測試 02（訓練），03（推論）與 04（MCU 控制）尚未測試
+- [x] **[Refactor] src/extension.ts 模組化重構**（2026-07-08）：將 ~2000 行的單一檔案拆分為 cocoyaManager.ts + sidecarManager.ts + 6 個 handlers，TypeScript 編譯通過。
+- [x] **[Phase 5] PBL 範例積木專案測試**：測試 02（訓練）、03（推論）與 04（MCU 控制）完成。
 
 ## [異動紀錄] 2026-07-05 訓練結果改為 HTML 報告，移除複雜 Modal
 - [x] **[訓練腳本] 產出 HTML 訓練報告**：`classifier_train.py` 在訓練完成後額外產出 `{project_name}_training_report.html`，內嵌 base64 曲線圖、摘要統計與可展開的 JSON 歷史資料。
@@ -80,12 +81,16 @@
 - [x] **[PBL 專案重命名]**：將 `examples/影像分類控制piCarl音效/` 改名為 `examples/AI_02_classifier/`，所有中文檔名改為英文檔名。
 - [x] **[PBL 專案檔名英文化]**：03_PC端推論控制.xml → 03_PC_inference.xml，04_MCU端音效控制.xml → 04_MCU_sound_control.xml
 
+## [已完成] 2026-07-11 — MicroPython 入門範例 + 孤兒積木白名單
+- [x] **[範例] 6 個 MicroPython 入門範例**：`examples/basic/03_`~`08_`，涵蓋 for/while 迴圈、多個 if（多選）、if-elif-else（單選）、變數、函式
+- [x] **[Enhancement] 孤兒積木白名單擴充**：將 `py_coding_comment` 加入 `allowedTypes`，說明註解可合法放在頂層
+
 ## [待辦] 其他優化
 - [ ] **[優化] 跨平台 Friendly Name**：實作 macOS/Linux 的序列埠名稱顯示優化。
-- [ ] **[優化] 刪除隱藏積木**：如 break out of loop。
+- [x] **[優化] 搜尋積木時，不顯示toolbox中沒有的積木**：如 break out of loop 等Blockly中預設積木。
 - [ ] **[功能] 重置韌體 Sidecar 化**：研究將 `esptool` 整合成 Tauri Sidecar 的可行性。
-- [ ] **[功能] Dataset manager 多部 webcam 選擇**。
-- [ ] **[功能] Dataset manager 刪除照片**。
+- [x] **[功能] Dataset manager 多部 webcam 選擇**：加入攝影機列舉與下拉選單，可切換不同 USB 攝影機。
+- [x] **[功能] Dataset manager 刪除照片**：每張縮圖 hover 時右上角出現「×」刪除按鈕，點擊可移除照片並自動更新統計。
 
 ---
-*最後更新日期：2026-07-07 (PBL 範例專案英文化)*
+*最後更新日期：2026-07-11 (MicroPython 入門範例 + 孤兒積木白名單)*

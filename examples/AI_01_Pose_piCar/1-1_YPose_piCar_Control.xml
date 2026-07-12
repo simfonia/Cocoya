@@ -46,7 +46,8 @@
                               </block>
                             </value>
                             <statement name="DO">
-                              <block type="controls_if" id="if_serial">
+                              <block type="py_logic_if" id="hp~_8?)}^i!j-;hcF;M%">
+                                <mutation elif="0" else="0"></mutation>
                                 <value name="IF0">
                                   <block type="py_io_serial_available" id="ser_avail"></block>
                                 </value>
@@ -57,7 +58,8 @@
                                       <block type="py_io_serial_read" id="ser_read"></block>
                                     </value>
                                     <next>
-                                      <block type="controls_if" id="if_line_nonempty">
+                                      <block type="py_logic_if" id="W=)izAANE*R8j0BAtTx{">
+                                        <mutation elif="0" else="0"></mutation>
                                         <value name="IF0">
                                           <block type="py_logic_compare" id="cmp_line_nonempty">
                                             <field name="OP">!=</field>

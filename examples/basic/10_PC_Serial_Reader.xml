@@ -2,24 +2,22 @@
   <variables>
     <variable id="v_data">received_data</variable>
   </variables>
-  <block type="py_definition_zone" id="def_root" x="20" y="20">
+  <block type="py_coding_comment" id="c1" x="10" y="10">
+    <field name="TEXT">PC 端序列埠讀取範例 (自動讀取最新數據版)&amp;#10;1. 請先執行 'pip install pyserial'。&amp;#10;2. 修改下面 'COM4' 為你的埠號。</field>
+  </block>
+  <block type="py_definition_zone" id="def_root" x="10" y="110">
     <statement name="DEFS">
-      <block type="py_coding_comment" id="c1">
-        <field name="TEXT">PC 端序列埠讀取範例 (自動讀取最新數據版)&amp;#10;1. 請先執行 'pip install pyserial'。&amp;#10;2. 修改下面 'COM5' 為你的埠號。</field>
-        <next>
-          <block type="py_io_serial_init" id="ser_init">
-            <field name="BAUD">9600</field>
-            <value name="PORT">
-              <shadow type="py_text" id="t1">
-                <field name="TEXT">COM5</field>
-              </shadow>
-            </value>
-          </block>
-        </next>
+      <block type="py_io_serial_init" id="ser_init">
+        <field name="BAUD">9600</field>
+        <value name="PORT">
+          <shadow type="py_text" id="t1">
+            <field name="TEXT">COM4</field>
+          </shadow>
+        </value>
       </block>
     </statement>
   </block>
-  <block type="py_main" id="main_root" x="20" y="180">
+  <block type="py_main" id="main_root" x="10" y="210">
     <statement name="DO">
       <block type="py_io_print" id="p1">
         <value name="TEXT">

@@ -1,0 +1,367 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
+  <variables>
+    <variable id="Rb.GL`^/o?^663^S)aFC">i</variable>
+    <variable id="count_var">count</variable>
+  </variables>
+  <block type="py_coding_comment" id="c01" x="10" y="10">
+    <field name="TEXT">變數入門 — 按鈕計數器&amp;#10;變數就像一個盒子，可以存入數字&amp;#10;按按鈕1 加1，按按鈕2 減1，用 LED 顯示數字</field>
+  </block>
+  <block type="py_definition_zone" id="dz01" x="10" y="110"></block>
+  <block type="mcu_main" id="main01" x="10" y="190">
+    <statement name="DO">
+      <block type="py_coding_comment" id="az,lQ?2frNV|c,LwnJQC">
+        <field name="TEXT">關閉所有LED</field>
+        <next>
+          <block type="py_loop_for_range" id="u=2q[*i8!EC*wbi7C32?">
+            <field name="VAR" id="Rb.GL`^/o?^663^S)aFC">i</field>
+            <value name="START">
+              <shadow type="py_math_number" id="Ky(^oJ=`b+F)Nc2I-X53">
+                <field name="NUM">0</field>
+              </shadow>
+            </value>
+            <value name="STOP">
+              <shadow type="py_math_number" id="T.O5lo7hB/+|?U%?e2YF">
+                <field name="NUM">8</field>
+              </shadow>
+            </value>
+            <value name="STEP">
+              <shadow type="py_math_number" id="2P%-Pw6CvVWBNGUvb,6o">
+                <field name="NUM">1</field>
+              </shadow>
+            </value>
+            <statement name="DO">
+              <block type="mcu_car_set_led_io" id="f/6+Wnv@)$0}lU;42D$c">
+                <value name="PIN">
+                  <shadow type="py_math_number" id="mn06">
+                    <field name="NUM">0</field>
+                  </shadow>
+                  <block type="py_variables_get" id="eA1XZqbAlexe/`m`L#E!">
+                    <field name="VAR" id="Rb.GL`^/o?^663^S)aFC">i</field>
+                  </block>
+                </value>
+                <value name="STATE">
+                  <shadow type="py_logic_boolean" id="K?!V,r9kjD=#;/}cR]0c">
+                    <field name="BOOL">False</field>
+                  </shadow>
+                </value>
+              </block>
+            </statement>
+            <next>
+              <block type="py_coding_comment" id="c02">
+                <field name="TEXT">宣告變數 count，初始值 = -1</field>
+                <next>
+                  <block type="py_variables_set" id="vs01">
+                    <field name="VAR" id="count_var">count</field>
+                    <value name="VALUE">
+                      <shadow type="py_math_number" id="mn01">
+                        <field name="NUM">-1</field>
+                      </shadow>
+                    </value>
+                    <next>
+                      <block type="py_coding_comment" id="c04">
+                        <field name="TEXT">=== 無窮迴圈：持續檢查按鈕 ===</field>
+                        <next>
+                          <block type="py_loop_while" id="wl01">
+                            <value name="CONDITION">
+                              <block type="py_logic_boolean" id="lb01">
+                                <field name="BOOL">True</field>
+                              </block>
+                            </value>
+                            <statement name="DO">
+                              <block type="py_logic_if" id="li01">
+                                <mutation elif="0" else="0"></mutation>
+                                <value name="IF0">
+                                  <block type="mcu_car_button_pressed" id="bp01">
+                                    <field name="PIN">board.GP20</field>
+                                  </block>
+                                </value>
+                                <statement name="DO0">
+                                  <block type="py_coding_comment" id="c05">
+                                    <field name="TEXT">按鈕1 按下 → count + 1</field>
+                                    <next>
+                                      <block type="py_variables_set" id="vs02">
+                                        <field name="VAR" id="count_var">count</field>
+                                        <value name="VALUE">
+                                          <shadow type="py_math_number" id="mn02">
+                                            <field name="NUM">0</field>
+                                          </shadow>
+                                          <block type="py_math_arithmetic" id="ma01">
+                                            <field name="OP">+</field>
+                                            <value name="A">
+                                              <block type="py_variables_get" id="vg01">
+                                                <field name="VAR" id="count_var">count</field>
+                                              </block>
+                                            </value>
+                                            <value name="B">
+                                              <shadow type="py_math_number" id="mn03">
+                                                <field name="NUM">1</field>
+                                              </shadow>
+                                            </value>
+                                          </block>
+                                        </value>
+                                        <next>
+                                          <block type="py_coding_comment" id="c06">
+                                            <field name="TEXT">不要讓 count 超過 7</field>
+                                            <next>
+                                              <block type="py_logic_if" id="li02">
+                                                <mutation elif="0" else="0"></mutation>
+                                                <value name="IF0">
+                                                  <block type="py_logic_compare" id="lc01">
+                                                    <field name="OP">&gt;</field>
+                                                    <value name="A">
+                                                      <block type="py_variables_get" id="vg02">
+                                                        <field name="VAR" id="count_var">count</field>
+                                                      </block>
+                                                    </value>
+                                                    <value name="B">
+                                                      <shadow type="py_math_number" id="mn04">
+                                                        <field name="NUM">7</field>
+                                                      </shadow>
+                                                    </value>
+                                                  </block>
+                                                </value>
+                                                <statement name="DO0">
+                                                  <block type="py_variables_set" id="vs03">
+                                                    <field name="VAR" id="count_var">count</field>
+                                                    <value name="VALUE">
+                                                      <shadow type="py_math_number" id="mn05">
+                                                        <field name="NUM">7</field>
+                                                      </shadow>
+                                                    </value>
+                                                  </block>
+                                                </statement>
+                                                <next>
+                                                  <block type="py_coding_comment" id="c07">
+                                                    <field name="TEXT">亮起第 count 顆 LED</field>
+                                                    <next>
+                                                      <block type="mcu_car_set_led_io" id="io01">
+                                                        <value name="PIN">
+                                                          <shadow type="py_math_number" id="mn06">
+                                                            <field name="NUM">0</field>
+                                                          </shadow>
+                                                          <block type="py_variables_get" id="vg03">
+                                                            <field name="VAR" id="count_var">count</field>
+                                                          </block>
+                                                        </value>
+                                                        <value name="STATE">
+                                                          <shadow type="py_logic_boolean" id="lb02">
+                                                            <field name="BOOL">True</field>
+                                                          </shadow>
+                                                        </value>
+                                                        <next>
+                                                          <block type="mcu_car_tone" id="tn01">
+                                                            <value name="FREQ">
+                                                              <shadow type="py_math_number" id="mn07">
+                                                                <field name="NUM">440</field>
+                                                              </shadow>
+                                                            </value>
+                                                            <value name="MS">
+                                                              <shadow type="py_math_number" id="mn08">
+                                                                <field name="NUM">100</field>
+                                                              </shadow>
+                                                            </value>
+                                                            <next>
+                                                              <block type="py_io_print" id="pr01">
+                                                                <value name="TEXT">
+                                                                  <shadow type="py_text" id="pt01">
+                                                                    <field name="TEXT">Hello Cocoya!</field>
+                                                                  </shadow>
+                                                                  <block type="py_text_join" id="tj01">
+                                                                    <mutation items="2"></mutation>
+                                                                    <value name="ADD0">
+                                                                      <shadow type="py_text" id="pt02">
+                                                                        <field name="TEXT">count = </field>
+                                                                      </shadow>
+                                                                    </value>
+                                                                    <value name="ADD1">
+                                                                      <block type="py_variables_get" id="vg04">
+                                                                        <field name="VAR" id="count_var">count</field>
+                                                                      </block>
+                                                                    </value>
+                                                                  </block>
+                                                                </value>
+                                                              </block>
+                                                            </next>
+                                                          </block>
+                                                        </next>
+                                                      </block>
+                                                    </next>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </statement>
+                                <next>
+                                  <block type="py_coding_comment" id="c08">
+                                    <field name="TEXT">按鈕2 按下 → count - 1</field>
+                                    <next>
+                                      <block type="py_logic_if" id="li03">
+                                        <mutation elif="0" else="0"></mutation>
+                                        <value name="IF0">
+                                          <block type="mcu_car_button_pressed" id="bp02">
+                                            <field name="PIN">board.GP21</field>
+                                          </block>
+                                        </value>
+                                        <statement name="DO0">
+                                          <block type="py_variables_set" id="vs04">
+                                            <field name="VAR" id="count_var">count</field>
+                                            <value name="VALUE">
+                                              <shadow type="py_math_number" id="mn09">
+                                                <field name="NUM">0</field>
+                                              </shadow>
+                                              <block type="py_math_arithmetic" id="ma02">
+                                                <field name="OP">-</field>
+                                                <value name="A">
+                                                  <block type="py_variables_get" id="vg05">
+                                                    <field name="VAR" id="count_var">count</field>
+                                                  </block>
+                                                </value>
+                                                <value name="B">
+                                                  <shadow type="py_math_number" id="mn10">
+                                                    <field name="NUM">1</field>
+                                                  </shadow>
+                                                </value>
+                                              </block>
+                                            </value>
+                                            <next>
+                                              <block type="py_coding_comment" id="c09">
+                                                <field name="TEXT">不要讓 count 小於 -1</field>
+                                                <next>
+                                                  <block type="py_logic_if" id="li04">
+                                                    <mutation elif="0" else="0"></mutation>
+                                                    <value name="IF0">
+                                                      <block type="py_logic_compare" id="lc02">
+                                                        <field name="OP">&lt;</field>
+                                                        <value name="A">
+                                                          <block type="py_variables_get" id="vg06">
+                                                            <field name="VAR" id="count_var">count</field>
+                                                          </block>
+                                                        </value>
+                                                        <value name="B">
+                                                          <shadow type="py_math_number" id="mn11">
+                                                            <field name="NUM">0</field>
+                                                          </shadow>
+                                                        </value>
+                                                      </block>
+                                                    </value>
+                                                    <statement name="DO0">
+                                                      <block type="py_variables_set" id="vs05">
+                                                        <field name="VAR" id="count_var">count</field>
+                                                        <value name="VALUE">
+                                                          <shadow type="py_math_number" id="mn12">
+                                                            <field name="NUM">-1</field>
+                                                          </shadow>
+                                                        </value>
+                                                      </block>
+                                                    </statement>
+                                                    <next>
+                                                      <block type="py_io_print" id="pr02">
+                                                        <value name="TEXT">
+                                                          <shadow type="py_text" id="pt03">
+                                                            <field name="TEXT">Hello Cocoya!</field>
+                                                          </shadow>
+                                                          <block type="py_text_join" id="tj02">
+                                                            <mutation items="2"></mutation>
+                                                            <value name="ADD0">
+                                                              <shadow type="py_text" id="pt04">
+                                                                <field name="TEXT">count = </field>
+                                                              </shadow>
+                                                            </value>
+                                                            <value name="ADD1">
+                                                              <block type="py_variables_get" id="vg08">
+                                                                <field name="VAR" id="count_var">count</field>
+                                                              </block>
+                                                            </value>
+                                                          </block>
+                                                        </value>
+                                                        <next>
+                                                          <block type="py_coding_comment" id="c10">
+                                                            <field name="TEXT">關閉第 count+1 顆 LED</field>
+                                                            <next>
+                                                              <block type="mcu_car_set_led_io" id="io02">
+                                                                <value name="PIN">
+                                                                  <shadow type="py_math_number" id="mn13">
+                                                                    <field name="NUM">0</field>
+                                                                  </shadow>
+                                                                  <block type="py_math_arithmetic" id="C3V2b_,uJw@]^SKbyTwb">
+                                                                    <field name="OP">+</field>
+                                                                    <value name="A">
+                                                                      <shadow type="py_math_number" id="(l?82OF9B(m7nq.l#2ko" disabled-reasons="orphan">
+                                                                        <field name="NUM">1</field>
+                                                                      </shadow>
+                                                                      <block type="py_variables_get" id="vg07">
+                                                                        <field name="VAR" id="count_var">count</field>
+                                                                      </block>
+                                                                    </value>
+                                                                    <value name="B">
+                                                                      <shadow type="py_math_number" id="j:XI9wrKhk5U7@nv$lC(">
+                                                                        <field name="NUM">1</field>
+                                                                      </shadow>
+                                                                    </value>
+                                                                  </block>
+                                                                </value>
+                                                                <value name="STATE">
+                                                                  <shadow type="py_logic_boolean" id="lb03">
+                                                                    <field name="BOOL">False</field>
+                                                                  </shadow>
+                                                                </value>
+                                                                <next>
+                                                                  <block type="mcu_car_tone" id="tn02">
+                                                                    <value name="FREQ">
+                                                                      <shadow type="py_math_number" id="mn14">
+                                                                        <field name="NUM">220</field>
+                                                                      </shadow>
+                                                                    </value>
+                                                                    <value name="MS">
+                                                                      <shadow type="py_math_number" id="mn15">
+                                                                        <field name="NUM">100</field>
+                                                                      </shadow>
+                                                                    </value>
+                                                                  </block>
+                                                                </next>
+                                                              </block>
+                                                            </next>
+                                                          </block>
+                                                        </next>
+                                                      </block>
+                                                    </next>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </statement>
+                                        <next>
+                                          <block type="py_time_sleep" id="sL?C/cWEB=jDdB#5k|mN">
+                                            <value name="SECONDS">
+                                              <shadow type="py_math_number" id="^z8El^n~:Hd#PxXp{.$z">
+                                                <field name="NUM">0.2</field>
+                                              </shadow>
+                                            </value>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </statement>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

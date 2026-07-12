@@ -1,70 +1,76 @@
-def train_model(dataset_dir, model_dir, task_type, backend, epochs, batch_size, learning_rate):
-    import subprocess
-    import sys
-    import os
-    import json
-
-    # 確保模型輸出目錄存在
-    os.makedirs(model_dir, exist_ok=True)
-
-    # 根據任務類型選擇訓練腳本
-    if task_type == "classifier":
-        script_name = "classifier_train.py"
-    elif task_type == "detector":
-        script_name = "detector_train.py"
-    elif task_type == "line_follower":
-        script_name = "line_follower_train.py"
-    else:
-        print(f"錯誤: 不支援的任務類型: {task_type}")
-        return False
-
-    # 呼叫訓練腳本
-    # 使用絕對路徑，避免工作目錄問題
-    script_path = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "..", "resources", "train_templates", task_type, script_name))
-
-    if not os.path.exists(script_path):
-        print(f"錯誤: 找不到訓練腳本 {script_path}")
-        return False
-
-    cmd = [
-        sys.executable, script_path,
-        "--dataset_dir", dataset_dir,
-        "--output_dir", model_dir,
-        "--epochs", str(epochs),
-        "--batch_size", str(batch_size),
-        "--learning_rate", str(learning_rate),
-        "--project_name", os.path.basename(dataset_dir)
-    ]
-
-    print("執行訓練命令: " + " ".join(cmd))
-    print("\n開始訓練，請稍候...\n")
-
-    # 使用 Popen 即時顯示輸出
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, universal_newlines=True)
-
-    # 即時讀取並顯示輸出
-    for line in process.stdout:
-        print(line, end='')
-
-    process.wait()
-
-    if process.returncode != 0:
-        print("\n訓練失敗")
-        return False
-
-    # 解析結果
-    print("\n訓練完成!")
-    return True
+import cv2
+import serial
+import time
 
 
-if __name__ == "__main__":  # S_ID:BW|{#2:o27$w}?+)8k5f
-    # 開始訓練  # S_ID:Y8]DzD?F[#5O_V_}^Ye0
-    train_model(
-        dataset_dir='dataset/classifier_dataset',
-        model_dir='model/classifier_dataset',
-        task_type='classifier',
-        backend='remote' if False else 'local',
-        epochs=5,
-        batch_size=32,
-        learning_rate=0.001
-    )  # E_ID:Y8]DzD?F[#5O_V_}^Ye0  # E_ID:BW|{#2:o27$w}?+)8k5f
+class _ModelClassifier:
+    def __init__(self, model_path):
+        import os, sys, cv2, numpy as np
+        try:
+            import tflite_runtime.interpreter as tflite
+        except ImportError:
+            try:
+                from tensorflow import lite as tflite
+            except ImportError:
+                print("Error: install tflite-runtime"); sys.exit(1)
+        # 智能搜尋模型檔案
+        if not model_path.endswith(".tflite"):
+            # 如果路徑是目錄，在裡面搜尋 .tflite 檔案
+            if os.path.isdir(model_path):
+                import glob
+                tflite_files = glob.glob(os.path.join(model_path, "*.tflite"))
+                if tflite_files:
+                    if len(tflite_files) > 1:
+                        print(f"警告: 找到多個模型檔案，使用第一個: {tflite_files[0]}")
+                    model_path = tflite_files[0]
+                else:
+                    # 如果目錄中沒有 .tflite 檔案，嘗試原本的邏輯
+                    model_path = model_path + ".tflite"
+        d = os.path.dirname(model_path)
+        lbl = os.path.join(d, os.path.basename(d) + "_labels.txt")
+        if not os.path.exists(model_path): raise FileNotFoundError("Model: " + model_path)
+        if not os.path.exists(lbl): raise FileNotFoundError("Labels: " + lbl)
+        self.it = tflite.Interpreter(model_path=model_path)
+        self.it.allocate_tensors(); self.i = self.it.get_input_details(); self.o = self.it.get_output_details()
+        self.isf = self.i[0]["dtype"] == np.float32
+        self.ls = [line.strip() for line in open(lbl)]
+
+    def _predict(self, frame):
+        import numpy as np
+        # 檢查 frame 是否有效
+        if frame is None or frame.size == 0:
+            return ("none", 0.0)
+        s = self.i[0]["shape"][1]
+        d2 = cv2.resize(frame, (s, s))
+        d2 = d2.astype(np.float32)/255.0 if self.isf else d2.astype(np.uint8)
+        d2 = np.expand_dims(d2, axis=0)
+        self.it.set_tensor(self.i[0]["index"], d2); self.it.invoke()
+        out = self.it.get_tensor(self.o[0]["index"])[0]
+        out = out.astype(np.float32)/255.0 if not self.isf else out
+        cid = int(np.argmax(out)); conf = float(out[cid])
+        lb = self.ls[cid] if cid < len(self.ls) else "class_" + str(cid)
+        return (lb, conf)
+
+    def predict(self, frame):
+        return self._predict(frame)
+
+
+  # S_ID:TW939Xfqdz=i#~l%IE4.
+_model_classifier = _ModelClassifier("model/classifier_dataset")  # S_ID:ZNXsCDVS3xfW;ngq2tGO  # E_ID:ZNXsCDVS3xfW;ngq2tGO
+ser = serial.Serial('COM4', 115200, timeout=0.01, write_timeout=0)  # S_ID:ser_init  # E_ID:ser_init  # E_ID:TW939Xfqdz=i#~l%IE4.
+
+if __name__ == "__main__":  # S_ID:Iv8!zE5oU-Rl`?clOlTb
+    cap = cv2.VideoCapture(0)  # S_ID:iRYRZaR*kFmX0F^.f:6(  # E_ID:iRYRZaR*kFmX0F^.f:6(
+    while True:  # S_ID:}-:W1Y^n+:5GawnA#_5a
+        ret, frame = cap.read()  # S_ID:O6YLd|SE2C-U8Z3{e;Ao  # E_ID:O6YLd|SE2C-U8Z3{e;Ao
+        result = _model_classifier.predict(frame)  # S_ID:U+gFSS1wGn5gBjMBy|+/  # E_ID:U+gFSS1wGn5gBjMBy|+/
+        frame = cv2.flip(frame, 1)  # S_ID:v*FxVv,Xxz#}FiLX9!bl  # E_ID:v*FxVv,Xxz#}FiLX9!bl
+        cv2.imshow('Cocoya Video', frame)  # S_ID:Q4mK*/c?A#;[mr{u(,=B  # E_ID:Q4mK*/c?A#;[mr{u(,=B
+        if result[1] > 0.75:  # S_ID:}XIen7s?y-~K.YJ#7u*)
+            ser.write((str(result[0]) + "\n").encode('utf-8'))  # S_ID:)_KTI-zsE33#tdL,?Gda  # E_ID:)_KTI-zsE33#tdL,?Gda
+            print(result[0])  # S_ID:)vJ2fkMz@S_X+OIuUW,^  # E_ID:)vJ2fkMz@S_X+OIuUW,^
+        else:
+            print('Not sure!')  # S_ID:`[6E=?sH$t^Ij(Y2:uYS  # E_ID:`[6E=?sH$t^Ij(Y2:uYS  # E_ID:}XIen7s?y-~K.YJ#7u*)
+        time.sleep(0.2)  # S_ID:|bTqz/E)Ay]S2V)PWh[}  # E_ID:|bTqz/E)Ay]S2V)PWh[}
+        if cv2.waitKey(1) & 0xFF == ord('q'):  # S_ID:E)!0^ha28O~xD3.4T|}C
+            break  # E_ID:E)!0^ha28O~xD3.4T|}C  # E_ID:}-:W1Y^n+:5GawnA#_5a  # E_ID:Iv8!zE5oU-Rl`?clOlTb
