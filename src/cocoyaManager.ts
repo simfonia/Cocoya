@@ -147,6 +147,9 @@ export class CocoyaManager {
                 case 'newFile':
                     await this.fileOps.handleNewFile(message);
                     break;
+                case 'openExamples':
+                    await this.handleOpenExamples(message);
+                    break;
                 case 'openFile':
                     await this.fileOps.handleOpenFile(message);
                     break;
@@ -287,6 +290,47 @@ export class CocoyaManager {
         }
     }
 
+    /**
+     * 處理開啟範例：跳出資料夾選擇對話框，預設指向 examples/
+     */
+    private async handleOpenExamples(message: any) {
+        // 1. 檢查髒狀態
+        if (message.isDirty) {
+            const proceed = await this.fileOps.checkDirtyAndConfirm(message);
+            if (!proceed) return;
+        }
+
+        // 2. 跳出開啟對話框，預設指向 examples/ 目錄
+        const examplesDir = path.join(this.context.extensionPath, 'examples');
+        const uris = await vscode.window.showOpenDialog({
+            canSelectMany: false,
+            filters: { 'Cocoya 範例專案': ['xml'] },
+            defaultUri: vscode.Uri.file(examplesDir)
+        });
+
+        if (!uris || !uris[0]) return;
+
+        // 3. 載入選取的範例
+        const filePath = uris[0].fsPath;
+        const content = require('fs').readFileSync(filePath, 'utf8');
+        const filename = path.basename(filePath);
+
+        let platform = 'PC';
+        const platformMatch = content.match(/<xml[^>]+platform="([^"]+)"/);
+        if (platformMatch) {
+            platform = platformMatch[1];
+        } else {
+            if (content.includes('type="py_loop_while"')) platform = 'MicroPython';
+            else if (content.includes('type="py_main"')) platform = 'PC';
+        }
+
+        this.currentFilePath = filePath; // 記錄範例路徑，以便後續檢查
+        this.currentPlatform = platform;
+        this.lastDirtyState = false;
+        this.updateTitle();
+        this.panel.webview.postMessage({ command: 'loadWorkspace', xml: content, filename, platform });
+    }
+
     private handleGetManifest() {
         const manifestPath = path.join(this.context.extensionPath, 'ui', 'src', 'core_manifest.json');
         const manifest = JSON.parse(require('fs').readFileSync(manifestPath, 'utf8'));
@@ -343,7 +387,7 @@ export class CocoyaManager {
 
     private handleOpenHelp(helpId: string) {
         if (!helpId) return;
-        const helpUri = vscode.Uri.joinPath(this.context.extensionUri, 'media', 'docs', `${helpId}.html`);
+        const helpUri = vscode.Uri.joinPath(this.context.extensionUri, 'docs', 'help', `${helpId}.html`);
         vscode.env.openExternal(helpUri);
     }
 

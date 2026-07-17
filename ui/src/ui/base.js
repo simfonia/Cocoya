@@ -167,16 +167,16 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             if (closeBtn) closeBtn.style.display = caps.canClose ? 'flex' : 'none';
             if (terminalToggleBtn) terminalToggleBtn.style.display = caps.hasTerminal ? 'flex' : 'none';
             
-            // AI 下拉選單：僅在具備雲端感知能力 (VSIX) 且非 Tauri 時顯示
+            // AI 下拉選單：VSIX 與 Tauri 皆顯示
             const aiDropdown = document.getElementById('ai-dropdown');
             const aiDropdownSeparator = document.getElementById('ai-dropdown-separator');
-            if (aiDropdown && caps.isRemoteAware && !caps.isTauri) {
+            if (aiDropdown && caps.isRemoteAware) {
                 aiDropdown.style.display = 'inline-block';
                 if (aiDropdownSeparator) aiDropdownSeparator.style.display = 'block';
             }
             
-            // 雲端 AI 模式：僅在具備雲端感知能力 (VSIX) 且非 Tauri 時顯示
-            if (cloudAiContainer && caps.isRemoteAware && !caps.isTauri) {
+            // 雲端 AI 模式：僅在具備雲端感知能力時顯示
+            if (cloudAiContainer && caps.isRemoteAware) {
                 cloudAiContainer.style.display = 'flex';
                 if (cloudAiSeparator) cloudAiSeparator.style.display = 'block';
             }
@@ -296,6 +296,14 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         const codeCloseBtn = document.getElementById('btn-close-code');
         if (codeCloseBtn) {
             codeCloseBtn.onclick = () => self.toggleCodeArea(false);
+        }
+
+        // 綁定範例按鈕：觸發後端 Quick Pick 並載入範例
+        const examplesBtn = document.getElementById('btn-examples');
+        if (examplesBtn) {
+            examplesBtn.onclick = () => {
+                postMessageFunc({ command: 'openExamples', isDirty: self.isDirty, includeXml: true });
+            };
         }
 
         // 綁定檔案操作

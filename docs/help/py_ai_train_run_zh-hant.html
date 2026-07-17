@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI訓練 - py_ai_train_run 積木說明</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 20px; max-width: 800px; margin: 0 auto; }
+  h1 { color: #9C27B0; border-bottom: 2px solid #9C27B0; padding-bottom: 8px; }
+  h2 { color: #7B1FA2; margin-top: 24px; }
+  .section { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .param-table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  .param-table th, .param-table td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+  .param-table th { background: #f3e5f5; color: #7B1FA2; }
+  .code { background: #f8f8f8; padding: 12px; border-radius: 4px; font-family: Consolas, monospace; font-size: 13px; overflow-x: auto; }
+  .note { background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px 14px; margin: 12px 0; border-radius: 0 4px 4px 0; }
+  .tip { background: #e8f5e9; border-left: 4px solid #4caf50; padding: 10px 14px; margin: 12px 0; border-radius: 0 4px 4px 0; }
+</style>
+</head>
+<body>
+  <h1>🦉AI訓練積木 (py_ai_train_run)</h1>
+
+  <div class="section">
+    <h2>功能說明</h2>
+    <p>執行 AI 模型訓練。從資料集學習並產出 TFLite 模型檔案，可用於後續的推論（預測）。</p>
+    <p>支援四種任務類型：<strong>圖像分類</strong>、<strong>物件偵測</strong>、<strong>循線偵測</strong>、<strong>表格資料</strong>。</p>
+  </div>
+
+  <div class="section">
+    <h2>基本參數</h2>
+    <table class="param-table">
+      <tr><th>欄位</th><th>說明</th><th>預設值</th></tr>
+      <tr><td>資料集 (Dataset)</td><td>訓練資料所在資料夾路徑。每個子資料夾代表一個分類。</td><td>dataset/classifier_dataset</td></tr>
+      <tr><td>模型 (Model)</td><td>訓練完成後模型檔案的輸出資料夾（自動產生）。</td><td>model/資料集名稱</td></tr>
+      <tr><td>Epochs</td><td>訓練輪數。越多代表學習越久，但過多可能導致過擬合。</td><td>20</td></tr>
+      <tr><td>Batch</td><td>批次大小。每次更新權重時同時處理的圖片張數。</td><td>32</td></tr>
+      <tr><td>LR (Learning Rate)</td><td>學習率。控制每次更新的步長，太大可能無法收斂。</td><td>0.001</td></tr>
+      <tr><td>Val Split</td><td>驗證集比例。從資料集中分割多少比例作為驗證用。</td><td>0.2 (20%)</td></tr>
+      <tr><td>Dropout</td><td>隨機丟棄率。防止過擬合，訓練時隨機丟棄部分神經元。</td><td>0.2 (20%)</td></tr>
+      <tr><td>Aug (Augmentation)</td><td>是否啟用資料擴增。自動對圖片進行翻轉/旋轉/縮放等變換。</td><td>✔ 啟用</td></tr>
+      <tr><td>類型 (Type)</td><td>任務類型：分類器 / 偵測器 / 循線 / 表格</td><td>分類器</td></tr>
+      <tr><td>後端 (Backend)</td><td>訓練位置：自動 / 本地 / 遠端</td><td>自動</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>進階參數</h2>
+    <table class="param-table">
+      <tr><th>欄位</th><th>說明</th><th>預設值</th></tr>
+      <tr><td>Backbone</td><td>骨幹網路。選擇 MobileNetV2、EfficientNetB0 或 ResNet50。</td><td>MobileNetV2</td></tr>
+      <tr><td>Optimizer</td><td>優化器。選擇 Adam、SGD 或 RMSprop。</td><td>Adam</td></tr>
+      <tr><td>DNN Layers</td><td>自訂隱藏層。逗號分隔神經元數，如 "128,64" 表示兩層。<br>輸入層（GlobalAveragePooling）與輸出層（Softmax）為自動設定，<br>使用者只需指定中間隱藏層即可。留空則跳過隱藏層直接到輸出。</td><td>128,64</td></tr>
+      <tr><td>Fine-tune</td><td>是否解凍骨幹網路進行微調。可提升準確率但需更多資料。</td><td>☐ 停用</td></tr>
+    </table>
+    <div class="note">💡 不熟悉這些參數的初學者，保留預設值即可獲得良好訓練結果。</div>
+  </div>
+
+  <div class="section">
+    <h2>訓練輸出檔案</h2>
+    <p>訓練完成後，在模型輸出資料夾中會產生：</p>
+    <ul>
+      <li><strong>*.tflite</strong> — 量化模型檔案（用於 MCU 或 Edge TPU）</li>
+      <li><strong>*_f32.tflite</strong> — Float32 模型檔案（用於 PC 端 Python 推論）</li>
+      <li><strong>*.keras</strong> — Keras 原始模型檔案</li>
+      <li><strong>*_labels.txt</strong> — 分類標籤對照表</li>
+      <li><strong>*_training_report.html</strong> — 訓練報告（含曲線圖與統計）</li>
+      <li><strong>*_training_history.json</strong> — 訓練歷史資料（JSON 格式）</li>
+      <li><strong>*_training_curve.png</strong> — Loss/Accuracy 曲線圖</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>注意事項</h2>
+    <div class="tip">✅ 圖片尺寸固定為 224×224，與 MobileNetV2 的 ImageNet 預訓練權重綁定。</div>
+    <div class="tip">✅ 驗證集（Validation Set）同時作為最終模型評估，不另設測試集。原因是教育場景資料量較小，三分割會導致各集合樣本不足，且初學者無需區分驗證/測試的複雜概念。</div>
+    <div class="note">⚠️ 每個分類至少需要 5 張以上圖片，建議每個分類 20-100 張。</div>
+    <div class="note">⚠️ 路徑中請避免使用中文字元，以免部分環境報錯。</div>
+  </div>
+</body>
+</html>

@@ -21,4 +21,10 @@
             </block>
         </value>
     </block>
+    
+    <!-- 結果解析積木 -->
+    <block type="py_ai_get_label"></block>
+    <block type="py_ai_get_confidence"></block>
+    <block type="py_ai_get_bbox"></block>
+    <block type="py_ai_get_direction"></block>
 </category>

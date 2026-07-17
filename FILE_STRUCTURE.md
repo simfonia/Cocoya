@@ -1,13 +1,23 @@
 C:\Workspace\cocoya\
 ├── .vscodeignore          # VSIX 打包過濾清單
 ├── docs/                  # 專案文檔
+│   ├── help/              # 積木說明文件與腳位圖（右鍵 Help 統一位置）
+│   │   ├── hardware_pins_en.html        # 硬體腳位說明（英文）
+│   │   ├── hardware_pins_zh-hant.html   # 硬體腳位說明（繁體中文）
+│   │   ├── pico-w_pinout.png            # Raspberry Pi Pico W 腳位圖
+│   │   ├── XIAO-ESP32-S3_pinout.jpg     # XIAO ESP32 S3 腳位圖
+│   │   ├── py_ai_train_run_zh-hant.html     # AI 訓練積木說明
+│   │   ├── py_ai_model_init_zh-hant.html    # 模型初始化積木說明
+│   │   ├── py_ai_model_predict_zh-hant.html # 推論積木說明
+│   │   ├── py_ai_get_label_zh-hant.html     # 取得標籤積木說明
+│   │   ├── py_ai_get_confidence_zh-hant.html # 取得信心度積木說明
+│   │   ├── py_ai_get_bbox_zh-hant.html      # 取得邊界框積木說明
+│   │   └── py_ai_get_direction_zh-hant.html # 取得方向積木說明
 │   ├── system_spec.html   # 系統規格說明書 (v5.0 雙模架構版)
 │   ├── api_manifest.md    # 前端 API SSOT (Source of Truth)
 │   ├── backend_api_manifest.md # [NEW] 後端 Rust API SSOT
 │   ├── mvp_development_guide.md # AI 模組開發規範與踩坑記錄
 │   ├── docker_training_deployment_guide.html # DGX Docker 訓練容器建置指南
-│   ├── pico-w_pinout.png  # 原始腳位圖
-│   └── XIAO-ESP32-S3_pinout.jpg # 原始腳位圖
 ├── examples/              # 範例檔 (.xml)
 │   ├── basic/              # Python 入門範例（MicroPython MCU 模式）
 │   │   ├── 01_Hello Cocoya.xml  # 基礎 Hello World (print + sleep)
@@ -144,6 +154,16 @@ C:\Workspace\cocoya\
 ├── resources/             # 靜態資源
 │   ├── deploy_mcu.py      # [OPTIMIZED] 具備硬體感知與分塊寫入的部署工具
 │   ├── extension_icon.png # 插件圖示
+│   ├── train_templates/   # AI 訓練模板（共同模組 + 任務專屬）
+│   │   ├── common/        # [NEW] 共同模組
+│   │   │   ├── __init__.py  # 模組包
+│   │   │   ├── dataset.py   # 資料集載入、驗證、分割、擴增
+│   │   │   ├── model.py     # 模型建立、backbone 管理、FC 層自訂
+│   │   │   ├── training.py  # 訓練迴圈、class weight、優化器選擇
+│   │   │   ├── export.py    # TFLite 轉換、模型儲存
+│   │   │   └── report.py    # 訓練曲線繪製、HTML 報告產生
+│   │   └── classifier/
+│   │       └── classifier_train.py # [REFACTORED] 使用 common 模組 + 新參數
 │   ├── dataset_manager/   # Dataset Manager 模組
 │   │   └── train_templates/ # 訓練容器模板
 │   │       └── classifier/  # 手勢分類訓練模板

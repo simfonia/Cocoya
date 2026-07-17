@@ -2,7 +2,7 @@ use std::fs;
 use tauri::{AppHandle, State, Window, Manager};
 use tauri_plugin_dialog::DialogExt;
 use crate::state::AppState;
-use crate::utils::get_resource_path;
+use crate::utils::{get_resource_path, get_examples_path};
 
 #[derive(serde::Serialize)]
 pub struct OpenFileResult {
@@ -80,6 +80,41 @@ pub async fn open_file(window: Window, handle: AppHandle, state: State<'_, AppSt
 }
 
 #[tauri::command]
+pub async fn open_examples(window: Window, handle: AppHandle, state: State<'_, AppState>) -> Result<OpenFileResult, String> {
+    // 預設指向 examples 目錄
+    let examples_dir = get_examples_path(&handle);
+    
+    let file_path = handle.dialog().file()
+        .add_filter("Cocoya XML", &["xml"])
+        .set_directory(&examples_dir)
+        .blocking_pick_file();
+
+    if let Some(p) = file_path {
+        let path = p.into_path().map_err(|_| "Failed to parse path".to_string())?;
+        let xml = fs::read_to_string(&path).map_err(|e| e.to_string())?;
+        let filename = path.file_name().unwrap().to_str().unwrap().to_string();
+        
+        let platform = if xml.contains("platform=\"MicroPython\"") { "MicroPython" } else { "PC" };
+
+        // 註冊路徑到 current_paths
+        {
+            let mut paths = state.current_paths.lock().unwrap();
+            paths.insert(window.label().to_string(), path.clone());
+        }
+
+        Ok(OpenFileResult {
+            xml,
+            filename,
+            platform: platform.into(),
+            backup_xml: None,
+            is_read_only: false
+        })
+    } else {
+        Err("Canceled".into())
+    }
+}
+
+#[tauri::command]
 pub async fn save_file(window: Window, handle: AppHandle, state: State<'_, AppState>, xml: String, save_as: bool) -> Result<String, String> {
     let mut path_to_save = {
         let paths = state.current_paths.lock().unwrap();
@@ -101,6 +136,12 @@ pub async fn save_file(window: Window, handle: AppHandle, state: State<'_, AppSt
     }
 
     if let Some(path) = path_to_save {
+        // --- 檢查是否為 examples 目錄 ---
+        let examples_dir = get_examples_path(&handle);
+        if path.starts_with(&examples_dir) {
+            return Err("EXAMPLES_PATH".to_string());
+        }
+
         {
             let mut locks = state.file_locks.lock().unwrap();
             if let Some(owner) = locks.get(&path) {

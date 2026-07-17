@@ -24,5 +24,6 @@ commands.allow = [
   "check_environment",
   "set_dirty",
   "close_window",
-  "check_startup_backup"
+  "check_startup_backup",
+  "open_examples"
 ]

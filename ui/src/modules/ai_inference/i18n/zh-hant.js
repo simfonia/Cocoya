@@ -4,8 +4,12 @@ Blockly.Msg["CAT_AI_INFERENCE"] = "AI 推論";
 Blockly.Msg["COLOUR_AI_INFERENCE"] = "#9C27B0";
 
 // Training Blocks
-Blockly.Msg["AI_TRAIN_RUN"] = "影像訓練";
-Blockly.Msg["AI_TRAIN_RUN_TOOLTIP"] = "開始模型訓練（若開啟遠端模式則使用遠端訓練）\n\n欄位說明：\n• 資料集：圖像資料集資料夾路徑\n  支援相對/絕對路徑，Windows 建議用\n  正斜線如 C:/dataset/images\n• 模型：模型輸出資料夾（自動從資料集名稱提取）\n• Epochs：訓練輪數（1-1000）\n• Batch：批次大小（1-512）\n• LR：學習率（0.0001-1）\n• 類型：任務類型（分類器/偵測器/循線）\n• 後端：訓練位置（自動/本地/遠端）\n\n注意：\n• 未存檔時，模型輸出至 temp_scripts/ 資料夾\n• 已存檔時，模型輸出至工作區根目錄";
+Blockly.Msg["AI_TRAIN_RUN"] = "AI 訓練";
+Blockly.Msg["AI_TRAIN_RUN_TOOLTIP"] = "開始模型訓練（若開啟遠端模式則使用遠端訓練）\n\n欄位說明：\n• 資料集：圖像資料集資料夾路徑\n  支援相對/絕對路徑，Windows 建議用\n  正斜線如 C:/dataset/images\n• 模型：模型輸出資料夾（自動從資料集名稱提取）\n• Epochs：訓練輪數（1-1000）\n• Batch：批次大小（1-512）\n• LR：學習率（0.0001-1）\n• Val Split：驗證集比例（0.1-0.5）\n• Dropout：隨機丟棄率（0.0-0.9）\n• Aug：是否啟用資料擴增\n• 類型：任務類型（分類器/偵測器/循線/表格）\n• 後端：訓練位置（自動/本地/遠端）\n\n進階設定：\n• Backbone：骨幹網路模型（MobileNetV2/EfficientNet/ResNet）\n• Optimizer：優化器（Adam/SGD/RMSprop）\n• DNN Layers：自訂全連接層（逗號分隔，如 128,64）\n• Fine-tune：是否解凍骨幹網路微調\n\n注意：\n• 未存檔時，模型輸出至 temp_scripts/ 資料夾\n• 已存檔時，模型輸出至工作區根目錄";
+
+// Section labels
+Blockly.Msg["AI_TRAIN_SECTION_BASIC"] = "▸ 基本設定";
+Blockly.Msg["AI_TRAIN_SECTION_ADVANCED"] = "▸ 進階設定（不熟悉者保留預設值即可）";
 
 // Field labels for training block
 Blockly.Msg["AI_TRAIN_FIELD_DATASET"] = "資料集:";
@@ -15,11 +19,19 @@ Blockly.Msg["AI_TRAIN_FIELD_BATCH"] = "Batch:";
 Blockly.Msg["AI_TRAIN_FIELD_LR"] = "LR:";
 Blockly.Msg["AI_TRAIN_FIELD_TYPE"] = "類型:";
 Blockly.Msg["AI_TRAIN_FIELD_BACKEND"] = "後端:";
+Blockly.Msg["AI_TRAIN_FIELD_VAL_SPLIT"] = "驗證比:";
+Blockly.Msg["AI_TRAIN_FIELD_DROPOUT"] = "Dropout:";
+Blockly.Msg["AI_TRAIN_FIELD_AUG"] = "擴增:";
+Blockly.Msg["AI_TRAIN_FIELD_BACKBONE"] = "骨幹:";
+Blockly.Msg["AI_TRAIN_FIELD_OPTIMIZER"] = "優化器:";
+Blockly.Msg["AI_TRAIN_FIELD_DNN_LAYERS"] = "DNN 層:";
+Blockly.Msg["AI_TRAIN_FIELD_FINE_TUNE"] = "微調:";
 
 // Task Types
 Blockly.Msg["AI_TASK_CLASSIFIER"] = "分類器";
 Blockly.Msg["AI_TASK_DETECTOR"] = "偵測器";
 Blockly.Msg["AI_TASK_LINE_FOLLOWER"] = "循線";
+Blockly.Msg["AI_TASK_TABLE"] = "表格";
 
 // Backend Options
 Blockly.Msg["AI_BACKEND_AUTO"] = "自動 (依【遠端訓練】開關設定)";
@@ -27,7 +39,17 @@ Blockly.Msg["AI_BACKEND_LOCAL"] = "本地";
 Blockly.Msg["AI_BACKEND_REMOTE"] = "遠端";
 
 // Inference Blocks
-Blockly.Msg["AI_MODEL_INIT"] = "初始化模型 %1";
-Blockly.Msg["AI_MODEL_INIT_TOOLTIP"] = "載入訓練好的 TFLite 模型用於推論\n\n欄位說明：\n• 模型路徑：.tflite 模型檔案的路徑\n  支援相對/絕對路徑\n  例如：model/classifier_model\n\n注意事項：\n• 自動載入對應的標籤檔\n• 標籤檔案命名：{model name}_labels.txt\n• 模型檔案命名：{model name}.tflite\n• 回傳模型物件用於推論";
+Blockly.Msg["AI_MODEL_INIT"] = "初始化模型";
+Blockly.Msg["AI_MODEL_INIT_TOOLTIP"] = "載入訓練好的 TFLite 模型用於推論\n\n欄位說明：\n• 模型路徑：.tflite 模型檔案的路徑\n  支援相對/絕對路徑\n  例如：model/classifier_model\n• 類型：任務類型（分類器/偵測器/循線/表格）\n  決定使用的推論引擎\n\n注意事項：\n• 自動載入對應的標籤檔\n• 標籤檔案命名：{model name}_labels.txt\n• 模型檔案命名：{model name}.tflite\n• 回傳模型物件用於推論";
 Blockly.Msg["AI_MODEL_PREDICT"] = "推論 %1";
-Blockly.Msg["AI_MODEL_PREDICT_TOOLTIP"] = "對影像幀執行推論\n\n輸入：\n• FRAME：影像幀（來自 OpenCV 的 numpy 陣列）\n\n輸出：\n• Tuple（標籤，信心度）\n  - 標籤：預測的類別名稱（字串）\n  - 信心度：預測信心度（浮點數 0-1）\n\n使用方式：\n• 使用 py_types_get_item 提取數值\n• 索引 0：類別標籤\n• 索引 1：信心度分數\n\n範例：\n  result = predict(frame)\n  class_id = result[0]\n  confidence = result[1]";
+Blockly.Msg["AI_MODEL_PREDICT_TOOLTIP"] = "對影像幀執行推論\n\n輸入：\n• FRAME：影像幀（來自 OpenCV 的 numpy 陣列）\n\n輸出：\n• 通用推論結果字典（依任務類型包含不同欄位）\n  - 分類器：{type, label, confidence}\n  - 偵測器：{type, objects: [{label, confidence, bbox}]}\n  - 循線：{type, direction, confidence}\n  - 表格：{type, prediction, confidence}\n\n使用方式：\n• 使用「取得標籤」/「取得信心度」/「取得邊界框」/「取得方向」\n  等積木從結果中提取特定數值";
+
+// Extraction blocks
+Blockly.Msg["AI_GET_LABEL"] = "取得標籤 %1";
+Blockly.Msg["AI_GET_LABEL_TOOLTIP"] = "從推論結果中提取標籤字串\n\n輸入：\n• RESULT：推論結果字典\n\n輸出：\n• 字串：預測的類別標籤\n  若無法取得則回傳 'none'";
+Blockly.Msg["AI_GET_CONFIDENCE"] = "取得信心度 %1";
+Blockly.Msg["AI_GET_CONFIDENCE_TOOLTIP"] = "從推論結果中提取信心度分數\n\n輸入：\n• RESULT：推論結果字典\n\n輸出：\n• 數字：信心度分數（0.0-1.0）\n  若無法取得則回傳 0.0";
+Blockly.Msg["AI_GET_BBOX"] = "取得邊界框 %1";
+Blockly.Msg["AI_GET_BBOX_TOOLTIP"] = "從偵測結果中提取第一個邊界框\n\n輸入：\n• RESULT：推論結果字典（偵測器類型）\n\n輸出：\n• Tuple (x1, y1, x2, y2)：邊界框座標\n  若無法取得則回傳 (0,0,0,0)";
+Blockly.Msg["AI_GET_DIRECTION"] = "取得方向 %1";
+Blockly.Msg["AI_GET_DIRECTION_TOOLTIP"] = "從循線結果中提取方向\n\n輸入：\n• RESULT：推論結果字典（循線類型）\n\n輸出：\n• 字串：方向（'left', 'right', 'forward', 'none'）\n  若無法取得則回傳 'none'";

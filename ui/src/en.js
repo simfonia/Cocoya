@@ -69,6 +69,7 @@
     "TYPE_LBL_SORT": "Sorting",
 
     // Toolbar & UI
+    "TLB_EXAMPLES": "Open Examples",
     "TLB_NEW": "New Project",
     "TLB_OPEN": "Open Project",
     "TLB_SAVE": "Save Project",
@@ -106,6 +107,18 @@
     "TLB_AI_REMOTE_TRAINING": "Remote Training",
     "TLB_AI_DATASET_MANAGER": "Dataset Manager",
     "TLB_AI_TRAINING_RESULT": "Training Results",
+    "TLB_NO_PORT": "(No Port)",
+    "TLB_SERIAL_PLACEHOLDER": "(No Port)",
+    "TLB_TERMINAL_TITLE": "TERMINAL",
+    "TLB_CLEAR_CONSOLE": "Clear Console",
+    "TLB_CLOSE_PANEL": "Close Panel",
+    "TLB_DRAG_RESIZE": "Drag to resize",
+    "TLB_COPY_CODE": "Copy Code",
+    "TLB_INDENT": "Indent:",
+    "TLB_INDENT_2": "2 Spaces",
+    "TLB_INDENT_4": "4 Spaces",
+    "TLB_SELECT_OPTION": "Select Option",
+    "MSG_SAVE_CONFIRM_DETAIL": "Changes you make will be lost if not saved.",
 
     // Environment Diagnosis
     "DIAG_TITLE": "Environment Diagnostic Assistant",

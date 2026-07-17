@@ -314,8 +314,9 @@ dependencies = [
 
 [[package]]
 name = "cocoya"
-version = "0.7.6"
+version = "0.7.7"
 dependencies = [
+ "open",
  "serde",
  "serde_json",
  "serialport",
@@ -324,6 +325,7 @@ dependencies = [
  "tauri-plugin-dialog",
  "tauri-plugin-fs",
  "tauri-plugin-shell",
+ "uuid",
 ]
 
 [[package]]
