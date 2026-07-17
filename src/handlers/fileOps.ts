@@ -24,6 +24,29 @@ export class FileOpsHandler {
 
     public async performSave(xml: string): Promise<boolean> {
         if (this.manager.currentFilePath) {
+            // 檢查是否要寫入 examples 目錄
+            const examplesDir = path.join(this.manager.context.extensionPath, 'examples');
+            
+            if (this.manager.currentFilePath.startsWith(examplesDir)) {
+                // 要寫入 examples 目錄，顯示警告對話框
+                const choice = await vscode.window.showWarningMessage(
+                    '此為 Cocoya 內建範例目錄，是否要覆蓋原始範例？',
+                    { modal: true },
+                    '覆蓋範例', '另存新檔'
+                );
+                
+                if (choice === '另存新檔') {
+                    await this.handleSaveFileAs({ xml });
+                    return true;
+                } else if (choice === '覆蓋範例') {
+                    fs.writeFileSync(this.manager.currentFilePath, xml, 'utf8');
+                    this.handleClearBackup();
+                    return true;
+                }
+                return false;  // 取消
+            }
+            
+            // 一般目錄，直接儲存
             fs.writeFileSync(this.manager.currentFilePath, xml, 'utf8');
             this.handleClearBackup();
             return true;

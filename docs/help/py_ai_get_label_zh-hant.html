@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>取得標籤 - py_ai_get_label 積木說明</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 20px; max-width: 800px; margin: 0 auto; }
+  h1 { color: #9C27B0; border-bottom: 2px solid #9C27B0; padding-bottom: 8px; }
+  .section { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .code { background: #f8f8f8; padding: 12px; border-radius: 4px; font-family: Consolas, monospace; font-size: 13px; overflow-x: auto; }
+  .note { background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px 14px; margin: 12px 0; border-radius: 0 4px 4px 0; }
+</style>
+</head>
+<body>
+  <h1>🏷️ 取得標籤積木 (py_ai_get_label)</h1>
+  <div class="section">
+    <h2>功能說明</h2>
+    <p>從推論結果字典中提取預測的類別標籤字串。</p>
+    <p>輸入：推論結果（py_ai_model_predict 的輸出）</p>
+    <p>輸出：字串 — 預測的類別名稱（例如 "cat", "dog"），若無法取得則回傳 "none"</p>
+  </div>
+  <div class="section">
+    <h2>使用範例</h2>
+    <div class="code">
+result = predict(frame)        <span style="color:#888;"># 推論</span><br>
+label = get_label(result)      <span style="color:#888;"># 取得標籤</span><br>
+print("預測結果:", label)</div>
+  </div>
+  <div class="section">
+    <div class="note">💡 主要用於分類器任務，但偵測器結果也可提取第一個物件的標籤。</div>
+  </div>
+</body>
+</html>

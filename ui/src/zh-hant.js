@@ -75,6 +75,7 @@
     "TYPE_LBL_SORT": "排序功能",
 
     // 工具列與 UI 文字
+    "TLB_EXAMPLES": "開啟範例",
     "TLB_NEW": "開新專案",
     "TLB_OPEN": "開啟專案",
     "TLB_SAVE": "儲存專案",
@@ -109,6 +110,18 @@
     "TLB_AI_REMOTE_TRAINING": "遠端訓練",
     "TLB_AI_DATASET_MANAGER": "資料集管理",
     "TLB_AI_TRAINING_RESULT": "訓練結果",
+    "TLB_NO_PORT": "(無序列埠)",
+    "TLB_SERIAL_PLACEHOLDER": "(無序列埠)",
+    "TLB_TERMINAL_TITLE": "終端機",
+    "TLB_CLEAR_CONSOLE": "清除終端機",
+    "TLB_CLOSE_PANEL": "關閉面板",
+    "TLB_DRAG_RESIZE": "拖動以調整寬度",
+    "TLB_COPY_CODE": "複製程式碼",
+    "TLB_INDENT": "縮排：",
+    "TLB_INDENT_2": "2 空格",
+    "TLB_INDENT_4": "4 空格",
+    "TLB_SELECT_OPTION": "選擇選項",
+    "MSG_SAVE_CONFIRM_DETAIL": "您對此專案所做的變更若不儲存將會遺失。",
 
     // 環境診斷
     "DIAG_TITLE": "環境診斷與安裝助手",

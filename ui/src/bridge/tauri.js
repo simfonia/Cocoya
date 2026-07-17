@@ -26,7 +26,7 @@ export class BridgeTauri extends BaseBridge {
             supportsStableMode: false,
             supportsEraseFS: false,
             isTauri: true,
-            isRemoteAware: false // Tauri 獨立版初期不支援雲端模式
+            isRemoteAware: true // Tauri 亦保留雲端/SSH 擴充可能性
         };
     }
 
@@ -171,7 +171,10 @@ export class BridgeTauri extends BaseBridge {
                         const filename = await this.tauriInvoke('save_file', { xml: data.xml, saveAs: isSaveAs });
                         this._dispatchToFrontend({ command: 'saveCompleted', filename: filename });
                     } catch (e) {
-                        if (e !== 'Canceled') {
+                        if (e === 'EXAMPLES_PATH') {
+                            // 要寫入 examples 目錄，顯示警告對話框
+                            this._handleExamplesSaveDialog(data.xml);
+                        } else if (e !== 'Canceled') {
                             console.error('[Bridge] Save failed:', e);
                             this.alert((window.Blockly?.Msg['BKY_SAVE_FAILED'] || 'Save failed: ') + e);
                         }
@@ -217,6 +220,14 @@ export class BridgeTauri extends BaseBridge {
 
                 case 'checkUpdate':
                     await this._handleCheckUpdate();
+                    break;
+
+                case 'openHelp':
+                    try {
+                        await this.tauriInvoke('open_help', { helpId: data.helpId });
+                    } catch (e) {
+                        console.error('[Bridge] Failed to open help:', e);
+                    }
                     break;
 
                 case 'openExternal':
@@ -305,6 +316,39 @@ export class BridgeTauri extends BaseBridge {
                 case 'confirm':
                 case 'prompt':
                     await this._handleNativeDialogs(command, data);
+                    break;
+
+                case 'openExamples':
+                    try {
+                        const res = await this.tauriInvoke('open_examples');
+                        this._dispatchToFrontend({ 
+                            command: 'loadWorkspace', 
+                            xml: res.xml, 
+                            filename: res.filename, 
+                            platform: res.platform 
+                        });
+                    } catch (e) {
+                        if (e !== 'Canceled') console.error('[Bridge] Open examples failed:', e);
+                    }
+                    break;
+
+                case 'openDatasetManager':
+                    // 前端已有 CocoyaDataset 模組，直接 dispatch
+                    this._dispatchToFrontend({ command: 'openDatasetManager' });
+                    break;
+
+                case 'datasetListCameras':
+                case 'datasetStartCamera':
+                case 'datasetStopCamera':
+                case 'datasetCaptureImage':
+                case 'datasetDeleteImage':
+                case 'datasetExport':
+                case 'datasetUploadArchive':
+                case 'pickFolder':
+                case 'openTrainingReport':
+                case 'openLatestTrainingReport':
+                    // Dataset 與訓練報告相關：先 dispatch 到前端，後續逐步實作後端支援
+                    this._dispatchToFrontend({ command, ...data });
                     break;
 
                 case 'newFile':
@@ -489,6 +533,40 @@ export class BridgeTauri extends BaseBridge {
                 requestId: data.requestId, 
                 result: (command === 'prompt' && ok) ? data.defaultValue : ok 
             });
+        }
+    }
+
+    async _handleExamplesSaveDialog(xml) {
+        try {
+            const { ask, message } = await import('@tauri-apps/plugin-dialog');
+            const okLabel = window.Blockly?.Msg['MSG_SAVE'] || '覆蓋範例';
+            const cancelLabel = window.Blockly?.Msg['MSG_CANCEL'] || '另存新檔';
+            const overwrite = await ask(
+                '此為 Cocoya 內建範例目錄，是否要覆蓋原始範例？',
+                { 
+                    title: 'Cocoya', 
+                    kind: 'warning', 
+                    okLabel, 
+                    cancelLabel 
+                }
+            );
+            
+            if (overwrite) {
+                // 覆蓋範例：直接呼叫 save_file 但標記 saveAs=false 略過檢查
+                try {
+                    const filename = await this.tauriInvoke('save_file', { xml, saveAs: false });
+                    this._dispatchToFrontend({ command: 'saveCompleted', filename: filename });
+                } catch (e2) {
+                    if (e2 !== 'Canceled' && e2 !== 'EXAMPLES_PATH') {
+                        this.alert((window.Blockly?.Msg['BKY_SAVE_FAILED'] || 'Save failed: ') + e2);
+                    }
+                }
+            } else {
+                // 另存新檔
+                this.send('saveFileAs', { xml });
+            }
+        } catch (e) {
+            console.error('[Bridge] Examples save dialog error:', e);
         }
     }
 

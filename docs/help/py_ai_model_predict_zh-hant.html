@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>推論 - py_ai_model_predict 積木說明</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 20px; max-width: 800px; margin: 0 auto; }
+  h1 { color: #9C27B0; border-bottom: 2px solid #9C27B0; padding-bottom: 8px; }
+  h2 { color: #7B1FA2; margin-top: 24px; }
+  .section { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .param-table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  .param-table th, .param-table td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+  .param-table th { background: #f3e5f5; color: #7B1FA2; }
+  .code { background: #f8f8f8; padding: 12px; border-radius: 4px; font-family: Consolas, monospace; font-size: 13px; overflow-x: auto; }
+  .note { background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px 14px; margin: 12px 0; border-radius: 0 4px 4px 0; }
+</style>
+</head>
+<body>
+  <h1>🔮 推論積木 (py_ai_model_predict)</h1>
+
+  <div class="section">
+    <h2>功能說明</h2>
+    <p>對輸入的影像幀執行 AI 推論，回傳通用結果字典。</p>
+    <p>此積木需搭配 <strong>py_ai_model_init</strong> 使用，且必須先初始化模型。</p>
+  </div>
+
+  <div class="section">
+    <h2>輸入</h2>
+    <table class="param-table">
+      <tr><th>參數</th><th>類型</th><th>說明</th></tr>
+      <tr><td>FRAME</td><td>numpy array</td><td>來自 OpenCV 的影像幀（如 camera.read() 的結果）</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>輸出格式（依任務類型）</h2>
+    <table class="param-table">
+      <tr><th>任務類型</th><th>回傳格式</th></tr>
+      <tr><td>分類器</td><td><code>{"type": "classifier", "label": "cat", "confidence": 0.95}</code></td></tr>
+      <tr><td>偵測器</td><td><code>{"type": "detector", "objects": [{"label": "cat", "confidence": 0.9, "bbox": [10,20,100,200]}]}</code></td></tr>
+      <tr><td>循線</td><td><code>{"type": "line_follower", "direction": "left", "confidence": 0.8}</code></td></tr>
+      <tr><td>表格</td><td><code>{"type": "table", "prediction": 0.85, "confidence": 0.9}</code></td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>使用方式</h2>
+    <p>使用解析積木從結果中提取特定數值：</p>
+    <ul>
+      <li><strong>get_label(result)</strong> — 取得預測標籤（分類器）</li>
+      <li><strong>get_confidence(result)</strong> — 取得信心度</li>
+      <li><strong>get_bbox(result)</strong> — 取得邊界框（偵測器）</li>
+      <li><strong>get_direction(result)</strong> — 取得方向（循線）</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>注意事項</h2>
+    <div class="note">⚠️ 必須先執行 py_ai_model_init 初始化模型。</div>
+    <div class="note">⚠️ 輸入的影像尺寸會自動縮放為模型所需的尺寸。</div>
+  </div>
+</body>
+</html>

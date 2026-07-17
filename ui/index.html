@@ -29,27 +29,25 @@
                         <img src="src/icons/load_project_24dp_1F1F1F.png" style="width: 14px; opacity: 0.5;">
                         <span id="current-filename">%{BKY_TLB_FILE_NEW}</span>
                     </div>
+                    <div class="toolbar-btn" id="btn-examples" title="%{BKY_TLB_EXAMPLES}">
+                        <img src="src/icons/examples_24dp_1F1F1F.png">
+                    </div>
                     <div class="toolbar-btn" id="btn-new" title="%{BKY_TLB_NEW}">
-                        <img src="src/icons/new_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="src/icons/new_24dp_FE2F89.png" class="hover-icon">
+                        <img src="src/icons/pen-new-square-outline.png">
                     </div>
                     <div class="toolbar-btn" id="btn-open" title="%{BKY_TLB_OPEN}">
-                        <img src="src/icons/load_project_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="src/icons/load_project_24dp_FE2F89.png" class="hover-icon">
+                        <img src="src/icons/open-file.png">
                     </div>
                     <div class="toolbar-btn" id="btn-save" title="%{BKY_TLB_SAVE}">
-                        <img src="src/icons/save_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="src/icons/save_24dp_FE2F89.png" class="hover-icon">
+                        <img src="src/icons/save.png">
                     </div>
                     <div class="toolbar-btn" id="btn-save-as" title="%{BKY_TLB_SAVE_AS}">
-                        <img src="src/icons/save_as_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="src/icons/save_as_24dp_FE2F89.png" class="hover-icon">
+                        <img src="src/icons/save-as.png">
                     </div>
                     <div class="toolbar-separator"></div>
                     <div class="toolbar-dropdown">
                         <div class="toolbar-btn" id="btn-settings-root" title="%{BKY_TLB_SETTINGS}">
-                            <img src="src/icons/settings_24dp_1F1F1F.png" class="normal-icon">
-                            <img src="src/icons/settings_24dp_FE2F89.png" class="hover-icon">
+                            <img src="src/icons/settings_24dp_1F1F1F.png">
                         </div>
                         <div class="dropdown-content">
                             <div class="dropdown-item" id="btn-set-python-path">
@@ -57,7 +55,7 @@
                                 <span>%{BKY_TLB_SETTINGS_PYTHON_PATH}</span>
                             </div>
                             <div class="dropdown-item" id="btn-diagnose">
-                                <img src="src/icons/dashboard_customize_24dp_FE2F89.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                <img src="src/icons/module-puzzle-1.png" style="width: 16px; height: 16px; margin-right: 8px;">
                                 <span>%{BKY_TLB_DIAGNOSE}</span>
                             </div>
                             <div class="dropdown-item" id="btn-toggle-scroll-options">
@@ -67,17 +65,17 @@
                             <div class="dropdown-separator"></div>
                             <div class="dropdown-submenu" id="group-firmware-settings">
                                 <div class="dropdown-item submenu-title">
-                                    <img src="src/icons/hr_resting_24dp_FE2F89.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                    <img src="src/icons/hardware-chip-outline.png" style="width: 16px; height: 16px; margin-right: 8px;">
                                     <span>%{BKY_TLB_SETTINGS_FIRMWARE_GROUP}</span>
                                     <span style="margin-left: auto; font-size: 10px;">▶</span>
                                 </div>
                                 <div class="submenu-content">
                                     <div class="dropdown-item" id="btn-erase-filesystem" title="%{BKY_TLB_SETTINGS_ERASE_FS_TOOLTIP}">
-                                        <img src="src/icons/delete_24dp_FE2F89.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                        <img src="src/icons/remove-from-trash.png" style="width: 16px; height: 16px; margin-right: 8px;">
                                         <span>%{BKY_TLB_SETTINGS_ERASE_FS}</span>
                                     </div>
                                     <div class="dropdown-item" id="btn-reset-firmware">
-                                        <img src="src/icons/hr_resting_24dp_FE2F89.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                        <img src="src/icons/reset.png" style="width: 16px; height: 16px; margin-right: 8px;">
                                         <span>%{BKY_TLB_SETTINGS_RESET_FIRMWARE}</span>
                                     </div>
                                 </div>
@@ -91,58 +89,54 @@
                 <!-- 右側群組：Serial 與 執行 -->
                 <div class="toolbar-group">
                     <!-- AI 功能下拉選單 (僅 PC 模式顯示) -->
-                    <div class="toolbar-dropdown" id="ai-dropdown" style="display: none;">
-                        <div class="toolbar-btn" id="btn-ai-menu" title="AI 功能">
-                            <img src="src/icons/psychology_24dp_1F1F1F.png" class="normal-icon">
-                            <img src="src/icons/psychology_24dp_FE2F89.png" class="hover-icon">
+                        <div class="toolbar-dropdown" id="ai-dropdown" style="display: none;" title="%{BKY_TLB_AI_MENU}">
+                            <div class="toolbar-btn" id="btn-ai-menu" title="%{BKY_TLB_AI_MENU}">
+                                <img src="src/icons/ai-education.png">
+                            </div>
+                            <div class="dropdown-content ai-dropdown-content">
+                                <div class="dropdown-item" id="btn-cloud-ai-toggle" title="%{BKY_TLB_AI_REMOTE_TRAINING}">
+                                    <img src="src/icons/cloud-24.png" style="width: 16px; height: 16px;">
+                                    <span style="flex: 1;">%{BKY_TLB_AI_REMOTE_TRAINING}</span>
+                                    <span id="cloud-ai-status" style="color: #999; font-size: 11px;">○</span>
+                                </div>
+                                <div class="dropdown-separator"></div>
+                                <div class="dropdown-item" id="btn-dataset-manager-dropdown" title="%{BKY_TLB_AI_DATASET_MANAGER}">
+                                    <img src="src/icons/data-structured.png" style="width: 16px; height: 16px;">
+                                    <span>%{BKY_TLB_AI_DATASET_MANAGER}</span>
+                                </div>
+                                <div class="dropdown-item" id="btn-training-result" title="%{BKY_TLB_AI_TRAINING_RESULT}">
+                                    <img src="src/icons/chart-line-data-01.png" style="width: 16px; height: 16px;">
+                                    <span>%{BKY_TLB_AI_TRAINING_RESULT}</span>
+                                </div>
+                            </div>
                         </div>
-                        <div class="dropdown-content ai-dropdown-content">
-                            <div class="dropdown-item" id="btn-cloud-ai-toggle">
-                                <span style="flex: 1;">☁️ 遠端訓練</span>
-                                <span id="cloud-ai-status" style="color: #999; font-size: 11px;">○</span>
-                            </div>
-                            <div class="dropdown-separator"></div>
-                            <div class="dropdown-item" id="btn-dataset-manager-dropdown">
-                                <img src="src/icons/dataset_24dp_FE2F89.png" style="width: 16px; height: 16px; margin-right: 8px;">
-                                <span>📊 資料集管理</span>
-                            </div>
-                            <div class="dropdown-item" id="btn-training-result">
-                                <img src="src/icons/data_exploration_24dp_FE2F89.png" style="width: 16px; height: 16px; margin-right: 8px;">
-                                <span>📈 訓練結果</span>
-                            </div>
-                        </div>
-                    </div>
 
-                    <div class="toolbar-separator" id="ai-dropdown-separator" style="display: none;"></div>
+                        <div class="toolbar-separator" id="ai-dropdown-separator" style="display: none;"></div>
                     
                     <!-- 隱藏的 checkbox 用於向後相容 (dataset_manager 模組依賴此元素) -->
                     <input type="checkbox" id="cloud-ai-toggle" style="display: none;">
                     
                     <div class="toolbar-btn" id="btn-refresh-serial" title="%{BKY_TLB_SERIAL_REFRESH}">
-                        <img src="src/icons/connect_serial_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="src/icons/connect_serial_24dp_FE2F89.png" class="hover-icon">
+                        <img src="src/icons/connect_serial_24dp_1F1F1F.png">
                     </div>
                     <select id="serial-selector" class="serial-select" title="%{BKY_TLB_SERIAL_PORT}">
-                        <option value="">(No Port)</option>
+                        <option value="">%{BKY_TLB_NO_PORT}</option>
                     </select>
                     <div class="toolbar-separator"></div>
                     <div class="toolbar-btn" id="btn-run" title="%{BKY_TLB_RUN}">
-                        <img src="src/icons/run_blocks_24dp_75FB4C.png" class="normal-icon">
-                        <img src="src/icons/run_blocks_24dp_FE2F89.png" class="hover-icon">
+                        <img src="src/icons/run_blocks_24dp_75FB4C.png">
                     </div>
                     <div class="toolbar-btn" id="btn-stop" title="%{BKY_TLB_STOP_PROGRAM}">
-                        <img src="src/icons/stop_24dp_EA3323.png" class="normal-icon">
+                        <img src="src/icons/stop_24dp_EA3323.png">
                     </div>
                     <div class="toolbar-btn" id="btn-terminal" title="%{BKY_TLB_TERMINAL}">
-                        <img src="src/icons/terminal_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="src/icons/terminal_24dp_FE2F89.png" class="hover-icon">
+                        <img src="src/icons/terminal_24dp_1F1F1F.png">
                     </div>
                     <div class="toolbar-btn" id="btn-update" title="%{BKY_TLB_UPDATE}">
                         <img src="src/icons/published_with_changes_24dp_1F1F1F.png" class="update-icon">
                     </div>
                     <div class="toolbar-btn" id="btn-close" title="%{BKY_TLB_CLOSE_EDITOR}" style="display: none;">
-                        <img src="src/icons/dangerous_24dp_1F1F1F.png" class="normal-icon">
-                        <img src="src/icons/dangerous_24dp_FE2F89.png" class="hover-icon">
+                        <img src="src/icons/dangerous_24dp_1F1F1F.png">
                     </div>
                 </div>
             </div>
@@ -152,16 +146,16 @@
                 <div id="terminalHeader">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <img src="src/icons/terminal_24dp_FE2F89.png" style="width: 14px;">
-                        <span id="terminalTitle">TERMINAL</span>
+                        <span id="terminalTitle">%{BKY_TLB_TERMINAL_TITLE}</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px;">
-                        <button class="terminal-tool-btn" id="btn-pause-terminal" title="Pause Auto-scroll">
+                        <button class="terminal-tool-btn" id="btn-pause-terminal" title="%{BKY_TLB_PAUSE_SCROLL}">
                             <img src="src/icons/list_arrow_24dp_FE2F89.png" style="width: 16px; height: 16px; opacity: 0.8;">
                         </button>
-                        <button class="terminal-tool-btn" id="btn-clear-terminal" title="Clear Console">
-                            <img src="src/icons/delete_24dp_FE2F89.png" style="width: 16px; height: 16px;">
+                        <button class="terminal-tool-btn" id="btn-clear-terminal" title="%{BKY_TLB_CLEAR_CONSOLE}">
+                            <img src="src/icons/brush-3-ai-line_ff007c.png" style="width: 16px; height: 16px;">
                         </button>
-                        <button class="terminal-tool-btn" id="btn-close-terminal" title="Close Panel">
+                        <button class="terminal-tool-btn" id="btn-close-terminal" title="%{BKY_TLB_CLOSE_PANEL}">
                             <span style="font-size: 16px; font-weight: bold;">×</span>
                         </button>
                     </div>
@@ -169,28 +163,27 @@
                 <div id="terminalContent"></div>
             </div>
         </div>
-        <div id="panel-resizer" title="拖動以調整寬度"></div>
+        <div id="panel-resizer" title="%{BKY_TLB_DRAG_RESIZE}"></div>
         <div id="codeArea">
-            <div id="code-toggle" title="切換面板">
+            <div id="code-toggle" title="%{BKY_TLB_TOGGLE_CODE}">
                 <span class="arrow">▶</span>
             </div>
             <div id="codeHeader">
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <div class="toolbar-btn" id="btn-close-code" title="Close Panel" style="width: 20px; height: 20px; margin-right: 4px;">
+                    <div class="toolbar-btn" id="btn-close-code" title="%{BKY_TLB_CLOSE_PANEL}" style="width: 20px; height: 20px; margin-right: 4px;">
                         <span style="font-size: 16px; font-weight: bold;">×</span>
                     </div>
                     <span>%{BKY_TLB_PYTHON_PREVIEW}</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <div class="toolbar-btn" id="btn-copy-code" title="Copy Code" style="width: 24px; height: 24px;">
-                        <img src="src/icons/content_copy_24dp_1F1F1F.png" class="normal-icon" style="width: 18px; height: 18px;">
-                        <img src="src/icons/content_copy_24dp_FE2F89.png" class="hover-icon" style="width: 18px; height: 18px;">
+                    <div class="toolbar-btn" id="btn-copy-code" title="%{BKY_TLB_COPY_CODE}" style="width: 24px; height: 24px;">
+                        <img src="src/icons/copy-duotone.png" style="width: 18px; height: 18px;">
                     </div>
                     <div class="toolbar-separator" style="height: 16px; margin: 0;"></div>
-                    <span style="font-size: 10px;">Indent:</span>
+                    <span style="font-size: 10px;">%{BKY_TLB_INDENT}</span>
                     <select id="indent-selector" class="indent-select">
-                        <option value="2">2 Spaces</option>
-                        <option value="4" selected>4 Spaces</option>
+                        <option value="2">%{BKY_TLB_INDENT_2}</option>
+                        <option value="4" selected>%{BKY_TLB_INDENT_4}</option>
                     </select>
                 </div>
             </div>
@@ -203,10 +196,10 @@
     <div id="save-confirm-modal" class="modal-overlay">
         <div class="modal-content" style="max-width: 450px; padding: 30px; text-align: left;">
             <div style="display: flex; gap: 20px; align-items: flex-start;">
-                <img src="src/icons/save_24dp_FE2F89.png" style="width: 32px; height: 32px;">
+                <img src="src/icons/save.png" style="width: 32px; height: 32px;">
                 <div>
                     <h3 id="save-confirm-message" style="margin: 0 0 10px 0; font-size: 16px;">%{BKY_MSG_SAVE_CONFIRM}</h3>
-                    <p style="margin: 0; font-size: 13px; color: #666;" id="save-confirm-detail">您對此專案所做的變更若不儲存將會遺失。</p>
+                    <p style="margin: 0; font-size: 13px; color: #666;" id="save-confirm-detail">%{BKY_MSG_SAVE_CONFIRM_DETAIL}</p>
                 </div>
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 30px;">
@@ -239,7 +232,7 @@
     <div id="quick-pick-modal" class="modal-overlay">
         <div class="modal-content" style="max-width: 400px; padding: 0; overflow: hidden;">
             <div class="modal-header" style="padding: 15px 20px; border-bottom: 1px solid #eee; margin-bottom: 0;">
-                <span id="quick-pick-title">Select Option</span>
+                <span id="quick-pick-title">%{BKY_TLB_SELECT_OPTION}</span>
             </div>
             <div id="quick-pick-body" style="max-height: 300px; overflow-y: auto;">
                 <div id="quick-pick-list" class="quick-pick-list">

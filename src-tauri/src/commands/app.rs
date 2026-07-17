@@ -48,3 +48,25 @@ pub async fn pick_python_path(handle: AppHandle) -> Result<String, String> {
         Err("Canceled".into())
     }
 }
+
+#[tauri::command]
+pub fn open_help(handle: AppHandle, help_id: String) -> Result<(), String> {
+    use std::fs;
+    use tauri::Manager;
+    
+    // 組合檔案路徑: docs/help/{help_id}.html
+    let resource_path = handle
+        .path()
+        .resolve("docs/help", tauri::path::BaseDirectory::Resource)
+        .map_err(|e| e.to_string())?;
+    
+    let help_path = resource_path.join(format!("{}.html", help_id));
+    
+    if !help_path.exists() {
+        return Err(format!("Help file not found: {:?}", help_path));
+    }
+    
+    // 使用預設瀏覽器開啟
+    open::that(&help_path).map_err(|e| e.to_string())?;
+    Ok(())
+}

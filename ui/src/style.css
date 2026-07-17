@@ -230,6 +230,10 @@ body.vscode-high-contrast #file-breadcrumb {
     color: #FE2F89;
 }
 
+.dropdown-item:hover img {
+    filter: brightness(0) saturate(100%) invert(24%) sepia(89%) saturate(6543%) hue-rotate(317deg) brightness(98%) contrast(93%);
+}
+
 .dropdown-separator {
     height: 1px;
     background-color: #eee;
@@ -274,21 +278,19 @@ body.vscode-high-contrast #file-breadcrumb {
     display: block;
 }
 
-.toolbar-btn .hover-icon {
+/* 所有 toolbar-btn（除了 run/stop）hover 時 img 變 #FE2F89 色 */
+.toolbar-btn:not(#btn-run):not(#btn-stop):hover img {
+    filter: brightness(0) saturate(100%) invert(24%) sepia(89%) saturate(6543%) hue-rotate(317deg) brightness(98%) contrast(93%);
+}
+
+/* btn-run 保留原有的 normal/hover-icon 切換 */
+#btn-run .hover-icon {
     display: none;
 }
-
-/* 預設 Hover 顯示切換：只有當同時存在兩種圖示時才切換 */
-.toolbar-btn:hover .normal-icon {
+#btn-run:hover .normal-icon {
     display: none;
 }
-
-/* 如果按鈕內只有一個 img，或者沒有 hover-icon，則維持顯示 normal-icon */
-.toolbar-btn:not(:has(.hover-icon)):hover .normal-icon {
-    display: block;
-}
-
-.toolbar-btn:hover .hover-icon {
+#btn-run:hover .hover-icon {
     display: block;
 }
 
@@ -1225,8 +1227,17 @@ body.vscode-high-contrast .normal-icon:not([src*="python"]):not([src*="stop_24dp
     filter: invert(1) brightness(0.9);
 }
 
+#btn-run:hover {
+    background-color: #e8f5e9 !important; /* 淺綠色背景 */
+}
+
 #btn-stop:hover {
     background-color: #fdecea !important; /* 淺紅色背景 */
+}
+
+body.vscode-dark #btn-run:hover,
+body.vscode-high-contrast #btn-run:hover {
+    background-color: #1b3a1f !important; /* 深綠色背景 */
 }
 
 body.vscode-dark #btn-stop:hover,

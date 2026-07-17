@@ -1,0 +1,27 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
+  <block type="py_definition_zone" id="eg[W-0dB,+`[|r=obc}$" x="100" y="20">
+    <statement name="DEFS">
+      <block type="py_coding_comment" id="81bIbE@0M:1PzYxWb$yp">
+        <field name="TEXT"></field>
+        <next>
+          <block type="py_ai_train_run" id="gQK/*E+/lV?fo~+eDuU1">
+            <field name="DATASET_DIR">dataset/classifier_dataset</field>
+            <field name="EPOCHS">20</field>
+            <field name="BATCH_SIZE">32</field>
+            <field name="LEARNING_RATE">0.001</field>
+            <field name="VALIDATION_SPLIT">0.2</field>
+            <field name="DROPOUT">0.2</field>
+            <field name="AUGMENTATION">TRUE</field>
+            <field name="TASK_TYPE">classifier</field>
+            <field name="BACKEND">auto</field>
+            <field name="BACKBONE">mobilenetv2</field>
+            <field name="OPTIMIZER">adam</field>
+            <field name="DNN_LAYERS">128,64</field>
+            <field name="FINE_TUNE">FALSE</field>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+  <block type="py_main" id="%fQ}Uj013_+LWAO:~2-W" x="100" y="140"></block>
+</xml>

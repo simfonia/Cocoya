@@ -42,11 +42,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "resources": {
+"resources": {
       "../resources/deploy_mcu.py": "resources/deploy_mcu.py",
       "../ui/src/core_manifest.json": "resources/core_manifest.json",
       "../resources/firmware": "resources/firmware",
-      "../ui/src/modules": "resources/modules"
+      "../ui/src/modules": "resources/modules",
+      "../docs/help": "docs/help",
+      "../examples": "examples"
     }
   }
 }
