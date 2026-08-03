@@ -30,6 +30,7 @@ Blockly.Python.forBlock['py_ai_train_run'] = function(block, generator) {
   const optimizer = block.getFieldValue('OPTIMIZER');
   const dnnLayers = block.getFieldValue('DNN_LAYERS');
   const fineTune = block.getFieldValue('FINE_TUNE');
+  const modelOutput = block.getFieldValue('MODEL_OUTPUT');
 
   const useRemote = (window.CocoyaUI && window.CocoyaUI.cloudAiEnabled) ? 'True' : 'False';
 
@@ -44,7 +45,7 @@ Blockly.Python.forBlock['py_ai_train_run'] = function(block, generator) {
 
   // 注入 train_model 函式定義
   if (!generator.definitions_['train_model_func']) {
-    generator.definitions_['train_model_func'] = 'def train_model(dataset_dir, model_dir, task_type, backend, epochs, batch_size, learning_rate, validation_split, dropout, augmentation, backbone, optimizer, dnn_layers, fine_tune):\n' +
+    generator.definitions_['train_model_func'] = 'def train_model(dataset_dir, model_dir, task_type, backend, epochs, batch_size, learning_rate, validation_split, dropout, augmentation, backbone, optimizer, dnn_layers, fine_tune, model_output):\n' +
       '    import subprocess\n' +
       '    import sys\n' +
       '    import os\n' +
@@ -67,11 +68,31 @@ Blockly.Python.forBlock['py_ai_train_run'] = function(block, generator) {
       '        return False\n' +
       '    \n' +
       '    # 呼叫訓練腳本\n' +
-      '    # 使用絕對路徑，避免工作目錄問題\n' +
-      '    script_path = os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "..", "resources", "train_templates", task_type, script_name))\n' +
-      '    \n' +
-      '    if not os.path.exists(script_path):\n' +
-      '        print(f"錯誤: 找不到訓練腳本 {script_path}")\n' +
+      '    # 使用多候選路徑搜尋，相容 VSIX 與 Tauri 開發/生產模式\n' +
+      '    script_path = None\n' +
+      '    candidates = [\n' +
+      '        os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "..", "resources", "train_templates", task_type, script_name)),\n' +
+      '        os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "..", "..", "resources", "train_templates", task_type, script_name)),\n' +
+      '        os.path.abspath(os.path.join(os.getcwd(), "resources", "train_templates", task_type, script_name)),\n' +
+      '    ]\n' +
+      '    for c in candidates:\n' +
+      '        if os.path.exists(c):\n' +
+      '            script_path = c\n' +
+      '            break\n' +
+      '    # 從 current_dir 向上逐層搜尋 resources/train_templates（相容 Tauri 專案目錄模式）\n' +
+      '    if script_path is None:\n' +
+      '        cwd = os.getcwd()\n' +
+      '        while True:\n' +
+      '            candidate = os.path.join(cwd, "resources", "train_templates", task_type, script_name)\n' +
+      '            if os.path.exists(candidate):\n' +
+      '                script_path = candidate\n' +
+      '                break\n' +
+      '            parent = os.path.dirname(cwd)\n' +
+      '            if parent == cwd:\n' +
+      '                break\n' +
+      '            cwd = parent\n' +
+      '    if script_path is None:\n' +
+      '        print(f"錯誤: 找不到訓練腳本，嘗試過: {candidates}")\n' +
       '        return False\n' +
       '    \n' +
       '    cmd = [\n' +
@@ -88,7 +109,8 @@ Blockly.Python.forBlock['py_ai_train_run'] = function(block, generator) {
       '        "--backbone", backbone,\n' +
       '        "--optimizer", optimizer,\n' +
       '        "--dnn_layers", dnn_layers,\n' +
-      '        "--fine_tune", str(fine_tune).lower()\n' +
+      '        "--fine_tune", str(fine_tune).lower(),\n' +
+      '        "--model_output", model_output\n' +
       '    ]\n' +
       '    \n' +
       '    print("執行訓練命令: " + " ".join(cmd))\n' +
@@ -123,11 +145,12 @@ Blockly.Python.forBlock['py_ai_train_run'] = function(block, generator) {
     '    learning_rate=' + learningRate + ',\n' +
     '    validation_split=' + validationSplit + ',\n' +
     '    dropout=' + dropout + ',\n' +
-    '    augmentation=' + (augmentation ? 'True' : 'False') + ',\n' +
+    '    augmentation=' + (augmentation === 'TRUE' ? 'True' : 'False') + ',\n' +
     "    backbone='" + backbone + "',\n" +
     "    optimizer='" + optimizer + "',\n" +
     "    dnn_layers='" + dnnLayers + "',\n" +
-    '    fine_tune=' + (fineTune ? 'True' : 'False') + '\n' +
+    '    fine_tune=' + (fineTune === 'TRUE' ? 'True' : 'False') + ',\n' +
+    "    model_output='" + modelOutput + "'\n" +
     ')\n';
   return code;
 };
@@ -137,11 +160,12 @@ Blockly.Python.forBlock['py_ai_train_run'] = function(block, generator) {
 Blockly.Python.forBlock['py_ai_model_init'] = function(block, generator) {
   var modelPath = block.getFieldValue('MODEL_PATH');
   var taskType = block.getFieldValue('TASK_TYPE');
+  var modelType = block.getFieldValue('MODEL_TYPE');
 
   var defName = 'module_ai_inference';
   if (!generator.definitions_[defName]) {
     generator.definitions_[defName] = 'class _ModelInference:\n' +
-      '    def __init__(self, model_path, task_type):\n' +
+      '    def __init__(self, model_path, task_type, model_type="auto"):\n' +
       '        import os, sys, cv2, numpy as np\n' +
       '        try:\n' +
       '            import tflite_runtime.interpreter as tflite\n' +
@@ -150,15 +174,25 @@ Blockly.Python.forBlock['py_ai_model_init'] = function(block, generator) {
       '                from tensorflow import lite as tflite\n' +
       '            except ImportError:\n' +
       '                print("Error: install tflite-runtime"); sys.exit(1)\n' +
-      '        # 智能搜尋模型檔案\n' +
+      '        # 智能搜尋模型檔案（根據 model_type 選擇）\n' +
       '        if not model_path.endswith(".tflite"):\n' +
       '            if os.path.isdir(model_path):\n' +
       '                import glob\n' +
       '                tflite_files = glob.glob(os.path.join(model_path, "*.tflite"))\n' +
       '                if tflite_files:\n' +
+      '                    # 根據 model_type 篩選\n' +
+      '                    if model_type == "int8":\n' +
+      '                        quantized = [f for f in tflite_files if "_f32" not in os.path.basename(f)]\n' +
+      '                        model_path = quantized[0] if quantized else tflite_files[0]\n' +
+      '                    elif model_type == "f32":\n' +
+      '                        f32_files = [f for f in tflite_files if "_f32" in os.path.basename(f)]\n' +
+      '                        model_path = f32_files[0] if f32_files else tflite_files[0]\n' +
+      '                    else:\n' +
+      '                        # auto: 優先選擇量化版（不含 _f32）\n' +
+      '                        quantized = [f for f in tflite_files if "_f32" not in os.path.basename(f)]\n' +
+      '                        model_path = quantized[0] if quantized else tflite_files[0]\n' +
       '                    if len(tflite_files) > 1:\n' +
-      '                        print(f"警告: 找到多個模型檔案，使用第一個: {tflite_files[0]}")\n' +
-      '                    model_path = tflite_files[0]\n' +
+      '                        print(f"模型類型: {model_type}, 使用: {model_path}")\n' +
       '                else:\n' +
       '                    model_path = model_path + ".tflite"\n' +
       '        d = os.path.dirname(model_path)\n' +
@@ -229,7 +263,7 @@ Blockly.Python.forBlock['py_ai_model_init'] = function(block, generator) {
       '        else:\n' +
       '            return {"type": "unknown", "error": "unknown task type"}\n';
   }
-  var code = '_model_inference = _ModelInference("' + modelPath + '", "' + taskType + '")\n';
+  var code = '_model_inference = _ModelInference("' + modelPath + '", "' + taskType + '", "' + modelType + '")\n';
   return code;
 };
 

@@ -103,14 +103,14 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
      * 更新環境偵測結果
      * @param {Object} results 模組安裝狀態
      */
-    updateEnvironmentStatus: function(results) {
-        console.log('[UI] updateEnvironmentStatus received:', results);
+    updateEnvironmentStatus: function(data) {
+        console.log('[UI] updateEnvironmentStatus received:', data);
         const modal = document.getElementById('diagnose-modal');
         const body = document.getElementById('diagnose-body');
         const list = document.getElementById('module-list');
         
-        if (!modal || !list || !results) {
-            console.error('[UI] Cannot find diagnosis modal elements or results is empty');
+        if (!modal || !list || !data) {
+            console.error('[UI] Cannot find diagnosis modal elements or data is empty');
             return;
         }
 
@@ -118,13 +118,9 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         const loadingPara = body?.querySelector('p');
         if (loadingPara) loadingPara.style.display = 'none';
 
-        const modules = [
-            { id: 'cv2', name: 'opencv-python' },
-            { id: 'mediapipe', name: 'mediapipe' },
-            { id: 'PIL', name: 'Pillow (Image)' },
-            { id: 'serial', name: 'pyserial' },
-            { id: 'esptool', name: 'esptool (Firmware)' }
-        ];
+        // 使用後端傳來的模組定義（單一真相來源）
+        const results = data.results || {};
+        const modules = data.modules || [];
 
         list.innerHTML = '';
         modules.forEach(mod => {
@@ -138,7 +134,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             
             const btnTxt = Blockly.Msg['DIAG_INSTALL_BTN'] || 'Install';
             
-            // 使用 Bridge 發送安裝指令
+            // 使用 Bridge 發送安裝指令（傳入 pip 套件名稱）
             const installBtnHtml = !installed ? `<button class="btn-install" onclick="window.CocoyaBridge.send('installModule', {module: '${mod.name}'})">${btnTxt}</button>` : '';
             
             li.innerHTML = `

@@ -11,14 +11,20 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
      * 設定髒狀態並通知後端
      */
     setDirty: function(dirty) { 
-        if (this.isInitializing && dirty === true) return;
-        if (this.isDirty === dirty) return;
+        if (this.isInitializing && dirty === true) return Promise.resolve();
+
+        const shouldSync = this.isDirty !== dirty || dirty === false;
+        if (!shouldSync) return Promise.resolve();
+
         // 唯讀模式也應該可以變髒，以便提示使用者更動了需另存新檔
         // if (this.isReadOnly && dirty === true) return; 
 
         this.isDirty = dirty; 
         if (window.CocoyaUI) window.CocoyaUI.setDirty(dirty); 
-        window.CocoyaBridge.send('setDirty', { isDirty: dirty }); 
+        if (window.CocoyaBridge && typeof window.CocoyaBridge.send === 'function') {
+            return window.CocoyaBridge.send('setDirty', { isDirty: dirty });
+        }
+        return Promise.resolve();
     },
 
     /**
@@ -104,7 +110,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         }
         
         if (window.CocoyaUI) window.CocoyaUI.updateFileStatus(filename); 
-        this.setDirty(false); 
+        await this.setDirty(false); 
         this.triggerCodeUpdate();
         setTimeout(() => { if (this.minimap) { this.minimap._isPaused = false; this.refreshMinimap(); } }, 300);
     },
@@ -136,7 +142,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
     /**
      * 儲存完成後的回調
      */
-    onSaveCompleted: function(filename) { 
+    onSaveCompleted: async function(filename) { 
         if (filename) {
             // 存檔成功，不論之前是否為唯讀，現在我就是這個新檔的擁有者了
             this.isReadOnly = false;
@@ -146,9 +152,11 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             }
 
             if (window.CocoyaUI) window.CocoyaUI.updateFileStatus(filename); 
-            this.setDirty(false); 
+            await this.setDirty(false); 
             if (window.CocoyaUI) window.CocoyaUI.flashButton('btn-save', '#e3f2fd'); 
-            window.CocoyaBridge.send('clearBackup');
+            if (window.CocoyaBridge) {
+                window.CocoyaBridge.send('clearBackup');
+            }
         }
     }
 });

@@ -66,7 +66,11 @@ class DatasetSidecar:
                 command = msg.get("command")
                 request_id = msg.get("requestId")
                 
-                if command == "listCameras":
+                if command == "ping":
+                    # 輕量健康檢查指令，立即回覆，不執行任何耗時操作
+                    self.send_response(request_id, {"success": True})
+
+                elif command == "listCameras":
                     cameras = CameraService.list_cameras()
                     self.send_response(request_id, {"success": True, "cameras": cameras})
                 
@@ -77,12 +81,17 @@ class DatasetSidecar:
                 
                 elif command == "stopCamera":
                     self.camera.stop()
+                    self.send_event("cameraStatus", {"running": False})
                     self.send_response(request_id, {"success": True})
                 
                 elif command == "captureImage":
                     save_path = msg.get("savePath")
                     label = msg.get("label", "unlabeled")
                     print(f"[Sidecar Log] Capturing image for label: {label}", file=sys.stderr)
+                    
+                    if not self.camera.is_running():
+                        self.send_response(request_id, {"success": False, "error": "攝影機預覽已關閉"})
+                        continue
                     
                     result = self.camera.capture(save_path)
                     if result:

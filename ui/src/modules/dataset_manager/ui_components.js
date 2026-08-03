@@ -3,14 +3,15 @@
  * 負責渲染動態面板內容 (影像網格、欄位表格等)
  */
 import { Sampler } from './sampler.js';
+import { t } from './i18n.js';
 
 function escapeHTML(str) {
     if (!str) return '';
     return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
+        .replace(/&/g, '&')
+        .replace(/</g, '<')
+        .replace(/>/g, '>')
+        .replace(/"/g, '"')
         .replace(/'/g, '&#039;');
 }
 
@@ -24,7 +25,7 @@ export const UIComponents = {
         if (!container) return;
         
         if (!images || images.length === 0) {
-            container.innerHTML = '<div class="dataset-empty-state">尚無影像資料</div>';
+            container.innerHTML = '<div class="dataset-empty-state">' + t('NO_IMAGES', '尚無影像資料') + '</div>';
             return;
         }
 
@@ -35,7 +36,7 @@ export const UIComponents = {
                     const color = this.getLabelColor(label);
                     return `
                     <div class="dataset-image-item" data-index="${index}" title="${escapeHTML(img.path)}">
-                        <button type="button" class="dataset-image-delete-btn" data-index="${index}" title="刪除照片">×</button>
+                        <button type="button" class="dataset-image-delete-btn" data-index="${index}" title="${t('DELETE_IMAGE', '刪除照片')}">×</button>
                         <div class="dataset-image-thumb" data-index="${index}">
                             ${img.blobUrl ? `<img src="${img.blobUrl}" loading="lazy">` : '<div class="dataset-thumb-placeholder">?</div>'}
                         </div>
@@ -79,16 +80,16 @@ export const UIComponents = {
         const labels = Object.keys(counts);
 
         if (labels.length === 0) {
-            container.innerHTML = '<div class="dataset-empty-state">尚未偵測到標籤</div>';
+            container.innerHTML = '<div class="dataset-empty-state">' + t('NO_LABELS', '尚未偵測到標籤') + '</div>';
             return;
         }
 
         container.innerHTML = `
             <div class="dataset-label-stats">
                 <div class="dataset-label-head">
-                    <span>標籤名稱</span>
-                    <span>樣本數</span>
-                    <span>顏色</span>
+                    <span>${t('LABEL_NAME', '標籤名稱')}</span>
+                    <span>${t('SAMPLE_COUNT', '樣本數')}</span>
+                    <span>${t('COLOR', '顏色')}</span>
                 </div>
                 ${labels.map(label => {
                     const color = this.getLabelColor(label);
@@ -117,14 +118,14 @@ export const UIComponents = {
                 <div class="dataset-sampler-video-wrapper">
                     <div id="dataset-sampler-placeholder" class="dataset-sampler-placeholder" style="${lastPreviewUrl ? 'display:none;' : ''}">
                         <div class="dataset-sampler-icon">📷</div>
-                        <div class="dataset-sampler-text">等待採集影像...</div>
+                        <div class="dataset-sampler-text">${t('SAMPLER_PLACEHOLDER', '等待採集影像...')}</div>
                     </div>
                     <img id="dataset-sampler-last-preview" class="dataset-sampler-last-img" 
                          src="${lastPreviewUrl || ''}" 
                          style="${lastPreviewUrl ? 'display:block;' : 'display:none;'}">
                     <div id="dataset-sampler-flash" class="dataset-sampler-flash"></div>
                     <div id="dataset-sampler-hint" class="dataset-sampler-hint-overlay" style="${isCamRunning ? 'display:block;' : 'display:none;'}">
-                        原生預覽已開啟
+                        📷 ${cameraList.length > 0 ? escapeHTML(cameraList.find(c => c.id === selectedDeviceId)?.name || '攝影機') : '攝影機'} ${t('SAMPLER_CAMERA_READY', '已就緒 · 點擊拍攝快照')}
                     </div>
                 </div>
                 
@@ -132,45 +133,45 @@ export const UIComponents = {
                     <div class="dataset-sampler-row">
                         <div id="dataset-sampler-camera-group" style="display: flex; align-items: center; gap: 5px; margin-bottom: 6px;">
                             <label style="display: flex; align-items: center; gap: 5px; margin-bottom: 0; font-size: 11px;">
-                                <span>📷 攝影機:</span>
+                                <span>${t('SAMPLER_CAMERA', '📷 攝影機:')}</span>
                                 <select id="dataset-sampler-camera-select" style="font-size: 11px; padding: 2px 4px;">
                                     ${cameraList.map(c => `<option value="${c.id}" ${c.id === selectedDeviceId ? 'selected' : ''}>${escapeHTML(c.name)}</option>`).join('')}
                                 </select>
                             </label>
-                            <button type="button" id="dataset-sampler-refresh-cameras" class="dataset-icon-btn" title="重新掃描攝影機" style="font-size: 14px;">🔄</button>
+                            <button type="button" id="dataset-sampler-refresh-cameras" class="dataset-icon-btn" title="${t('SAMPLER_REFRESH_CAMERAS', '重新掃描攝影機')}" style="font-size: 14px;">🔄</button>
                         </div>
                     </div>
                     <div class="dataset-sampler-row">
                         <div id="dataset-sampler-label-group" style="display: flex; align-items: center; flex: 1;">
                             <label style="flex: 1; display: flex; align-items: center; gap: 5px; margin-bottom: 0;">
-                                <span>標籤:</span>
+                                <span>${t('SAMPLER_LABEL', '標籤:')}</span>
                                 <select id="dataset-sampler-label-select" style="flex: 1;">
                                     ${options.labels.map(l => `<option value="${escapeHTML(l)}" ${l === targetLabel ? 'selected' : ''}>${escapeHTML(l)}</option>`).join('')}
-                                    ${options.labels.length === 0 ? '<option value="" disabled selected>請先新增標籤</option>' : ''}
+                                    ${options.labels.length === 0 ? '<option value="" disabled selected>' + t('SAMPLER_NO_LABEL', '請先新增標籤') + '</option>' : ''}
                                 </select>
                             </label>
-                            <button type="button" id="dataset-sampler-add-label-btn" class="dataset-icon-btn" title="新增標籤" style="margin-left: 5px; font-size: 18px;">+</button>
+                            <button type="button" id="dataset-sampler-add-label-btn" class="dataset-icon-btn" title="${t('SAMPLER_ADD_LABEL', '新增標籤')}" style="margin-left: 5px; font-size: 18px;">+</button>
                         </div>
 
                         <div id="dataset-sampler-new-label-group" style="display: none; align-items: center; flex: 1; gap: 5px;">
-                            <input type="text" id="dataset-sampler-new-label-input" placeholder="輸入新標籤名稱" style="flex: 1;">
-                            <button type="button" id="dataset-sampler-new-label-confirm" class="dataset-icon-btn" style="color: #4CAF50;" title="確認">✔</button>
-                            <button type="button" id="dataset-sampler-new-label-cancel" class="dataset-icon-btn" style="color: #F44336;" title="取消">✘</button>
+                            <input type="text" id="dataset-sampler-new-label-input" placeholder="${t('SAMPLER_NEW_LABEL_PLACEHOLDER', '輸入新標籤名稱')}" style="flex: 1;">
+                            <button type="button" id="dataset-sampler-new-label-confirm" class="dataset-icon-btn" style="color: #4CAF50;" title="${t('SAMPLER_CONFIRM', '確認')}">✔</button>
+                            <button type="button" id="dataset-sampler-new-label-cancel" class="dataset-icon-btn" style="color: #F44336;" title="${t('SAMPLER_CANCEL', '取消')}">✘</button>
                         </div>
 
                         <button type="button" id="dataset-sampler-toggle-cam" class="${isCamRunning ? 'dataset-danger-btn' : 'dataset-primary-btn'}" style="margin-left: 8px;">
-                            ${isCamRunning ? '停止攝影機' : '啟動預覽'}
+                            ${isCamRunning ? t('SAMPLER_STOP_CAM', '停止攝影機') : t('SAMPLER_START_CAM', '啟動預覽')}
                         </button>
                     </div>
 
                     <div id="dataset-sampler-main-actions" class="dataset-sampler-actions" 
                          style="${isCamRunning ? 'display:flex; visibility:visible; opacity:1;' : 'display:none; visibility:hidden; opacity:0;'}">
-                        <button type="button" id="dataset-sampler-snapshot" class="dataset-primary-btn">📸 拍攝快照</button>
-                        <button type="button" id="dataset-sampler-burst" class="dataset-secondary-btn">⏯ 自動連拍</button>
+                        <button type="button" id="dataset-sampler-snapshot" class="dataset-primary-btn">${t('SAMPLER_SNAPSHOT', '📸 拍攝快照')}</button>
+                        <button type="button" id="dataset-sampler-burst" class="dataset-secondary-btn">${t('SAMPLER_BURST', '⏯ 自動連拍')}</button>
                     </div>
 
                     <div id="dataset-sampler-settings" class="dataset-sampler-settings" style="${isCamRunning ? 'display:block;' : 'display:none;'}">
-                        <span>間隔:</span>
+                        <span>${t('SAMPLER_INTERVAL', '間隔:')}</span>
                         <select id="dataset-sampler-interval">
                             <option value="200">0.2s</option>
                             <option value="500" selected>0.5s</option>
@@ -224,13 +225,24 @@ export const UIComponents = {
             };
         }
 
+        // 儲存進入新增模式前的標籤值，以便取消時還原
+        let previousLabel = targetLabel;
+
         // 切換模式函式
         const setAddMode = (isAdd) => {
             labelGroup.style.display = isAdd ? 'none' : 'flex';
             newLabelGroup.style.display = isAdd ? 'flex' : 'none';
             if (isAdd) {
+                // 進入新增模式時，記錄當前選擇的標籤
+                previousLabel = labelSelect ? labelSelect.value : targetLabel;
                 newLabelInput.value = '';
                 newLabelInput.focus();
+            } else {
+                // 取消新增時，恢復到原來的標籤
+                if (previousLabel && options.labels.indexOf(previousLabel) >= 0) {
+                    labelSelect.value = previousLabel;
+                    if (options.onLabelChange) options.onLabelChange(previousLabel);
+                }
             }
         };
 
@@ -248,18 +260,21 @@ export const UIComponents = {
         confirmBtn.onclick = handleAdd;
         newLabelInput.onkeydown = (e) => {
             if (e.key === 'Enter') handleAdd();
-            if (e.key === 'Escape') setAddMode(false);
+            if (e.key === 'Escape') {
+                e.stopPropagation(); // 阻止冒泡到 modal 的全域 Escape 關閉
+                setAddMode(false);
+            }
         };
 
         toggleCamBtn.onclick = async () => {
             if (!Sampler.state.isCamRunning) {
                 toggleCamBtn.disabled = true;
-                toggleCamBtn.textContent = '啟動中...';
+                toggleCamBtn.textContent = t('SAMPLER_STARTING', '啟動中...');
                 const success = await options.onStartCamera();
                 toggleCamBtn.disabled = false;
                 
                 if (success) {
-                    toggleCamBtn.textContent = '停止攝影機';
+                    toggleCamBtn.textContent = t('SAMPLER_STOP_CAM', '停止攝影機');
                     toggleCamBtn.className = 'dataset-danger-btn';
                     mainActions.style.display = 'flex';
                     mainActions.style.visibility = 'visible';
@@ -267,11 +282,11 @@ export const UIComponents = {
                     settings.style.display = 'block';
                     hint.style.display = 'block';
                 } else {
-                    toggleCamBtn.textContent = '啟動失敗，再試一次';
+                    toggleCamBtn.textContent = t('SAMPLER_START_FAILED', '啟動失敗，再試一次');
                 }
             } else {
                 options.onStopCamera();
-                toggleCamBtn.textContent = '啟動攝影機預覽';
+                toggleCamBtn.textContent = t('SAMPLER_START_CAM', '啟動預覽');
                 toggleCamBtn.className = 'dataset-primary-btn';
                 mainActions.style.display = 'none';
                 mainActions.style.visibility = 'hidden';
@@ -307,7 +322,7 @@ export const UIComponents = {
                 burstBtn.onclick = (e) => {
                     console.log('[UIComponents] Burst toggle clicked');
                     const isBursting = options.onBurstToggle();
-                    e.target.textContent = isBursting ? '⏹ 停止連拍' : '⏯ 自動連拍';
+                    e.target.textContent = isBursting ? t('SAMPLER_STOP_BURST', '⏹ 停止連拍') : t('SAMPLER_BURST', '⏯ 自動連拍');
                     e.target.classList.toggle('dataset-danger-btn', isBursting);
                 };
             }

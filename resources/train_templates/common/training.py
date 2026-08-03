@@ -8,6 +8,13 @@ import tensorflow as tf
 from datetime import datetime
 from sklearn.utils import class_weight
 
+# 啟用確定性運算（TF 2.9+），確保跨環境再現性
+try:
+    tf.config.experimental.enable_op_determinism()
+except (AttributeError, tf.errors.NotFoundError):
+    # 舊版 TensorFlow 不支援此 API，靜默跳過
+    pass
+
 
 # 支援的優化器對照表
 OPTIMIZER_REGISTRY = {

@@ -112,12 +112,15 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
                 try { this.workspace.dispose(); } catch(e) {}
             }
 
+            // 啟用工作區註解功能 (Blockly v12+ 需要兩道手續)
+            // 第一道：在 injectOptions 中啟用 workspaceComments
             const injectOptions = {
                 toolbox: finalToolboxXML,
                 media: mediaUri + '/media/',
                 grid: { spacing: 20, length: 3, colour: '#ccc', snap: true },
                 trashcan: true, sounds: false, scrollbars: true,
                 contextMenu: true,
+                workspaceComments: true,
                 move: { scrollbars: true, drag: true, wheel: true },
                 zoom: { controls: true, wheel: false, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 }
             };
@@ -128,6 +131,12 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
                 injectOptions.plugins = { 'blockDragger': scrollDragger, 'metricsManager': scrollMetrics };
             }
 
+            // 第二道：手動註冊 context menu 的註解選項 (Blockly v12+ 重構機制)
+            if (typeof Blockly.ContextMenuItems !== 'undefined' &&
+                typeof Blockly.ContextMenuItems.registerCommentOptions === 'function') {
+                Blockly.ContextMenuItems.registerCommentOptions();
+            }
+            
             this.workspace = Blockly.inject('blocklyDiv', injectOptions);
             this.initMinimap();
 
@@ -146,6 +155,10 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             if (window.CocoyaUI) window.CocoyaUI.initToolbar((msg) => window.CocoyaBridge.send(msg.command, msg));
             
             window.CocoyaBridge.send('setLocale', { messages: Blockly.Msg });
+
+            if (window.CocoyaDataset && typeof window.CocoyaDataset.refreshI18n === 'function') {
+                await window.CocoyaDataset.refreshI18n();
+            }
             
             this.registerVariablesCallback();
             if (window.CocoyaUtils && CocoyaUtils.setupGeneratorOverrides) CocoyaUtils.setupGeneratorOverrides();

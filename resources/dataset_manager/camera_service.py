@@ -14,10 +14,11 @@ class CameraService:
         self.window_name = "Cocoya Dataset Preview"
 
     @staticmethod
-    def list_cameras(max_test=10):
+    def list_cameras(max_test=5):
         """列舉系統中所有可用的攝影機裝置
         
         依序測試 index 0 ~ max_test-1，回傳可用的裝置清單。
+        當連續 2 個 index 失敗時提前中止，避免測試過多不存在的裝置。
         暫時重導 stderr 以抑制 OpenCV 對不存在的 index 的錯誤訊息。
         """
         # 暫時重導 stderr 到 devnull 抑制 OpenCV 的 obsensor 錯誤輸出
@@ -31,6 +32,7 @@ class CameraService:
             _stderr_fd = None
 
         available = []
+        consecutive_failures = 0
         try:
             for i in range(max_test):
                 try:
@@ -45,9 +47,18 @@ class CameraService:
                                 "id": i,
                                 "name": name
                             })
+                            consecutive_failures = 0
+                        else:
+                            consecutive_failures += 1
                         cap.release()
+                    else:
+                        consecutive_failures += 1
                 except:
-                    pass
+                    consecutive_failures += 1
+
+                # 連續 2 個失敗就停止，避免測試太多不存在的 index
+                if consecutive_failures >= 2:
+                    break
         finally:
             # 還原 stderr
             if _stderr_fd is not None:
@@ -81,6 +92,9 @@ class CameraService:
         if self.cap:
             self.cap.release()
             self.cap = None
+
+    def is_running(self):
+        return self.running
 
     def _run(self):
         cv2.namedWindow(self.window_name, cv2.WINDOW_AUTOSIZE)

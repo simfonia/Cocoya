@@ -26,6 +26,18 @@ Blockly.Msg["AI_TRAIN_FIELD_BACKBONE"] = "骨幹:";
 Blockly.Msg["AI_TRAIN_FIELD_OPTIMIZER"] = "優化器:";
 Blockly.Msg["AI_TRAIN_FIELD_DNN_LAYERS"] = "DNN 層:";
 Blockly.Msg["AI_TRAIN_FIELD_FINE_TUNE"] = "微調:";
+Blockly.Msg["AI_TRAIN_FIELD_MODEL_OUTPUT"] = "模型輸出:";
+Blockly.Msg["AI_TRAIN_OUTPUT_NONE"] = "無";
+Blockly.Msg["AI_TRAIN_OUTPUT_INT8"] = "量化 TFLite (int8)";
+Blockly.Msg["AI_TRAIN_OUTPUT_F32"] = "Float32 TFLite";
+Blockly.Msg["AI_TRAIN_OUTPUT_KERAS"] = "Keras";
+Blockly.Msg["AI_TRAIN_OUTPUT_INT8_F32"] = "量化 + Float32";
+Blockly.Msg["AI_TRAIN_OUTPUT_ALL"] = "全部";
+
+Blockly.Msg["AI_INFERENCE_FIELD_MODEL_TYPE"] = "模型類型:";
+Blockly.Msg["AI_INFERENCE_TYPE_AUTO"] = "自動";
+Blockly.Msg["AI_INFERENCE_TYPE_INT8"] = "量化 (int8)";
+Blockly.Msg["AI_INFERENCE_TYPE_F32"] = "Float32";
 
 // Task Types
 Blockly.Msg["AI_TASK_CLASSIFIER"] = "分類器";

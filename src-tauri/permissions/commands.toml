@@ -25,5 +25,13 @@ commands.allow = [
   "set_dirty",
   "close_window",
   "check_startup_backup",
-  "open_examples"
+  "open_examples",
+  "start_sidecar",
+  "sidecar_send",
+  "stop_sidecar",
+  "delete_file",
+  "pick_folder",
+  "export_dataset",
+  "open_report",
+  "find_latest_training_report"
 ]

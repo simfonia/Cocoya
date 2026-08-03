@@ -1,9 +1,41 @@
 use std::process::{Command, Stdio};
-use std::io::{BufReader, BufRead};
+use std::io::{BufRead, BufReader};
 use std::collections::HashMap;
 use std::fs;
 use tauri::{State, Window, Emitter};
 use crate::state::AppState;
+
+/// 過濾 ANSI 色碼序列（如 `\x1b[1m`, `\x1b[32m` 等）
+/// 確保終端機輸出與 VSIX 版一致（VSCode 終端機原生處理色碼）
+fn strip_ansi_codes(input: &str) -> String {
+    let mut result = String::with_capacity(input.len());
+    let mut chars = input.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\x1b' {
+            // ESC 字元，開始 ANSI 序列
+            if chars.peek() == Some(&'[') {
+                chars.next(); // 消費 '['
+                // 消費直到遇到 letter（序列結束符）
+                while let Some(&next) = chars.peek() {
+                    chars.next();
+                    if next.is_ascii_alphabetic() {
+                        break;
+                    }
+                }
+            } else {
+                // 單獨 ESC 字元，保留
+                result.push(c);
+            }
+        } else {
+            result.push(c);
+        }
+    }
+    result
+}
+
+// SSOT: Python 套件檢查清單（從 config/python_modules.json 同步）
+// 當修改 config/python_modules.json 時，必須同步更新此常數
+const PYTHON_MODULES_JSON: &str = r#"[{"id":"serial","name":"pyserial","description":"MCU 通訊"},{"id":"esptool","name":"esptool (Firmware)","description":"ESP32 韌體燒錄"},{"id":"cv2","name":"opencv-python","description":"OpenCV - 影像處理"},{"id":"mediapipe","name":"mediapipe","description":"MediaPipe - 姿態/人臉/手勢偵測"},{"id":"PIL","name":"Pillow (Image)","description":"Pillow - 影像處理"},{"id":"tensorflow","name":"tensorflow","description":"深度學習框架"},{"id":"numpy","name":"numpy","description":"數值計算"},{"id":"sklearn","name":"scikit-learn","description":"機器學習工具（class_weight）"},{"id":"matplotlib","name":"matplotlib","description":"訓練報告視覺化"},{"id":"paramiko","name":"paramiko (SSH)","description":"SSH/SFTP 連線（遠端訓練）"}]"#;
 
 #[tauri::command]
 pub async fn run_python(
@@ -24,12 +56,40 @@ pub async fn run_python(
     fs::write(&script_path, &code).map_err(|e| e.to_string())?;
 
     // 3. 啟動進程
-    let mut child = Command::new(&python_path)
-        .arg("-u") // Unbuffered mode
+    // 設定工作目錄為當前檔案的專案目錄（與 VSIX 一致），確保相對路徑（如 dataset/）能正確解析
+    let current_path = {
+        let paths = state.current_paths.lock().unwrap();
+        paths.get(window.label()).cloned()
+    };
+
+    let work_dir = match current_path {
+        Some(ref p) => p.parent().map(|d| d.to_path_buf()).unwrap_or_else(|| {
+            let mut dev = std::env::current_dir().unwrap();
+            if dev.ends_with("src-tauri") { dev.pop(); }
+            dev
+        }),
+        None => {
+            let mut dev = std::env::current_dir().unwrap();
+            if dev.ends_with("src-tauri") { dev.pop(); }
+            dev
+        }
+    };
+
+    let mut cmd = Command::new(&python_path);
+    cmd.arg("-u") // Unbuffered mode
         .arg(&script_path)
+        .current_dir(&work_dir)
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
+        .stderr(Stdio::piped());
+
+    // Windows: 隱藏 console 視窗
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+
+    let mut child = cmd.spawn()
         .map_err(|e| format!("Failed to start Python: {}", e))?;
 
     let stdout = child.stdout.take().unwrap();
@@ -42,22 +102,48 @@ pub async fn run_python(
     }
 
     // 4. 即時串流日誌到前端
+    // 對齊 VSIX 版：顯示實際執行命令，讓使用者知道使用了哪個腳本
+    let _ = window.emit("python-log", format!(
+        "& \"{}\" \"{}\"\n",
+        python_path, script_path.display()
+    ));
+
     let window_clone = window.clone();
     std::thread::spawn(move || {
-        let reader = BufReader::new(stdout);
-        for line in reader.lines() {
-            if let Ok(l) = line {
-                let _ = window_clone.emit("python-log", l);
+        let mut reader = BufReader::new(stdout);
+        let mut buffer = Vec::new();
+        loop {
+            buffer.clear();
+            match reader.read_until(b'\n', &mut buffer) {
+                Ok(0) => break, // EOF
+                Ok(_) => {
+                    // 用 from_utf8_lossy 處理編碼，避免中文亂碼
+                    let raw = String::from_utf8_lossy(&buffer);
+                    // 過濾 ANSI 色碼，對齊 VSIX 終端機輸出
+                    let cleaned = strip_ansi_codes(&raw);
+                    let _ = window_clone.emit("python-log", cleaned);
+                }
+                Err(_) => break,
             }
         }
     });
 
+    // stderr 使用獨立事件，前端可用不同樣式顯示
+    // 不再混入 stdout 串流，避免亂碼片段出現在正常輸出中
     let window_clone_err = window.clone();
     std::thread::spawn(move || {
-        let reader = BufReader::new(stderr);
-        for line in reader.lines() {
-            if let Ok(l) = line {
-                let _ = window_clone_err.emit("python-error", l);
+        let mut reader = BufReader::new(stderr);
+        let mut buffer = Vec::new();
+        loop {
+            buffer.clear();
+            match reader.read_until(b'\n', &mut buffer) {
+                Ok(0) => break, // EOF
+                Ok(_) => {
+                    let raw = String::from_utf8_lossy(&buffer);
+                    let cleaned = strip_ansi_codes(&raw);
+                    let _ = window_clone_err.emit("python-error", cleaned);
+                }
+                Err(_) => break,
             }
         }
     });
@@ -174,21 +260,35 @@ pub async fn start_training(
 }
 
 #[tauri::command]
-pub async fn check_environment(python_path: String) -> Result<HashMap<String, bool>, String> {
-    let check_script = r#"
+pub async fn check_environment(python_path: String) -> Result<serde_json::Value, String> {
+    // 從 SSOT JSON 解析模組清單
+    let module_defs: Vec<serde_json::Value> = serde_json::from_str(PYTHON_MODULES_JSON).map_err(|e| e.to_string())?;
+    let module_ids: Vec<String> = module_defs.iter()
+        .filter_map(|m| m.get("id").and_then(|v| v.as_str().map(String::from)))
+        .collect();
+    
+    // 建立 Python 檢查腳本
+    let modules_json = serde_json::json!(module_ids).to_string();
+    let check_script = format!(
+        r#"
 import importlib.util
 import json
 import sys
 
-modules = ['cv2', 'mediapipe', 'PIL', 'serial', 'esptool']
-results = {}
+modules = {}
+results = {{}}
 for m in modules:
-    results[m] = importlib.util.find_spec(m) is not None
+    try:
+        results[m] = importlib.util.find_spec(m) is not None
+    except:
+        results[m] = False
 print(json.dumps(results))
-"#;
+"#,
+        modules_json
+    );
 
     let mut cmd = Command::new(&python_path);
-    cmd.arg("-c").arg(check_script);
+    cmd.arg("-c").arg(&check_script);
 
     #[cfg(target_os = "windows")]
     {
@@ -198,17 +298,24 @@ print(json.dumps(results))
 
     let output = cmd.output().map_err(|e| format!("Failed to run Python: {}", e))?;
 
-    if output.status.success() {
+    let results: HashMap<String, bool> = if output.status.success() {
         let out_str = String::from_utf8_lossy(&output.stdout);
-        let results: HashMap<String, bool> = serde_json::from_str(out_str.trim()).map_err(|e| e.to_string())?;
-        Ok(results)
+        serde_json::from_str(out_str.trim()).unwrap_or_default()
     } else {
         let mut results = HashMap::new();
-        results.insert("cv2".to_string(), false);
-        results.insert("mediapipe".to_string(), false);
-        results.insert("PIL".to_string(), false);
-        results.insert("serial".to_string(), false);
-        results.insert("esptool".to_string(), false);
-        Ok(results)
-    }
+        for m in module_ids {
+            results.insert(m, false);
+        }
+        results
+    };
+
+    // 直接使用 SSOT 的模組定義
+    let modules: Vec<serde_json::Value> = module_defs.into_iter()
+        .filter(|m| results.contains_key(m.get("id").and_then(|v| v.as_str()).unwrap_or("")))
+        .collect();
+
+    Ok(serde_json::json!({
+        "results": results,
+        "modules": modules
+    }))
 }

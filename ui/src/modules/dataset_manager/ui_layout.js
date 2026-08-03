@@ -1,8 +1,8 @@
 import { DatasetSpec, DatasetSpecConstants } from './spec.js';
-import { Importer } from './importer.js';
 import { Sampler } from './sampler.js';
 import { UIComponents } from './ui_components.js';
 import { UICanvas } from './ui_canvas.js';
+import { t } from './i18n.js';
 
 const MODAL_ID = 'dataset-manager-modal';
 
@@ -68,8 +68,12 @@ function buildLabelMap(columns) {
     // 如果目前有 label_map 但沒選 label 欄位，暫且保留，以免剛匯入就清空
     if (!labelColumn && Object.keys(current).length > 0) return current;
     if (!labelColumn) return {};
+    // 有 label 欄位時，過濾掉無效的條目（值不為非負整數的），避免髒資料殘留
     return Object.keys(current).reduce((acc, key) => {
-        acc[key] = current[key];
+        const val = current[key];
+        if (Number.isInteger(val) && val >= 0) {
+            acc[key] = val;
+        }
         return acc;
     }, {});
 }
@@ -126,14 +130,14 @@ function renderColumnRow(column = {}) {
     const normalized = DatasetSpec.normalizeColumn(column);
     return `
         <div class="dataset-column-row">
-            <input data-field="name" value="${escapeHtml(normalized.name)}" placeholder="欄位名稱">
+            <input data-field="name" value="${escapeHtml(normalized.name)}" placeholder="${t('COLUMN_NAME_PLACEHOLDER', '欄位名稱')}">
             <select data-field="type">
                 ${optionList(DatasetSpecConstants.COLUMN_TYPES, normalized.type)}
             </select>
             <select data-field="role">
                 ${optionList(DatasetSpecConstants.COLUMN_ROLES, normalized.role)}
             </select>
-            <button type="button" class="dataset-icon-btn dataset-remove-column" title="移除欄位">×</button>
+            <button type="button" class="dataset-icon-btn dataset-remove-column" title="${t('REMOVE_COLUMN', '移除欄位')}">×</button>
         </div>
     `;
 }
@@ -142,7 +146,7 @@ function renderValidation(result) {
     const errors = result.errors.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
     const warnings = result.warnings.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
     const statusClass = result.ok ? 'ok' : 'error';
-    const statusText = result.ok ? 'Spec 可用' : '需要修正';
+    const statusText = result.ok ? t('SPEC_OK', 'Spec 可用') : t('SPEC_NEED_FIX', '需要修正');
 
     return `
         <div class="dataset-validation ${statusClass}">
@@ -178,7 +182,7 @@ export function refreshPreview() {
             if (specJson.data_source.samples && specJson.data_source.samples.length > 20) {
                 const total = specJson.data_source.samples.length;
                 specJson.data_source.samples = specJson.data_source.samples.slice(0, 20);
-                preview.textContent = JSON.stringify(specJson, null, 2) + `\n\n... (還有 ${total - 20} 個樣本未顯示於預覽區)`;
+                preview.textContent = JSON.stringify(specJson, null, 2) + `\n\n` + t('PREVIEW_MORE_SAMPLES', '... (還有 %1 個樣本未顯示於預覽區)').replace('%1', total - 20);
             } else {
                 preview.textContent = JSON.stringify(specJson, null, 2);
             }
@@ -228,7 +232,7 @@ function sanitizeName(text) {
 async function handleFileImport(file) {
     if (!file) return;
     const status = document.getElementById('dataset-import-status');
-    if (status) status.textContent = `載入中: ${file.name}...`;
+    if (status) status.textContent = t('STATUS_LOADING', '載入中: %1...').replace('%1', file.name);
 
     try {
         const text = await file.text();
@@ -244,7 +248,7 @@ async function handleFileImport(file) {
         }
 
         if (!rows || rows.length === 0) {
-            throw new Error('檔案內容為空或格式不符');
+            throw new Error(t('ERROR_IMPORT_EMPTY', '檔案內容為空或格式不符'));
         }
 
         const rawFileName = file.name.split('.')[0];
@@ -272,20 +276,20 @@ async function handleFileImport(file) {
         state.spec.updateSchema(detectedSchema);
         
         refreshDynamicPanels(); 
-        if (status) status.textContent = `✅ 成功匯入 ${rows.length} 筆資料`;
+        if (status) status.textContent = t('SUCCESS_IMPORT_DATA', '✅ 成功匯入 %1 筆資料').replace('%1', rows.length);
 
         const fileInput = document.getElementById('dataset-file-input');
         if (fileInput) fileInput.value = '';
 
     } catch (e) {
         console.error('[DatasetManager] Import Error:', e);
-        if (status) status.textContent = `❌ 錯誤: ${e.message}`;
+        if (status) status.textContent = t('ERROR_PREFIX', '❌ 錯誤: %1').replace('%1', e.message);
     }
 }
 
 async function handleDirectoryImport() {
     const status = document.getElementById('dataset-import-status');
-    if (status) status.textContent = '正在選取資料夾...';
+    if (status) status.textContent = t('STATUS_IMPORTING_FOLDER', '正在選取資料夾...');
 
     try {
         const result = await window.CocoyaBridge.pickFolder();
@@ -342,21 +346,21 @@ async function handleDirectoryImport() {
             }
         });
 
-        if (status) status.textContent = `✅ 成功匯入 ${images.length} 張影像，共 ${Object.keys(labelCounts).length} 個標籤`;
+        if (status) status.textContent = t('SUCCESS_IMPORT_IMAGES', '✅ 成功匯入 %1 張影像，共 %2 個標籤').replace('%1', images.length).replace('%2', Object.keys(labelCounts).length);
         
         refreshDynamicPanels();
         refreshPreview();
 
     } catch (e) {
         console.error('[DatasetManager] Dir Import Error:', e);
-        if (status) status.textContent = `❌ 錯誤: ${e.message}`;
+        if (status) status.textContent = t('ERROR_PREFIX', '❌ 錯誤: %1').replace('%1', e.message);
     }
 }
 
 async function handleExportDataset() {
     console.log('[DatasetManager] handleExportDataset triggered');
     const status = document.getElementById('dataset-import-status');
-    if (status) status.textContent = '📦 正在準備匯出...';
+    if (status) status.textContent = t('STATUS_EXPORTING', '📦 正在準備匯出...');
 
     try {
         // 1. 同步最新資料
@@ -367,7 +371,7 @@ async function handleExportDataset() {
         // 2. 驗證 Spec
         const result = state.spec.validate();
         if (!result.ok) {
-            throw new Error(`資料集規格驗證失敗: ${result.errors[0]}`);
+            throw new Error(t('ERROR_EXPORT_VALIDATE', '資料集規格驗證失敗: %1').replace('%1', result.errors[0]));
         }
 
         // 3. 透過 Bridge 發送匯出指令
@@ -382,9 +386,9 @@ async function handleExportDataset() {
             if (msg.command === 'datasetExportResult') {
                 window.CocoyaBridge.offMessage(handler);
                 if (msg.success) {
-                    if (status) status.textContent = '✅ 資料集匯出成功';
+                    if (status) status.textContent = t('SUCCESS_EXPORT', '✅ 資料集匯出成功');
                 } else {
-                    if (status) status.textContent = `❌ 匯出失敗: ${msg.error}`;
+                    if (status) status.textContent = t('ERROR_EXPORT_FAILED', '❌ 匯出失敗: %1').replace('%1', msg.error);
                 }
             }
         };
@@ -392,7 +396,38 @@ async function handleExportDataset() {
 
     } catch (e) {
         console.error('[DatasetManager] Export Error:', e);
-        if (status) status.textContent = `❌ 錯誤: ${e.message}`;
+        if (status) status.textContent = t('ERROR_PREFIX', '❌ 錯誤: %1').replace('%1', e.message);
+    }
+}
+
+/**
+ * 保存目前縮圖網格的捲動位置
+ */
+function saveGridScroll() {
+    const modal = getModal();
+    const imagePreview = modal?.querySelector('#dataset-image-preview');
+    const grid = imagePreview?.querySelector('.dataset-image-grid');
+    state._savedGridScrollTop = grid ? grid.scrollTop : 0;
+}
+
+/**
+ * 恢復縮圖網格的捲動位置（在 renderImageGrid 之後呼叫）
+ */
+function restoreGridScroll() {
+    const modal = getModal();
+    const imagePreview = modal?.querySelector('#dataset-image-preview');
+    if (!imagePreview) return;
+
+    // 決定 scrollTop 值：先取 state._savedGridScrollTop（從標註模式返回），
+    // 若無則嘗試現有 grid 的 scrollTop（刪除照片時保留），最後為 0
+    const oldGrid = imagePreview.querySelector('.dataset-image-grid');
+    const savedScrollTop = (state._savedGridScrollTop > 0) ? state._savedGridScrollTop : (oldGrid ? oldGrid.scrollTop : 0);
+    // 使用過後清空，避免下次 refreshDynamicPanels 誤用
+    state._savedGridScrollTop = 0;
+
+    const newGrid = imagePreview.querySelector('.dataset-image-grid');
+    if (newGrid && state.images.length > 0 && savedScrollTop > 0) {
+        newGrid.scrollTop = savedScrollTop;
     }
 }
 
@@ -402,10 +437,8 @@ function enterAnnotationMode(image, index) {
     const previewHeader = modal?.querySelector('.dataset-preview-panel .dataset-panel-title div');
     if (!previewContent || !previewHeader) return;
 
-    // 進入標註前，先保存目前縮圖網格的捲動位置到 state
-    const imagePreview = modal.querySelector('#dataset-image-preview');
-    const grid = imagePreview?.querySelector('.dataset-image-grid');
-    state._savedGridScrollTop = grid ? grid.scrollTop : 0;
+    // 進入標註前，先保存目前縮圖網格的捲動位置
+    saveGridScroll();
 
     const existingBackBtn = modal.querySelector('#dataset-annotation-back');
     if (existingBackBtn) {
@@ -413,7 +446,7 @@ function enterAnnotationMode(image, index) {
     }
 
     previewHeader.insertAdjacentHTML('afterbegin', `
-        <button type="button" id="dataset-annotation-back" class="dataset-small-btn" style="background: #FE2F89; color: white; border: none; margin-right: 8px;">← 返回列表</button>
+        <button type="button" id="dataset-annotation-back" class="dataset-small-btn" style="background: #FE2F89; color: white; border: none; margin-right: 8px;">${t('BACK_TO_LIST', '← 返回列表')}</button>
     `);
     modal.querySelector('#dataset-annotation-back').onclick = exitAnnotationMode;
 
@@ -421,8 +454,8 @@ function enterAnnotationMode(image, index) {
         <div class="dataset-annotation-view" style="display: flex; flex-direction: column; gap: 10px; height: 100%;">
             <div class="dataset-annotation-sidebar" style="display: flex; align-items: center; justify-content: space-between; width: 100%; box-sizing: border-box; padding: 8px 12px; gap: 16px;">
                 <div style="min-width: 120px;">
-                    <h4 style="margin: 0; font-size: 13px; color: #FE2F89;">標註資訊</h4>
-                    <span style="font-size: 10px; color: #777; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;" title="${image.name}">檔案: ${image.name}</span>
+                    <h4 style="margin: 0; font-size: 13px; color: #FE2F89;">${t('ANNOTATION_INFO', '標註資訊')}</h4>
+                    <span style="font-size: 10px; color: #777; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;" title="${image.name}">${t('ANNOTATION_FILE', '檔案')}: ${image.name}</span>
                 </div>
                 <div id="annotation-list-ui" style="display: flex; gap: 6px; flex-wrap: wrap; flex: 1; max-height: 60px; overflow-y: auto; justify-content: flex-start; align-content: flex-start;"></div>
             </div>
@@ -460,7 +493,7 @@ function renderAnnotationListUI(anns) {
             const coords = ann.line.map(v => v.toFixed(2)).join(',');
             return `
                 <div class="dataset-annotation-item">
-                    <span>#${i+1} 線段: [${coords}]</span>
+                    <span>#${i+1} ${t('ANNOTATION_LINE', '線段')}: [${coords}]</span>
                     <button onclick="window.CocoyaDataset.removeAnnotation(${i})">×</button>
                 </div>
             `;
@@ -473,7 +506,7 @@ function renderAnnotationListUI(anns) {
             `;
         }
         return '';
-    }).join('') || '<p style="color: #999;">尚未有標註</p>';
+    }).join('') || '<p style="color: #999;">' + t('ANNOTATION_EMPTY', '尚未有標註') + '</p>';
 }
 
 function exitAnnotationMode() {
@@ -515,17 +548,17 @@ export function refreshDynamicPanels() {
 
     // 2. 更新欄位/標籤面板
     if (isImage || isLive) {
-        structureTitle.textContent = '標籤與樣本統計';
+        structureTitle.textContent = t('LABEL_STATS_TITLE', '標籤與樣本統計');
         structureActions.style.display = 'none';
         UIComponents.renderLabelStats(structureContent, state.spec.toJSON().stats);
     } else {
-        structureTitle.textContent = '欄位與標籤';
+        structureTitle.textContent = t('STRUCTURE_TITLE', '欄位與標籤');
         structureActions.style.display = 'block';
         structureContent.innerHTML = `
             <div class="dataset-column-head">
-                <span>名稱</span>
-                <span>型別</span>
-                <span>角色</span>
+                <span>${t('COLUMN_NAME', '名稱')}</span>
+                <span>${t('COLUMN_TYPE', '型別')}</span>
+                <span>${t('COLUMN_ROLE', '角色')}</span>
                 <span></span>
             </div>
             <div id="dataset-column-list" class="dataset-column-list"></div>
@@ -578,8 +611,20 @@ export function refreshDynamicPanels() {
                     state.spec.updateSchema({ label_map: labelMap });
                 }
 
-                // 立即刷新採集面板以更新 Select 清單
-                refreshDynamicPanels();
+                // 更新左側標籤統計
+                const structureContent = modal.querySelector('#dataset-structure-content');
+                if (structureContent) {
+                    UIComponents.renderLabelStats(structureContent, state.spec.toJSON().stats);
+                }
+
+                // 更新採集面板的 dropdown 選項清單（新增標籤後讓新標籤出現在下拉選單）
+                const updatedLabels = Object.keys(state.spec.toJSON().schema.label_map || {});
+                const labelSelect = samplerView.querySelector('#dataset-sampler-label-select');
+                if (labelSelect) {
+                    labelSelect.innerHTML = updatedLabels.map(lb => 
+                        `<option value="${lb}" ${lb === l ? 'selected' : ''}>${lb}</option>`
+                    ).join('');
+                }
             },
             onSnapshot: () => handleSamplerSnapshot(),
             onBurstToggle: () => handleSamplerBurstToggle(),
@@ -594,25 +639,13 @@ export function refreshDynamicPanels() {
     // 顯示影像或表格預覽（保留 scrollTop 避免回到列表或刪除時縮圖捲回最上方）
     if (isImage || isLive) {
         const imagePreview = modal.querySelector('#dataset-image-preview');
-
-        // 決定 scrollTop 值：先取 state._savedGridScrollTop（從標註模式返回），
-        // 若無則嘗試現有 grid 的 scrollTop（刪除照片時保留），最後為 0
-        const oldGrid = imagePreview.querySelector('.dataset-image-grid');
-        const savedScrollTop = (state._savedGridScrollTop > 0) ? state._savedGridScrollTop : (oldGrid ? oldGrid.scrollTop : 0);
-        // 使用過後清空，避免下次 refreshDynamicPanels 誤用
-        state._savedGridScrollTop = 0;
-
         imagePreview.style.display = state.images.length ? 'block' : 'none';
         UIComponents.renderImageGrid(imagePreview, state.images, {
             onImageClick: (img, idx) => enterAnnotationMode(img, idx),
             onDeleteImage: (idx) => handleDeleteImage(idx)
         });
-
-        // 恢復捲動位置
-        const newGrid = imagePreview.querySelector('.dataset-image-grid');
-        if (newGrid && state.images.length > 0 && savedScrollTop > 0) {
-            newGrid.scrollTop = savedScrollTop;
-        }
+        // 恢復捲動位置（統一由 restoreGridScroll 處理）
+        restoreGridScroll();
     } else {
         const tablePreview = modal.querySelector('#dataset-table-preview');
         tablePreview.style.display = state.tableRows.length ? 'block' : 'none';
@@ -623,14 +656,14 @@ export function refreshDynamicPanels() {
 
 async function handleSamplerSnapshot() {
     const status = document.getElementById('dataset-import-status');
-    if (status) status.textContent = '📸 正在採集...';
+    if (status) status.textContent = t('STATUS_CAPTURETTING', '📸 正在採集...');
     
     try {
         const projectName = getFormValue('projectName') || 'dataset';
         await Sampler.takeSnapshot(projectName);
-        if (status) status.textContent = '✅ 採集成功';
+        if (status) status.textContent = t('SUCCESS_CAPTURE', '✅ 採集成功');
     } catch (e) {
-        if (status) status.textContent = `❌ 採集失敗: ${e.message}`;
+        if (status) status.textContent = t('ERROR_CAPTURE_FAILED', '❌ 採集失敗: %1').replace('%1', e.message);
     }
 }
 
@@ -668,9 +701,8 @@ function handleDeleteImage(index) {
 
         const imagePreview = modal.querySelector('#dataset-image-preview');
         if (imagePreview) {
-            // 記錄目前的捲動位置
-            const grid = imagePreview.querySelector('.dataset-image-grid');
-            const scrollTop = grid ? grid.scrollTop : 0;
+            // 刪除前保存捲動位置
+            saveGridScroll();
 
             if (state.images.length === 0) {
                 imagePreview.style.display = 'none';
@@ -680,11 +712,8 @@ function handleDeleteImage(index) {
                 onDeleteImage: (idx) => handleDeleteImage(idx)
             });
 
-            // 恢復捲動位置（renderImageGrid 會重建 DOM，需要重新查詢 grid）
-            const newGrid = imagePreview.querySelector('.dataset-image-grid');
-            if (newGrid) {
-                newGrid.scrollTop = scrollTop;
-            }
+            // 恢復捲動位置（統一由 restoreGridScroll 處理）
+            restoreGridScroll();
         }
     }
 
@@ -822,9 +851,7 @@ function bindModalEvents(modal) {
             if (status) status.textContent = '';
             
             const fi = modal.querySelector('#dataset-file-input');
-            const di = modal.querySelector('#dataset-dir-input');
             if (fi) fi.value = '';
-            if (di) di.value = '';
 
             // 7. 清理 Sampler 模組內部的預覽快取
             if (Sampler.state.lastPreviewUrl) {
@@ -866,7 +893,7 @@ function bindModalEvents(modal) {
 
             window.CocoyaUI.ensureSshConfig(async (sshConfig) => {
                 const status = modal.querySelector('#dataset-import-status');
-                if (status) status.textContent = '📦 正在準備上傳本地 ZIP 檔案...';
+                if (status) status.textContent = t('STATUS_UPLOADING_ZIP', '📦 正在準備上傳本地 ZIP 檔案...');
 
                 try {
                     const chunkSize = 65536; // 64KB 分塊
@@ -895,7 +922,7 @@ function bindModalEvents(modal) {
 
                         if (status) {
                             const progress = Math.round(((i + 1) / totalChunks) * 100);
-                            status.textContent = `☁️ 正在上傳資料集... (${progress}%)`;
+                            status.textContent = t('STATUS_UPLOADING', '☁️ 正在上傳資料集... (%1%)').replace('%1', progress);
                         }
 
                         // 發送分塊訊息，合併 SSH 帳密資訊
@@ -912,9 +939,9 @@ function bindModalEvents(modal) {
                         if (i % 5 === 0) await new Promise(resolve => setTimeout(resolve, 50));
                     }
 
-                    if (status) status.textContent = '⌛ 正在雲端進行解壓縮，請稍候...';
+                    if (status) status.textContent = t('STATUS_DECOMPRESSING', '⌛ 正在雲端進行解壓縮，請稍候...');
                 } catch (err) {
-                    if (status) status.textContent = `❌ 讀取失敗: ${err.message}`;
+                    if (status) status.textContent = t('ERROR_READ_FAILED', '❌ 讀取失敗: %1').replace('%1', err.message);
                 }
             });
         };
@@ -925,7 +952,7 @@ function bindModalEvents(modal) {
         cloudDiagnoseBtn.onclick = () => {
             window.CocoyaUI.ensureSshConfig((sshConfig) => {
                 const diagResult = modal.querySelector('#dataset-cloud-diagnostic-result');
-                if (diagResult) diagResult.innerHTML = '正在進行遠端環境診斷...';
+                if (diagResult) diagResult.innerHTML = t('CLOUD_DIAGNOSING', '正在進行遠端環境診斷...');
                 window.CocoyaBridge.send('checkRemoteEnvironment', sshConfig);
             });
         };
@@ -943,26 +970,26 @@ function bindModalEvents(modal) {
                 if (msg.success) {
                     const statusData = msg.status;
                     let html = `<div style="margin-top: 4px;">`;
-                    html += `<strong>GPU</strong>: ${statusData.cudaAvailable ? `<span style="color:#4CAF50;">可用</span> (${statusData.gpuName})` : '<span style="color:#F44336;">無</span>'}<br>`;
-                    html += `<strong>Docker</strong>: ${statusData.dockerRunning ? '<span style="color:#4CAF50;">正常</span>' : '<span style="color:#F44336;">未啟動</span>'}<br>`;
-                    html += `<strong>GPU Passthrough</strong>: ${statusData.gpuPassthrough ? '<span style="color:#4CAF50;">支援 (--gpus)</span>' : '<span style="color:#F44336;">不支援</span>'}`;
+                    html += `<strong>GPU</strong>: ${statusData.cudaAvailable ? `<span style="color:#4CAF50;">${t('CLOUD_AVAILABLE', '可用')}</span> (${statusData.gpuName})` : `<span style="color:#F44336;">${t('CLOUD_NONE', '無')}</span>`}<br>`;
+                    html += `<strong>Docker</strong>: ${statusData.dockerRunning ? `<span style="color:#4CAF50;">${t('CLOUD_NORMAL', '正常')}</span>` : `<span style="color:#F44336;">${t('CLOUD_NOT_RUNNING', '未啟動')}</span>`}<br>`;
+                    html += `<strong>GPU Passthrough</strong>: ${statusData.gpuPassthrough ? `<span style="color:#4CAF50;">${t('CLOUD_SUPPORTED', '支援 (--gpus)')}</span>` : `<span style="color:#F44336;">${t('CLOUD_NOT_SUPPORTED', '不支援')}</span>`}`;
                     
                     if (statusData.errors && statusData.errors.length > 0) {
-                        html += `<div style="color: #FF9800; margin-top: 4px; font-size: 10px;">⚠️ 診斷警告:<br>- ${statusData.errors.join('<br>- ')}</div>`;
+                        html += `<div style="color: #FF9800; margin-top: 4px; font-size: 10px;">${t('CLOUD_DIAGNOSE_WARN', '⚠️ 診斷警告:')}<br>- ${statusData.errors.join('<br>- ')}</div>`;
                     }
                     html += `</div>`;
                     diagResult.innerHTML = html;
                 } else {
-                    diagResult.innerHTML = `<span style="color: #F44336;">❌ 診斷失敗: ${msg.error}</span>`;
+                    diagResult.innerHTML = `<span style="color: #F44336;">${t('CLOUD_DIAGNOSE_FAILED', '❌ 診斷失敗')}: ${msg.error}</span>`;
                 }
             }
         } else if (msg.command === 'datasetUploadResult') {
             if (status) {
                 if (msg.success) {
-                    status.textContent = '✅ 資料集已成功上傳並在遠端解壓縮！';
+                    status.textContent = t('SUCCESS_UPLOAD', '✅ 資料集已成功上傳並在遠端解壓縮！');
                     if (cloudZipInput) cloudZipInput.value = '';
                 } else {
-                    status.textContent = `❌ 上傳失敗: ${msg.error}`;
+                    status.textContent = t('ERROR_UPLOAD_FAILED', '❌ 上傳失敗: %1').replace('%1', msg.error);
                 }
             }
         }
@@ -1014,9 +1041,7 @@ function bindModalEvents(modal) {
             if (status) status.textContent = '';
             
             const fi = modal.querySelector('#dataset-file-input');
-            const di = modal.querySelector('#dataset-dir-input');
             if (fi) fi.value = '';
-            if (di) di.value = '';
 
             refreshDynamicPanels();
             refreshPreview();
@@ -1085,39 +1110,38 @@ function createModal() {
         <section class="dataset-manager-dialog" role="dialog" aria-modal="true" aria-labelledby="dataset-manager-title">
             <header class="dataset-manager-header">
                 <div>
-                    <h2 id="dataset-manager-title">Dataset Manager</h2>
-                    <span>Dataset Spec</span>
+                    <h2 id="dataset-manager-title">${t('TITLE', 'Dataset Manager')}</h2>
+                    <span>${t('SUBTITLE', 'Dataset Spec')}</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <button type="button" id="dataset-manager-clear" class="dataset-secondary-btn" style="padding: 4px 8px; font-size: 11px; margin: 0; line-height: 1.2; display: flex; align-items: center; justify-content: center;" title="清空所有暫存資料記錄並重置">清除資料</button>
-                    <button type="button" id="dataset-manager-close" class="dataset-icon-btn" title="關閉">×</button>
+                    <button type="button" id="dataset-manager-clear" class="dataset-secondary-btn" style="padding: 4px 8px; font-size: 11px; margin: 0; line-height: 1.2; display: flex; align-items: center; justify-content: center;" title="${t('CLEAR_DATA_TOOLTIP', '清空所有暫存資料記錄並重置')}">${t('CLEAR_DATA', '清除資料')}</button>
+                    <button type="button" id="dataset-manager-close" class="dataset-icon-btn" title="${t('CLOSE', '關閉')}">×</button>
                 </div>
             </header>
 
             <div class="dataset-manager-body">
                 <section class="dataset-panel dataset-source-panel">
-                    <h3>資料來源 (Source)</h3>
+                    <h3>${t('SOURCE', '資料來源')}</h3>
                     
                     <label>
-                        <span>專案類型 (Type)</span>
+                        <span>${t('PROJECT_TYPE', '專案類型')}</span>
                         <select name="projectType">${optionList(DatasetSpecConstants.PROJECT_TYPES, 'table')}</select>
                     </label>
                     <label>
-                        <span>來源模式 (Mode)</span>
+                        <span>${t('SOURCE_MODE', '來源模式')}</span>
                         <select name="sourceMode">${optionList(TYPE_TO_MODES_MAP['table'], 'file')}</select>
                     </label>
 
                     <div class="dataset-panel-divider"></div>
 
                     <div id="dataset-import-area-table" class="dataset-import-area">
-                        <button type="button" id="dataset-import-btn" class="dataset-secondary-btn" style="width: 100%">選擇 CSV / JSON 檔案</button>
+                        <button type="button" id="dataset-import-btn" class="dataset-secondary-btn" style="width: 100%">${t('SELECT_CSV', '選擇 CSV / JSON 檔案')}</button>
                         <input type="file" id="dataset-file-input" accept=".csv,.json" style="display: none;">
                     </div>
 
                     <div id="dataset-import-area-image" class="dataset-import-area" style="display: none;">
-                        <button type="button" id="dataset-dir-import-btn" class="dataset-secondary-btn" style="width: 100%">選擇影像資料夾</button>
-                        <input type="file" id="dataset-dir-input" webkitdirectory style="display: none;">
-                        <button type="button" id="dataset-cloud-upload-btn" class="dataset-secondary-btn" style="width: 100%; margin-top: 8px; background: #9c27b0; color: white; border: none; display: none;">☁️ 上傳本地資料集 (ZIP)</button>
+                        <button type="button" id="dataset-dir-import-btn" class="dataset-secondary-btn" style="width: 100%">${t('SELECT_IMAGE_FOLDER', '選擇影像資料夾')}</button>
+                        <button type="button" id="dataset-cloud-upload-btn" class="dataset-secondary-btn" style="width: 100%; margin-top: 8px; background: #9c27b0; color: white; border: none; display: none;">${t('UPLOAD_ZIP', '☁️ 上傳本地資料集 (ZIP)')}</button>
                         <input type="file" id="dataset-cloud-zip-input" accept=".zip" style="display: none;">
                     </div>
 
@@ -1126,42 +1150,42 @@ function createModal() {
                     <div class="dataset-panel-divider"></div>
 
                     <label>
-                        <span>資料集名稱 (Name)</span>
-                        <input name="projectName" value="dataset" placeholder="僅限英數與下劃線">
-                        <span style="font-size: 10px; color: #999; margin-top: 2px; display: block;">* 僅限英文、數字與下劃線 (用於雲端路徑)</span>
+                        <span>${t('PROJECT_NAME', '資料集名稱')}</span>
+                        <input name="projectName" value="dataset" placeholder="${t('PROJECT_NAME_PLACEHOLDER', '僅限英數與下劃線')}">
+                        <span style="font-size: 10px; color: #999; margin-top: 2px; display: block;">${t('PROJECT_NAME_HINT', '* 僅限英文、數字與下劃線 (用於雲端路徑)')}</span>
                     </label>
                     
                     <label>
-                        <span>描述 (Description)</span>
-                        <textarea name="description" rows="3" placeholder="專案詳細描述..."></textarea>
+                        <span>${t('DESCRIPTION', '描述')}</span>
+                        <textarea name="description" rows="3" placeholder="${t('DESCRIPTION_PLACEHOLDER', '專案詳細描述...')}"></textarea>
                     </label>
 
                     <div id="dataset-cloud-diagnostic-area" style="display: none; margin-top: 12px; padding: 10px; background: #fdf6fb; border: 1px solid #e1bee7; border-radius: 6px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <span style="font-size: 12px; font-weight: bold; color: #9c27b0;">☁️ 遠端環境</span>
+                            <span style="font-size: 12px; font-weight: bold; color: #9c27b0;">${t('CLOUD_REMOTE_ENV', '☁️ 遠端環境')}</span>
                             <div style="display: flex; gap: 4px;">
-                                <button type="button" id="dataset-cloud-diagnose-btn" class="dataset-small-btn" style="margin: 0; background: #9c27b0; color: white; border: none; padding: 2px 6px;">執行診斷</button>
+                                <button type="button" id="dataset-cloud-diagnose-btn" class="dataset-small-btn" style="margin: 0; background: #9c27b0; color: white; border: none; padding: 2px 6px;">${t('CLOUD_DIAGNOSE', '執行診斷')}</button>
                             </div>
                         </div>
                         <div id="dataset-cloud-diagnostic-result" style="font-size: 11px; color: #555; line-height: 1.4;">
-                            請點擊「執行診斷」檢查 GPU 與 Docker 環境。
+                            ${t('CLOUD_DIAGNOSE_HINT', '請點擊「執行診斷」檢查 GPU 與 Docker 環境。')}
                         </div>
                     </div>
                 </section>
 
                 <section class="dataset-panel dataset-schema-panel">
                     <div class="dataset-panel-title">
-                        <h3 id="dataset-structure-title">欄位與標籤</h3>
+                        <h3 id="dataset-structure-title">${t('STRUCTURE_TITLE', '欄位與標籤')}</h3>
                         <div id="dataset-schema-actions">
-                            <button type="button" id="dataset-add-column" class="dataset-small-btn">新增 Feature</button>
-                            <button type="button" id="dataset-add-label" class="dataset-small-btn">新增 Label</button>
+                            <button type="button" id="dataset-add-column" class="dataset-small-btn">${t('ADD_FEATURE', '新增 Feature')}</button>
+                            <button type="button" id="dataset-add-label" class="dataset-small-btn">${t('ADD_LABEL', '新增 Label')}</button>
                         </div>
                     </div>
                     <div id="dataset-structure-content">
                         <div class="dataset-column-head">
-                            <span>名稱</span>
-                            <span>型別</span>
-                            <span>角色</span>
+                            <span>${t('COLUMN_NAME', '名稱')}</span>
+                            <span>${t('COLUMN_TYPE', '型別')}</span>
+                            <span>${t('COLUMN_ROLE', '角色')}</span>
                             <span></span>
                         </div>
                         <div id="dataset-column-list" class="dataset-column-list"></div>
@@ -1170,10 +1194,10 @@ function createModal() {
 
                 <section class="dataset-panel dataset-preview-panel">
                     <div class="dataset-panel-title">
-                        <h3>預覽與標註</h3>
+                        <h3>${t('PREVIEW_TITLE', '預覽與標註')}</h3>
                         <div>
-                            <button type="button" id="dataset-manager-validate" class="dataset-small-btn">驗證</button>
-                            <button type="button" id="dataset-manager-export" class="dataset-small-btn" style="background: #FE2F89; color: white; border: none;">匯出資料集</button>
+                            <button type="button" id="dataset-manager-validate" class="dataset-small-btn">${t('VALIDATE', '驗證')}</button>
+                            <button type="button" id="dataset-manager-export" class="dataset-small-btn" style="background: #FE2F89; color: white; border: none;">${t('EXPORT', '匯出資料集')}</button>
                         </div>
                     </div>
                     <div id="dataset-validation"></div>
@@ -1203,6 +1227,26 @@ export function initDatasetManagerUI() {
         button.onclick = openDatasetManager;
     }
     return getModal() || createModal();
+}
+
+export function refreshI18n() {
+    if (typeof document === 'undefined') return null;
+
+    const existingModal = getModal();
+    if (existingModal) {
+        const shouldReopen = state.isOpen && existingModal.style.display === 'flex';
+        existingModal.remove();
+        const newModal = initDatasetManagerUI();
+        if (shouldReopen && newModal) {
+            state.isOpen = true;
+            newModal.style.display = 'flex';
+            refreshDynamicPanels();
+            refreshPreview();
+        }
+        return newModal;
+    }
+
+    return initDatasetManagerUI();
 }
 
 export function openDatasetManager() {

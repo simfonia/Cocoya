@@ -63,12 +63,37 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
                 if (this.minimap._isPaused || isInputActive) return;
                 
                 try {
-                    if (event.type !== Blockly.Events.BLOCK_DELETE && event.blockId && !this.workspace.getBlockById(event.blockId)) return;
-                    originalMirror(event);
+                    // [工作區註解支援] 允許註解事件通過 (COMMENT_CREATE, COMMENT_DELETE, COMMENT_CHANGE, COMMENT_MOVE, COMMENT_RESIZE)
+                    const isCommentEvent = [
+                        Blockly.Events.COMMENT_CREATE,
+                        Blockly.Events.COMMENT_DELETE,
+                        Blockly.Events.COMMENT_CHANGE,
+                        Blockly.Events.COMMENT_MOVE,
+                        Blockly.Events.COMMENT_RESIZE
+                    ].includes(event.type);
                     
-                    // 確保增量更新後依然維持滿版 (縮圖模式)
-                    if (this.minimap.minimapWorkspace && !event.isUiEvent) {
-                        this.minimap.minimapWorkspace.zoomToFit();
+                    // 對於積木事件：如果不是刪除事件，且 blockId 不存在於主工作區，則跳過
+                    // 對於註解事件：直接通過 (註解沒有 blockId，而是有 commentId)
+                    if (!isCommentEvent && event.type !== Blockly.Events.BLOCK_DELETE && event.blockId && !this.workspace.getBlockById(event.blockId)) return;
+                    
+                    // [關鍵修正] 註解事件需要完整重新載入，因為 minimap 內部的 p Set 不包含註解事件
+                    if (isCommentEvent) {
+                        const dom = Blockly.Xml.workspaceToDom(this.workspace);
+                        this.minimap.minimapWorkspace.clear();
+                        Blockly.Xml.domToWorkspace(dom, this.minimap.minimapWorkspace);
+                        setTimeout(() => {
+                            if (this.minimap && this.minimap.minimapWorkspace) {
+                                this.minimap.minimapWorkspace.zoomToFit();
+                                Blockly.svgResize(this.minimap.minimapWorkspace);
+                            }
+                        }, 50);
+                    } else {
+                        originalMirror(event);
+                        
+                        // 確保增量更新後依然維持滿版 (縮圖模式)
+                        if (this.minimap.minimapWorkspace && !event.isUiEvent) {
+                            this.minimap.minimapWorkspace.zoomToFit();
+                        }
                     }
                 } catch (e) { }
             };
@@ -117,12 +142,46 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
                 const dom = Blockly.Xml.workspaceToDom(this.workspace);
                 this.minimap.minimapWorkspace.clear();
                 Blockly.Xml.domToWorkspace(dom, this.minimap.minimapWorkspace);
-                setTimeout(() => { 
-                    if (this.minimap && this.minimap.minimapWorkspace) { 
-                        this.minimap.minimapWorkspace.zoomToFit(); 
-                        Blockly.svgResize(this.minimap.minimapWorkspace); 
-                    } 
-                }, 50);
+
+                const syncCommentGeometry = () => {
+                    if (!this.minimap || !this.minimap.minimapWorkspace) return;
+
+                    const mainComments = this.workspace.getTopComments();
+                    const minimapComments = this.minimap.minimapWorkspace.getTopComments();
+                    if (mainComments.length === 0 || minimapComments.length === 0) return;
+
+                    const commentMap = new Map();
+                    mainComments.forEach(c => commentMap.set(c.id, c));
+
+                    minimapComments.forEach(mc => {
+                        const mainComment = commentMap.get(mc.id);
+                        if (!mainComment) return;
+
+                        const size = mainComment.getSize();
+                        if (size && size.width && size.height) {
+                            mc.setSize(new Blockly.utils.Size(size.width, size.height));
+                        }
+
+                        if (mainComment.location) {
+                            mc.moveTo(new Blockly.utils.Coordinate(mainComment.location.x, mainComment.location.y));
+                        }
+                    });
+                };
+
+                const applyRefresh = () => {
+                    if (!this.minimap || !this.minimap.minimapWorkspace) return;
+                    syncCommentGeometry();
+                    this.minimap.minimapWorkspace.zoomToFit();
+                    Blockly.svgResize(this.minimap.minimapWorkspace);
+                };
+
+                const scheduleRefresh = (delay) => setTimeout(() => {
+                    requestAnimationFrame(applyRefresh);
+                }, delay);
+
+                scheduleRefresh(120);
+                scheduleRefresh(260);
+                scheduleRefresh(420);
             } catch (e) { }
         }
     },
@@ -187,14 +246,19 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
                 Blockly.Events.BLOCK_MOVE,
                 Blockly.Events.BLOCK_CREATE,
                 Blockly.Events.BLOCK_CHANGE,
-                Blockly.Events.BLOCK_DELETE
+                Blockly.Events.BLOCK_DELETE,
+                Blockly.Events.COMMENT_CREATE,
+                Blockly.Events.COMMENT_MOVE,
+                Blockly.Events.COMMENT_CHANGE,
+                Blockly.Events.COMMENT_RESIZE,
+                Blockly.Events.COMMENT_DELETE
             ].includes(event.type);
 
-            if (isBlockChange) { 
-                this.setDirty(true); 
-                this.triggerBlockStateUpdate(); 
+            if (isBlockChange) {
+                this.setDirty(true);
+                this.triggerBlockStateUpdate();
                 this.triggerCodeUpdate();
-                this.triggerAutoBackup(); 
+                this.triggerAutoBackup();
             }
         });
     },

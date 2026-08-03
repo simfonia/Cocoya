@@ -54,7 +54,36 @@ Blockly.Python.forBlock['py_function_def'] = function(block, generator) {
 };
     </pre>
 
-    <h2>3. 資料集管理 API (CocoyaDataset)</h2>
+    <h2>3. 積木程式定位 API (Code Positioning)</h2>
+    <p>用於將 Blockly 積木與產出代碼之間建立 1:1 對應，支援點擊積木時高亮對應程式碼行。</p>
+
+    <h3>3.1 findLocatableBlock (遞迴尋找可定位父積木)</h3>
+    <p><span class="tag tag-bridge">Frontend</span> <span class="tag tag-vsix">VSIX</span> <span class="tag tag-vsix">Tauri</span></p>
+    <p>位於 <code>ui/src/ui/renderer.js</code>。當使用者點擊 value/expression 積木 (具有 <code>outputConnection</code>) 時，
+       該積木的程式碼是內嵌在父 statement 積木之中，通常沒有自己的範圍標記。此方法遞迴往上找到
+       沒有 <code>outputConnection</code> 的 statement 積木，該積木的 ID 才會有 <code># S_ID</code>/<code># E_ID</code> 標記。</p>
+    <pre>
+// 遞迴尋找可定位的父積木
+findLocatableBlock: function(block) {
+    if (!block) return null;
+    if (block.outputConnection) {
+        var parent = block.getParent();
+        if (parent) return this.findLocatableBlock(parent);
+    }
+    return block;
+},
+
+// 在 syncSelection 中使用
+syncSelection: function(blockId) {
+    var block = Blockly.getMainWorkspace().getBlockById(blockId);
+    var locatableBlock = this.findLocatableBlock(block);
+    var range = this.blockToRangeMap.get(locatableBlock.id);
+    // ... 高亮 range.start ~ range.end 的行 ...
+};
+    </pre>
+    <p><strong>參考：</strong> CodeBridge <code>ui/src/main.js</code> 的 <code>findLocatableBlock</code> 實作。</p>
+
+    <h2>4. 資料集管理 API (CocoyaDataset)</h2>
     <p>用於管理 AI 資料集 Spec、影像標註與匯入流程。</p>
     
     <h3>3.1 開啟管理器</h3>

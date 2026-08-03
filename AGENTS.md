@@ -44,6 +44,7 @@ Cocoya 是一個針對 Python AI 視覺的教學工具。它透過 Blockly 產�
 - **代碼風格**：
     - Extension: TypeScript (Strict)。
     - Webview: ES6 JavaScript。
+- **終端機**：使用 PowerShell 作為預設終端機。
 - **系統規格書**：`docs/system_spec.html`。
     - **強制規範**：在進行任何積木或產生器開發前，**必須先詳細閱讀系統規格書**，以確保 ID 注入機制、轉義字元 (\\n) 與 AI 座標規範被嚴格執行。
 - **日誌與備份保護原則**：
@@ -94,6 +95,14 @@ Cocoya 是混合架構（VSIX + Tauri），資源路徑的解析方式因平台�
 3. **VSIX 無需區分模式**：`context.extensionPath` 在開發和生產行為一致
 4. **路徑保護**：內建範例目錄（examples）應設為唯讀保護，防止使用者意外覆蓋。VSIX 在 `fileOps.ts` 檢查路徑前綴，Tauri 在 `file.rs` 的 `save_file` 中檢查 `path.starts_with(&examples_dir)`
 
+### 環境診斷套件清單 (Python Module Check SSOT)
+Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX 與 Tauri 兩端皆從此讀取：
+- **Rust 端**：`src-tauri/src/commands/python.rs` 的 `check_environment` 函數，從嵌入的 `PYTHON_MODULES_JSON` 常數解析
+- **TypeScript 端**：`src/handlers/envOps.ts` 的 `handleCheckEnvironment`，透過 `fs.readFileSync` 讀取 JSON
+- **前端渲染**：`ui/src/ui/hardware.js` 的 `updateEnvironmentStatus` 直接使用後端傳來的 `modules` 陣列
+- **修改規範**：只需修改 `config/python_modules.json`，三個檔案自動同步（但 Rust 端需手動更新內嵌常數後重新編譯）
+
 ## 重要路徑
 - **模組路徑**：`ui/src/modules/` (雙模共用內建模組 SSOT)。
 - **模組快取路徑**：`globalStorage/modules/` 為 VS Code Extension 執行期快取位置，不是 repo 內固定目錄。
+- **Python 套件檢查清單**：`config/python_modules.json` (SSOT 單一事實來源)

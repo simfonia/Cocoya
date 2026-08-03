@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-hant">
+<head>
+<meta charset="UTF-8">
+<title>Tauri Sidecar API 對照表</title>
+<style>
+body { font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; max-width: 900px; margin: 20px auto; padding: 0 20px; }
+h1 { color: #9c27b0; border-bottom: 2px solid #9c27b0; padding-bottom: 8px; }
+h2 { color: #7b1fa2; margin-top: 24px; }
+table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+th, td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+th { background: #f3e5f5; color: #4a148c; }
+code { background: #f5f5f5; padding: 2px 6px; border-radius: 3px; font-size: 13px; }
+pre { background: #f5f5f5; padding: 12px; border-radius: 6px; overflow-x: auto; }
+.note { background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px 14px; margin: 12px 0; }
+.tag { background: #e8f5e9; color: #2e7d32; padding: 2px 6px; border-radius: 3px; font-size: 12px; }
+.tag-rust { background: #e3f2fd; color: #1565c0; }
+.tag-js { background: #fff8e1; color: #f57f17; }
+</style>
+</head>
+<body>
+<h1>Tauri Sidecar API 對照表</h1>
+<p>記錄 Cocoya Tauri 版中 Python Sidecar 通訊的實作方式與 API 使用。</p>
+
+<h2>架構概覽</h2>
+<pre>
+前端 (tauri.js) → invoke('start_sidecar/sidecar_send/stop_sidecar')
+  → Rust Command (dataset.rs)
+    → stdin/stdout JSON 通訊
+      → Python dataset_sidecar.py (CameraService)
+</pre>
+
+<h2>Rust 指令</h2>
+<table>
+<tr><th>指令</th><th>參數</th><th>回傳</th><th>說明</th></tr>
+<tr>
+  <td><code>start_sidecar</code></td>
+  <td><code>python_path: String</code></td>
+  <td><code>Result<(), String></code></td>
+  <td>啟動 <code>dataset_sidecar.py</code> 進程。維護 stdin/stdout/stderr 的 handle。stderr 輸出透過 <code>sidecar-log</code> event 發送到前端。</td>
+</tr>
+<tr>
+  <td><code>sidecar_send</code></td>
+  <td><code>command: String</code>, <code>payload: String</code> (JSON)</td>
+  <td><code>Result<String, String></code> (JSON 回應)</td>
+  <td>發送指令到 sidecar stdin，讀取 stdout 直到找到匹配 requestId 的 response。非 response 行（event）透過 <code>sidecar-event</code> emit 到前端。</td>
+</tr>
+<tr>
+  <td><code>stop_sidecar</code></td>
+  <td>無</td>
+  <td><code>Result<(), String></code></td>
+  <td>關閉 stdin + kill 進程。</td>
+</tr>
+</table>
+
+<h2>Python Sidecar 指令清單 (<code>dataset_sidecar.py</code>)</h2>
+<table>
+<tr><th>command</th><th>payload</th><th>回傳範例</th><th>說明</th></tr>
+<tr>
+  <td><code>listCameras</code></td>
+  <td><code>{}</code></td>
+  <td><code>{"type":"response","success":true,"cameras":[{"id":0,"name":"Camera 0 (640x480)"}]}</code></td>
+  <td>掃描系統中所有可用 webcam。使用 OpenCV <code>cv2.VideoCapture</code> 測試 index 0~9。</td>
+</tr>
+<tr>
+  <td><code>startCamera</code></td>
+  <td><code>{"deviceId": 0}</code></td>
+  <td><code>{"type":"response","success":true}</code></td>
+  <td>啟動指定攝影機的 OpenCV 預覽視窗。背景執行緒持續更新 frame。</td>
+</tr>
+<tr>
+  <td><code>stopCamera</code></td>
+  <td><code>{}</code></td>
+  <td><code>{"type":"response","success":true}</code></td>
+  <td>停止攝影機，關閉 OpenCV 視窗。</td>
+</tr>
+<tr>
+  <td><code>captureImage</code></td>
+  <td><code>{"requestId":"xxx","savePath":"...","label":"..."}</code></td>
+  <td><code>{"type":"response","success":true,"base64":"...","width":640,"height":480}</code></td>
+  <td>擷取目前 frame，回傳 base64 JPEG。若有 savePath 則儲存到磁碟。</td>
+</tr>
+</table>
+
+<h2>Sidecar Event 類型</h2>
+<table>
+<tr><th>event</th><th>payload</th><th>觸發時機</th></tr>
+<tr>
+  <td><code>cameraStatus</code></td>
+  <td><code>{"type":"event","event":"cameraStatus","running":true/false}</code></td>
+  <td>攝影機狀態變化（例如使用者手動關閉 OpenCV 視窗）</td>
+</tr>
+</table>
+
+<div class="note">
+<strong>注意</strong>：sidecar 的 stdout 同時混合 response 和 event。Rust 端會持續讀取 stdout，只有 <code>type=response</code> + 匹配 <code>requestId</code> 的行才會回傳給 caller，其他行（event）透過 Tauri event system emit 到前端。
+</div>
+
+<h2>前端使用方式 (tauri.js)</h2>
+<pre>
+// 自動檢測 sidecar 狀態並啟動（由 _handleDatasetCommand 處理）
+await this._handleDatasetCommand('listCameras', {}, (response) => {
+  this._dispatchToFrontend({
+    command: 'datasetCameraListResult',
+    success: response.success,
+    cameras: response.cameras || []
+  });
+});
+</pre>
+
+<h2>關鍵檔案位置</h2>
+<table>
+<tr><th>檔案</th><th>說明</th></tr>
+<tr><td><code>src-tauri/src/commands/dataset.rs</code></td><td>Rust sidecar 通訊指令（start_sidecar, sidecar_send, stop_sidecar）</td></tr>
+<tr><td><code>src-tauri/src/state.rs</code></td><td>SidecarProcess struct 定義</td></tr>
+<tr><td><code>src-tauri/permissions/commands.toml</code></td><td>指令權限設定</td></tr>
+<tr><td><code>resources/dataset_manager/dataset_sidecar.py</code></td><td>Python sidecar 主進程</td></tr>
+<tr><td><code>resources/dataset_manager/camera_service.py</code></td><td>OpenCV 攝影機服務</td></tr>
+<tr><td><code>ui/src/bridge/tauri.js</code></td><td>前端 bridge + sidecar-event 監聽</td></tr>
+<tr><td><code>ui/src/modules/dataset_manager/sampler.js</code></td><td>攝影機採集前端模組</td></tr>
+</table>
+
+<h2>關鍵技術細節</h2>
+<ul>
+  <li><strong>逐 byte 讀取 stdout</strong>：不使用 <code>BufReader</code>（會內部緩衝吃掉 event），改用 <code>stdout.read(&mut [0u8; 1])</code> 逐 byte 讀取直到換行。</li>
+  <li><strong>requestId 匹配</strong>：每次 <code>sidecar_send</code> 產生唯一 requestId，持續讀 stdout 直到找到 match 的 response。</li>
+  <li><strong>event 轉發</strong>：不匹配的 stdout 行透過 <code>window.emit("sidecar-event", line)</code> 送到前端。</li>
+  <li><strong>前端相容性</strong>：<code>_dispatchToFrontend</code> 覆寫加入 <code>window.postMessage</code>，確保 <code>sampler.js</code> 的 <code>window.addEventListener('message')</code> 能正常接收回應。</li>
+  <li><strong>自動重啟</strong>：前端 <code>_handleDatasetCommand</code> 在 sidecar 未啟動時自動呼叫 <code>start_sidecar</code>。</li>
+</ul>
+</body>
+</html>

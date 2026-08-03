@@ -99,6 +99,23 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
     },
 
     /**
+     * 遞迴尋找可定位的父積木 (參考 CodeBridge findLocatableBlock)
+     * 若積木有 outputConnection (value/expression 積木)，往上遞迴找到
+     * 沒有 outputConnection 的 statement 積木，該積木的 ID 才會在
+     * 程式碼中有範圍標記 (S_ID/E_ID)。
+     * @param {Blockly.Block} block 當前積木
+     * @returns {Blockly.Block|null} 可定位的積木
+     */
+    findLocatableBlock: function(block) {
+        if (!block) return null;
+        if (block.outputConnection) {
+            var parent = block.getParent();
+            if (parent) return this.findLocatableBlock(parent);
+        }
+        return block;
+    },
+
+    /**
      * 高亮並捲動到指定積木對應的代碼範圍
      * @param {string} blockId 積木 ID
      */
@@ -120,7 +137,11 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             infoBar.style.display = 'none';
         }
 
-        const range = this.blockToRangeMap.get(blockId);
+        // 遞迴尋找可定位的父積木 (value 積木通常沒有自己的範圍標記，
+        // 需要往上找到 statement 父積木才能定位)
+        var locatableBlock = this.findLocatableBlock(block);
+        if (!locatableBlock) return;
+        const range = this.blockToRangeMap.get(locatableBlock.id);
         if (range && this.lineDoms.length > 0) {
             // 高亮範圍內的所有行
             for (let i = range.start; i <= range.end; i++) {

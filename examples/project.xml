@@ -1,0 +1,10 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
+  <block type="py_definition_zone" id="eg[W-0dB,+`[|r=obc}$" x="100" y="20">
+    <statement name="DEFS">
+      <block type="py_coding_comment" id="81bIbE@0M:1PzYxWb$yp">
+        <field name="TEXT"></field>
+      </block>
+    </statement>
+  </block>
+  <block type="py_main" id="%fQ}Uj013_+LWAO:~2-W" x="100" y="140"></block>
+</xml>

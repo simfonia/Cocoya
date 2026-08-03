@@ -9,6 +9,11 @@ import os
 import sys
 import json
 
+# === 確定性運算控制（確保 VSIX 與 Tauri 環境訓練結果一致）===
+# 必須在 import tensorflow 之前設定環境變數
+os.environ['TF_DETERMINISTIC_OPS'] = '1'
+os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
+
 # === 依賴檢查 ===
 try:
     import tensorflow as tf
@@ -16,6 +21,12 @@ except ImportError:
     print("錯誤: 請先安裝 tensorflow")
     print("  pip install tensorflow")
     sys.exit(1)
+
+import numpy as np
+
+# 設定全域隨機種子，確保跨環境再現性
+tf.random.set_seed(42)
+np.random.seed(42)
 
 # 匯入共同模組
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -54,12 +65,16 @@ def main():
     parser.add_argument('--fine_tune', type=str, default='false',
                         choices=['true', 'false'],
                         help='是否解凍 backbone 進行微調')
+    parser.add_argument('--model_output', type=str, default='none',
+                        choices=['none', 'int8', 'f32', 'keras', 'int8+f32', 'all'],
+                        help='模型輸出格式（none=僅觀察結果, int8=量化TFLite, f32=Float32TFLite, keras=Keras, int8+f32=兩種TFLite, all=全部）')
 
     args = parser.parse_args()
 
     # 轉換字串參數為布林值
     augmentation_enabled = args.augmentation.lower() == 'true'
     fine_tune_enabled = args.fine_tune.lower() == 'true'
+    model_output = args.model_output
 
     # 確保輸出目錄存在
     os.makedirs(args.output_dir, exist_ok=True)
@@ -137,24 +152,30 @@ def main():
     else:
         final_acc = history.history['accuracy'][-1]
 
-    # === 轉換為 TFLite ===
-    print("\n轉換為 TFLite 模型...")
+    # === 模型產出（根據 model_output 格式選擇性產出）===
+    if model_output != 'none':
+        print(f"\n產出模型（格式: {model_output}）...")
 
-    # 先存 Keras 模型
-    keras_path = os.path.join(args.output_dir, f'{args.project_name}.keras')
-    save_keras_model(model, keras_path)
+        # Keras 模型
+        if model_output in ('keras', 'all'):
+            keras_path = os.path.join(args.output_dir, f'{args.project_name}.keras')
+            save_keras_model(model, keras_path)
 
-    # 轉換 TFLite（量化）
-    tflite_path = os.path.join(args.output_dir, f'{args.project_name}.tflite')
-    success, size_kb, warn = export_tflite(model, train_ds, tflite_path, quantize=True)
+        # 量化 TFLite (int8)
+        if model_output in ('int8', 'int8+f32', 'all'):
+            tflite_path = os.path.join(args.output_dir, f'{args.project_name}.tflite')
+            export_tflite(model, train_ds, tflite_path, quantize=True)
 
-    # 同時也存非量化版本 (float32) 以備用
-    tflite_f32_path = os.path.join(args.output_dir, f'{args.project_name}_f32.tflite')
-    export_tflite(model, train_ds, tflite_f32_path, quantize=False)
+        # Float32 TFLite
+        if model_output in ('f32', 'int8+f32', 'all'):
+            tflite_f32_path = os.path.join(args.output_dir, f'{args.project_name}_f32.tflite')
+            export_tflite(model, train_ds, tflite_f32_path, quantize=False)
 
-    # === 儲存 labels.txt ===
-    labels_path = os.path.join(args.output_dir, f'{args.project_name}_labels.txt')
-    save_labels(labels, labels_path)
+        # 永遠產生 labels.txt
+        labels_path = os.path.join(args.output_dir, f'{args.project_name}_labels.txt')
+        save_labels(labels, labels_path)
+    else:
+        print("\n[跳過] 模型輸出設為「無」，僅輸出訓練結果（曲線圖/歷史/報告）")
 
     # === 繪製訓練曲線圖與產出報告 ===
     print("\n繪製訓練曲線圖...")
@@ -179,12 +200,22 @@ def main():
     report_path = os.path.join(args.output_dir, f'{args.project_name}_training_report.html')
     generate_html_report(history_data, curve_b64, report_path, labels, args.project_name)
 
-    # === 列出產出檔案 ===
+    # === 列出產出檔案（僅列出本次實際產出的檔案）===
     print("\n✅ 訓練完成！產出檔案:")
-    for f in os.listdir(args.output_dir):
-        fpath = os.path.join(args.output_dir, f)
-        size = os.path.getsize(fpath)
-        print(f"  {fpath} ({size/1024:.1f} KB)")
+    if model_output != 'none':
+        # 有產出模型：列出所有產出檔案
+        for f in os.listdir(args.output_dir):
+            fpath = os.path.join(args.output_dir, f)
+            size = os.path.getsize(fpath)
+            print(f"  {fpath} ({size/1024:.1f} KB)")
+    else:
+        # 僅觀察模式：只列出本次產出的結果檔案（曲線圖/歷史/報告）
+        for f in os.listdir(args.output_dir):
+            if f.endswith(('_training_curve.png', '_training_history.json', '_training_report.html')):
+                fpath = os.path.join(args.output_dir, f)
+                size = os.path.getsize(fpath)
+                print(f"  {fpath} ({size/1024:.1f} KB)")
+        print("  (模型輸出設為「無」，未產出 Keras/TFLite/labels 檔案)")
 
     # 回傳結果（JSON 格式）
     result = {

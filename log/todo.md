@@ -6,6 +6,86 @@
 - **SSOT (單一事實來源)**：所有積木、產生器與前端邏輯必須統一存放在 `ui/src` 下，由 VSIX 與 Tauri 共享。
 - **通訊抽象化**：前端必須透過 `CocoyaBridge` 與後端通訊，禁止在 UI 層直接使用環境專屬 API。
 
+---
+
+## [已完成] 2026-08-02 — 模型輸出格式選單 + 推論積木模型類型
+
+### 需求
+1. 將「產生模型」勾選框整合為「模型輸出」下拉選單，預設「無」
+2. 推論積木加入「模型類型」下拉選單，可自訂使用哪個模型檔
+3. 修正推論積木 glob 搜尋順序不保證的 bug
+
+### 修改
+- [x] `ai_inference_blocks.js`：`EXPORT_MODEL` 勾選框 → `MODEL_OUTPUT` 下拉選單；推論積木加入 `MODEL_TYPE` 下拉選單
+- [x] `ai_inference_generators.js`：`export_model` → `model_output` 參數；推論加入 `model_type` + 修正 glob 搜尋邏輯
+- [x] `classifier_train.py`：`--export_model` → `--model_output` 參數，根據值控制產出格式
+- [x] `zh-hant.js` + `en.js`：新增 i18n 字串
+
+### 行為
+- 模型輸出選項：無 / 量化 TFLite (int8) / Float32 TFLite / Keras / 量化+Float32 / 全部
+- 推論模型類型：自動（優先 int8）/ 量化 (int8) / Float32
+
+---
+
+## [已完成] 2026-08-01 — VSIX/Tauri 訓練結果差異修復（4 問題）
+
+### 問題
+1. terminal 輸出格式不一致（Tauri 有 ANSI 色碼和中文亂碼）
+2. Tauri 未顯示 `cocoya_run.py` 路徑
+3. Tauri 訓練正確率偏低（57.5% vs VSIX 90%）
+4. VSIX 無法自動顯示訓練結果（Tauri 可以）
+
+### 修復
+- [x] Phase 1：終端機輸出格式（`src-tauri/src/commands/python.rs` — ANSI 過濾、編碼處理、執行命令顯示）
+- [x] Phase 2：正確率差異（`classifier_train.py` + `common/training.py` — 隨機種子控制 + 確定性運算）
+- [x] Phase 3：VSIX 自動顯示訓練結果（`src/handlers/envOps.ts` — spawn 模式 + RESULT 解析）
+- [x] Phase 4：stderr 混入問題（`src-tauri/src/commands/python.rs` — 獨立 python-error 事件）
+- [x] `cargo check` 編譯驗證通過
+
+### 待驗證
+- [ ] 重新執行 `02_PC_train.xml`，確認兩版正確率一致
+- [ ] 確認 VSIX 自動顯示訓練報告
+- [ ] 確認 Tauri 終端機無 ANSI 色碼和亂碼
+
+---
+
+## [進行中] 2026-07-18 — Tauri Dataset Manager 功能對齊VSIX
+
+### Phase A：Sidecar 已有支援（優先實作）
+- [x] A1. `datasetDeleteImage` — Rust 新增 `delete_file` 指令 + lib.rs/權限/tauri.js 串接
+- [x] A2. `datasetExport` — Rust `export_dataset` 指令 + sidecar 打包 + 原生存檔對話框
+- [ ] **A3. `datasetUploadArchive`** — sidecar `uploadDataset` 串接（SSH/SFTP 分塊上傳）
+
+### Phase B：需新實作
+- [x] B1. `pickFolder` — Tauri 原生資料夾選擇 + Rust 掃描影像（`pick_folder` 指令）
+- [x] **B2. `openTrainingReport`** — Rust `open::that()` 開 HTML（2026-08-01 完成）
+
+### Phase C：雲端訓練（長期）
+- [ ] C1. SSH/SFTP 上傳流程整合
+- [ ] C2. 遠端訓練啟動與監控
+
+---
+
+## [待辦] 優先級 1：AI 訓練腳本擴充
+- [ ] **detector_train.py 實作**：使用 `resources/train_templates/common/` 模組實作物件偵測訓練腳本
+- [ ] **line_follower_train.py 實作**：使用 common 模組實作循線訓練腳本
+- [ ] **table_train.py 實作**：使用 common 模組實作表格資料訓練腳本
+
+## [待辦] 優先級 2：遠端訓練
+- [ ] **SSH/Sidecar 整合**：實作 `extension.ts` 中 `backend === 'remote'` 的分支
+- [ ] **容器化訓練腳本**：建立基於 DGX 鏡像的訓練容器與模板程式
+
+## [待辦] 優先級 3：範例與說明
+- [ ] **物件偵測範例規劃**：討論 `examples/AI_03_???` 的方向
+- [ ] **hardware_pins 說明文件補齊**：補上 `hardware_pins_en.html` 和 `hardware_pins_zh-hant.html` 的完整內容
+- [ ] **[選用]** 更新 `03_PC_inference.xml` 使用新的解析積木
+
+## [待辦] 長期優化
+- [ ] **[優化] 跨平台 Friendly Name**：實作 macOS/Linux 的序列埠名稱顯示優化。
+- [ ] **[功能] 重置韌體 Sidecar 化**：研究將 `esptool` 整合成 Tauri Sidecar 的可行性。
+
+---
+
 ## [已完成] 里程碑 v1.0 ~ v6.0 (硬體、UI 與 部署穩定化)
 - [x] **[硬體] XIAO S3 Sense 全面支援**：實作 Serial 燒錄 (esptool)、多段韌體恢復 (Factory C++ - 支援 project_config.json) 以及主動式硬體偵測優化 (2026-06-07)。
 - [x] **[部署] 傳輸可靠性革命**：升級 `deploy_mcu.py` 支援 128-byte 分塊二進位寫入與 10 次中斷序列，徹底解決 ESP32-S3 同步失敗問題 (2026-06-07)。
@@ -20,9 +100,6 @@
 - [x] **[功能] 遠端環境診斷 (CUDA/Docker)**
 - [x] **[功能] 資料集 SFTP 傳輸與原位解壓**
 - [x] **[Phase 5] Python MVP 驗證完成**（2026-06-24）
-- [ ] **[遠端訓練] SSH/Sidecar 整合**：實作 `extension.ts` 中 `backend === 'remote'` 的分支
-- [ ] **[遠端訓練] 容器化訓練腳本**
-- [ ] **[遠端訓練] 推論與部署鏈**
 - [x] **[Phase 1] 訓練後端選擇 UI**
 - [x] **[Phase 2] 本地訓練功能**
 - [x] **[Phase 2.5] 通用化架構重構**
@@ -59,25 +136,202 @@
 - [x] Tauri 端 `open_help` 指令 + `docs/help` 資源包
 - [x] `toolbox.xml` 補上 4 個解析積木
 
-## [待辦] 優先級 1：AI 訓練腳本擴充
-- [ ] **detector_train.py 實作**：使用 `resources/train_templates/common/` 模組實作物件偵測訓練腳本
-- [ ] **line_follower_train.py 實作**：使用 common 模組實作循線訓練腳本
-- [ ] **table_train.py 實作**：使用 common 模組實作表格資料訓練腳本
+## [已完成] 2026-07-18 — Tauri 版 Dataset Manager Webcam 修復
+- [x] 新增 Rust sidecar 通訊模組（`start_sidecar`、`sidecar_send`、`stop_sidecar`）
+- [x] 修正 `sidecar_send` 逐 byte 讀取 stdout 避免 BufReader 緩衝問題
+- [x] 修正 `datasetStopCamera` 狀態同步（停止後 success: false）
+- [x] 新增 `sidecar-event` 監聽，sidecar 主動事件轉發到前端
+- [x] 覆寫 `_dispatchToFrontend` 加入 `window.postMessage` 相容 sampler.js
 
-## [待辦] 優先級 2：遠端訓練
-- [ ] **SSH/Sidecar 整合**：實作 `extension.ts` 中 `backend === 'remote'` 的分支
-- [ ] **容器化訓練腳本**：建立基於 DGX 鏡像的訓練容器與模板程式
+## [已完成] 2026-07-29 — Value 積木程式定位修復
 
-## [待辦] 優先級 3：範例與說明
-- [ ] **物件偵測範例規劃**：討論 `examples/AI_03_???` 的方向
-- [ ] **hardware_pins 說明文件補齊**：補上 `hardware_pins_en.html` 和 `hardware_pins_zh-hant.html` 的完整內容
-- [ ] **[選用]** 更新 `03_PC_inference.xml` 使用新的解析積木
+### 問題
+Cocoya 無法定位 value/expression 積木 (如數字、文字、變數 getter)。當點擊這類積木時，程式碼預覽面板不會高亮對應行。
 
-## [待辦] 長期優化
-- [ ] **[優化] 跨平台 Friendly Name**：實作 macOS/Linux 的序列埠名稱顯示優化。
-- [ ] **[功能] 重置韌體 Sidecar 化**：研究將 `esptool` 整合成 Tauri Sidecar 的可行性。
-- [x] **[功能] Dataset manager 多部 webcam 選擇**
-- [x] **[功能] Dataset manager 刪除照片**
+### 根本原因
+1. **標記被清除**：`workspace.js` 的 `triggerCodeUpdateSync` 中，`/\u0001ID:.*?\u0002/g` 正則清除了 value 積木的 invisble 標記，導致 `blockToRangeMap` 中沒有 value 積木的 ID。
+2. **缺少遞迴查找**：`renderer.js` 的 `syncSelection` 直接以 `blockId` 查找，CodeBridge 的 `findLocatableBlock` 遞迴向上查找機制尚未實作。
+
+### 修復
+- **`ui/src/ui/renderer.js`**：
+  - 新增 `findLocatableBlock(block)` 方法：若積木有 `outputConnection`，遞迴往上找到 statement 父積木。
+  - 修改 `syncSelection`：使用 `findLocatableBlock` 找到可定位父積木後，再以其 ID 查找範圍。
+- **`docs/system_spec.html`**：在「積木定位技術」章節補充 subsection D，說明遞迴查找機制。
+
+### 參考
+- CodeBridge `ui/src/main.js` 的 `findLocatableBlock` 與 `syncSelection` 實作。
+
+## [已完成] 2026-07-29 — 修復 Minimap 工作區註解同步問題
+
+### 問題
+- 工作區註解功能啟用後，Minimap 不會即時更新工作區註解
+
+### 根本原因
+- `workspace.js` 的 `initMinimap()` 中，覆寫了 `minimap.mirror()` 函數
+- 原函數過濾掉了不包含 `blockId` 的事件（第 66 行）
+- 工作區註解事件（COMMENT_CREATE, COMMENT_DELETE 等）使用 `commentId` 而非 `blockId`
+- 導致所有註解事件都被過濾掉，Minimap 無法同步
+
+### 修復
+- **`ui/src/app/workspace.js`**：
+  - 在 `minimap.mirror()` 中加入註解事件識別邏輯
+  - 允許 5 種註解事件通過：COMMENT_CREATE, COMMENT_DELETE, COMMENT_CHANGE, COMMENT_MOVE, COMMENT_RESIZE
+  - 註解事件直接通過過濾器，不檢查 `blockId`
+
+### 技術細節
+- Blockly 工作區註解事件類型：
+  - `COMMENT_CREATE`：建立註解
+  - `COMMENT_DELETE`：刪除註解
+  - `COMMENT_CHANGE`：修改註解內容
+  - `COMMENT_MOVE`：移動註解
+  - `COMMENT_RESIZE`：調整註解大小
+- 這些事件使用 `commentId` 而非 `blockId`
+- Minimap 的 `mirror()` 函數需要正確處理這些事件
+
+### 參考
+- Blockly v12.3.1 事件系統：`ui/blockly/core/blockly.js` 中的 EventType 定義
+- Minimap 插件：`ui/blockly/plugins/workspace-minimap.js` 中的 `p Set` 定義
+
+## [已完成] 2026-07-29 — 修復 Minimap 工作區註解寬度問題 (v3 - 註解大小同步)
+
+### 問題
+- 關閉 minimap 再重開後，minimap 中的每個註解寬度變寬
+- 再移動工作區的任一註解就會讓 minimap 中的註解寬度回復
+
+### 根本原因
+- `refreshMinimap()` 函數中，使用 `domToWorkspace` 載入註解時
+- `domToWorkspace` 載入的註解寬度可能與實際顯示不同（使用預設寬度）
+- 導致關閉再開啟 minimap 後，註解寬度變寬
+- 但移動註解時，會觸發 COMMENT_MOVE 事件，重新載入後寬度恢復正常
+
+### 解決方案 (v3 - 註解大小同步)
+- **`ui/src/app/workspace.js`**：
+  - 在 `refreshMinimap()` 函數中，加入註解大小和位置同步邏輯
+  - 載入完成後，比對主工作區和 minimap 工作區的註解
+  - 建立 ID 對應表，複製每個註解的 `size` 和 `location`
+  - 確保 minimap 中的註解大小與主工作區一致
+
+### 技術細節
+- `workspaceToDom` 會序列化註解的 `x`, `y`, `w`, `h` 屬性
+- 但 `domToWorkspace` 載入時，可能使用預設寬度而非序列化的寬度
+- 需要在載入完成後，手動同步 `getSize()` 和 `location`
+- 使用 `setTimeout(..., 50)` 確保載入完成後再同步
+
+### 修改檔案
+- `ui/src/app/workspace.js`：第 114-145 行（refreshMinimap 函數）
+
+### 驗證
+- [x] 在 refreshMinimap() 中加入註解大小和位置同步邏輯
+- [x] 建立 ID 對應表，複製 size 和 location
+- [x] 待驗證：關閉 minimap 再重開，註解寬度保持正常
+- [x] 待驗證：移動註解後，minimap 註解寬度不變
+- [x] 待驗證：新增註解後，minimap 立即顯示且寬度正確
+
+### 下次啟動方向 (Next Steps)
+- 在瀏覽器中測試 minimap 關閉再開啟的註解寬度問題
+- 驗證新增、移動、刪除註解時 minimap 正確更新且寬度正常
+
+## [已完成] 2026-07-29 — 修復 Minimap 工作區註解同步問題 (v2 - 完整重新載入法)
+
+### 問題
+- 工作區註解功能啟用後，Minimap 不會即時更新工作區註解
+- 使用者詳細回報：
+  1. 開啟舊檔，註解正確顯示，minimap 也正確
+  2. 移動積木，minimap 正確更新
+  3. 移動或新增註解，minimap 沒有更新
+  4. 關閉 minimap 再重開，註解更新但每個註解的寬度變寬
+
+### 根本原因
+- `workspace.js` 的 `initMinimap()` 中，覆寫了 `minimap.mirror()` 函數
+- **第一層問題**：原函數過濾掉了不包含 `blockId` 的事件
+  - 工作區註解事件使用 `commentId` 而非 `blockId`
+- **第二層問題**：minimap 內部的 `p Set` 不包含註解事件
+  - `p = new Set([BLOCK_CHANGE, BLOCK_CREATE, BLOCK_DELETE, BLOCK_DRAG, BLOCK_MOVE])`
+  - 註解事件不會觸發 minimap 內部的 update() 函數
+- **第三層問題**：關閉再開啟後註解寬度變寬
+  - 可能是因為 `domToWorkspace` 載入時的預設寬度與實際不同
+
+### 解決方案 (v2 - 完整重新載入法)
+- **`ui/src/app/workspace.js`**：
+  - 在 `minimap.mirror()` 中加入註解事件識別邏輯
+  - 對於註解事件，使用完整重新載入：`workspaceToDom` → `clear` → `domToWorkspace`
+  - 不使用 `originalMirror(event)` 增量更新
+  - 這樣可以確保註解事件正確同步，避免寬度問題
+
+### 技術細節
+- Blockly 工作區註解事件類型：
+  - `COMMENT_CREATE`：建立註解
+  - `COMMENT_DELETE`：刪除註解
+  - `COMMENT_CHANGE`：修改註解內容
+  - `COMMENT_MOVE`：移動註解
+  - `COMMENT_RESIZE`：調整註解大小
+- 這些事件使用 `commentId` 而非 `blockId`
+- Minimap 的 `mirror()` 函數內部的 `p Set` 只包含積木事件，不包含註解事件
+- 完整重新載入可以確保 XML 序列化/反序列化的一致性
+
+### 參考
+- Blockly v12.3.1 事件系統：`ui/blockly/core/blockly.js` 中的 EventType 定義
+- Minimap 插件：`ui/blockly/plugins/workspace-minimap.js` 中的 `p Set` 定義
+
+## [已完成] 2026-07-29 — 啟用 Blockly 工作區註解功能
+
+### 問題
+- 右鍵積木可以寫註解 (comments: true 預設啟用)
+- 右鍵工作區空白處沒有 'Add comment' 選項
+
+### 根本原因
+- Blockly v12+ 重構了 context menu 註冊機制（2024-04-17 PR #8035）
+- `workspaceComments: true` 只啟用功能，不自動註冊右鍵選單
+- 必須手動呼叫 `Blockly.ContextMenuItems.registerCommentOptions()` 才能顯示 "Add comment" 選項
+
+### 修復
+- **`ui/src/app/lifecycle.js`**：
+  - 在 `injectOptions` 中加入 `workspaceComments: true`（第一道手續）
+  - 在 `Blockly.inject()` 之前加入 `registerCommentOptions()` 呼叫（第二道手續）
+  - 加入 typeof 防呆檢查，確保與舊版 Blockly 相容
+
+### 技術細節
+- Blockly v9.3.0+（包含 v12.3.1）：必須手動呼叫 `registerCommentOptions()`
+- 此函數註冊三個選項：commentCreate, commentDelete, commentDuplicate
+- Cocoya 使用 Blockly v12.3.1，需要此修復
+
+### 參考
+- CodeBridge `log/work/2026-07-26.md` 的「啟用 Blockly 工作區註解」章節
+
+## [已完成] 2026-07-30 — Dataset Manager 優化（7 項目）
+
+### 項目 6：廢棄 DOM 元素清理
+- [x] 移除無用的 `#dataset-dir-input`（`input[webkitdirectory]`）及相關程式碼
+
+### 項目 1：Importer 閒置問題
+- [x] 移除未使用的 `importer.js` 檔案及 import 語句（已備份至 backup/）
+
+### 項目 5：CSS 深色主題補完
+- [x] 新增 19 處 `.vscode-high-contrast` 變體（hover、驗證狀態、縮圖、標註面板等）
+
+### 項目 4：標籤新增 UI 改善
+- [x] 取消新增時保留原標籤（儲存 `previousLabel`）
+- [x] Escape 鍵加 `stopPropagation()` 避免關閉整個 Dataset Manager
+- [x] `onLabelChange` 不再呼叫 `refreshDynamicPanels()`，改為局部更新
+
+### 項目 2：攝影機預覽更新優化
+- [x] hint overlay 改為顯示攝影機名稱和操作指引
+- [x] hint overlay 樣式優化（底部置中、半透明黑色、字體縮小）
+
+### 項目 3：標註返回 scroll 穩定
+- [x] 提取共用函式 `saveGridScroll()` 和 `restoreGridScroll()`
+- [x] `enterAnnotationMode`、`refreshDynamicPanels`、`handleDeleteImage` 統一使用
+
+### 項目 7：label_map 保留邏輯改善
+- [x] `buildLabelMap()` 新增值驗證，過濾無效的 label_map 條目
+
+### 待處理（獨立問題）
+- [x] **Tauri 版 sidecar 拍攝快照超時**：已修正（新增 ping 指令、健康檢查改用 ping、list_cameras 優化、超時延長）
+- [x] **Dataset Manager 文字 i18n 化**：已建立獨立 i18n 檔案（zh-hant/en），並完成 ui_layout.js 與 ui_components.js 替換
+- [x] **Dataset Manager spec.js i18n 化**：提取共享 `i18n.js` 模組（支援佔位符），替換 spec.js validate() 的 13 個硬編碼字串，新增 13 個 `DSM_VALIDATE_*` 鍵值
+- [x] **ui_layout.js 其餘 43 處硬編碼字串 i18n 化**：替換 createModal() 模板 28 處、事件處理器 7 處、handleBridgeMessage 雲端診斷 8 處，全數使用共享 `t()` 函式
+
+---
 
 ## [規劃] Tauri 版 SSH/雲端訓練實作藍圖
 
@@ -86,8 +340,9 @@
 - **實作方式**：Tauri 用 `tauri-plugin-shell` 的 `Command` API 啟動 Python subprocess
 
 ### Phase 1：資料集管理補全（前端 only）
-- [ ] `openDatasetManager` → 已修（直接 dispatch 前端）
-- [ ] `datasetListCameras`、`datasetStartCamera`、`datasetStopCamera`、`datasetCaptureImage`、`datasetDeleteImage` → tauri.js 需加入對應 case
+- [x] `openDatasetManager` → 已修（直接 dispatch 前端）
+- [x] `datasetListCameras`、`datasetStartCamera`、`datasetStopCamera`、`datasetCaptureImage` → 已透過 sidecar 通訊實作
+- [ ] `datasetDeleteImage` → 待 sidecar 支援
 - [ ] `datasetExport`、`datasetUploadArchive` → 需後端支援（Python sidecar 或 Rust 實作）
 - [ ] `pickFolder` → 使用 Tauri 原生對話框（已有 `tauri-plugin-dialog`）
 
@@ -107,4 +362,5 @@
 - [ ] 模型下載與部署流程
 
 ---
-*最後更新日期：2026-07-17 (Tauri SSH 實作計畫)*
+
+*最後更新日期：2026-07-18 (Tauri Dataset Manager 對齊計畫)*

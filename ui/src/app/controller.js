@@ -46,7 +46,7 @@ class AppController {
         this.handlers.set('runCompleted', () => { if (this.ui.flashButton) this.ui.flashButton('btn-run', '#c8e6c9'); });
         this.handlers.set('updateStatus', (m) => { if (this.ui.setUpdateStatus) this.ui.setUpdateStatus(m.data); });
         this.handlers.set('serialPortsData', (m) => { if (this.ui.updateSerialPorts) this.ui.updateSerialPorts(m.ports); });
-        this.handlers.set('environmentStatus', (m) => { if (this.ui.updateEnvironmentStatus) this.ui.updateEnvironmentStatus(m.results); });
+        this.handlers.set('environmentStatus', (m) => { if (this.ui.updateEnvironmentStatus) this.ui.updateEnvironmentStatus(m); });
         this.handlers.set('cloudAiModeStatus', (m) => { if (this.ui.updateCloudAiToggle) this.ui.updateCloudAiToggle(m.enabled); });
     }
 

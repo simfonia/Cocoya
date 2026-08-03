@@ -98,31 +98,47 @@ export class TrainingOpsHandler {
      */
     public handleOpenTrainingReport(message: any) {
         const reportPath = message.path;
-        if (!reportPath || !fs.existsSync(reportPath)) {
-            vscode.window.showErrorMessage('找不到訓練報告檔案: ' + (reportPath || ''));
+        if (!reportPath) {
+            vscode.window.showErrorMessage('找不到訓練報告檔案: 路徑為空');
+            return;
+        }
+
+        // 若為相對路徑，結合當前專案目錄解析（對齊 Tauri 版 open_report 行為）
+        let resolvedPath = reportPath;
+        if (!path.isAbsolute(reportPath)) {
+            const baseDir = this.manager.currentFilePath
+                ? path.dirname(this.manager.currentFilePath)
+                : (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0
+                    ? vscode.workspace.workspaceFolders[0].uri.fsPath
+                    : this.manager.context.extensionPath);
+            resolvedPath = path.resolve(baseDir, reportPath);
+        }
+
+        if (!fs.existsSync(resolvedPath)) {
+            vscode.window.showErrorMessage('找不到訓練報告檔案: ' + resolvedPath);
             return;
         }
         
         console.log(`[TrainingReport] Opening report in browser:`);
         console.log(`[TrainingReport]   path: ${reportPath}`);
         
-        const hasChinesePath = /[\u4e00-\u9fa5]/.test(reportPath);
+        const hasChinesePath = /[\u4e00-\u9fa5]/.test(resolvedPath);
         
         if (hasChinesePath) {
-            this.showChinesePathError(reportPath);
+            this.showChinesePathError(resolvedPath);
             return;
         }
         
-        vscode.env.openExternal(vscode.Uri.file(reportPath)).then((success: boolean) => {
+        vscode.env.openExternal(vscode.Uri.file(resolvedPath)).then((success: boolean) => {
             if (!success) {
                 console.error(`[TrainingReport] openExternal returned false`);
-                vscode.window.showErrorMessage(`開啟失敗，請手動開啟檔案：\n${reportPath}`);
+                vscode.window.showErrorMessage(`開啟失敗，請手動開啟檔案：\n${resolvedPath}`);
             } else {
                 console.log(`[TrainingReport] Successfully opened in browser`);
             }
         }, (err: any) => {
             console.error(`[TrainingReport] openExternal failed:`, err);
-            vscode.window.showErrorMessage(`開啟失敗，請手動開啟檔案：\n${reportPath}\n\n錯誤：${err.message || '未知錯誤'}`);
+            vscode.window.showErrorMessage(`開啟失敗，請手動開啟檔案：\n${resolvedPath}\n\n錯誤：${err.message || '未知錯誤'}`);
         });
     }
     

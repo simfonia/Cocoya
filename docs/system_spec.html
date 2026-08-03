@@ -313,6 +313,34 @@ Blockly.Python.scrub_ = function(block, code, opt_thisOnly) {
             <li><strong>渲染:</strong> 當使用者點擊積木時，UI 管理器會根據映射表循環高亮該範圍內的所有 DOM 行。</li>
             <li><strong>抹除:</strong> 在執行代碼或複製到剪貼簿前，系統會使用正則徹底清除所有標記。</li>
         </ol>
+
+        <h3>D. Value 積木定位：遞迴尋找可定位父積木 (Recursive Locatable Block Finding)</h3>
+        <p>由於 value/expression 積木 (具有 <code>outputConnection</code>) 的程式碼是內嵌在父 statement 積木之中，它們通常沒有自己的範圍標記。Cocoya 採用<strong>遞迴向上查找</strong>的方式解決此問題，參考自 CodeBridge 專案的實作：</p>
+        <pre><code class="language-javascript">// ui/src/ui/renderer.js
+findLocatableBlock: function(block) {
+    if (!block) return null;
+    // 若是 value 積木 (有 outputConnection)，往上遞迴找父積木
+    if (block.outputConnection) {
+        var parent = block.getParent();
+        if (parent) return this.findLocatableBlock(parent);
+    }
+    return block;
+},
+
+syncSelection: function(blockId) {
+    // ...移除舊高亮...
+    var block = Blockly.getMainWorkspace().getBlockById(blockId);
+    var locatableBlock = this.findLocatableBlock(block);  // 遞迴查找
+    var range = this.blockToRangeMap.get(locatableBlock.id);  // 使用可定位積木的 ID
+    // ...高亮範圍...
+};</code></pre>
+        <p>運作原理：</p>
+        <ol>
+            <li>使用者點擊 value 積木 (如數字、文字、變數 getter)。</li>
+            <li><code>findLocatableBlock</code> 檢查該積木是否有 <code>outputConnection</code>，若有，遞迴往上找到父積木。</li>
+            <li>重複直到找到<strong>沒有</strong> <code>outputConnection</code> 的 statement 積木 (該積木的 ID 才會有 <code>S_ID</code>/<code>E_ID</code> 標記)。</li>
+            <li>使用該 statement 積木的 ID 從 <code>blockToRangeMap</code> 查找範圍，並高亮對應的程式碼行。</li>
+        </ol>
     </section>
 
     <section id="ai-spec">
@@ -477,12 +505,55 @@ print(f"""Alice 的分數是: {scores_dict['Alice']}""")</code></pre>
         <h2>15. 環境診斷與套件管理</h2>
         <p>為了解決 AI 教育中常見的 Python 環境設定挫折，系統內建了自動化診斷與安裝助手。</p>
         
-        <h3>A. 偵測機制 (Diagnostic Logic)</h3>
-        <p>當使用者點擊診斷按鈕時，Webview 會發送 <code>checkEnvironment</code> 訊息至 Host 端。Host 端會針對 <code>cv2</code>, <code>mediapipe</code>, <code>PIL</code>, <code>serial</code> 執行背景導入測試：</p>
-        <pre><code class="language-typescript">// Host 端的模組探測實作
-execSync(`"${pythonPath}" -c "import ${module}"`, { stdio: 'ignore' });</code></pre>
+        <h3>A. 單一事實來源 (SSOT JSON Configuration)</h3>
+        <p>Python 套件檢查清單統一由 <code>config/python_modules.json</code> 定義，作為唯一的真相來源：</p>
+        <pre><code class="language-json">{
+  "modules": [
+    { "id": "serial",     "name": "pyserial",           "description": "MCU 通訊" },
+    { "id": "esptool",    "name": "esptool (Firmware)",  "description": "ESP32 韌體燒錄" },
+    { "id": "cv2",        "name": "opencv-python",       "description": "OpenCV - 影像處理" },
+    { "id": "mediapipe",  "name": "mediapipe",           "description": "MediaPipe - 姿態/人臉/手勢偵測" },
+    { "id": "PIL",        "name": "Pillow (Image)",      "description": "Pillow - 影像處理" },
+    { "id": "tensorflow", "name": "tensorflow",          "description": "深度學習框架" },
+    { "id": "numpy",      "name": "numpy",               "description": "數值計算" },
+    { "id": "sklearn",    "name": "scikit-learn",        "description": "機器學習工具（class_weight）" },
+    { "id": "matplotlib", "name": "matplotlib",          "description": "訓練報告視覺化" },
+    { "id": "paramiko",   "name": "paramiko (SSH)",      "description": "SSH/SFTP 連線（遠端訓練）" }
+  ]
+}</code></pre>
+        <p><strong>規範：</strong>未來新增或修改套件時，只需編輯此 JSON 檔案。VSIX（TypeScript）與 Tauri（Rust）兩端皆從此檔案讀取清單，無需分別維護。</p>
 
-        <h3>B. 一鍵安裝 (One-click Installation)</h3>
+        <h3>B. 雙平台讀取機制</h3>
+        <ul>
+            <li><strong>VSIX 模式（TypeScript）：</strong>透過 <code>fs.readFileSync</code> 讀取 <code>config/python_modules.json</code>，解析後取得模組 id 陣列進行檢查。</li>
+            <li><strong>Tauri 模式（Rust）：</strong>編譯時將 JSON 內容嵌入 <code>PYTHON_MODULES_JSON</code> 常數，執行期解析後動態產生 Python 檢查腳本。</li>
+        </ul>
+        <p>兩端皆將完整的模組定義（含 id 與顯示名稱）傳送給前端，前端直接渲染，無需硬編碼。</p>
+
+        <h3>C. 偵測機制 (Diagnostic Logic)</h3>
+        <p>當使用者點擊診斷按鈕時，Webview 會發送 <code>checkEnvironment</code> 訊息至 Host 端。Host 端會針對 JSON 中定義的所有模組執行背景導入測試：</p>
+        <pre><code class="language-python"># 動態產生的 Python 檢查腳本
+import importlib.util
+import json
+
+modules = ['serial', 'esptool', 'cv2', ...]  # 從 JSON 動態注入
+results = {}
+for m in modules:
+    try:
+        results[m] = importlib.util.find_spec(m) is not None
+    except:
+        results[m] = False
+print(json.dumps(results))</code></pre>
+
+        <h3>D. 前端渲染 (Frontend Rendering)</h3>
+        <p>後端傳送完整的 <code>{ results, modules }</code> 物件給前端：</p>
+        <ul>
+            <li><code>results</code>：各模組的安裝狀態（true/false）</li>
+            <li><code>modules</code>：模組定義陣列（含 id 與顯示名稱）</li>
+        </ul>
+        <p>前端 <code>hardware.js</code> 的 <code>updateEnvironmentStatus</code> 函數直接使用後端傳來的 <code>modules</code> 陣列渲染對話框，無需在前端硬編碼套件清單。</p>
+
+        <h3>E. 一鍵安裝 (One-click Installation)</h3>
         <p>針對偵測為「未安裝」的模組，系統會呼叫 <code>-m pip install</code> 命令，並自動開啟 VS Code 整合終端機 <code>Cocoya Environment</code> 顯示進度，安裝後自動觸發重新掃描。</p>
     </section>
 

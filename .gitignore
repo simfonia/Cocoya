@@ -25,6 +25,9 @@ temp_scripts/
 .*.bak
 untitled_backup*.xml
 
+# Python cache
+resources/train_templates/common/__pycache__
+
 # Project specific
 backup/
 GEMINI.md
