@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as https from 'https';
-import { exec } from 'child_process';
+import { exec, spawn } from 'child_process';
 
 /**
  * 環境操作 Handler（環境檢查、模組安裝、更新檢查等）
@@ -16,7 +16,19 @@ export class EnvOpsHandler {
 
     public async handleCheckEnvironment() {
         let pythonPath = this.manager.getPythonPath();
-        const modules = ['cv2', 'mediapipe', 'PIL', 'serial', 'esptool'];
+        
+        // SSOT: 從 config/python_modules.json 讀取套件清單
+        const configPath = path.join(this.manager.context.extensionPath, '..', 'config', 'python_modules.json');
+        let moduleDefs: any[] = [];
+        try {
+            const configContent = fs.readFileSync(configPath, 'utf-8');
+            const config = JSON.parse(configContent);
+            moduleDefs = config.modules || [];
+        } catch (e) {
+            console.error('[Cocoya] Failed to load python_modules.json:', e);
+        }
+        
+        const modules = moduleDefs.map(m => m.id);
         
         const checkScript = `
 import importlib.util
@@ -47,7 +59,21 @@ print(json.dumps(results))
             } else {
                 modules.forEach(m => results[m] = false);
             }
-            this.manager.panel.webview.postMessage({ command: 'environmentStatus', results });
+            
+            // 使用 SSOT JSON 的模組定義
+            const moduleDefinitions = moduleDefs.filter(m => modules.includes(m.id));
+            
+            console.log('[Cocoya] Sending environmentStatus:', { 
+                command: 'environmentStatus', 
+                resultsCount: Object.keys(results).length,
+                modulesCount: moduleDefinitions.length 
+            });
+            
+            this.manager.panel.webview.postMessage({ 
+                command: 'environmentStatus', 
+                results,
+                modules: moduleDefinitions
+            });
         });
     }
 
@@ -165,40 +191,132 @@ print(json.dumps(results))
             } else return;
         }
 
-        let terminal = vscode.window.terminals.find(t => t.name === 'Cocoya Execution');
-        if (!terminal) terminal = vscode.window.createTerminal('Cocoya Execution');
-        terminal.show();
+        // 設定工作目錄為當前專案目錄
+        const projectDir = this.manager.currentFilePath
+            ? path.dirname(this.manager.currentFilePath)
+            : (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0
+                ? vscode.workspace.workspaceFolders[0].uri.fsPath
+                : tempDir);
 
-        if (this.manager.currentFilePath) {
-            const projectDir = path.dirname(this.manager.currentFilePath);
-            terminal.sendText(`cd "${projectDir}"`);
-        }
-
+        // 使用 Pseudoterminal 建立虛擬終端機
+        // 優點：支援 ANSI 色碼顯示（與原終端機一致）+ 可攔截輸出解析 RESULT 行
+        // 不會將輸出當作命令執行（不像 terminal.sendText）
         const shell = (vscode as any).env?.shell || '';
         const isBashLike = shell.includes('bash') || shell.includes('git-bash') || shell.includes('zsh');
         const isPowerShell = shell.includes('powershell') || shell.includes('pwsh');
-        
         let runCmd: string;
         if (isBashLike) {
             runCmd = `"${pythonPath}" "${tempFilePath}"`;
         } else if (isPowerShell || process.platform === 'win32') {
             runCmd = `& "${pythonPath}" "${tempFilePath}"`;
         } else {
-            runCmd = `start "" "${pythonPath}" "${tempFilePath}"`;
+            runCmd = `"${pythonPath}" "${tempFilePath}"`;
         }
-        
-        terminal.sendText(runCmd);
+
+        // 建立 Pseudoterminal
+        const writeEmitter = new vscode.EventEmitter<string>();
+        const closeEmitter = new vscode.EventEmitter<void>();
+
+        const pty: vscode.Pseudoterminal = {
+            onDidWrite: writeEmitter.event,
+            onDidClose: closeEmitter.event,
+            open: () => {
+                // 顯示執行命令
+                writeEmitter.fire(`# 執行中: ${runCmd}\r\n`);
+
+                // 啟動 Python 進程
+                const child = spawn(pythonPath, ['-u', tempFilePath], {
+                    cwd: projectDir,
+                    stdio: ['ignore', 'pipe', 'pipe']
+                });
+
+                // 即時串流 stdout 到終端機 + 解析 RESULT 行
+                let outputBuffer = '';
+                child.stdout.on('data', (data: Buffer) => {
+                    const text = data.toString('utf8');
+                    outputBuffer += text;
+                    // 顯示到終端機（保留 ANSI 色碼）
+                    writeEmitter.fire(text.replace(/\n/g, '\r\n'));
+                    // 解析 RESULT: {...} 行（由 classifier_train.py 輸出）
+                    const lines = outputBuffer.split('\n');
+                    for (const line of lines) {
+                        const resultIdx = line.indexOf('RESULT:');
+                        if (resultIdx !== -1) {
+                            try {
+                                const result = JSON.parse(line.substring(resultIdx + 7).trim());
+                                console.log('[Cocoya] Training result detected:', result);
+                                // 發送 trainingComplete 到前端，觸發自動顯示報告
+                                this.manager.panel.webview.postMessage({
+                                    command: 'trainingComplete',
+                                    ...result
+                                });
+                            } catch (e) {
+                                console.warn('[Cocoya] Failed to parse training result:', e);
+                            }
+                        }
+                    }
+                    // 清除已處理的行，保留最後不完整的行
+                    const lastNewline = outputBuffer.lastIndexOf('\n');
+                    if (lastNewline !== -1) {
+                        outputBuffer = outputBuffer.substring(lastNewline + 1);
+                    }
+                });
+
+                // stderr 也顯示到終端機
+                child.stderr.on('data', (data: Buffer) => {
+                    writeEmitter.fire(data.toString('utf8').replace(/\n/g, '\r\n'));
+                });
+
+                child.on('close', (code: number) => {
+                    if (code !== 0) {
+                        writeEmitter.fire(`\r\n程式結束 (退出碼: ${code})\r\n`);
+                    } else {
+                        writeEmitter.fire(`\r\n程式執行結束\r\n`);
+                    }
+                    // 不 fire closeEmitter：讓終端機保持開啟，使用者可回顧完整輸出歷史
+                });
+
+                // 儲存 child process 以供 stopCode 使用
+                this.manager.currentChildProcess = child;
+            },
+            close: () => {
+                // 終端機關閉時終止進程
+                if (this.manager.currentChildProcess) {
+                    try {
+                        this.manager.currentChildProcess.kill('SIGTERM');
+                    } catch (e) {
+                        console.error('[Cocoya] Failed to kill child process on close:', e);
+                    }
+                    this.manager.currentChildProcess = null;
+                }
+            }
+        };
+
+        // 建立終端機並顯示
+        const terminal = vscode.window.createTerminal({
+            name: 'Cocoya Execution',
+            pty
+        });
+        terminal.show();
+
         this.manager.panel.webview.postMessage({ command: 'runCompleted' });
     }
 
     public handleStopCode() {
+        // 若有 child process（Pseudoterminal 模式），直接終止
+        if (this.manager.currentChildProcess) {
+            try {
+                this.manager.currentChildProcess.kill('SIGTERM');
+            } catch (e) {
+                console.error('[Cocoya] Failed to kill child process:', e);
+            }
+            this.manager.currentChildProcess = null;
+        }
+
+        // 終止 Pseudoterminal 終端機
         const terminal = vscode.window.terminals.find(t => t.name === 'Cocoya Execution');
         if (terminal) {
-            terminal.show();
-            terminal.sendText('\u0003\u0003\u0003');
-            setTimeout(() => {
-                terminal.dispose();
-            }, 500);
+            terminal.dispose();
         }
     }
 

@@ -130,7 +130,8 @@
     margin: 15px 0;
 }
 
-body.vscode-dark .dataset-panel-divider {
+body.vscode-dark .dataset-panel-divider,
+body.vscode-high-contrast .dataset-panel-divider {
     background: #444444;
 }
 
@@ -145,6 +146,20 @@ body.vscode-dark .dataset-panel-divider {
 .dataset-column-row select:focus {
     border-color: #FE2F89;
     box-shadow: 0 0 0 2px rgba(254, 47, 137, 0.12);
+}
+
+body.vscode-dark .dataset-source-panel input:focus,
+body.vscode-dark .dataset-source-panel select:focus,
+body.vscode-dark .dataset-source-panel textarea:focus,
+body.vscode-dark .dataset-column-row input:focus,
+body.vscode-dark .dataset-column-row select:focus,
+body.vscode-high-contrast .dataset-source-panel input:focus,
+body.vscode-high-contrast .dataset-source-panel select:focus,
+body.vscode-high-contrast .dataset-source-panel textarea:focus,
+body.vscode-high-contrast .dataset-column-row input:focus,
+body.vscode-high-contrast .dataset-column-row select:focus {
+    border-color: #FE2F89;
+    box-shadow: 0 0 0 2px rgba(254, 47, 137, 0.25);
 }
 
 .dataset-column-head,
@@ -184,6 +199,12 @@ body.vscode-dark .dataset-panel-divider {
     color: #FE2F89;
 }
 
+body.vscode-dark .dataset-icon-btn:hover,
+body.vscode-high-contrast .dataset-icon-btn:hover {
+    background: #4a2a35;
+    color: #FE2F89;
+}
+
 .dataset-small-btn,
 .dataset-secondary-btn {
     border: 1px solid #cccccc;
@@ -201,6 +222,15 @@ body.vscode-dark .dataset-panel-divider {
     border-color: #FE2F89;
     color: #FE2F89;
     background: #fff7fb;
+}
+
+body.vscode-dark .dataset-small-btn:hover,
+body.vscode-dark .dataset-secondary-btn:hover,
+body.vscode-high-contrast .dataset-small-btn:hover,
+body.vscode-high-contrast .dataset-secondary-btn:hover {
+    border-color: #FE2F89;
+    color: #FE2F89;
+    background: #4a2a35;
 }
 
 .dataset-validation {
@@ -222,6 +252,25 @@ body.vscode-dark .dataset-panel-divider {
     border-color: #efb7b7;
     background: #fff5f5;
     color: #9b2222;
+}
+
+body.vscode-dark .dataset-validation.ok,
+body.vscode-high-contrast .dataset-validation.ok {
+    border-color: #388e3c;
+    background: #1b3d1b;
+    color: #81c784;
+}
+
+body.vscode-dark .dataset-validation.error,
+body.vscode-high-contrast .dataset-validation.error {
+    border-color: #c62828;
+    background: #3d1b1b;
+    color: #ef9a9a;
+}
+
+body.vscode-dark .dataset-validation .dataset-warnings,
+body.vscode-high-contrast .dataset-validation .dataset-warnings {
+    color: #ffb74d;
 }
 
 .dataset-validation ul {
@@ -348,13 +397,20 @@ body.vscode-high-contrast #dataset-json-preview {
     position: relative;
 }
 
-body.vscode-dark .dataset-image-item {
+body.vscode-dark .dataset-image-item,
+body.vscode-high-contrast .dataset-image-item {
     background: #333333;
 }
 
 .dataset-image-item:hover {
     border-color: #FE2F89;
     box-shadow: 0 4px 12px rgba(254, 47, 137, 0.15);
+}
+
+body.vscode-dark .dataset-image-item:hover,
+body.vscode-high-contrast .dataset-image-item:hover {
+    border-color: #FE2F89;
+    box-shadow: 0 4px 12px rgba(254, 47, 137, 0.3);
 }
 
 .dataset-image-delete-btn {
@@ -397,6 +453,11 @@ body.vscode-dark .dataset-image-item {
     justify-content: center;
 }
 
+body.vscode-dark .dataset-image-thumb,
+body.vscode-high-contrast .dataset-image-thumb {
+    background: #444;
+}
+
 .dataset-image-thumb img {
     width: 100%;
     height: 100%;
@@ -437,7 +498,8 @@ body.vscode-dark .dataset-image-item {
     background: #f9f9f9;
 }
 
-body.vscode-dark .dataset-label-row {
+body.vscode-dark .dataset-label-row,
+body.vscode-high-contrast .dataset-label-row {
     background: #333333;
 }
 
@@ -448,6 +510,11 @@ body.vscode-dark .dataset-label-row {
     border: 1px solid rgba(0,0,0,0.1);
 }
 
+body.vscode-dark .dataset-label-color,
+body.vscode-high-contrast .dataset-label-color {
+    border-color: rgba(255,255,255,0.2);
+}
+
 .dataset-empty-state {
     padding: 40px 20px;
     text-align: center;
@@ -456,6 +523,10 @@ body.vscode-dark .dataset-label-row {
     font-size: 13px;
 }
 
+body.vscode-dark .dataset-empty-state,
+body.vscode-high-contrast .dataset-empty-state {
+    color: #888;
+}
 
 /* Annotation Mode */
 .dataset-annotation-view {
@@ -483,7 +554,8 @@ body.vscode-dark .dataset-label-row {
     padding: 10px;
 }
 
-body.vscode-dark .dataset-annotation-sidebar {
+body.vscode-dark .dataset-annotation-sidebar,
+body.vscode-high-contrast .dataset-annotation-sidebar {
     background: #333333;
     border-color: #444;
 }
@@ -499,7 +571,8 @@ body.vscode-dark .dataset-annotation-sidebar {
     font-size: 11px;
 }
 
-body.vscode-dark .dataset-annotation-item {
+body.vscode-dark .dataset-annotation-item,
+body.vscode-high-contrast .dataset-annotation-item {
     background: #444;
 }
 
@@ -515,6 +588,10 @@ body.vscode-dark .dataset-annotation-item {
     color: #FE2F89;
 }
 
+body.vscode-dark .dataset-annotation-item button:hover,
+body.vscode-high-contrast .dataset-annotation-item button:hover {
+    color: #FE2F89;
+}
 
 /* Fix Alignment and Height */
 .dataset-label-head {
@@ -524,20 +601,24 @@ body.vscode-dark .dataset-annotation-item {
     margin-bottom: 6px;
     color: #777777;
     font-size: 11px;
-    padding: 0 8px; /* 對齊內容的 padding */
+    padding: 0 8px;
+}
+
+body.vscode-dark .dataset-label-head,
+body.vscode-high-contrast .dataset-label-head {
+    color: #aaaaaa;
 }
 
 /* 小螢幕優化：讓 Modal 撐滿 */
 @media (max-height: 800px) {
     .dataset-manager-overlay {
-        padding: 0; /* 移除外距，貼齊邊緣 */
+        padding: 0;
     }
     .dataset-manager-dialog {
         max-height: 100vh;
         border-radius: 0;
     }
 }
-
 
 /* Tighten layout for laptop screens */
 @media (max-height: 800px) {
@@ -552,14 +633,13 @@ body.vscode-dark .dataset-annotation-item {
         padding: 8px 14px;
     }
     #dataset-json-preview {
-        min-height: 200px; /* 縮小預覽區高度以露出更多內容 */
+        min-height: 200px;
     }
 }
 
 .dataset-label-head span {
-    text-align: left; /* 強制標題靠左對齊 */
+    text-align: left;
 }
-
 
 /* Preview Table Styles */
 .dataset-preview-table {
@@ -581,14 +661,15 @@ body.vscode-dark .dataset-annotation-item {
     border: 1px solid #ddd;
     white-space: nowrap;
 }
-body.vscode-dark .dataset-preview-table th {
+body.vscode-dark .dataset-preview-table th,
+body.vscode-high-contrast .dataset-preview-table th {
     background: #333;
     border-color: #555;
 }
-body.vscode-dark .dataset-preview-table td {
+body.vscode-dark .dataset-preview-table td,
+body.vscode-high-contrast .dataset-preview-table td {
     border-color: #555;
 }
-
 
 /* Phase 5: Sampler Styles */
 .dataset-sampler-container {
@@ -639,7 +720,8 @@ body.vscode-dark .dataset-preview-table td {
     border-radius: 6px;
 }
 
-body.vscode-dark .dataset-sampler-controls {
+body.vscode-dark .dataset-sampler-controls,
+body.vscode-high-contrast .dataset-sampler-controls {
     background: #333;
 }
 
@@ -677,23 +759,38 @@ body.vscode-dark .dataset-sampler-controls {
     gap: 5px;
 }
 
+body.vscode-dark .dataset-sampler-settings,
+body.vscode-high-contrast .dataset-sampler-settings {
+    color: #999;
+}
+
 .dataset-sampler-hint-overlay {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    background: rgba(254, 47, 137, 0.85);
-    color: white;
-    padding: 4px 10px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: bold;
+    bottom: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.6);
+    color: rgba(255, 255, 255, 0.9);
+    padding: 3px 12px;
+    border-radius: 12px;
+    font-size: 10px;
+    font-weight: normal;
     pointer-events: none;
     z-index: 10;
+    white-space: nowrap;
+    max-width: 90%;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .dataset-sampler-controls {
     padding: 12px;
     border-top: 1px solid #eee;
+}
+
+body.vscode-dark .dataset-sampler-controls,
+body.vscode-high-contrast .dataset-sampler-controls {
+    border-top-color: #444;
 }
 
 .dataset-sampler-row {
@@ -723,7 +820,6 @@ body.vscode-dark .dataset-sampler-controls {
     background: #e91e63;
 }
 
-
 /* Ensure Sampler View is visible */
 #dataset-sampler-view {
     min-height: 450px;
@@ -731,8 +827,12 @@ body.vscode-dark .dataset-sampler-controls {
     flex-direction: column;
 }
 
+body.vscode-dark #dataset-sampler-view,
+body.vscode-high-contrast #dataset-sampler-view {
+    background: #2d2d2d;
+}
+
 .dataset-sampler-video-wrapper {
     background: #111;
     box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
 }
-

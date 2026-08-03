@@ -115,11 +115,13 @@ pub async fn open_examples(window: Window, handle: AppHandle, state: State<'_, A
 }
 
 #[tauri::command]
-pub async fn save_file(window: Window, handle: AppHandle, state: State<'_, AppState>, xml: String, save_as: bool) -> Result<String, String> {
-    let mut path_to_save = {
+pub async fn save_file(window: Window, handle: AppHandle, state: State<'_, AppState>, xml: String, save_as: bool, force_examples: Option<bool>) -> Result<String, String> {
+    let allow_examples = force_examples.unwrap_or(false);
+    let current_path = {
         let paths = state.current_paths.lock().unwrap();
-        if save_as { None } else { paths.get(window.label()).cloned() }
+        paths.get(window.label()).cloned()
     };
+    let mut path_to_save = if save_as { None } else { current_path.clone() };
 
     if path_to_save.is_none() {
         let picked = handle.dialog().file()
@@ -139,7 +141,17 @@ pub async fn save_file(window: Window, handle: AppHandle, state: State<'_, AppSt
         // --- 檢查是否為 examples 目錄 ---
         let examples_dir = get_examples_path(&handle);
         if path.starts_with(&examples_dir) {
-            return Err("EXAMPLES_PATH".to_string());
+            if !allow_examples {
+                if save_as {
+                    if let Some(ref current) = current_path {
+                        if &path == current {
+                            return Err("EXAMPLES_PATH".to_string());
+                        }
+                    }
+                } else {
+                    return Err("EXAMPLES_PATH".to_string());
+                }
+            }
         }
 
         {
@@ -279,4 +291,131 @@ pub fn reject_recovery(window: Window, state: State<'_, AppState>) -> Result<(),
         }
     }
     Ok(())
+}
+
+/// 刪除單一檔案（供 datasetDeleteImage 使用）
+#[tauri::command]
+pub fn delete_file(path: String) -> Result<(), String> {
+    if fs::metadata(&path).is_err() {
+        // 檔案不存在視為成功（同 VSIX 行為）
+        return Ok(());
+    }
+    fs::remove_file(&path).map_err(|e| format!("Failed to delete file: {}", e))
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ScanedImage {
+    pub name: String,
+    pub path: String,
+    pub label: String,
+    pub blob_url: String,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PickFolderResult {
+    pub path: String,
+    pub images: Vec<ScanedImage>,
+    pub label_counts: std::collections::HashMap<String, u32>,
+    pub label_map: std::collections::HashMap<String, u32>,
+}
+
+/// 選擇資料夾並掃描影像（供 datasetManager pickFolder 使用）
+#[tauri::command]
+pub async fn pick_folder(handle: AppHandle) -> Result<PickFolderResult, String> {
+    let picked = handle.dialog().file()
+        .set_title("選取資料集資料夾")
+        .blocking_pick_folder();
+
+    let folder_path = match picked {
+        Some(p) => p.into_path().map_err(|_| "Failed to parse folder path".to_string())?,
+        None => return Err("Canceled".into()),
+    };
+
+    let path_str = folder_path.to_string_lossy().to_string();
+    let images = scan_images(&folder_path, &handle);
+
+    // 統計標籤
+    let mut label_counts: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
+    let mut label_map: std::collections::HashMap<String, u32> = std::collections::HashMap::new();
+    let mut next_id: u32 = 0;
+    for img in &images {
+        *label_counts.entry(img.label.clone()).or_insert(0) += 1;
+        if !label_map.contains_key(&img.label) {
+            label_map.insert(img.label.clone(), next_id);
+            next_id += 1;
+        }
+    }
+
+    Ok(PickFolderResult {
+        path: path_str,
+        images,
+        label_counts,
+        label_map,
+    })
+}
+
+fn scan_images(folder: &std::path::Path, handle: &AppHandle) -> Vec<ScanedImage> {
+    let mut images = Vec::new();
+    let image_extensions = ["jpg", "jpeg", "png", "webp", "bmp"];
+    walk_folder(folder, std::path::Path::new(""), folder, handle, &image_extensions, &mut images);
+    images
+}
+
+fn walk_folder(
+    base: &std::path::Path,
+    rel: &std::path::Path,
+    current: &std::path::Path,
+    handle: &AppHandle,
+    exts: &[&str],
+    out: &mut Vec<ScanedImage>,
+) {
+    if let Ok(entries) = fs::read_dir(current) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            let name = entry.file_name().to_string_lossy().to_string();
+            let rel_path = rel.join(&name);
+
+            if path.is_dir() {
+                walk_folder(base, &rel_path, &path, handle, exts, out);
+            } else {
+                let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("").to_lowercase();
+                if exts.contains(&ext.as_str()) {
+                    // 標籤 = 上一層資料夾名稱
+                    let label = rel.file_name()
+                        .and_then(|n| n.to_str())
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| "unlabeled".to_string());
+
+                    let rel_path_str = rel_path.to_string_lossy().replace('\\', "/");
+                    // 存原始絕對路徑，由前端 convertFileSrc 轉換
+                    let blob_url = path.to_string_lossy().to_string();
+
+                    out.push(ScanedImage {
+                        name,
+                        path: rel_path_str,
+                        label,
+                        blob_url,
+                    });
+                }
+            }
+        }
+    }
+}
+
+/// URL 編碼檔案路徑（保留路徑分隔符）
+fn url_encode_path(path: &str) -> String {
+    path.split('/')
+        .map(|segment| {
+            segment.chars().map(|c| {
+                if c.is_alphanumeric() || c == '-' || c == '_' || c == '.' || c == '~' {
+                    c.to_string()
+                } else {
+                    format!("%{:02X}", c as u8)
+                }
+            }).collect::<String>()
+        })
+        .collect::<Vec<_>>()
+        .join("/")
 }

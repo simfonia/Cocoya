@@ -18,6 +18,8 @@ pub fn run() {
             current_paths: Arc::new(Mutex::new(HashMap::new())),
             file_locks: Arc::new(Mutex::new(HashMap::new())),
             dirty_states: Arc::new(Mutex::new(HashMap::new())),
+            sidecar_processes: Arc::new(Mutex::new(HashMap::new())),
+            sidecar_responses: Arc::new(Mutex::new(HashMap::new())),
         })
         .invoke_handler(tauri::generate_handler![
             commands::run_python, 
@@ -43,7 +45,15 @@ pub fn run() {
             commands::check_environment,
             commands::set_dirty,
             commands::close_window,
-            commands::check_startup_backup
+            commands::check_startup_backup,
+            commands::start_sidecar,
+            commands::sidecar_send,
+            commands::stop_sidecar,
+            commands::delete_file,
+            commands::pick_folder,
+            commands::export_dataset,
+            commands::open_report,
+            commands::find_latest_training_report
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

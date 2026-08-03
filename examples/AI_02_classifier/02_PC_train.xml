@@ -6,8 +6,16 @@
         <field name="EPOCHS">5</field>
         <field name="BATCH_SIZE">32</field>
         <field name="LEARNING_RATE">0.001</field>
+        <field name="VALIDATION_SPLIT">0.2</field>
+        <field name="DROPOUT">0.2</field>
+        <field name="AUGMENTATION">TRUE</field>
         <field name="TASK_TYPE">classifier</field>
         <field name="BACKEND">auto</field>
+        <field name="BACKBONE">mobilenetv2</field>
+        <field name="OPTIMIZER">adam</field>
+        <field name="DNN_LAYERS">128,64</field>
+        <field name="FINE_TUNE">FALSE</field>
+        <field name="MODEL_OUTPUT">none</field>
       </block>
     </statement>
   </block>

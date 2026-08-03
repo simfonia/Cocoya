@@ -26,6 +26,18 @@ Blockly.Msg["AI_TRAIN_FIELD_BACKBONE"] = "Backbone:";
 Blockly.Msg["AI_TRAIN_FIELD_OPTIMIZER"] = "Optimizer:";
 Blockly.Msg["AI_TRAIN_FIELD_DNN_LAYERS"] = "DNN Layers:";
 Blockly.Msg["AI_TRAIN_FIELD_FINE_TUNE"] = "Fine-tune:";
+Blockly.Msg["AI_TRAIN_FIELD_MODEL_OUTPUT"] = "Output:";
+Blockly.Msg["AI_TRAIN_OUTPUT_NONE"] = "None";
+Blockly.Msg["AI_TRAIN_OUTPUT_INT8"] = "Quantized TFLite (int8)";
+Blockly.Msg["AI_TRAIN_OUTPUT_F32"] = "Float32 TFLite";
+Blockly.Msg["AI_TRAIN_OUTPUT_KERAS"] = "Keras";
+Blockly.Msg["AI_TRAIN_OUTPUT_INT8_F32"] = "Quantized + Float32";
+Blockly.Msg["AI_TRAIN_OUTPUT_ALL"] = "All";
+
+Blockly.Msg["AI_INFERENCE_FIELD_MODEL_TYPE"] = "Model Type:";
+Blockly.Msg["AI_INFERENCE_TYPE_AUTO"] = "Auto";
+Blockly.Msg["AI_INFERENCE_TYPE_INT8"] = "Quantized (int8)";
+Blockly.Msg["AI_INFERENCE_TYPE_F32"] = "Float32";
 
 // Task Types
 Blockly.Msg["AI_TASK_CLASSIFIER"] = "classifier";

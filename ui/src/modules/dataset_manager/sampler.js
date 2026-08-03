@@ -116,7 +116,7 @@ export const Sampler = {
             const timeout = setTimeout(() => {
                 window.removeEventListener('message', handler);
                 reject(new Error('擷取超時 (Host 無回應)'));
-            }, 5000);
+            }, 15000);
 
             const handler = (event) => {
                 const message = event.data;

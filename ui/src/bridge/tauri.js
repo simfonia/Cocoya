@@ -11,6 +11,7 @@ export class BridgeTauri extends BaseBridge {
         this.tauriListen = null;
         this.tauriGetCurrent = null;
         this._firstLogReceived = false;
+        this._isClosing = false;
     }
 
     /**
@@ -166,22 +167,27 @@ export class BridgeTauri extends BaseBridge {
 
                 case 'saveFile':
                 case 'saveFileAs':
-                    const isSaveAs = (command === 'saveFileAs');
-                    try {
-                        const filename = await this.tauriInvoke('save_file', { xml: data.xml, saveAs: isSaveAs });
-                        this._dispatchToFrontend({ command: 'saveCompleted', filename: filename });
-                    } catch (e) {
-                        if (e === 'EXAMPLES_PATH') {
-                            // 要寫入 examples 目錄，顯示警告對話框
-                            this._handleExamplesSaveDialog(data.xml);
-                        } else if (e !== 'Canceled') {
-                            console.error('[Bridge] Save failed:', e);
-                            this.alert((window.Blockly?.Msg['BKY_SAVE_FAILED'] || 'Save failed: ') + e);
+                    {
+                        const isSaveAs = (command === 'saveFileAs');
+                        const xml = data.xml || this._getCurrentXml();
+                        try {
+                            const filename = await this.tauriInvoke('save_file', { xml, saveAs: isSaveAs });
+                            this._dispatchToFrontend({ command: 'saveCompleted', filename: filename });
+                            return true;
+                        } catch (e) {
+                            if (e === 'EXAMPLES_PATH') {
+                                // 要寫入 examples 目錄，顯示警告對話框
+                                await this._handleExamplesSaveDialog(xml);
+                            } else if (e !== 'Canceled') {
+                                console.error('[Bridge] Save failed:', e);
+                                this.alert((window.Blockly?.Msg['BKY_SAVE_FAILED'] || 'Save failed: ') + e);
+                            }
+                            return false;
                         }
                     }
-                    break;
 
                 case 'openFile':
+                    if (!(await this._confirmSaveBeforeOpen(data))) return;
                     try {
                         const res = await this.tauriInvoke('open_file');
                         this._dispatchToFrontend({ 
@@ -319,6 +325,7 @@ export class BridgeTauri extends BaseBridge {
                     break;
 
                 case 'openExamples':
+                    if (!(await this._confirmSaveBeforeOpen(data))) return;
                     try {
                         const res = await this.tauriInvoke('open_examples');
                         this._dispatchToFrontend({ 
@@ -338,17 +345,167 @@ export class BridgeTauri extends BaseBridge {
                     break;
 
                 case 'datasetListCameras':
+                    await this._handleDatasetCommand('listCameras', data, (response) => {
+                        this._dispatchToFrontend({
+                            command: 'datasetCameraListResult',
+                            success: response.success,
+                            cameras: response.cameras || []
+                        });
+                    });
+                    break;
+
                 case 'datasetStartCamera':
+                    await this._handleDatasetCommand('startCamera', data, (response) => {
+                        this._dispatchToFrontend({
+                            command: 'datasetCameraStatus',
+                            success: response.success
+                        });
+                    });
+                    break;
+
                 case 'datasetStopCamera':
+                    await this._handleDatasetCommand('stopCamera', data, (response) => {
+                        // 停止成功後，攝影機不在 running 狀態，故 success: false
+                        this._dispatchToFrontend({
+                            command: 'datasetCameraStatus',
+                            success: false
+                        });
+                    });
+                    break;
+
                 case 'datasetCaptureImage':
+                    await this._handleDatasetCommand('captureImage', data, (response) => {
+                        this._dispatchToFrontend({
+                            command: 'datasetCaptureResult',
+                            requestId: data.requestId,
+                            success: response.success,
+                            base64: response.base64 || null,
+                            width: response.width || 0,
+                            height: response.height || 0,
+                            label: response.label || data.label,
+                            savePath: response.savePath || null,
+                            error: response.error
+                        });
+                    });
+                    break;
+
                 case 'datasetDeleteImage':
-                case 'datasetExport':
-                case 'datasetUploadArchive':
+                    try {
+                        await this.tauriInvoke('delete_file', { path: data.filePath });
+                        this._dispatchToFrontend({ command: 'datasetDeleteImageResult', success: true });
+                    } catch (e) {
+                        console.error('[Bridge] Delete image failed:', e);
+                        this._dispatchToFrontend({ command: 'datasetDeleteImageResult', success: false, error: String(e) });
+                    }
+                    break;
+
                 case 'pickFolder':
-                case 'openTrainingReport':
-                case 'openLatestTrainingReport':
-                    // Dataset 與訓練報告相關：先 dispatch 到前端，後續逐步實作後端支援
+                    try {
+                        const result = await this.tauriInvoke('pick_folder');
+                        const { convertFileSrc } = await import('@tauri-apps/api/core');
+                        const images = (result.images || []).map(img => ({
+                            name: img.name,
+                            path: img.path,
+                            label: img.label,
+                            blobUrl: convertFileSrc(img.blobUrl)
+                        }));
+                        this._dispatchToFrontend({
+                            command: 'folderSelected',
+                            requestId: data.requestId,
+                            path: result.path,
+                            images: images,
+                            labelCounts: result.labelCounts,
+                            labelMap: result.labelMap
+                        });
+                    } catch (e) {
+                        if (e === 'Canceled') {
+                            this._dispatchToFrontend({
+                                command: 'folderSelected',
+                                requestId: data.requestId,
+                                error: '使用者取消選擇'
+                            });
+                        } else {
+                            console.error('[Bridge] Pick folder failed:', e);
+                            this._dispatchToFrontend({
+                                command: 'folderSelected',
+                                requestId: data.requestId,
+                                error: String(e)
+                            });
+                        }
+                    }
+                    break;
+
+                case 'datasetExport':
+                    try {
+                        const pythonPath = localStorage.getItem('pythonPath') || 'python';
+                        const result = await this.tauriInvoke('export_dataset', {
+                            specJson: JSON.stringify(data.spec),
+                            sourceFolderPath: data.sourceFolderPath || '',
+                            pythonPath: pythonPath
+                        });
+                        this._dispatchToFrontend({
+                            command: 'datasetExportResult',
+                            success: true,
+                            path: result
+                        });
+                    } catch (e) {
+                        if (e === 'Canceled') {
+                            // 使用者取消存檔對話框，靜默處理
+                        } else {
+                            console.error('[Bridge] Export dataset failed:', e);
+                            this._dispatchToFrontend({
+                                command: 'datasetExportResult',
+                                success: false,
+                                error: String(e)
+                            });
+                        }
+                    }
+                    break;
+
+                case 'datasetUploadArchive':
+                    // 尚未實作 sidecar 支援，先 dispatch 到前端
                     this._dispatchToFrontend({ command, ...data });
+                    break;
+
+                case 'openTrainingReport':
+                    try {
+                        await this.tauriInvoke('open_report', { reportPath: data.path });
+                    } catch (e) {
+                        console.error('[Bridge] open_report failed:', e);
+                        this.alert(`開啟失敗，請手動開啟檔案：\n${data.path}\n\n錯誤：${e}`);
+                    }
+                    break;
+
+                case 'openLatestTrainingReport':
+                    try {
+                        const reports = await this.tauriInvoke('find_latest_training_report');
+                        if (!reports || reports.length === 0) {
+                            this.alert('尚無訓練結果，請先執行訓練。');
+                            break;
+                        }
+                        if (reports.length === 1) {
+                            await this.tauriInvoke('open_report', { reportPath: reports[0].path });
+                        } else {
+                            // 多個報告：顯示 QuickPick 讓使用者選擇
+                            const options = reports.map(r => ({
+                                id: r.path,
+                                label: r.projectName
+                            }));
+                            window.CocoyaUI.showQuickPick(
+                                `找到 ${reports.length} 個訓練報告，請選擇要開啟的項目：`,
+                                options,
+                                (selectedPath) => {
+                                    if (selectedPath) {
+                                        this.tauriInvoke('open_report', { reportPath: selectedPath })
+                                            .catch(e => this.alert(`開啟失敗：${e}`));
+                                    }
+                                }
+                            );
+                        }
+                    } catch (e) {
+                        console.error('[Bridge] find_latest_training_report failed:', e);
+                        this.alert('搜尋訓練報告失敗：' + e);
+                    }
                     break;
 
                 case 'newFile':
@@ -363,8 +520,9 @@ export class BridgeTauri extends BaseBridge {
                 case 'checkEnvironment':
                     try {
                         const pythonPath = localStorage.getItem('pythonPath') || 'python';
-                        const results = await this.tauriInvoke('check_environment', { pythonPath: pythonPath });
-                        this._dispatchToFrontend({ command: 'environmentStatus', results });
+                        const data = await this.tauriInvoke('check_environment', { pythonPath: pythonPath });
+                        console.log('[Bridge] check_environment returned:', data);
+                        this._dispatchToFrontend({ command: 'environmentStatus', ...data });
                     } catch (e) {
                         console.error('[Bridge] Check environment failed:', e);
                     }
@@ -418,6 +576,20 @@ export class BridgeTauri extends BaseBridge {
                     if (window.CocoyaUI) window.CocoyaUI.hideLoadingModal();
                 }
                 if (window.CocoyaUI) window.CocoyaUI.appendTerminal(event.payload, 'out');
+
+                // 解析訓練結果 RESULT: {...} 格式（由 classifier_train.py 輸出）
+                // 注意：輸出可能以 \n 開頭，需用 includes + indexOf 定位
+                const text = event.payload || '';
+                const resultIdx = text.indexOf('RESULT:');
+                if (resultIdx !== -1) {
+                    try {
+                        const result = JSON.parse(text.substring(resultIdx + 7).trim());
+                        console.log('[Bridge] Training result detected:', result);
+                        this._dispatchToFrontend({ command: 'trainingComplete', ...result });
+                    } catch (e) {
+                        console.warn('[Bridge] Failed to parse training result:', e);
+                    }
+                }
             });
 
             await appWindow.listen('python-error', (event) => {
@@ -425,12 +597,34 @@ export class BridgeTauri extends BaseBridge {
                 if (window.CocoyaUI) window.CocoyaUI.hideLoadingModal();
                 if (window.CocoyaUI) window.CocoyaUI.appendTerminal(event.payload, 'err');
             });
+
+            // 監聽 sidecar 事件（如 cameraStatus 變化）
+            await appWindow.listen('sidecar-event', (event) => {
+                try {
+                    const payload = typeof event.payload === 'string' ? event.payload : JSON.stringify(event.payload);
+                    const parsed = JSON.parse(payload);
+                    // 將 sidecar event 轉為前端可理解的格式
+                    if (parsed.type === 'event' && parsed.event) {
+                        const command = 'dataset' + parsed.event.charAt(0).toUpperCase() + parsed.event.slice(1);
+                        this._dispatchToFrontend({
+                            command,
+                            success: parsed.running !== undefined ? parsed.running : true,
+                            ...parsed
+                        });
+                    }
+                } catch (e) {
+                    console.warn('[Bridge] Failed to parse sidecar event:', e);
+                }
+            });
         } catch (e) {
             console.error('[Bridge] Failed to setup Tauri listeners:', e);
         }
     }
 
     async _handleCloseDialog(appWindow) {
+        if (this._isClosing) return;
+        this._isClosing = true;
+
         try {
             const app = window.CocoyaApp;
             const confirmMsg = (window.Blockly && Blockly.Msg['MSG_SAVE_CONFIRM']) || 'Do you want to save changes?';
@@ -452,7 +646,8 @@ export class BridgeTauri extends BaseBridge {
                         if (filename) {
                             // 2. 存檔成功
                             await app.onSaveCompleted(filename); 
-                            // 3. 要求後端關閉視窗
+                            // 3. 確保後端 dirty 狀態已更新，再要求關閉視窗
+                            await this.tauriInvoke('set_dirty', { isDirty: false });
                             await this.tauriInvoke('close_window'); 
                         }
                     } catch (e) {
@@ -466,8 +661,9 @@ export class BridgeTauri extends BaseBridge {
                         }
                     }
                 } else if (choice === 'discard') {
-                    // 強制不儲存：直接清除狀態並要求關閉
+                    // 強制不儲存：先同步 dirty 狀態後再關閉
                     await app.setDirty(false);
+                    await this.tauriInvoke('set_dirty', { isDirty: false });
                     await this.tauriInvoke('close_window');
                 }
             } else {
@@ -476,13 +672,66 @@ export class BridgeTauri extends BaseBridge {
                 const ok = await ask(confirmMsg, { title: 'Cocoya', kind: 'warning' });
                 if (ok) {
                     // 這裡簡化處理，如果不支援 showSaveConfirm 則僅問是否要關閉 (可能遺失未存檔)
-                    app.setDirty(false);
+                    await app.setDirty(false);
+                    await this.tauriInvoke('set_dirty', { isDirty: false });
                     await this.tauriInvoke('close_window');
                 }
             }
         } catch (err) {
             console.error('[Bridge] Error in _handleCloseDialog:', err);
             await this.tauriInvoke('close_window');
+        } finally {
+            this._isClosing = false;
+        }
+    }
+
+    async _handleDatasetCommand(sidecarCommand, data, callback) {
+        try {
+            // 1. 確保 sidecar 已啟動（使用輕量 ping 健康檢查 + 狀態快取）
+            const pythonPath = localStorage.getItem('pythonPath') || 'python';
+            let sidecarReady = false;
+
+            // 快取狀態：若已知 sidecar 啟動中，先嘗試 ping（輕量，不遍歷攝影機）
+            try {
+                await this.tauriInvoke('sidecar_send', {
+                    command: 'ping',
+                    payload: '{}'
+                });
+                sidecarReady = true;
+            } catch (e) {
+                // sidecar 未啟動或已死，啟動它
+                console.log('[Bridge] Sidecar not running, starting...');
+                await this.tauriInvoke('start_sidecar', { pythonPath });
+                // 等待 sidecar 啟動
+                await new Promise(r => setTimeout(r, 1000));
+                sidecarReady = true;
+            }
+
+            if (!sidecarReady) {
+                if (callback) callback({ success: false, error: 'Sidecar failed to start' });
+                return;
+            }
+
+            // 2. 發送實際指令到 sidecar
+            const payload = JSON.stringify(data);
+            const raw = await this.tauriInvoke('sidecar_send', {
+                command: sidecarCommand,
+                payload
+            });
+
+            // 3. 解析回應
+            const response = JSON.parse(raw);
+            if (response.type === 'response' && callback) {
+                callback(response);
+            } else if (response.type === 'error') {
+                console.error('[Bridge] Sidecar error:', response.error);
+                if (callback) callback({ success: false, error: response.error });
+            } else {
+                if (callback) callback(response);
+            }
+        } catch (e) {
+            console.error(`[Bridge] Dataset command "${sidecarCommand}" failed:`, e);
+            if (callback) callback({ success: false, error: String(e) });
         }
     }
 
@@ -520,6 +769,24 @@ export class BridgeTauri extends BaseBridge {
         }
     }
 
+    async _confirmSaveBeforeOpen(data) {
+        if (!data.isDirty) return true;
+
+        const confirmMsg = (window.Blockly && Blockly.Msg['MSG_SAVE_CONFIRM']) || 'Do you want to save changes to the current project?';
+        let choice = 'cancel';
+        if (window.CocoyaUI && window.CocoyaUI.showSaveConfirm) {
+            choice = await window.CocoyaUI.showSaveConfirm(confirmMsg);
+        }
+
+        if (choice === 'cancel') return false;
+        if (choice === 'save') {
+            const xml = data.xml || this._getCurrentXml();
+            const saved = await this.send('saveFile', { xml });
+            return saved === true;
+        }
+        return true; // discard
+    }
+
     async _handleNativeDialogs(command, data) {
         const { ask, message } = await import('@tauri-apps/plugin-dialog');
         if (command === 'alert') {
@@ -534,6 +801,16 @@ export class BridgeTauri extends BaseBridge {
                 result: (command === 'prompt' && ok) ? data.defaultValue : ok 
             });
         }
+    }
+
+    _getCurrentXml() {
+        if (typeof Blockly !== 'undefined' && Blockly.getMainWorkspace) {
+            const dom = Blockly.Xml.workspaceToDom(Blockly.getMainWorkspace());
+            const platform = document.getElementById('platform-selector')?.value || 'PC';
+            dom.setAttribute('platform', platform);
+            return Blockly.Xml.domToPrettyText(dom);
+        }
+        return '';
     }
 
     async _handleExamplesSaveDialog(xml) {
@@ -552,9 +829,9 @@ export class BridgeTauri extends BaseBridge {
             );
             
             if (overwrite) {
-                // 覆蓋範例：直接呼叫 save_file 但標記 saveAs=false 略過檢查
+                // 覆蓋範例：直接呼叫 save_file 並標註強制覆蓋 examples 目錄
                 try {
-                    const filename = await this.tauriInvoke('save_file', { xml, saveAs: false });
+                    const filename = await this.tauriInvoke('save_file', { xml, saveAs: false, forceExamples: true });
                     this._dispatchToFrontend({ command: 'saveCompleted', filename: filename });
                 } catch (e2) {
                     if (e2 !== 'Canceled' && e2 !== 'EXAMPLES_PATH') {
@@ -563,11 +840,22 @@ export class BridgeTauri extends BaseBridge {
                 }
             } else {
                 // 另存新檔
-                this.send('saveFileAs', { xml });
+                await this.send('saveFileAs', { xml });
             }
         } catch (e) {
             console.error('[Bridge] Examples save dialog error:', e);
         }
+    }
+
+    /**
+     * 覆寫 _dispatchToFrontend：除了調用內部 listeners，
+     * 也要透過 window.postMessage 讓 sampler.js 能接收
+     */
+    _dispatchToFrontend(message) {
+        // 內部 listeners
+        this._listeners.forEach(cb => cb(message));
+        // window message event（相容 sampler.js 的 window.addEventListener('message') 監聽）
+        window.postMessage(message, '*');
     }
 
     // 覆寫父類別方法以使用 Tauri 特有的 UI

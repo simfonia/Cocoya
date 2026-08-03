@@ -87,9 +87,9 @@
         }
 
         const lastChild = content.lastElementChild;
-        // 如果最後一行存在，且類型相同，且不以換行符結尾，則附加文字
+        // 如果最後一行存在，且類型相同，且不以換行符結尾，則先插入換行再附加文字
         if (lastChild && lastChild.className === `term-${type}` && !lastChild.textContent.endsWith('\n')) {
-            lastChild.textContent += text;
+            lastChild.textContent += '\n' + text;
         } else {
             const span = document.createElement('span');
             span.className = `term-${type}`;

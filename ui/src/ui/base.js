@@ -299,12 +299,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         }
 
         // 綁定範例按鈕：觸發後端 Quick Pick 並載入範例
-        const examplesBtn = document.getElementById('btn-examples');
-        if (examplesBtn) {
-            examplesBtn.onclick = () => {
-                postMessageFunc({ command: 'openExamples', isDirty: self.isDirty, includeXml: true });
-            };
-        }
+        bind('btn-examples', 'openExamples', { includeXml: true });
 
         // 綁定檔案操作
         bind('btn-new', 'newFile', { includeXml: true });

@@ -24,6 +24,7 @@ export class CocoyaManager {
     public cloudAiEnabled: boolean = false;
     public remoteWorkspaceRoot: string | undefined;
     public uploadBuffers: Map<string, Buffer[]> = new Map();
+    public currentChildProcess: any = null; // Pseudoterminal 模式的 child process（供 stopCode 終止）
 
     // Handler 實例
     public trainingOps: TrainingOpsHandler;

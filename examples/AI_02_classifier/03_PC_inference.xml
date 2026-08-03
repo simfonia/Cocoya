@@ -10,6 +10,8 @@
         <next>
           <block type="py_ai_model_init" id="ZNXsCDVS3xfW;ngq2tGO">
             <field name="MODEL_PATH">model/classifier_dataset</field>
+            <field name="TASK_TYPE">classifier</field>
+            <field name="MODEL_TYPE">int8</field>
             <next>
               <block type="py_io_serial_init" id="ser_init">
                 <field name="BAUD">115200</field>
@@ -25,7 +27,7 @@
       </block>
     </statement>
   </block>
-  <block type="py_main" id="Iv8!zE5oU-Rl`?clOlTb" x="10" y="170">
+  <block type="py_main" id="Iv8!zE5oU-Rl`?clOlTb" x="10" y="230">
     <statement name="DO">
       <block type="py_ai_open_camera" id="iRYRZaR*kFmX0F^.f:6(">
         <field name="INDEX">0</field>

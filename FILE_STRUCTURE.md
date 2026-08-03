@@ -47,7 +47,11 @@ C:\Workspace\cocoya\
 │   │   ├── 2026-06-05.html # [NEW] 初始化今日日誌與開發 context
 │   │   └── 2026-06-24.html # Phase 5 MVP 驗證 + DGX Spark Docker 建置
 │   └── mappings/          # 長期結構化知識庫（對照表）
-│       └── cocoya_ssh_sftp_api.html # SSH/SFTP API 使用對照表
+│       ├── cocoya_ssh_sftp_api.html # SSH/SFTP API 使用對照表
+│       ├── Framework_API_Index.html # Framework API 索引 (含 findLocatableBlock)
+│       ├── DatasetManager.html      # Dataset Manager API 對照表
+│       ├── Tauri_Sidecar_API.html   # Tauri Sidecar API 使用對照表
+│       └── Renderer_API.html        # UI Renderer API (syncSelection, findLocatableBlock)
 
 
 ├── ui/                    # 雙模共用前端根目錄 (Vite Project)
@@ -79,15 +83,20 @@ C:\Workspace\cocoya\
 │   │   │   ├── mutator.js   # Mutator Undo 方案
 │   │   │   └── search.js    # 積木搜尋引擎
 │   │   ├── modules/       # 雙模共用積木模組
+│   │   │   ├── ai_inference/ # AI 訓練與推論積木模組
+│   │   │   │   └── ai_inference_generators.js # 訓練/推論積木 Python 產生器（含多候選路徑搜尋）
 │   │   │   └── dataset_manager/ # Dataset Spec 與資料集管理器應用層模組
 │   │   │       ├── dataset_manager.css # Dataset Manager Modal、縮圖牆與標註畫布樣式
+│   │   │       ├── i18n.js # [NEW] 共享 i18n t() 函式庫 (支援佔位符替換)
 │   │   │       ├── index.js # 靜態 ESM 入口與 window.CocoyaDataset API 掛載
-│   │   │       ├── spec.js  # DatasetSpec 類別、Schema 偵測、強健型 CSV 解析與驗證邏輯
-│   │   │       ├── importer.js # 影像目錄與檔案匯入解析邏輯
+│   │   │       ├── spec.js  # DatasetSpec 類別、Schema 偵測、強健型 CSV 解析與驗證邏輯 (i18n 化)
 │   │   │       ├── sampler.js # [NEW] 攝影機採集核心、連拍邏輯與 Python 擷取備援方案
 │   │   │       ├── ui_layout.js # Modal UI、動態面板管理與標註視圖切換 (含事件清理)
 │   │   │       ├── ui_components.js # 動態視圖組件 (影像網格、標籤統計，含 XSS 防護)
-│   │   │       └── ui_canvas.js # 標註互動畫布 (物件偵測拉框與自駕循線畫線，支援座標限幅防護與雙模互動)
+│   │   │       ├── ui_canvas.js # 標註互動畫布 (物件偵測拉框與自駕循線畫線，支援座標限幅防護與雙模互動)
+│   │   │       └── i18n/      # 語系檔目錄
+│   │   │           ├── zh-hant.js # 繁體中文 i18n 鍵值 (含 VALIDATE_* 驗證訊息)
+│   │   │           └── en.js      # 英文 i18n 鍵值 (含 VALIDATE_* 驗證訊息)
 │   │   ├── main.js        # Legacy Entry Point
 │   │   ├── ui_manager.js  # Legacy Entry Point
 │   │   ├── utils.js       # [REFACTORED] 入口與命名空間初始化
@@ -119,11 +128,13 @@ C:\Workspace\cocoya\
 │       ├── state.rs       # [NEW] AppState 定義 (進程/鎖定狀態)
 │       ├── utils.rs       # [NEW] 路徑與資源解析工具
 │       └── commands/      # [NEW] 分類指令處理器
-│           ├── mod.rs     # 指令集匯出
-│           ├── python.rs  # Python 執行與環境診斷
-│           ├── file.rs    # 檔案讀寫、備份與鎖定
-│           ├── mcu.rs     # 硬體通訊、韌體與序列埠
-│           └── app.rs     # 視窗控制與系統資訊
+│           ├── mod.rs       # 指令集匯出
+│           ├── python.rs    # Python 執行與環境診斷
+│           ├── file.rs      # 檔案讀寫、備份與鎖定
+│           ├── mcu.rs       # 硬體通訊、韌體與序列埠
+│           ├── app.rs       # 視窗控制與系統資訊
+│           ├── dataset.rs   # [NEW] Sidecar 通訊 (start/send/stop)
+│           └── training.rs  # [NEW] 訓練報告開啟 (open_report, find_latest_training_report)
 │   ├── firmware/          # MCU 韌體資源
 │   │   └── MicroPython/   # MicroPython 韌體
 │   │       ├── MakerPi_RP2040/   # 內含 .uf2

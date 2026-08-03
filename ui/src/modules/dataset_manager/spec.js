@@ -1,3 +1,5 @@
+import { t } from './i18n.js';
+
 const SPEC_VERSION = '1.0';
 
 const PROJECT_TYPES = new Set(['image', 'object_detection', 'feature', 'serial', 'table', 'line_following']);
@@ -164,52 +166,52 @@ export class DatasetSpec {
         const columnNames = new Set();
 
         if (spec.version !== SPEC_VERSION) {
-            warnings.push(`Unsupported spec version "${spec.version}". Expected "${SPEC_VERSION}".`);
+            warnings.push(t('VALIDATE_VERSION_UNSUPPORTED', 'Unsupported spec version "%1". Expected "%2".', spec.version, SPEC_VERSION));
         }
         if (!spec.project.name) {
-            errors.push('Project name is required.');
+            errors.push(t('VALIDATE_PROJECT_NAME_REQUIRED', 'Project name is required.'));
         }
         if (!PROJECT_TYPES.has(spec.project.type)) {
-            errors.push(`Project type must be one of: ${Array.from(PROJECT_TYPES).join(', ')}.`);
+            errors.push(t('VALIDATE_PROJECT_TYPE_INVALID', 'Project type must be one of: %1.', Array.from(PROJECT_TYPES).join(', ')));
         }
         if (!SOURCE_MODES.has(spec.data_source.mode)) {
-            errors.push(`Data source mode must be one of: ${Array.from(SOURCE_MODES).join(', ')}.`);
+            errors.push(t('VALIDATE_SOURCE_MODE_INVALID', 'Data source mode must be one of: %1.', Array.from(SOURCE_MODES).join(', ')));
         }
         if (!Array.isArray(spec.schema.columns) || spec.schema.columns.length === 0) {
-            errors.push('At least one schema column is required.');
+            errors.push(t('VALIDATE_COLUMN_REQUIRED', 'At least one schema column is required.'));
         }
 
         spec.schema.columns.forEach((column, index) => {
             if (!column.name) {
-                errors.push(`Column ${index + 1} is missing a name.`);
+                errors.push(t('VALIDATE_COLUMN_MISSING_NAME', 'Column %1 is missing a name.', index + 1));
                 return;
             }
             if (columnNames.has(column.name)) {
-                errors.push(`Duplicate column name: ${column.name}.`);
+                errors.push(t('VALIDATE_COLUMN_DUPLICATE', 'Duplicate column name: %1.', column.name));
             }
             columnNames.add(column.name);
             if (!COLUMN_TYPES.has(column.type)) {
-                errors.push(`Column "${column.name}" has invalid type "${column.type}".`);
+                errors.push(t('VALIDATE_COLUMN_INVALID_TYPE', 'Column "%1" has invalid type "%2".', column.name, column.type));
             }
             if (!COLUMN_ROLES.has(column.role)) {
-                errors.push(`Column "${column.name}" has invalid role "${column.role}".`);
+                errors.push(t('VALIDATE_COLUMN_INVALID_ROLE', 'Column "%1" has invalid role "%2".', column.name, column.role));
             }
         });
 
         spec.schema.features.forEach((name) => {
             if (!columnNames.has(name)) {
-                errors.push(`Feature column "${name}" does not exist in schema.columns.`);
+                errors.push(t('VALIDATE_FEATURE_NOT_FOUND', 'Feature column "%1" does not exist in schema.columns.', name));
             }
         });
 
         if (spec.schema.label && !columnNames.has(spec.schema.label)) {
-            errors.push(`Label column "${spec.schema.label}" does not exist in schema.columns.`);
+            errors.push(t('VALIDATE_LABEL_NOT_FOUND', 'Label column "%1" does not exist in schema.columns.', spec.schema.label));
         }
         if (!spec.schema.label && spec.project.type !== 'table' && spec.project.type !== 'line_following') {
-            warnings.push('No label column is assigned yet.');
+            warnings.push(t('VALIDATE_NO_LABEL', 'No label column is assigned yet.'));
         }
         if (spec.schema.features.length === 0 && spec.project.type !== 'image' && spec.project.type !== 'line_following') {
-            warnings.push('No feature columns are assigned yet.');
+            warnings.push(t('VALIDATE_NO_FEATURES', 'No feature columns are assigned yet.'));
         }
 
         return {

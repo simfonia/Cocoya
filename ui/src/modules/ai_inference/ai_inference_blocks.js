@@ -83,6 +83,18 @@ Blockly.Blocks['py_ai_train_run'] = {
         .appendField(Blockly.Msg["AI_TRAIN_FIELD_FINE_TUNE"])
         .appendField(new Blockly.FieldCheckbox(false), 'FINE_TUNE');
 
+    // 模型輸出格式（預設「無」，僅觀察訓練結果）
+    this.appendDummyInput()
+        .appendField(Blockly.Msg["AI_TRAIN_FIELD_MODEL_OUTPUT"])
+        .appendField(new Blockly.FieldDropdown([
+          [Blockly.Msg["AI_TRAIN_OUTPUT_NONE"], "none"],
+          [Blockly.Msg["AI_TRAIN_OUTPUT_INT8"], "int8"],
+          [Blockly.Msg["AI_TRAIN_OUTPUT_F32"], "f32"],
+          [Blockly.Msg["AI_TRAIN_OUTPUT_KERAS"], "keras"],
+          [Blockly.Msg["AI_TRAIN_OUTPUT_INT8_F32"], "int8+f32"],
+          [Blockly.Msg["AI_TRAIN_OUTPUT_ALL"], "all"]
+        ]), 'MODEL_OUTPUT');
+
     this.setPreviousStatement(true);
     this.setNextStatement(true);
     this.setColour(Blockly.Msg["COLOUR_AI_INFERENCE"]);
@@ -110,6 +122,15 @@ Blockly.Blocks["py_ai_model_init"] = {
           [Blockly.Msg["AI_TASK_LINE_FOLLOWER"], "line_follower"],
           [Blockly.Msg["AI_TASK_TABLE"], "table"]
         ]), 'TASK_TYPE');
+
+    // 模型類型選擇（自動/量化/Float32）
+    this.appendDummyInput()
+        .appendField(Blockly.Msg["AI_INFERENCE_FIELD_MODEL_TYPE"])
+        .appendField(new Blockly.FieldDropdown([
+          [Blockly.Msg["AI_INFERENCE_TYPE_AUTO"], "auto"],
+          [Blockly.Msg["AI_INFERENCE_TYPE_INT8"], "int8"],
+          [Blockly.Msg["AI_INFERENCE_TYPE_F32"], "f32"]
+        ]), 'MODEL_TYPE');
 
     this.setPreviousStatement(true);
     this.setNextStatement(true);
