@@ -65,3 +65,6 @@ Blockly.Msg["AI_GET_BBOX"] = "取得邊界框 %1";
 Blockly.Msg["AI_GET_BBOX_TOOLTIP"] = "從偵測結果中提取第一個邊界框\n\n輸入：\n• RESULT：推論結果字典（偵測器類型）\n\n輸出：\n• Tuple (x1, y1, x2, y2)：邊界框座標\n  若無法取得則回傳 (0,0,0,0)";
 Blockly.Msg["AI_GET_DIRECTION"] = "取得方向 %1";
 Blockly.Msg["AI_GET_DIRECTION_TOOLTIP"] = "從循線結果中提取方向\n\n輸入：\n• RESULT：推論結果字典（循線類型）\n\n輸出：\n• 字串：方向（'left', 'right', 'forward', 'none'）\n  若無法取得則回傳 'none'";
+
+Blockly.Msg["AI_GET_BBOX_CENTER"] = "取得邊界框中心點 %1";
+Blockly.Msg["AI_GET_BBOX_CENTER_TOOLTIP"] = "從偵測結果中計算邊界框的中心點座標\n\n輸入：\n• RESULT：推論結果字典（偵測器類型）\n\n輸出：\n• Tuple (cx, cy)：中心點座標（0~1 比例）\n  若無法取得則回傳 (0, 0)\n\n用途：\n• 雲台追蹤：計算目標中心與畫面中心的偏移量\n• 控制伺服馬達轉向目標";

@@ -216,3 +216,18 @@ Blockly.Blocks["py_ai_get_direction"] = {
     this.setOutput(true, "String");
   }
 };
+
+Blockly.Blocks["py_ai_get_bbox_center"] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["AI_GET_BBOX_CENTER"],
+      "args0": [
+        { "type": "input_value", "name": "RESULT" }
+      ],
+      "colour": Blockly.Msg["COLOUR_AI_INFERENCE"],
+      "tooltip": Blockly.Msg["AI_GET_BBOX_CENTER_TOOLTIP"],
+      "helpUrl": "py_ai_get_bbox_center"
+    });
+    this.setOutput(true, "Tuple");
+  }
+};

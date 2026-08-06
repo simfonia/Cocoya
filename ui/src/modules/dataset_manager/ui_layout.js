@@ -450,6 +450,21 @@ function enterAnnotationMode(image, index) {
     `);
     modal.querySelector('#dataset-annotation-back').onclick = exitAnnotationMode;
 
+    // 取得類別列表（用於物件偵測的類別選擇器）
+    const projectType = getFormValue('projectType');
+    const labelMap = state.spec.toJSON().schema.label_map || {};
+    const labelEntries = Object.entries(labelMap);
+
+    // 物件偵測模式才顯示類別選擇器
+    const classSelectorHtml = (projectType === 'object_detection' && labelEntries.length > 0)
+        ? `<div style="display: flex; align-items: center; gap: 6px;">
+             <label style="font-size: 11px; color: #555; white-space: nowrap;">${t('ANNOTATION_CLASS', '類別')}:</label>
+             <select id="annotation-class-select" style="font-size: 11px; padding: 2px 6px; border: 1px solid #ccc; border-radius: 3px;">
+               ${labelEntries.map(([name, id]) => `<option value="${id}">${name}</option>`).join('')}
+             </select>
+           </div>`
+        : '';
+
     previewContent.innerHTML = `
         <div class="dataset-annotation-view" style="display: flex; flex-direction: column; gap: 10px; height: 100%;">
             <div class="dataset-annotation-sidebar" style="display: flex; align-items: center; justify-content: space-between; width: 100%; box-sizing: border-box; padding: 8px 12px; gap: 16px;">
@@ -457,6 +472,7 @@ function enterAnnotationMode(image, index) {
                     <h4 style="margin: 0; font-size: 13px; color: #FE2F89;">${t('ANNOTATION_INFO', '標註資訊')}</h4>
                     <span style="font-size: 10px; color: #777; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;" title="${image.name}">${t('ANNOTATION_FILE', '檔案')}: ${image.name}</span>
                 </div>
+                ${classSelectorHtml}
                 <div id="annotation-list-ui" style="display: flex; gap: 6px; flex-wrap: wrap; flex: 1; max-height: 60px; overflow-y: auto; justify-content: flex-start; align-content: flex-start;"></div>
             </div>
             <div class="dataset-annotation-image-container" style="min-height: 380px; height: 380px; width: 100%;">
@@ -469,18 +485,28 @@ function enterAnnotationMode(image, index) {
 
     const img = document.getElementById('annotation-target-img');
     const container = document.getElementById('annotation-container');
-    
+
     img.onload = () => {
-        const projectType = getFormValue('projectType');
         const mode = projectType === 'line_following' ? 'line' : 'bbox';
         UICanvas.init(container, img, image.annotations || [], {
             mode: mode,
             onUpdate: (anns) => {
-                image.annotations = anns; 
+                image.annotations = anns;
                 renderAnnotationListUI(anns);
-                refreshPreview(); 
+                refreshPreview();
             }
         });
+
+        // 物件偵測模式：設定類別選擇器的事件
+        const classSelect = document.getElementById('annotation-class-select');
+        if (classSelect) {
+            classSelect.onchange = () => {
+                UICanvas.state.currentClassId = parseInt(classSelect.value, 10) || 0;
+            };
+            // 初始化 currentClassId
+            UICanvas.state.currentClassId = parseInt(classSelect.value, 10) || 0;
+        }
+
         renderAnnotationListUI(image.annotations || []);
     };
 }

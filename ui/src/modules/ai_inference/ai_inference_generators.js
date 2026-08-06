@@ -228,14 +228,20 @@ Blockly.Python.forBlock['py_ai_model_init'] = function(block, generator) {
       '        return {"type": "classifier", "label": lb, "confidence": conf}\n' +
       '    \n' +
       '    def _detect(self, frame):\n' +
-      '        # 物件偵測推論（預留接口）\n' +
+      '        # 物件偵測推論（單一目標回歸）\n' +
       '        import numpy as np\n' +
       '        d2 = self._preprocess(frame)\n' +
       '        if d2 is None:\n' +
       '            return {"type": "detector", "objects": []}\n' +
       '        self.it.set_tensor(self.i[0]["index"], d2); self.it.invoke()\n' +
-      '        # 目前回傳空結果，待 detector_train.py 實作後補齊\n' +
-      '        return {"type": "detector", "objects": []}\n' +
+      '        out = self.it.get_tensor(self.o[0]["index"])[0]\n' +
+      '        # out = [cx, cy, w, h] (0~1)\n' +
+      '        cx, cy, w, h = float(out[0]), float(out[1]), float(out[2]), float(out[3])\n' +
+      '        # 轉換為 (x1, y1, x2, y2)\n' +
+      '        x1, y1 = cx - w/2, cy - h/2\n' +
+      '        x2, y2 = cx + w/2, cy + h/2\n' +
+      '        label = self.ls[0] if self.ls else "object"\n' +
+      '        return {"type": "detector", "objects": [{"label": label, "confidence": 1.0, "bbox": (x1, y1, x2, y2)}]}\n' +
       '    \n' +
       '    def _follow_line(self, frame):\n' +
       '        # 循線偵測推論（預留接口）\n' +
@@ -310,6 +316,15 @@ Blockly.Python.forBlock['py_ai_get_bbox'] = function(block, generator) {
 Blockly.Python.forBlock['py_ai_get_direction'] = function(block, generator) {
   var resultCode = Blockly.Python.valueToCode(block, 'RESULT', Blockly.Python.ORDER_ATOMIC) || '{}';
   var code = resultCode + '.get("direction", "none")';
+  if (!block.outputConnection) {
+    return code + '\n';
+  }
+  return [code, Blockly.Python.ORDER_FUNCTION_CALL];
+};
+
+Blockly.Python.forBlock['py_ai_get_bbox_center'] = function(block, generator) {
+  var resultCode = Blockly.Python.valueToCode(block, 'RESULT', Blockly.Python.ORDER_ATOMIC) || '{}';
+  var code = '(lambda b: ((b[0]+b[2])/2, (b[1]+b[3])/2))(' + resultCode + '.get("objects", [{}])[0].get("bbox", (0,0,0,0)) if ' + resultCode + '.get("objects", []) else (0,0,0,0))';
   if (!block.outputConnection) {
     return code + '\n';
   }
