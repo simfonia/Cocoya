@@ -30,7 +30,12 @@ C:\Workspace\cocoya\
 │   │   └── 08_functions_light_show.xml # 函式定義與聲光表演
 │   ├── πCar/               # πCar 小車控制範例
 │   ├── AI_01_Pose_piCar/   # AI 姿勢辨識控制 πCar
-│   └── AI_02_classifier/   # AI 影像分類控制 πCar
+│   ├── AI_02_classifier/   # AI 影像分類控制 πCar
+│   └── AI_03_detector_pan_tilt/ # [NEW] 物件偵測追蹤雲台範例
+│       ├── 01_README.md    # 完整 PBL 說明文件
+│       ├── 02_PC_train.xml # 物件偵測訓練積木
+│       ├── 03_PC_inference.xml # PC 端推論與視覺化
+│       └── 04_MCU_tracking.xml # MCU 端雲台追蹤控制
 ├── log/                   # 專案日誌與任務追蹤
 │   ├── details.md         # 技術細節與 API 踩坑紀錄
 │   ├── handover.md        # 任務交接檔
@@ -166,15 +171,19 @@ C:\Workspace\cocoya\
 │   ├── deploy_mcu.py      # [OPTIMIZED] 具備硬體感知與分塊寫入的部署工具
 │   ├── extension_icon.png # 插件圖示
 │   ├── train_templates/   # AI 訓練模板（共同模組 + 任務專屬）
-│   │   ├── common/        # [NEW] 共同模組
-│   │   │   ├── __init__.py  # 模組包
-│   │   │   ├── dataset.py   # 資料集載入、驗證、分割、擴增
-│   │   │   ├── model.py     # 模型建立、backbone 管理、FC 層自訂
-│   │   │   ├── training.py  # 訓練迴圈、class weight、優化器選擇
-│   │   │   ├── export.py    # TFLite 轉換、模型儲存
-│   │   │   └── report.py    # 訓練曲線繪製、HTML 報告產生
-│   │   └── classifier/
-│   │       └── classifier_train.py # [REFACTORED] 使用 common 模組 + 新參數
+│   │   ├── common/        # 共同模組（重命名為任務前綴 + 共用功能）
+│   │   │   ├── __init__.py            # 模組包
+│   │   │   ├── classifier_dataset.py  # 分類資料集載入、驗證、分割、擴增
+│   │   │   ├── classifier_model.py    # 分類模型建立、backbone 管理、FC 層自訂
+│   │   │   ├── detector_dataset.py    # [NEW] YOLO 格式資料載入、bbox 解析
+│   │   │   ├── detector_model.py      # [NEW] 物件偵測回歸模型（MobileNetV2 + Dense(4, sigmoid)）
+│   │   │   ├── training_loop.py       # 訓練迴圈、class weight、優化器選擇（共用）
+│   │   │   ├── model_export.py        # TFLite 轉換、模型儲存（共用）
+│   │   │   └── training_report.py     # 訓練曲線繪製、HTML 報告產生（共用）
+│   │   ├── classifier/
+│   │   │   └── classifier_train.py    # 分類訓練腳本（使用 common 模組）
+│   │   └── detector/
+│   │       └── detector_train.py      # [NEW] 物件偵測訓練腳本（單一目標，MSE loss）
 │   ├── dataset_manager/   # Dataset Manager 模組
 │   │   └── train_templates/ # 訓練容器模板
 │   │       └── classifier/  # 手勢分類訓練模板

@@ -114,10 +114,64 @@ class DatasetSidecar:
                     
                     try:
                         import os
+                        import json
                         from dataset_io import DatasetIO
                         if not os.path.exists(source_dir):
                             raise Exception(f"Source directory does not exist: {source_dir}")
+                        
+                        # 檢查是否有 dataset.json，若有 annotations 則寫入 YOLO labels
+                        spec_path = os.path.join(source_dir, "dataset.json")
+                        if os.path.exists(spec_path):
+                            with open(spec_path, 'r', encoding='utf-8') as f:
+                                spec = json.load(f)
                             
+                            project_type = spec.get("project", {}).get("type", "")
+                            samples = spec.get("data_source", {}).get("samples", [])
+                            
+                            if project_type == "object_detection" and samples:
+                                labels_dir = os.path.join(source_dir, "labels")
+                                os.makedirs(labels_dir, exist_ok=True)
+                                
+                                # 寫入 labels.txt（類別名稱）
+                                label_map = spec.get("schema", {}).get("label_map", {})
+                                if label_map:
+                                    # 依 class_id 排序
+                                    sorted_labels = sorted(label_map.items(), key=lambda x: x[1])
+                                    labels_txt_path = os.path.join(source_dir, "labels.txt")
+                                    with open(labels_txt_path, 'w', encoding='utf-8') as f:
+                                        for name, cid in sorted_labels:
+                                            f.write(f"{name}\n")
+                                    print(f"[Sidecar Log] Wrote labels.txt with {len(sorted_labels)} classes", file=sys.stderr)
+                                
+                                # 為每張影像寫入 YOLO label 檔案
+                                for sample in samples:
+                                    image_path = sample.get("image_path", "")
+                                    annotations = sample.get("annotations", [])
+                                    
+                                    if not image_path or not annotations:
+                                        continue
+                                    
+                                    # 取得影像檔名（不含副檔名）
+                                    img_filename = os.path.basename(image_path)
+                                    label_filename = os.path.splitext(img_filename)[0] + ".txt"
+                                    label_filepath = os.path.join(labels_dir, label_filename)
+                                    
+                                    with open(label_filepath, 'w') as f:
+                                        for ann in annotations:
+                                            if "bbox" in ann and "class_id" in ann:
+                                                bbox = ann["bbox"]
+                                                class_id = ann["class_id"]
+                                                # bbox 格式: [x, y, w, h]（比例座標）
+                                                # YOLO 格式: class_id cx cy w h
+                                                # Dataset Manager 的 bbox 已經是 [x, y, w, h]（左上角 + 寬高）
+                                                # 需要轉換為 YOLO 的 [cx, cy, w, h]（中心點 + 寬高）
+                                                x, y, w, h = bbox[0], bbox[1], bbox[2], bbox[3]
+                                                cx = x + w / 2
+                                                cy = y + h / 2
+                                                f.write(f"{class_id} {cx:.6f} {cy:.6f} {w:.6f} {h:.6f}\n")
+                                
+                                print(f"[Sidecar Log] Wrote YOLO labels for {len(samples)} images", file=sys.stderr)
+                        
                         result_path = DatasetIO.export_dataset(source_dir, output_zip)
                         self.send_response(request_id, {"success": True, "path": result_path})
                     except Exception as e:

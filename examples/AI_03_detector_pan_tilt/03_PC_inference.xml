@@ -1,0 +1,127 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
+  <variables>
+    <variable id="var_frame">frame</variable>
+    <variable id="var_result">result</variable>
+    <variable id="var_center">center</variable>
+  </variables>
+  <block type="py_definition_zone" id="cfg_root" x="10" y="10">
+    <statement name="DEFS">
+      <block type="py_import" id="imp_cv2">
+        <field name="LIB">cv2</field>
+        <next>
+          <block type="py_ai_model_init" id="det_init">
+            <field name="MODEL_PATH">model/detector_dataset</field>
+            <field name="TASK_TYPE">detector</field>
+            <field name="MODEL_TYPE">int8</field>
+            <next>
+              <block type="py_io_serial_init" id="det_ser_init">
+                <field name="BAUD">115200</field>
+                <value name="PORT">
+                  <shadow type="py_text" id="det_ser_port">
+                    <field name="TEXT">COM4</field>
+                  </shadow>
+                </value>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+  <block type="py_main" id="det_main" x="10" y="220">
+    <statement name="DO">
+      <block type="py_ai_open_camera" id="det_cam">
+        <field name="INDEX">0</field>
+        <next>
+          <block type="py_loop_while" id="det_loop">
+            <value name="CONDITION">
+              <block type="py_logic_boolean" id="det_loop_cond">
+                <field name="BOOL">True</field>
+              </block>
+            </value>
+            <statement name="DO">
+              <block type="py_ai_read_frame" id="det_read">
+                <field name="VAR" id="var_frame">frame</field>
+                <next>
+                  <block type="py_variables_set" id="det_set_result">
+                    <field name="VAR" id="var_result">result</field>
+                    <value name="VALUE">
+                      <shadow type="py_math_number" id="det_result_default">
+                        <field name="NUM">0</field>
+                      </shadow>
+                      <block type="py_ai_model_predict" id="det_predict">
+                        <value name="FRAME">
+                          <block type="py_variables_get" id="det_get_frame_predict">
+                            <field name="VAR" id="var_frame">frame</field>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="py_variables_set" id="det_set_center">
+                        <field name="VAR" id="var_center">center</field>
+                        <value name="VALUE">
+                          <shadow type="py_math_number" id="det_center_default">
+                            <field name="NUM">0</field>
+                          </shadow>
+                          <block type="py_ai_get_bbox_center" id="det_get_center">
+                            <value name="RESULT">
+                              <block type="py_variables_get" id="det_get_result_center">
+                                <field name="VAR" id="var_result">result</field>
+                              </block>
+                            </value>
+                          </block>
+                        </value>
+                            <next>
+                              <block type="py_io_serial_write" id="det_serial_send">
+                                <value name="DATA">
+                                  <block type="py_variables_get" id="det_get_center_serial">
+                                    <field name="VAR" id="var_center">center</field>
+                                  </block>
+                                </value>
+                                <next>
+                              <block type="py_ai_flip_image" id="det_flip">
+                                <field name="VAR" id="var_frame">frame</field>
+                                <field name="CODE">1</field>
+                                <next>
+                                  <block type="py_ai_show_image" id="det_show">
+                                    <value name="IMAGE">
+                                      <block type="py_variables_get" id="det_get_show_frame">
+                                        <field name="VAR" id="var_frame">frame</field>
+                                      </block>
+                                    </value>
+                                    <next>
+                                      <block type="py_io_print" id="det_print_center">
+                                        <value name="TEXT">
+                                          <shadow type="py_text" id="det_center_text">
+                                            <field name="TEXT">Center:</field>
+                                          </shadow>
+                                          <block type="py_variables_get" id="det_get_print_center">
+                                            <field name="VAR" id="var_center">center</field>
+                                          </block>
+                                        </value>
+                                        <next>
+                                          <block type="py_ai_wait_key_break" id="det_break">
+                                            <field name="KEY">q</field>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </statement>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

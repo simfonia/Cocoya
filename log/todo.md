@@ -66,8 +66,19 @@
 
 ---
 
+## [已完成] 2026-08-04 — detector_train.py 實作（單一目標物件偵測）
+- [x] **Common 模組重命名**：dataset.py → classifier_dataset.py 等 5 個檔案統一命名
+- [x] **detector_dataset.py**：YOLO 格式資料載入模組
+- [x] **detector_model.py**：MobileNetV2 + 回歸頭模型建立
+- [x] **detector_train.py**：物件偵測訓練主腳本（MSE loss, int8 TFLite）
+- [x] **Dataset Manager 標註 UI**：加入類別選擇器（先選類別再畫框）
+- [x] **Dataset Manager YOLO 匯出**：sidecar 匯出時寫入 labels/ 目錄
+- [x] **推論端 _detect() 補齊**：解析 TFLite 輸出為 bbox
+- [x] **新增 py_ai_get_bbox_center 積木**：計算 bbox 中心點（雲台追蹤用）
+- [x] **Phase 7：範例建立**：`examples/AI_03_detector_pan_tilt/`（02/03/04 XML + README）
+
 ## [待辦] 優先級 1：AI 訓練腳本擴充
-- [ ] **detector_train.py 實作**：使用 `resources/train_templates/common/` 模組實作物件偵測訓練腳本
+- [x] **detector_train.py 實作**：使用 `resources/train_templates/common/` 模組實作物件偵測訓練腳本
 - [ ] **line_follower_train.py 實作**：使用 common 模組實作循線訓練腳本
 - [ ] **table_train.py 實作**：使用 common 模組實作表格資料訓練腳本
 
@@ -76,7 +87,7 @@
 - [ ] **容器化訓練腳本**：建立基於 DGX 鏡像的訓練容器與模板程式
 
 ## [待辦] 優先級 3：範例與說明
-- [ ] **物件偵測範例規劃**：討論 `examples/AI_03_???` 的方向
+- [x] **物件偵測範例規劃**：已完成 `examples/AI_03_detector_pan_tilt/`
 - [ ] **hardware_pins 說明文件補齊**：補上 `hardware_pins_en.html` 和 `hardware_pins_zh-hant.html` 的完整內容
 - [ ] **[選用]** 更新 `03_PC_inference.xml` 使用新的解析積木
 

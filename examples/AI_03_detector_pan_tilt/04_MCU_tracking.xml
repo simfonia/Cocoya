@@ -1,0 +1,85 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
+  <variables>
+    <variable id="var_cmd">cmd</variable>
+    <variable id="var_angle">angle</variable>
+  </variables>
+  <block type="py_definition_zone" id="mcu_def_root" deletable="false" x="10" y="10">
+    <statement name="DEFS">
+      <block type="py_io_serial_init" id="mcu_ser_init">
+        <field name="BAUD">115200</field>
+        <value name="PORT">
+          <shadow type="py_text" id="mcu_ser_port">
+            <field name="TEXT">COM4</field>
+          </shadow>
+        </value>
+      </block>
+    </statement>
+  </block>
+  <block type="mcu_main" id="mcu_main_root" deletable="false" x="10" y="110">
+    <statement name="DO">
+      <block type="py_loop_while" id="mcu_loop">
+        <value name="CONDITION">
+          <block type="py_logic_boolean" id="mcu_loop_cond">
+            <field name="BOOL">True</field>
+          </block>
+        </value>
+        <statement name="DO">
+          <block type="py_variables_set" id="mcu_set_cmd">
+            <field name="VAR" id="var_cmd">cmd</field>
+            <value name="VALUE">
+              <block type="py_io_serial_read" id="mcu_ser_read"></block>
+            </value>
+            <next>
+              <block type="py_logic_if" id="mcu_if_has_data">
+                <mutation elif="0" else="0"></mutation>
+                <value name="IF0">
+                  <block type="py_logic_compare" id="mcu_cmd_cmp">
+                    <field name="OP">!=</field>
+                    <value name="A">
+                      <block type="py_variables_get" id="mcu_get_cmd">
+                        <field name="VAR" id="var_cmd">cmd</field>
+                      </block>
+                    </value>
+                    <value name="B">
+                      <shadow type="py_text" id="mcu_empty_text">
+                        <field name="TEXT"></field>
+                      </shadow>
+                    </value>
+                  </block>
+                </value>
+                <statement name="DO0">
+                  <block type="mcu_car_servo" id="mcu_servo">
+                    <field name="PIN">board.GP14</field>
+                    <field name="TYPE">STANDARD</field>
+                    <value name="ANGLE">
+                      <block type="py_math_arithmetic" id="mcu_angle_math">
+                        <field name="OP">*</field>
+                        <value name="A">
+                          <shadow type="py_math_number" id="mcu_angle_a">
+                            <field name="NUM">180</field>
+                          </shadow>
+                          <block type="py_math_round" id="mcu_conv_float">
+                            <value name="NUM">
+                              <block type="py_variables_get" id="mcu_get_cmd_angle">
+                                <field name="VAR" id="var_cmd">cmd</field>
+                              </block>
+                            </value>
+                          </block>
+                        </value>
+                        <value name="B">
+                          <shadow type="py_math_number" id="mcu_angle_b">
+                            <field name="NUM">0</field>
+                          </shadow>
+                        </value>
+                      </block>
+                    </value>
+                  </block>
+                </statement>
+              </block>
+            </next>
+          </block>
+        </statement>
+      </block>
+    </statement>
+  </block>
+</xml>

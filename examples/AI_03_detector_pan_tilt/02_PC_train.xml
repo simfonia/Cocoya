@@ -1,0 +1,22 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
+  <block type="py_main" id="train_main" x="30" y="90">
+    <statement name="DO">
+      <block type="py_ai_train_run" id="det_train_001">
+        <field name="DATASET_DIR">dataset/detector_dataset</field>
+        <field name="EPOCHS">10</field>
+        <field name="BATCH_SIZE">8</field>
+        <field name="LEARNING_RATE">0.001</field>
+        <field name="VALIDATION_SPLIT">0.2</field>
+        <field name="DROPOUT">0.2</field>
+        <field name="AUGMENTATION">TRUE</field>
+        <field name="TASK_TYPE">detector</field>
+        <field name="BACKEND">auto</field>
+        <field name="BACKBONE">mobilenetv2</field>
+        <field name="OPTIMIZER">adam</field>
+        <field name="DNN_LAYERS">128,64</field>
+        <field name="FINE_TUNE">FALSE</field>
+        <field name="MODEL_OUTPUT">int8</field>
+      </block>
+    </statement>
+  </block>
+</xml>

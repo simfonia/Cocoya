@@ -65,3 +65,6 @@ Blockly.Msg["AI_GET_BBOX"] = "get bbox %1";
 Blockly.Msg["AI_GET_BBOX_TOOLTIP"] = "Extract the first bounding box from a detection result\n\nInput:\n• RESULT: Inference result dict (detector type)\n\nOutput:\n• Tuple (x1, y1, x2, y2): Bounding box coordinates\n  Returns (0,0,0,0) if not available";
 Blockly.Msg["AI_GET_DIRECTION"] = "get direction %1";
 Blockly.Msg["AI_GET_DIRECTION_TOOLTIP"] = "Extract the direction from a line follower result\n\nInput:\n• RESULT: Inference result dict (line_follower type)\n\nOutput:\n• String: Direction ('left', 'right', 'forward', 'none')\n  Returns 'none' if not available";
+
+Blockly.Msg["AI_GET_BBOX_CENTER"] = "get bbox center %1";
+Blockly.Msg["AI_GET_BBOX_CENTER_TOOLTIP"] = "Calculate the center point of the bounding box from a detection result\n\nInput:\n• RESULT: Inference result dict (detector type)\n\nOutput:\n• Tuple (cx, cy): Center coordinates (0~1 ratio)\n  Returns (0, 0) if not available\n\nUsage:\n• Pan-tilt tracking: Calculate offset between target center and frame center\n• Control servo motors to track the target";

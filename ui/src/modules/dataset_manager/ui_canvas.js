@@ -16,6 +16,7 @@ export const UICanvas = {
         currentBbox: null, // [x, y, w, h] (BBox) 或 [x1, y1, x2, y2] (Line) 比例座標 (0~1)
         annotations: [], // [{ class_id, bbox:[x,y,w,h] }] 或 [{ class_id, line:[x1,y1,x2,y2] }]
         mode: 'bbox', // 'bbox' 或 'line'
+        currentClassId: 0, // 目前選擇的類別 ID（由外部 UI 設定）
         onUpdate: null,
         handlers: {} // 存放事件處理器以便清理
     },
@@ -173,7 +174,7 @@ export const UICanvas = {
                 // 畫矩形框結束
                 if (this.state.currentBbox && this.state.currentBbox[2] > 0.01) {
                     this.state.annotations.push({
-                        class_id: 0,
+                        class_id: this.state.currentClassId,
                         bbox: this.state.currentBbox.slice() // 拷貝陣列避免參考問題
                     });
                     if (this.state.onUpdate) this.state.onUpdate(this.state.annotations);

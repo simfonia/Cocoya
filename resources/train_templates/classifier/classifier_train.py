@@ -30,11 +30,11 @@ np.random.seed(42)
 
 # 匯入共同模組
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from common.dataset import load_image_dataset, create_data_augmentation, prepare_dataset
-from common.model import build_image_model
-from common.training import compute_class_weights, compile_and_train
-from common.export import save_keras_model, export_tflite, save_labels
-from common.report import save_training_history, plot_training_curves, generate_html_report
+from common.classifier_dataset import load_image_dataset, create_data_augmentation, prepare_dataset
+from common.classifier_model import build_image_model
+from common.training_loop import compute_class_weights, compile_and_train
+from common.model_export import save_keras_model, export_tflite, save_labels
+from common.training_report import save_training_history, plot_training_curves, generate_html_report
 
 
 def main():
