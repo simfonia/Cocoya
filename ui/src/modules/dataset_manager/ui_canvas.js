@@ -17,6 +17,8 @@ export const UICanvas = {
         annotations: [], // [{ class_id, bbox:[x,y,w,h] }] 或 [{ class_id, line:[x1,y1,x2,y2] }]
         mode: 'bbox', // 'bbox' 或 'line'
         currentClassId: 0, // 目前選擇的類別 ID（由外部 UI 設定）
+        selectedAnnotationIndex: -1, // -1 = 無選中
+        labelMap: {}, // class_id → 類別名稱對照表
         onUpdate: null,
         handlers: {} // 存放事件處理器以便清理
     },
@@ -26,8 +28,10 @@ export const UICanvas = {
         this.state.annotations = annotations || [];
         this.state.onUpdate = options.onUpdate;
         this.state.mode = options.mode || 'bbox';
+        this.state.labelMap = options.labelMap || {};
         this.state.drawingState = 0; // 重置點擊兩點狀態機
         this.state.isDrawing = false;
+        this.state.selectedAnnotationIndex = -1; // 重置選中狀態
 
         const oldCanvas = parentContainer.querySelector('canvas.dataset-annotation-canvas');
         if (oldCanvas) {
@@ -68,6 +72,9 @@ export const UICanvas = {
             const rect = canvas.getBoundingClientRect();
             const px = clamp(e.clientX - rect.left, canvas.width);
             const py = clamp(e.clientY - rect.top, canvas.height);
+
+            // 點擊畫布時清除選中狀態（非拉框開始）
+            this.state.selectedAnnotationIndex = -1;
 
             if (this.state.mode === 'line') {
                 if (this.state.drawingState === 0) {
@@ -195,6 +202,7 @@ export const UICanvas = {
         if (h.mousedown && canvas) canvas.removeEventListener('mousedown', h.mousedown);
         if (h.mousemove) window.removeEventListener('mousemove', h.mousemove);
         if (h.mouseup) window.removeEventListener('mouseup', h.mouseup);
+        if (h.keydown && canvas) canvas.removeEventListener('keydown', h.keydown);
         
         this.state.handlers = {};
     },
@@ -221,7 +229,9 @@ export const UICanvas = {
             // 繪製既有矩形框
             annotations.forEach((ann, idx) => {
                 if (ann.bbox) {
-                    this.drawBox(ann.bbox, '#FE2F89', `Obj ${idx}`);
+                    const isSelected = (idx === this.state.selectedAnnotationIndex);
+                    const label = this.getAnnotationLabel(ann.class_id, idx);
+                    this.drawBox(ann.bbox, isSelected ? '#00CCFF' : '#FE2F89', label, isSelected);
                 }
             });
 
@@ -232,7 +242,7 @@ export const UICanvas = {
         }
     },
 
-    drawBox(bbox, color, label) {
+    drawBox(bbox, color, label, isSelected = false) {
         const { ctx, canvas } = this.state;
         const [x, y, w, h] = bbox;
         
@@ -242,12 +252,34 @@ export const UICanvas = {
         const ph = h * canvas.height;
 
         ctx.strokeStyle = color;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = isSelected ? 4 : 2;
         ctx.strokeRect(px, py, pw, ph);
 
         ctx.fillStyle = color;
-        ctx.font = '10px sans-serif';
+        ctx.font = isSelected ? 'bold 11px sans-serif' : '10px sans-serif';
         ctx.fillText(label, px, py > 15 ? py - 5 : py + 15);
+    },
+
+    /**
+     * 設定目前選中的標註索引並重新繪製
+     * @param {number} index 標註索引，-1 表示清除選中
+     */
+    setSelectedAnnotation(index) {
+        this.state.selectedAnnotationIndex = index;
+        this.render();
+    },
+
+    /**
+     * 根據 class_id 反查類別名稱
+     * @param {number} classId 標註的類別 ID
+     * @param {number} idx 標註索引（fallback 用）
+     * @returns {string} 類別名稱或 fallback 字串
+     */
+    getAnnotationLabel(classId, idx) {
+        const labelMap = this.state.labelMap || {};
+        if (classId === -1) return 'Unclassified';
+        const name = Object.keys(labelMap).find(k => labelMap[k] === classId);
+        return name || `Obj ${idx}`;
     },
 
     drawLine(lineCoords, color, label) {

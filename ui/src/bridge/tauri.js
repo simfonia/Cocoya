@@ -789,18 +789,201 @@ export class BridgeTauri extends BaseBridge {
 
     async _handleNativeDialogs(command, data) {
         const { ask, message } = await import('@tauri-apps/plugin-dialog');
+        
         if (command === 'alert') {
             await message(data.message, { title: 'Cocoya', kind: 'info' });
-        } else {
+            this._dispatchToFrontend({ 
+                command: 'promptResponse', 
+                requestId: data.requestId, 
+                result: null 
+            });
+        } else if (command === 'confirm') {
             const okLabel = (window.Blockly && (Blockly.Msg['MSG_OK'] || Blockly.Msg['MSG_SAVE'])) || 'OK';
             const cancelLabel = (window.Blockly && Blockly.Msg['MSG_CANCEL']) || 'Cancel';
             const ok = await ask(data.message, { title: 'Cocoya', kind: 'warning', okLabel, cancelLabel });
             this._dispatchToFrontend({ 
                 command: 'promptResponse', 
                 requestId: data.requestId, 
-                result: (command === 'prompt' && ok) ? data.defaultValue : ok 
+                result: ok 
+            });
+        } else if (command === 'prompt') {
+            // Tauri 2.0 沒有內建的 input dialog，使用自定義 HTML 對話框
+            const value = await this._showPromptDialog(data.message, data.defaultValue || '');
+            this._dispatchToFrontend({ 
+                command: 'promptResponse', 
+                requestId: data.requestId, 
+                result: value 
             });
         }
+    }
+    
+    /**
+     * 自定義 prompt 對話框（Tauri 2.0 沒有內建 input dialog）
+     */
+    async _showPromptDialog(message, defaultValue) {
+        return new Promise((resolve) => {
+            // 建立對話框 HTML
+            const dialog = document.createElement('div');
+            dialog.className = 'cocoya-prompt-dialog-overlay';
+            dialog.innerHTML = `
+                <div class="cocoya-prompt-dialog">
+                    <div class="cocoya-prompt-message">${this._escapeHtml(message)}</div>
+                    <input type="text" class="cocoya-prompt-input" value="${this._escapeHtml(defaultValue)}" autofocus>
+                    <div class="cocoya-prompt-buttons">
+                        <button class="cocoya-prompt-btn cocoya-prompt-cancel">${window.Blockly?.Msg['MSG_CANCEL'] || 'Cancel'}</button>
+                        <button class="cocoya-prompt-btn cocoya-prompt-ok">${window.Blockly?.Msg['MSG_OK'] || 'OK'}</button>
+                    </div>
+                </div>
+            `;
+            
+            // 加入樣式
+            if (!document.getElementById('cocoya-prompt-styles')) {
+                const styles = document.createElement('style');
+                styles.id = 'cocoya-prompt-styles';
+                styles.textContent = `
+                    .cocoya-prompt-dialog-overlay {
+                        position: fixed;
+                        inset: 0;
+                        background: rgba(0, 0, 0, 0.5);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        z-index: 9999;
+                    }
+                    .cocoya-prompt-dialog {
+                        background: #ffffff;
+                        border: 1px solid #cccccc;
+                        border-radius: 8px;
+                        padding: 20px;
+                        min-width: 300px;
+                        max-width: 500px;
+                        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                    }
+                    .cocoya-prompt-message {
+                        margin-bottom: 12px;
+                        font-size: 13px;
+                        color: #333333;
+                        word-wrap: break-word;
+                    }
+                    .cocoya-prompt-input {
+                        width: 100%;
+                        padding: 8px 10px;
+                        border: 1px solid #cccccc;
+                        border-radius: 4px;
+                        font-size: 13px;
+                        margin-bottom: 16px;
+                        box-sizing: border-box;
+                        outline: none;
+                    }
+                    .cocoya-prompt-input:focus {
+                        border-color: #FE2F89;
+                        box-shadow: 0 0 0 2px rgba(254, 47, 137, 0.12);
+                    }
+                    .cocoya-prompt-buttons {
+                        display: flex;
+                        justify-content: flex-end;
+                        gap: 8px;
+                    }
+                    .cocoya-prompt-btn {
+                        padding: 6px 16px;
+                        border: 1px solid #cccccc;
+                        border-radius: 4px;
+                        background: #f7f7f7;
+                        color: #333333;
+                        cursor: pointer;
+                        font-size: 12px;
+                        min-height: 30px;
+                    }
+                    .cocoya-prompt-btn:hover {
+                        border-color: #FE2F89;
+                        color: #FE2F89;
+                        background: #fff7fb;
+                    }
+                    .cocoya-prompt-ok {
+                        background: #FE2F89;
+                        color: white;
+                        border: none;
+                    }
+                    .cocoya-prompt-ok:hover {
+                        background: #e91e63;
+                        color: white;
+                    }
+                    body.vscode-dark .cocoya-prompt-dialog,
+                    body.vscode-high-contrast .cocoya-prompt-dialog {
+                        background: #252526;
+                        border-color: #404040;
+                    }
+                    body.vscode-dark .cocoya-prompt-message,
+                    body.vscode-high-contrast .cocoya-prompt-message {
+                        color: #e0e0e0;
+                    }
+                    body.vscode-dark .cocoya-prompt-input,
+                    body.vscode-high-contrast .cocoya-prompt-input {
+                        background: #1e1e1e;
+                        border-color: #555555;
+                        color: #e0e0e0;
+                    }
+                    body.vscode-dark .cocoya-prompt-btn,
+                    body.vscode-high-contrast .cocoya-prompt-btn {
+                        background: #3c3c3c;
+                        border-color: #555555;
+                        color: #e0e0e0;
+                    }
+                `;
+                document.head.appendChild(styles);
+            }
+            
+            document.body.appendChild(dialog);
+            
+            const input = dialog.querySelector('.cocoya-prompt-input');
+            const okBtn = dialog.querySelector('.cocoya-prompt-ok');
+            const cancelBtn = dialog.querySelector('.cocoya-prompt-cancel');
+            
+            // 自動聚焦並選中文字
+            input.focus();
+            input.select();
+            
+            // 處理 Enter 鍵
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    dialog.remove();
+                    resolve(input.value);
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    dialog.remove();
+                    resolve(null);
+                }
+            });
+            
+            // 處理按鈕點擊
+            okBtn.onclick = () => {
+                dialog.remove();
+                resolve(input.value);
+            };
+            
+            cancelBtn.onclick = () => {
+                dialog.remove();
+                resolve(null);
+            };
+            
+            // 點擊背景關閉
+            dialog.addEventListener('click', (e) => {
+                if (e.target === dialog) {
+                    dialog.remove();
+                    resolve(null);
+                }
+            });
+        });
+    }
+    
+    /**
+     * HTML 轉義函數
+     */
+    _escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     _getCurrentXml() {

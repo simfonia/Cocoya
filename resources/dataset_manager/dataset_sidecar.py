@@ -113,8 +113,6 @@ class DatasetSidecar:
                     print(f"[Sidecar Log] Exporting dataset from {source_dir} to {output_zip}", file=sys.stderr)
                     
                     try:
-                        import os
-                        import json
                         from dataset_io import DatasetIO
                         if not os.path.exists(source_dir):
                             raise Exception(f"Source directory does not exist: {source_dir}")

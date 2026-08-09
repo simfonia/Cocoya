@@ -21,7 +21,13 @@ const state = {
     images: [], // 儲存匯入的影像資訊
     tableRows: [], // 儲存匯入的表格資料 (前幾筆)
     sourceFolderPath: null, // 儲存來源資料夾路徑
-    _savedGridScrollTop: 0  // 進入標註模式前保留的縮圖捲動位置
+    _savedGridScrollTop: 0,  // 進入標註模式前保留的縮圖捲動位置
+    annotationMode: {
+        isActive: false,
+        currentIndex: -1,
+        saveTimer: null,        // debounce timer for auto-save
+        originalBodyClass: null // for restoring layout
+    }
 };
 
 function optionList(values, selected) {
@@ -32,11 +38,20 @@ function optionList(values, selected) {
 
 function escapeHtml(value) {
     return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
+        .replace(/&/g, '&' + 'amp;')
+        .replace(/</g, '&' + 'lt;')
+        .replace(/>/g, '&' + 'gt;')
+        .replace(/"/g, '&' + 'quot;')
+        .replace(/'/g, '&' + '#39;');
+}
+
+/**
+ * 同步 state.spec 的 label_map 到 UICanvas.state.labelMap
+ * 確保畫布能即時顯示最新的類別名稱
+ */
+function syncLabelMap() {
+    const labelMap = state.spec.toJSON().schema.label_map || {};
+    UICanvas.state.labelMap = labelMap;
 }
 
 function getModal() {
@@ -318,7 +333,8 @@ async function handleDirectoryImport() {
             }
         }
 
-        state.images = images;
+        // 初始化每張圖的 annotations 為獨立陣列（後端回傳的 images 沒有 annotations 欄位）
+        state.images = images.map(img => ({ ...img, annotations: img.annotations || [] }));
         state.tableRows = []; 
         state.sourceFolderPath = folderPath; // 儲存來源路徑以便匯出時同步
         
@@ -363,6 +379,31 @@ async function handleExportDataset() {
     if (status) status.textContent = t('STATUS_EXPORTING', '📦 正在準備匯出...');
 
     try {
+        // 0. 檢查是否有未標註圖片（物件偵測/循線模式）
+        const projectType = getFormValue('projectType');
+        const isImage = projectType === 'image' || projectType === 'object_detection' || projectType === 'line_following';
+        if (isImage && state.images.length > 0) {
+            const unannotated = state.images.filter(img => !img.annotations || img.annotations.length === 0).length;
+            if (unannotated > 0) {
+                if (!(await window.CocoyaBridge.confirm(t('ANNOTATION_UNANNOTATED_WARNING', '尚有 %1 張圖片未標註，確定要離開？').replace('%1', unannotated)))) {
+                    if (status) status.textContent = '';
+                    return;
+                }
+            }
+        }
+
+        // 檢查是否有未分類標註框 (class_id === -1)
+        if (isImage && state.images.length > 0) {
+            const unclassified = state.images.reduce((sum, img) =>
+                sum + (img.annotations?.filter(a => a.class_id === -1).length || 0), 0);
+            if (unclassified > 0) {
+                if (!(await window.CocoyaBridge.confirm(t('ANNOTATION_EXPORT_UNCLASSIFIED_WARNING', '尚有 %1 個未分類標註框，確定要匯出嗎？').replace('%1', unclassified)))) {
+                    if (status) status.textContent = '';
+                    return;
+                }
+            }
+        }
+
         // 1. 同步最新資料
         syncSpecFromUI(true);
         const spec = state.spec.toJSON();
@@ -440,106 +481,509 @@ function enterAnnotationMode(image, index) {
     // 進入標註前，先保存目前縮圖網格的捲動位置
     saveGridScroll();
 
+    // 設定標註模式狀態
+    state.annotationMode.isActive = true;
+    state.annotationMode.currentIndex = index;
+
+    // 更新副標題為「物件偵測標註」
+    const subtitle = modal.querySelector('#dataset-manager-subtitle');
+    if (subtitle) subtitle.textContent = t('ANNOTATION_MODE_TITLE', '物件偵測標註');
+
+    // 讓 overlay 撐滿，使高度鏈可解析（縮圖欄才能捲動）
+    modal.classList.add('dataset-annotation-fullscreen');
+
+    // 為 body 添加標註模式 class，切換為全寬單欄布局
+    const body = modal.querySelector('.dataset-manager-body');
+    if (body) {
+        state.annotationMode.originalBodyClass = body.className;
+        body.classList.add('dataset-annotation-mode');
+    }
+
+    // 隱藏 source/schema 面板
+    const sourcePanel = modal.querySelector('.dataset-source-panel');
+    const schemaPanel = modal.querySelector('.dataset-schema-panel');
+    if (sourcePanel) sourcePanel.style.display = 'none';
+    if (schemaPanel) schemaPanel.style.display = 'none';
+
+    // 移除舊的返回按鈕（若存在）
     const existingBackBtn = modal.querySelector('#dataset-annotation-back');
     if (existingBackBtn) {
         existingBackBtn.remove();
     }
 
+    // 在預覽面板標題加入返回按鈕
     previewHeader.insertAdjacentHTML('afterbegin', `
         <button type="button" id="dataset-annotation-back" class="dataset-small-btn" style="background: #FE2F89; color: white; border: none; margin-right: 8px;">${t('BACK_TO_LIST', '← 返回列表')}</button>
     `);
     modal.querySelector('#dataset-annotation-back').onclick = exitAnnotationMode;
 
-    // 取得類別列表（用於物件偵測的類別選擇器）
+    // 渲染 3 欄布局
+    previewContent.innerHTML = `
+        <div class="dataset-annotation-layout">
+            <div class="dataset-annotation-thumbnails" id="annotation-thumbnails"></div>
+            <div class="dataset-annotation-main">
+                <div class="dataset-annotation-toolbar">
+                    <span class="dataset-annotation-progress" id="annotation-progress"></span>
+                    <span class="dataset-annotation-shortcuts-hint">${t('ANNOTATION_SHORTCUTS_HINT', '↑/↓ 切換圖片 · Delete 刪除標註 · Esc 退出')}</span>
+                </div>
+                <div class="dataset-annotation-image-container" id="annotation-image-container">
+                    <div id="annotation-container" style="position: relative; display: inline-block;">
+                        <img src="${image.blobUrl}" id="annotation-target-img" style="max-width: 100%; max-height: 100%; display: block; object-fit: contain;">
+                    </div>
+                </div>
+            </div>
+            <div class="dataset-annotation-controls" id="annotation-controls"></div>
+        </div>
+    `;
+
+    // 渲染縮圖欄
+    const thumbnails = document.getElementById('annotation-thumbnails');
+    UIComponents.renderAnnotationThumbnails(thumbnails, state.images, index, {
+        onThumbnailClick: (newIndex) => navigateToImage(newIndex)
+    });
+
+    // 渲染右側控制欄
+    renderAnnotationControls();
+
+    // 載入目前圖片
+    loadAnnotationImage(index);
+}
+
+/**
+ * 將目前畫布上的標註寫回 state.images 並清除 debounce timer
+ */
+function saveCurrentAnnotations() {
+    const idx = state.annotationMode.currentIndex;
+    if (idx < 0 || idx >= state.images.length) return;
+    // 拷貝陣列，避免多張圖片共用同一個陣列參考
+    state.images[idx].annotations = (UICanvas.state.annotations || []).slice();
+
+    // 清除 debounce timer
+    if (state.annotationMode.saveTimer) {
+        clearTimeout(state.annotationMode.saveTimer);
+        state.annotationMode.saveTimer = null;
+    }
+}
+
+/**
+ * 載入指定索引的圖片並初始化畫布
+ */
+function loadAnnotationImage(index) {
+    const image = state.images[index];
+    if (!image) return;
+
+    state.annotationMode.currentIndex = index;
+
+    const projectType = getFormValue('projectType');
+    const container = document.getElementById('annotation-container');
+    const img = document.getElementById('annotation-target-img');
+    if (!container || !img) return;
+
+    // 更新圖片來源
+    img.src = image.blobUrl;
+
+    // 同步初始化畫布（不依賴 onload，避免 src 相同時 onload 不觸發導致 UI 空白）
+    const mode = projectType === 'line_following' ? 'line' : 'bbox';
+    const labelMap = state.spec.toJSON().schema.label_map || {};
+    UICanvas.init(container, img, image.annotations || [], {
+        mode: mode,
+        labelMap: labelMap,
+        onUpdate: (anns) => {
+            image.annotations = anns;
+            renderAnnotationListUI(anns);
+            // Debounce refreshPreview
+            clearTimeout(state.annotationMode.saveTimer);
+            state.annotationMode.saveTimer = setTimeout(() => {
+                refreshPreview();
+            }, 300);
+        }
+    });
+
+    // 物件偵測模式：設定類別選擇器的事件
+    const classSelect = document.getElementById('annotation-class-select');
+    if (classSelect) {
+        classSelect.onchange = () => {
+            UICanvas.state.currentClassId = parseInt(classSelect.value, 10) || 0;
+        };
+        // 初始化 currentClassId
+        UICanvas.state.currentClassId = parseInt(classSelect.value, 10) || 0;
+    }
+
+    renderAnnotationListUI(image.annotations || []);
+    updateAnnotationProgress();
+    updateThumbnailHighlight();
+    bindCanvasKeyboardEvents();
+    // 聚焦畫布以接收鍵盤事件
+    const canvas = container.querySelector('canvas.dataset-annotation-canvas');
+    if (canvas) canvas.focus();
+}
+
+/**
+ * 切換到指定索引的圖片（先自動儲存目前圖片）
+ */
+function navigateToImage(newIndex) {
+    if (newIndex < 0 || newIndex >= state.images.length) return;
+    if (newIndex === state.annotationMode.currentIndex) return;
+
+    // 自動儲存前一張圖的標註
+    saveCurrentAnnotations();
+
+    // 載入新圖
+    loadAnnotationImage(newIndex);
+}
+
+/**
+ * 更新頂部進度計數器
+ */
+function updateAnnotationProgress() {
+    const progressEl = document.getElementById('annotation-progress');
+    if (!progressEl) return;
+
+    const annotatedCount = state.images.filter(img => img.annotations && img.annotations.length > 0).length;
+    const total = state.images.length;
+    progressEl.textContent = t('ANNOTATION_PROGRESS', '進度: %1/%2 張').replace('%1', annotatedCount).replace('%2', total);
+}
+
+/**
+ * 更新縮圖欄的高亮與勾號狀態
+ */
+function updateThumbnailHighlight() {
+    const thumbnails = document.getElementById('annotation-thumbnails');
+    if (!thumbnails) return;
+
+    const items = thumbnails.querySelectorAll('.dataset-annotation-thumb-item');
+    items.forEach((item, idx) => {
+        item.classList.toggle('current', idx === state.annotationMode.currentIndex);
+        const isAnnotated = state.images[idx].annotations && state.images[idx].annotations.length > 0;
+        item.classList.toggle('annotated', isAnnotated);
+    });
+
+    // 自動捲動到當前縮圖
+    const currentItem = items[state.annotationMode.currentIndex];
+    if (currentItem) {
+        currentItem.scrollIntoView({ block: 'center', inlineSize: 'nearest', behavior: 'smooth' });
+    }
+}
+
+/**
+ * 綁定畫布鍵盤事件（↑/↓ 切換、Delete 刪除、Esc 退出）
+ */
+function bindCanvasKeyboardEvents() {
+    const container = document.getElementById('annotation-container');
+    if (!container) return;
+
+    const canvas = container.querySelector('canvas.dataset-annotation-canvas');
+    if (!canvas) return;
+
+    // 設定 tabindex 以便接收鍵盤事件
+    canvas.tabIndex = 0;
+
+    // 移除舊的鍵盤 handler
+    if (UICanvas.state.handlers.keydown) {
+        canvas.removeEventListener('keydown', UICanvas.state.handlers.keydown);
+    }
+
+    UICanvas.state.handlers.keydown = (e) => {
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            navigateToImage(state.annotationMode.currentIndex - 1);
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            navigateToImage(state.annotationMode.currentIndex + 1);
+        } else if (e.key === 'Delete' || e.key === 'Backspace') {
+            e.preventDefault();
+            deleteSelectedAnnotation();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation(); // 阻止冒泡到 modal 的全域 Esc 關閉
+            exitAnnotationMode();
+        }
+    };
+
+    canvas.addEventListener('keydown', UICanvas.state.handlers.keydown);
+}
+
+/**
+ * 刪除目前高亮的標註（若無高亮則刪除最後一個）
+ */
+function deleteSelectedAnnotation() {
+    const anns = UICanvas.state.annotations || [];
+    if (anns.length === 0) return;
+
+    let index = UICanvas.state.selectedAnnotationIndex;
+    if (index < 0 || index >= anns.length) {
+        index = anns.length - 1;
+    }
+
+    anns.splice(index, 1);
+    UICanvas.state.selectedAnnotationIndex = -1;
+    if (UICanvas.state.onUpdate) UICanvas.state.onUpdate(anns);
+    UICanvas.render();
+    renderAnnotationListUI(anns);
+}
+
+/**
+ * 渲染右側控制欄（類別選擇器 + 標註列表）
+ */
+function renderAnnotationControls() {
+    const controls = document.getElementById('annotation-controls');
+    if (!controls) return;
+
     const projectType = getFormValue('projectType');
     const labelMap = state.spec.toJSON().schema.label_map || {};
     const labelEntries = Object.entries(labelMap);
 
-    // 物件偵測模式才顯示類別選擇器
-    const classSelectorHtml = (projectType === 'object_detection' && labelEntries.length > 0)
-        ? `<div style="display: flex; align-items: center; gap: 6px;">
-             <label style="font-size: 11px; color: #555; white-space: nowrap;">${t('ANNOTATION_CLASS', '類別')}:</label>
-             <select id="annotation-class-select" style="font-size: 11px; padding: 2px 6px; border: 1px solid #ccc; border-radius: 3px;">
-               ${labelEntries.map(([name, id]) => `<option value="${id}">${name}</option>`).join('')}
-             </select>
-           </div>`
-        : '';
+    // 類別選擇器（僅物件偵測模式顯示）
+    let classSelectorHtml = '';
+    if (projectType === 'object_detection') {
+        classSelectorHtml = `
+            <div class="dataset-annotation-class-section">
+                <div class="dataset-annotation-section-title">${t('ANNOTATION_CLASS', '類別')}</div>
+                <div class="dataset-annotation-class-row">
+                    <select id="annotation-class-select" class="dataset-annotation-class-select">
+                        ${labelEntries.length > 0
+                            ? labelEntries.map(([name, id]) => `<option value="${id}">${escapeHtml(name)}</option>`).join('')
+                            : '<option value="-1" disabled selected>' + t('ANNOTATION_EMPTY', '尚未有標註') + '</option>'}
+                    </select>
+                    <button type="button" class="dataset-icon-btn" id="annotation-class-add" title="${t('ANNOTATION_CLASS_ADD', '新增')}">+</button>
+                    <button type="button" class="dataset-icon-btn" id="annotation-class-edit" title="${t('ANNOTATION_CLASS_EDIT', '編輯')}">✏️</button>
+                    <button type="button" class="dataset-icon-btn" id="annotation-class-delete" title="${t('ANNOTATION_CLASS_DELETE', '刪除')}">🗑️</button>
+                </div>
+            </div>
+        `;
+    }
 
-    previewContent.innerHTML = `
-        <div class="dataset-annotation-view" style="display: flex; flex-direction: column; gap: 10px; height: 100%;">
-            <div class="dataset-annotation-sidebar" style="display: flex; align-items: center; justify-content: space-between; width: 100%; box-sizing: border-box; padding: 8px 12px; gap: 16px;">
-                <div style="min-width: 120px;">
-                    <h4 style="margin: 0; font-size: 13px; color: #FE2F89;">${t('ANNOTATION_INFO', '標註資訊')}</h4>
-                    <span style="font-size: 10px; color: #777; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px;" title="${image.name}">${t('ANNOTATION_FILE', '檔案')}: ${image.name}</span>
-                </div>
-                ${classSelectorHtml}
-                <div id="annotation-list-ui" style="display: flex; gap: 6px; flex-wrap: wrap; flex: 1; max-height: 60px; overflow-y: auto; justify-content: flex-start; align-content: flex-start;"></div>
-            </div>
-            <div class="dataset-annotation-image-container" style="min-height: 380px; height: 380px; width: 100%;">
-                <div id="annotation-container" style="position: relative; display: inline-block;">
-                    <img src="${image.blobUrl}" id="annotation-target-img" style="max-width: 100%; max-height: 380px; display: block; object-fit: contain;">
-                </div>
-            </div>
+    controls.innerHTML = `
+        ${classSelectorHtml}
+        <div class="dataset-annotation-list-section">
+            <div class="dataset-annotation-section-title">${t('ANNOTATION_LIST', '標註列表')}</div>
+            <div id="annotation-list-ui" class="dataset-annotation-list"></div>
         </div>
     `;
 
-    const img = document.getElementById('annotation-target-img');
-    const container = document.getElementById('annotation-container');
-
-    img.onload = () => {
-        const mode = projectType === 'line_following' ? 'line' : 'bbox';
-        UICanvas.init(container, img, image.annotations || [], {
-            mode: mode,
-            onUpdate: (anns) => {
-                image.annotations = anns;
-                renderAnnotationListUI(anns);
-                refreshPreview();
-            }
-        });
-
-        // 物件偵測模式：設定類別選擇器的事件
+    // 綁定類別管理事件
+    if (projectType === 'object_detection') {
         const classSelect = document.getElementById('annotation-class-select');
+        const addBtn = document.getElementById('annotation-class-add');
+        const editBtn = document.getElementById('annotation-class-edit');
+        const deleteBtn = document.getElementById('annotation-class-delete');
+
         if (classSelect) {
             classSelect.onchange = () => {
                 UICanvas.state.currentClassId = parseInt(classSelect.value, 10) || 0;
             };
-            // 初始化 currentClassId
-            UICanvas.state.currentClassId = parseInt(classSelect.value, 10) || 0;
         }
 
-        renderAnnotationListUI(image.annotations || []);
-    };
+        if (addBtn) {
+            addBtn.onclick = async () => {
+                const name = await window.CocoyaBridge.prompt(t('ANNOTATION_NEW_CLASS_PLACEHOLDER', '輸入新類別名稱'));
+                if (name && name.trim()) {
+                    const trimmed = name.trim();
+                    const spec = state.spec.toJSON();
+                    const map = spec.schema.label_map || {};
+                    if (map[trimmed] === undefined) {
+                        map[trimmed] = Object.keys(map).length;
+                        state.spec.updateSchema({ label_map: map });
+                        syncLabelMap();
+                        renderAnnotationControls();
+                        // 立即更新畫布顯示新的類別名稱
+                        if (UICanvas.state.annotations) {
+                            UICanvas.render();
+                        }
+                    }
+                }
+            };
+        }
+
+        if (editBtn) {
+            editBtn.onclick = async () => {
+                const selectedId = parseInt(classSelect.value, 10);
+                const entry = labelEntries.find(([, id]) => id === selectedId);
+                if (!entry) return;
+                const newName = await window.CocoyaBridge.prompt(t('ANNOTATION_NEW_CLASS_PLACEHOLDER', '輸入新類別名稱'), entry[0]);
+                if (newName && newName.trim()) {
+                    const spec = state.spec.toJSON();
+                    const map = spec.schema.label_map || {};
+                    delete map[entry[0]];
+                    map[newName.trim()] = selectedId;
+                    state.spec.updateSchema({ label_map: map });
+                    syncLabelMap();
+                    renderAnnotationControls();
+                    // 立即更新畫布顯示新的類別名稱
+                    if (UICanvas.state.annotations) {
+                        UICanvas.render();
+                    }
+                }
+            };
+        }
+
+        if (deleteBtn) {
+            deleteBtn.onclick = async () => {
+                const selectedId = parseInt(classSelect.value, 10);
+                const entry = labelEntries.find(([, id]) => id === selectedId);
+                if (!entry) return;
+                // 計算該類別的標註框總數
+                const count = state.images.reduce((sum, img) =>
+                    sum + (img.annotations?.filter(a => a.class_id === selectedId).length || 0), 0);
+                const confirmed = await window.CocoyaBridge.confirm(
+                    t('ANNOTATION_DELETE_CLASS_CONFIRM', '確定刪除類別「%1」及其 %2 個標註框嗎？')
+                        .replace('%1', entry[0]).replace('%2', count)
+                );
+                if (confirmed) {
+                    const spec = state.spec.toJSON();
+                    const map = spec.schema.label_map || {};
+                    delete map[entry[0]];
+                    state.spec.updateSchema({ label_map: map });
+                    syncLabelMap();
+
+                    // 刪除該類別的所有標註框（bbox + line）
+                    state.images.forEach(img => {
+                        if (img.annotations) {
+                            img.annotations = img.annotations.filter(ann => ann.class_id !== selectedId);
+                        }
+                    });
+
+                    renderAnnotationControls();
+                    if (UICanvas.state.annotations) {
+                        UICanvas.state.annotations = UICanvas.state.annotations.filter(ann => ann.class_id !== selectedId);
+                        UICanvas.state.selectedAnnotationIndex = -1;
+                        UICanvas.render();
+                    }
+                }
+            };
+        }
+    }
+
+    // 重新渲染標註列表（controls.innerHTML 重置會清空 #annotation-list-ui，需恢復）
+    const currentIdx = state.annotationMode.currentIndex;
+    if (currentIdx >= 0 && state.images[currentIdx]) {
+        renderAnnotationListUI(state.images[currentIdx].annotations || []);
+    }
 }
 
 function renderAnnotationListUI(anns) {
     const list = document.getElementById('annotation-list-ui');
     if (!list) return;
+    const labelMap = state.spec.toJSON().schema.label_map || {};
+    const labelEntries = Object.entries(labelMap);
+
     list.innerHTML = anns.map((ann, i) => {
         if (ann.line) {
             const coords = ann.line.map(v => v.toFixed(2)).join(',');
             return `
-                <div class="dataset-annotation-item">
+                <div class="dataset-annotation-item" data-index="${i}">
                     <span>#${i+1} ${t('ANNOTATION_LINE', '線段')}: [${coords}]</span>
                     <button onclick="window.CocoyaDataset.removeAnnotation(${i})">×</button>
                 </div>
             `;
         } else if (ann.bbox) {
+            const options = labelEntries.length > 0
+                ? labelEntries.map(([name, id]) =>
+                    `<option value="${id}" ${id === ann.class_id ? 'selected' : ''}>${escapeHtml(name)}</option>`
+                ).join('')
+                : '<option value="-1">Unclassified</option>';
             return `
-                <div class="dataset-annotation-item">
-                    <span>#${i+1} [${ann.bbox.map(v => v.toFixed(2)).join(',')}]</span>
+                <div class="dataset-annotation-item" data-index="${i}">
+                    <span>#${i+1}</span>
+                    <select class="dataset-annotation-item-class" data-index="${i}">
+                        ${options}
+                    </select>
+                    <span>[${ann.bbox.map(v => v.toFixed(2)).join(',')}]</span>
                     <button onclick="window.CocoyaDataset.removeAnnotation(${i})">×</button>
                 </div>
             `;
         }
         return '';
     }).join('') || '<p style="color: #999;">' + t('ANNOTATION_EMPTY', '尚未有標註') + '</p>';
+
+    // 綁定點擊高亮事件
+    list.querySelectorAll('.dataset-annotation-item').forEach(item => {
+        item.onclick = (e) => {
+            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT') return;
+            const index = parseInt(item.dataset.index);
+            UICanvas.setSelectedAnnotation(index);
+            // 高亮列表項目
+            list.querySelectorAll('.dataset-annotation-item').forEach(el => el.classList.remove('selected'));
+            item.classList.add('selected');
+        };
+    });
+
+    // 綁定類別下拉選單變更事件（即時更正標錯類別）
+    list.querySelectorAll('.dataset-annotation-item-class').forEach(select => {
+        select.onchange = () => {
+            const idx = parseInt(select.dataset.index);
+            anns[idx].class_id = parseInt(select.value, 10);
+            if (UICanvas.state.onUpdate) UICanvas.state.onUpdate(anns);
+            UICanvas.render();
+        };
+    });
 }
 
-function exitAnnotationMode() {
+/**
+ * 檢查是否有未標註圖片，若有則提示使用者
+ * @returns {boolean} true = 繼續離開，false = 取消
+ */
+async function checkUnannotatedOnExit() {
+    const unannotated = state.images.filter(img => !img.annotations || img.annotations.length === 0).length;
+    if (unannotated > 0) {
+        return await window.CocoyaBridge.confirm(t('ANNOTATION_UNANNOTATED_WARNING', '尚有 %1 張圖片未標註，確定要離開？').replace('%1', unannotated));
+    }
+    return true;
+}
+
+async function exitAnnotationMode() {
+    // 非標註模式下安全返回
+    if (!state.annotationMode.isActive) {
+        UICanvas.unbindEvents();
+        const modal = getModal();
+        const backBtn = modal?.querySelector('#dataset-annotation-back');
+        if (backBtn) backBtn.remove();
+        if (modal) modal.classList.remove('dataset-annotation-fullscreen');
+        refreshDynamicPanels();
+        return;
+    }
+
+    // 檢查未標註圖片
+    if (!(await checkUnannotatedOnExit())) return;
+
+    // 自動儲存當前圖標註
+    saveCurrentAnnotations();
+
+    // 清理鍵盤事件
     UICanvas.unbindEvents();
+
     const modal = getModal();
-    const backBtn = modal?.querySelector('#dataset-annotation-back');
+    if (!modal) return;
+
+    // 移除返回按鈕
+    const backBtn = modal.querySelector('#dataset-annotation-back');
     if (backBtn) backBtn.remove();
+
+    // 恢復副標題
+    const subtitle = modal.querySelector('#dataset-manager-subtitle');
+    if (subtitle) subtitle.textContent = t('SUBTITLE', 'Dataset Spec');
+
+    // 移除 overlay 撐滿 class，恢復原始布局
+    modal.classList.remove('dataset-annotation-fullscreen');
+
+    // 移除標註模式 class，恢復原始布局
+    const body = modal.querySelector('.dataset-manager-body');
+    if (body) {
+        body.classList.remove('dataset-annotation-mode');
+    }
+
+    // 顯示 source/schema 面板
+    const sourcePanel = modal.querySelector('.dataset-source-panel');
+    const schemaPanel = modal.querySelector('.dataset-schema-panel');
+    if (sourcePanel) sourcePanel.style.display = '';
+    if (schemaPanel) schemaPanel.style.display = '';
+
+    // 重置標註模式狀態
+    state.annotationMode.isActive = false;
+    state.annotationMode.currentIndex = -1;
+    state.annotationMode.originalBodyClass = null;
+
+    // 恢復縮圖網格
     refreshDynamicPanels();
 }
 
@@ -1137,7 +1581,7 @@ function createModal() {
             <header class="dataset-manager-header">
                 <div>
                     <h2 id="dataset-manager-title">${t('TITLE', 'Dataset Manager')}</h2>
-                    <span>${t('SUBTITLE', 'Dataset Spec')}</span>
+                    <span id="dataset-manager-subtitle">${t('SUBTITLE', 'Dataset Spec')}</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <button type="button" id="dataset-manager-clear" class="dataset-secondary-btn" style="padding: 4px 8px; font-size: 11px; margin: 0; line-height: 1.2; display: flex; align-items: center; justify-content: center;" title="${t('CLEAR_DATA_TOOLTIP', '清空所有暫存資料記錄並重置')}">${t('CLEAR_DATA', '清除資料')}</button>
@@ -1293,6 +1737,13 @@ export function closeDatasetManager() {
     const modal = getModal();
     state.isOpen = false;
     Sampler.stopCamera();
+
+    // 清除標註模式的 debounce timer，避免 callback 在 DOM 銷毀後執行
+    if (state.annotationMode.saveTimer) {
+        clearTimeout(state.annotationMode.saveTimer);
+        state.annotationMode.saveTimer = null;
+    }
+
     if (modal) modal.style.display = 'none';
     return state.spec;
 }
@@ -1307,6 +1758,9 @@ export function removeAnnotation(index) {
         renderAnnotationListUI(UICanvas.state.annotations);
         UICanvas.render();
         refreshPreview();
+        // 同步更新縮圖勾號與進度
+        updateThumbnailHighlight();
+        updateAnnotationProgress();
     }
 }
 
