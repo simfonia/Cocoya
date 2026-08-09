@@ -374,4 +374,56 @@ Cocoya 無法定位 value/expression 積木 (如數字、文字、變數 getter)
 
 ---
 
-*最後更新日期：2026-07-18 (Tauri Dataset Manager 對齊計畫)*
+## [已完成] 2026-08-06 — BBox 標註 UI 重構（全寬 3 欄布局）
+
+### 需求
+依 `log/plan/BboxAnnotationUIImprovement.md` 改善 Dataset Manager 縮圖點入 bbox 標註 UI 的兩項缺點：
+1. 顯示在右方預覽面板版面太小（固定高度 380px）
+2. 每標註一張圖就需點「返回列表」再點下一張縮圖，效率低
+
+### 修改
+- [x] `ui_layout.js`：重構 enterAnnotationMode/exitAnnotationMode，新增 loadAnnotationImage/navigateToImage/saveCurrentAnnotations/renderAnnotationControls/鍵盤事件/進度/未標註檢查
+- [x] `ui_canvas.js`：新增 selectedAnnotationIndex + setSelectedAnnotation，修改 drawBox 高亮，unbindEvents 清理 keydown
+- [x] `ui_components.js`：新增 renderAnnotationThumbnails（單列垂直縮圖欄）
+- [x] `dataset_manager.css`：新增 .dataset-annotation-mode 布局、縮圖勾號、高亮邊框、進度計數器樣式
+- [x] `i18n/zh-hant.js` + `en.js`：新增 16 個 DSM_ANNOTATION_* 鍵值
+
+### 行為
+- 標註模式改為全寬 3 欄布局（左縮圖欄 80px + 中央畫布 + 右控制欄 220px）
+- 左側縮圖欄快速導航，已標註顯示綠勾，當前圖片藍框高亮
+- 右側控制欄：類別選擇器（增/修/刪）+ 標註列表（點擊高亮 bbox）
+- 鍵盤快捷鍵：↑/↓ 切換圖片、Delete 刪除標註、Esc 退出
+- 自動儲存（debounce 300ms）+ 進度計數器 + 未標註警告
+
+### 待驗證
+- [x] 實際啟動 VSIX/Tauri 驗證 bbox 標註 UI 完整流程
+- [x] 深色主題下新 UI 元素顯示
+- [ ] 含未標註圖片匯出警告
+
+---
+
+*最後更新日期：2026-08-06 (BBox 標註 UI 重構)*
+
+---
+
+## [已完成] 2026-08-08 — Dataset Manager 攝影機列表失效修復（VSIX + Tauri 共同根因）
+
+### 問題
+- VSIX 與 Tauri 版 Dataset Manager 都無法取得攝影機列表，下拉選單空白。
+- console 只顯示請求送出，無後續結果。
+
+### 根因（跨平台共用 sidecar 層）
+- `resources/dataset_manager/dataset_sidecar.py` 在 2026-08-04（YOLO 匯出功能）於 `run()` 方法的 `exportDataset` 分支加入區域 `import os`/`import json`。
+- Python 區域 import 遮蔽頂層 import ⇒ `run()` 內 `json`/`os` 成未綁定區域變數 ⇒ 主迴圈 `json.loads()` 對所有指令拋錯 ⇒ sidecar 全殘，VSIX 與 Tauri 皆受影響。
+
+### 修復與驗證
+- [x] 刪除 `dataset_sidecar.py` 中 `exportDataset` 分支多餘的區域 `import os`/`import json`（頂層已有）
+- [x] sidecar `ping`/`listCameras`/`stopCamera`/`exportDataset` 逐一驗證通過（listCameras 回傳 Camera 0 640x480）
+- [x] 實際啟動 VSIX 與 Tauri 驗證下拉選單出現選項
+
+### 明日/下次待辦
+- [x] 實機驗證兩平台攝影機選擇與快照流程
+- [ ] 建議為 `dataset_sidecar.py` 增加 `ping`+`listCameras` smoke test
+
+*更新日期：2026-08-08*
+

@@ -38,7 +38,7 @@ export const UIComponents = {
                     <div class="dataset-image-item" data-index="${index}" title="${escapeHTML(img.path)}">
                         <button type="button" class="dataset-image-delete-btn" data-index="${index}" title="${t('DELETE_IMAGE', '刪除照片')}">×</button>
                         <div class="dataset-image-thumb" data-index="${index}">
-                            ${img.blobUrl ? `<img src="${img.blobUrl}" loading="lazy">` : '<div class="dataset-thumb-placeholder">?</div>'}
+                            ${img.blobUrl ? `<img src="${img.blobUrl}">` : '<div class="dataset-thumb-placeholder">?</div>'}
                         </div>
                         <div class="dataset-image-info">
                             <span class="dataset-image-label" style="background-color: ${color} !important;">
@@ -66,6 +66,46 @@ export const UIComponents = {
                     e.stopPropagation();
                     const index = parseInt(btn.dataset.index);
                     options.onDeleteImage(index);
+                };
+            });
+        }
+    },
+
+    /**
+     * 渲染標註模式左側的單列垂直縮圖欄
+     * @param {HTMLElement} container 容器元素
+     * @param {Array} images 影像資料 [{path, label, blobUrl, annotations}]
+     * @param {number} currentIndex 當前圖片索引
+     * @param {Object} options 回調 { onThumbnailClick }
+     */
+    renderAnnotationThumbnails(container, images, currentIndex, options = {}) {
+        if (!container) return;
+
+        if (!images || images.length === 0) {
+            container.innerHTML = '<div class="dataset-empty-state">' + t('NO_IMAGES', '尚無影像資料') + '</div>';
+            return;
+        }
+
+        container.innerHTML = `
+            <div class="dataset-annotation-thumb-list">
+                ${images.map((img, index) => {
+                    const isCurrent = (index === currentIndex);
+                    const isAnnotated = img.annotations && img.annotations.length > 0;
+                    return `
+                    <div class="dataset-annotation-thumb-item ${isCurrent ? 'current' : ''} ${isAnnotated ? 'annotated' : ''}" data-index="${index}" title="${escapeHTML(img.path || img.name || '')}">
+                        ${img.blobUrl ? `<img src="${img.blobUrl}" class="dataset-annotation-thumb">` : '<div class="dataset-thumb-placeholder">?</div>'}
+                        ${isAnnotated ? '<span class="dataset-annotation-thumb-check">✓</span>' : ''}
+                    </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+
+        if (options.onThumbnailClick) {
+            container.querySelectorAll('.dataset-annotation-thumb-item').forEach(item => {
+                item.onclick = () => {
+                    const index = parseInt(item.dataset.index);
+                    options.onThumbnailClick(index);
                 };
             });
         }

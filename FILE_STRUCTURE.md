@@ -50,7 +50,9 @@ C:\Workspace\cocoya\
 │   │   ├── 2026-05-31.html # [NEW] 系統還原診斷與 Sidecar 架構 #trim 修整
 │   │   ├── 2026-06-04.html # [NEW] 優化專案指南與規範同步
 │   │   ├── 2026-06-05.html # [NEW] 初始化今日日誌與開發 context
-│   │   └── 2026-06-24.html # Phase 5 MVP 驗證 + DGX Spark Docker 建置
+│   │   ├── 2026-06-24.html # Phase 5 MVP 驗證 + DGX Spark Docker 建置
+│   │   ├── 2026-08-06.md  # [NEW] BBox 標註 UI 重構（全寬 3 欄布局）
+│   │   └── 2026-08-07.md  # [NEW] BBox 標註 UI 除錯（Tauri/VSIX 雙平台驗證通過）
 │   └── mappings/          # 長期結構化知識庫（對照表）
 │       ├── cocoya_ssh_sftp_api.html # SSH/SFTP API 使用對照表
 │       ├── Framework_API_Index.html # Framework API 索引 (含 findLocatableBlock)
@@ -91,17 +93,17 @@ C:\Workspace\cocoya\
 │   │   │   ├── ai_inference/ # AI 訓練與推論積木模組
 │   │   │   │   └── ai_inference_generators.js # 訓練/推論積木 Python 產生器（含多候選路徑搜尋）
 │   │   │   └── dataset_manager/ # Dataset Spec 與資料集管理器應用層模組
-│   │   │       ├── dataset_manager.css # Dataset Manager Modal、縮圖牆與標註畫布樣式
+│   │   │       ├── dataset_manager.css # Dataset Manager Modal、縮圖牆與標註畫布樣式 (含全寬 3 欄標註模式)
 │   │   │       ├── i18n.js # [NEW] 共享 i18n t() 函式庫 (支援佔位符替換)
 │   │   │       ├── index.js # 靜態 ESM 入口與 window.CocoyaDataset API 掛載
 │   │   │       ├── spec.js  # DatasetSpec 類別、Schema 偵測、強健型 CSV 解析與驗證邏輯 (i18n 化)
 │   │   │       ├── sampler.js # [NEW] 攝影機採集核心、連拍邏輯與 Python 擷取備援方案
-│   │   │       ├── ui_layout.js # Modal UI、動態面板管理與標註視圖切換 (含事件清理)
-│   │   │       ├── ui_components.js # 動態視圖組件 (影像網格、標籤統計，含 XSS 防護)
-│   │   │       ├── ui_canvas.js # 標註互動畫布 (物件偵測拉框與自駕循線畫線，支援座標限幅防護與雙模互動)
+│   │   │       ├── ui_layout.js # Modal UI、動態面板管理與標註視圖切換 (含全寬 3 欄標註模式、鍵盤快捷鍵、自動儲存)
+│   │   │       ├── ui_components.js # 動態視圖組件 (影像網格、標籤統計、標註縮圖欄，含 XSS 防護)
+│   │   │       ├── ui_canvas.js # 標註互動畫布 (物件偵測拉框與自駕循線畫線，支援座標限幅防護、bbox 高亮與雙模互動)
 │   │   │       └── i18n/      # 語系檔目錄
-│   │   │           ├── zh-hant.js # 繁體中文 i18n 鍵值 (含 VALIDATE_* 驗證訊息)
-│   │   │           └── en.js      # 英文 i18n 鍵值 (含 VALIDATE_* 驗證訊息)
+│   │   │           ├── zh-hant.js # 繁體中文 i18n 鍵值 (含 VALIDATE_* 驗證與 ANNOTATION_* 標註訊息)
+│   │   │           └── en.js      # 英文 i18n 鍵值 (含 VALIDATE_* 驗證與 ANNOTATION_* 標註訊息)
 │   │   ├── main.js        # Legacy Entry Point
 │   │   ├── ui_manager.js  # Legacy Entry Point
 │   │   ├── utils.js       # [REFACTORED] 入口與命名空間初始化
