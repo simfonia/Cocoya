@@ -82,7 +82,7 @@ export class FileOpsHandler {
     public async handleOpenFile(message: any) {
         if (await this.checkDirtyAndConfirm(message)) {
             const lastPath = (this.manager.context.globalState as any).get('lastWorkspacePath') as string | undefined;
-            const defaultUri = lastPath ? vscode.Uri.file(lastPath) : undefined;
+            const defaultUri = (lastPath && fs.existsSync(lastPath)) ? vscode.Uri.file(lastPath) : undefined;
             const uris = await vscode.window.showOpenDialog({
                 canSelectMany: false,
                 filters: { 'Cocoya Project': ['xml'] },
@@ -130,7 +130,8 @@ export class FileOpsHandler {
 
     public async handleSaveFileAs(message: any) {
         const lastPath = (this.manager.context.globalState as any).get('lastWorkspacePath') as string | undefined;
-        const defaultUri = lastPath ? vscode.Uri.file(lastPath) : undefined;
+        // 僅在路徑仍存在時作為預設目錄，避免無效 defaultUri 導致存檔對話框被直接取消
+        const defaultUri = (lastPath && fs.existsSync(lastPath)) ? vscode.Uri.file(lastPath) : undefined;
         const uri = await vscode.window.showSaveDialog({
             filters: { 'Cocoya Project': ['xml'] },
             defaultUri: defaultUri

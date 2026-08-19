@@ -62,6 +62,7 @@
     "DSM_ANNOTATION_UNCLASSIFIED": "Unclassified",
     "DSM_ANNOTATION_UNKNOWN": "Unknown class",
     "DSM_ANNOTATION_EXPORT_UNCLASSIFIED_WARNING": "%1 unclassified annotations, export anyway?",
+    "DSM_ANNOTATION_EXPORT_UNANNOTATED_WARNING": "%1 images unannotated, export anyway?",
     "DSM_ANNOTATION_UNSAVED_WARNING": "Unsaved annotations, leave anyway?",
     "DSM_ANNOTATION_UNANNOTATED_WARNING": "%1 images unannotated, leave anyway?",
     "DSM_ANNOTATION_SHORTCUTS_HINT": "↑/↓ navigate · Delete remove · Esc exit",
@@ -116,6 +117,7 @@
     "DSM_STATUS_LOADING": "Loading: %1...",
     "DSM_STATUS_IMPORTING_FOLDER": "Selecting folder...",
     "DSM_STATUS_EXPORTING": "📦 Preparing export...",
+    "DSM_EXPORT_IN_PROGRESS": "Building ZIP and generating dataset.json...",
     "DSM_STATUS_CAPTURETING": "📸 Capturing...",
     "DSM_STATUS_UPLOADING_ZIP": "📦 Preparing to upload local ZIP file...",
     "DSM_STATUS_UPLOADING": "☁️ Uploading dataset... (%1%)",
@@ -145,7 +147,7 @@
     "DSM_VALIDATE_PROJECT_NAME_REQUIRED": "Project name is required.",
     "DSM_VALIDATE_PROJECT_TYPE_INVALID": "Project type must be one of: %1.",
     "DSM_VALIDATE_SOURCE_MODE_INVALID": "Data source mode must be one of: %1.",
-    "DSM_VALIDATE_COLUMN_REQUIRED": "At least one schema column is required.",
+    "DSM_VALIDATE_COLUMN_REQUIRED": "No columns defined yet. Import a CSV/JSON file, or click \"Add Feature / Add Label\" to create one.",
     "DSM_VALIDATE_COLUMN_MISSING_NAME": "Column %1 is missing a name.",
     "DSM_VALIDATE_COLUMN_DUPLICATE": "Duplicate column name: %1.",
     "DSM_VALIDATE_COLUMN_INVALID_TYPE": "Column \"%1\" has invalid type \"%2\".",
@@ -153,6 +155,37 @@
     "DSM_VALIDATE_FEATURE_NOT_FOUND": "Feature column \"%1\" does not exist in schema.columns.",
     "DSM_VALIDATE_LABEL_NOT_FOUND": "Label column \"%1\" does not exist in schema.columns.",
     "DSM_VALIDATE_NO_LABEL": "No label column is assigned yet.",
-    "DSM_VALIDATE_NO_FEATURES": "No feature columns are assigned yet."
+    "DSM_VALIDATE_NO_FEATURES": "No feature columns are assigned yet.",
+    "DSM_VALIDATE_NO_SAMPLES": "No images imported yet. Select an image folder or capture photos with the camera.",
+
+    // Classification review mode (image classification label correction)
+    "DSM_CLASSIFY_MODE_TITLE": "Image Classification Labels",
+    "DSM_CLASSIFY_CURRENT_LABEL": "Current Label",
+    "DSM_CLASSIFY_ADD_LABEL": "Add Class",
+    "DSM_CLASSIFY_NEW_LABEL_PLACEHOLDER": "Enter new class name",
+    "DSM_CLASSIFY_IMAGE_INFO": "File: %1",
+    "DSM_CLASSIFY_PROGRESS": "Sample: %1 / %2",
+    "DSM_CLASSIFY_SHORTCUTS_HINT": "↑/↓ switch image · Esc exit",
+
+    // Save / Load progress
+    "DSM_AUTOSAVE_ON": "Auto-save enabled",
+    "DSM_AUTOSAVE_ON_TOOLTIP": "Automatically writes to dataset.json after annotating/classifying/adding/deleting; no manual save needed",
+    "DSM_SAVE_PROGRESS": "Save Progress",
+    "DSM_SAVE_PROGRESS_TOOLTIP": "Save current dataset spec and annotations to dataset.json",
+    "DSM_STATUS_SAVING_PROGRESS": "💾 Saving progress...",
+    "DSM_SUCCESS_SAVE_PROGRESS": "✅ Dataset progress saved",
+    "DSM_ERROR_SAVE_PROGRESS_FAILED": "❌ Save progress failed: %1",
+    "DSM_ERROR_SAVE_PROGRESS_NO_ANCHOR": "Project not anchored, cannot save progress (open or create a .xml project first)",
+    "DSM_SUCCESS_LOAD_PROGRESS": "✅ Restored progress from last session (%1 annotated images)",
+    "DSM_ERROR_LOAD_PROGRESS_FAILED": "❌ Load progress failed: %1",
+
+    // Guardrail confirmations
+    "DSM_CLEAR_CONFIRM": "Clear all data and reset?",
+    "DSM_TYPE_SWITCH_CONFIRM": "Switching project type will clear current data. Continue?",
+    "DSM_CLOSE_UNSAVED_CONFIRM": "You have unsaved data. Close anyway?",
+    "DSM_SOURCE_RENAME_CONFIRM": "Source changed to \"%1\", but the current dataset name is \"%2\".\nUpdate the dataset name to \"%1\"?\n\n(Choosing \"Cancel\" keeps \"%2\"; progress will be saved to dataset/%2/ and may overwrite existing progress. To create a new dataset, copy the source folder and re-import it.)",
+    "DSM_SOURCE_COLLISION_CONFIRM": "A different source folder uses the same name \"%1\". Progress will be written to and may overwrite dataset/%1/. Continue?",
+    "DSM_IMPORT_CANCELLED": "Import cancelled",
+    "DSM_SOURCE_KEPT_STATUS": "Keeping dataset name \"%1\"; progress will be saved to dataset/%1/"
   });
 })(Blockly);

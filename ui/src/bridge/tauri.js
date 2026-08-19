@@ -12,6 +12,7 @@ export class BridgeTauri extends BaseBridge {
         this.tauriGetCurrent = null;
         this._firstLogReceived = false;
         this._isClosing = false;
+        this._anchor = null; // { isAnchored, projectRoot } 由 init() 從後端取得
     }
 
     /**
@@ -27,7 +28,9 @@ export class BridgeTauri extends BaseBridge {
             supportsStableMode: false,
             supportsEraseFS: false,
             isTauri: true,
-            isRemoteAware: true // Tauri 亦保留雲端/SSH 擴充可能性
+            isRemoteAware: true, // Tauri 亦保留雲端/SSH 擴充可能性
+            isAnchored: !!(this._anchor && this._anchor.isAnchored),
+            projectRoot: (this._anchor && this._anchor.projectRoot) || null
         };
     }
 
@@ -44,6 +47,14 @@ export class BridgeTauri extends BaseBridge {
             this.tauriInvoke = invoke;
             this.tauriListen = listen;
             this.tauriGetCurrent = getCurrentWebviewWindow;
+            
+            // 取得專案根錨定狀態（供 Startup Home / Dataset Manager 查詢）
+            try {
+                this._anchor = this._normalizeAnchor(await this.tauriInvoke('get_project_anchor'));
+            } catch (e) {
+                console.error('[Bridge] Failed to get project anchor:', e);
+                this._anchor = null;
+            }
             
             await this._setupTauriListeners();
             console.log('[Bridge] Tauri mode initialized');
@@ -173,6 +184,7 @@ export class BridgeTauri extends BaseBridge {
                         try {
                             const filename = await this.tauriInvoke('save_file', { xml, saveAs: isSaveAs });
                             this._dispatchToFrontend({ command: 'saveCompleted', filename: filename });
+                            await this._refreshAnchor(); // 存檔後同步前端錨定（首檔另存即錨定）
                             return true;
                         } catch (e) {
                             if (e === 'EXAMPLES_PATH') {
@@ -197,6 +209,7 @@ export class BridgeTauri extends BaseBridge {
                             platform: res.platform,
                             is_read_only: res.is_read_only // 補上遺漏的唯讀旗標
                         });
+                        await this._refreshAnchor(); // 開檔後同步前端錨定（後端 current_paths 已更新）
                         if (res.backup_xml) {
                             this._dispatchToFrontend({ command: 'recoveryData', xml: res.backup_xml });
                         }
@@ -292,6 +305,11 @@ export class BridgeTauri extends BaseBridge {
                     await this.tauriInvoke('close_window');
                     break;
 
+                case 'closeEditor':
+                    // toolbar 的「關閉編輯器」：與右上角 X 走相同 dirty 檢查與存檔確認流程
+                    if (this._appWindow) await this._handleCloseDialog(this._appWindow);
+                    break;
+
                 case 'setupStableMode':
                     try {
                         window.CocoyaUI.showLoadingModal('Setting up stable mode...');
@@ -374,7 +392,30 @@ export class BridgeTauri extends BaseBridge {
                     break;
 
                 case 'datasetCaptureImage':
+                    {
+                        // live 影像落盤：動態取得最新專案根（_anchor 是 init 時快照，開啟專案後會過期）
+                        // 依 `projectRoot/dataset/<專案>/<標籤>/` 生成 savePath（對齊 VSIX 慣例）。
+                        // 未錨定（無專案根）則不落盤（diskPath 為 null）。
+                        if (!data.savePath) {
+                            let projectRoot = this._anchor && this._anchor.projectRoot;
+                            if (!projectRoot) {
+                                try {
+                                    const anchor = this._normalizeAnchor(await this.tauriInvoke('get_project_anchor'));
+                                    projectRoot = anchor && anchor.projectRoot;
+                                    this._anchor = anchor;
+                                } catch (e) { projectRoot = null; }
+                            }
+                            if (projectRoot) {
+                                const project = data.projectName || 'dataset';
+                                const label = data.label || 'unlabeled';
+                                const stamp = Date.now();
+                                data.savePath = `${projectRoot}/dataset/${project}/${label}/${label}_${stamp}.jpg`;
+                            }
+                            console.log('[Capture] projectRoot =', projectRoot, '-> generated savePath =', data.savePath);
+                        }
+                    }
                     await this._handleDatasetCommand('captureImage', data, (response) => {
+                        console.log('[Capture] sidecar response savePath =', response.savePath);
                         this._dispatchToFrontend({
                             command: 'datasetCaptureResult',
                             requestId: data.requestId,
@@ -465,6 +506,54 @@ export class BridgeTauri extends BaseBridge {
                 case 'datasetUploadArchive':
                     // 尚未實作 sidecar 支援，先 dispatch 到前端
                     this._dispatchToFrontend({ command, ...data });
+                    break;
+
+                case 'datasetSaveProgress':
+                    try {
+                        // 依「專案根 SSOT」動態取得最新專案根（與 M4c captureImage 同策略）
+                        let projectRoot = this._anchor && this._anchor.projectRoot;
+                        if (!projectRoot) {
+                            try {
+                                const anchor = this._normalizeAnchor(await this.tauriInvoke('get_project_anchor'));
+                                projectRoot = anchor && anchor.projectRoot;
+                                this._anchor = anchor;
+                            } catch (e) { projectRoot = null; }
+                        }
+                        if (!projectRoot) {
+                            this._dispatchToFrontend({
+                                command: 'datasetSaveProgressResult',
+                                success: false,
+                                error: '未錨定專案，請先開新或開啟一個 .xml 專案後再儲存進度'
+                            });
+                            break;
+                        }
+                        const savedPath = await this.tauriInvoke('dataset_save_progress', {
+                            folderPath: projectRoot,
+                            projectName: data.projectName || 'dataset',
+                            specJson: JSON.stringify(data.spec)
+                        });
+                        console.log('[Bridge] Saved dataset progress to', savedPath);
+                        this._dispatchToFrontend({ command: 'datasetSaveProgressResult', success: true, path: savedPath });
+                    } catch (e) {
+                        console.error('[Bridge] Save progress failed:', e);
+                        this._dispatchToFrontend({ command: 'datasetSaveProgressResult', success: false, error: String(e) });
+                    }
+                    break;
+
+                case 'datasetLoadProgress':
+                    try {
+                        const result = await this.tauriInvoke('dataset_load_progress', { folderPath: data.folderPath });
+                        this._dispatchToFrontend({
+                            command: 'datasetLoadProgressResult',
+                            success: true,
+                            hasProgress: result.hasProgress,
+                            spec: result.spec || null,
+                            path: result.path
+                        });
+                    } catch (e) {
+                        console.error('[Bridge] Load progress failed:', e);
+                        this._dispatchToFrontend({ command: 'datasetLoadProgressResult', success: false, error: String(e) });
+                    }
                     break;
 
                 case 'openTrainingReport':
@@ -563,6 +652,7 @@ export class BridgeTauri extends BaseBridge {
 
         try {
             const appWindow = this.tauriGetCurrent();
+            this._appWindow = appWindow; // 供 closeEditor（toolbar 關閉）復用同一關閉流程
             
             // 監聽後端發來的「要關了」請求 (由 Rust 攔截 X 按鈕觸發)
             await appWindow.listen('closeRequested', () => {
@@ -652,7 +742,17 @@ export class BridgeTauri extends BaseBridge {
                         }
                     } catch (e) {
                         // 處理取消與失敗
-                        if (e === 'Canceled') {
+                        if (e === 'EXAMPLES_PATH') {
+                            // 目標是內建範例目錄：跳出範例警示（覆蓋/另存）
+                            // 完成（覆蓋成功或另存成功）才關閉；若使用者取消則維持視窗回到原作業
+                            const done = await this._handleExamplesSaveDialog(xml);
+                            if (done) {
+                                await this.tauriInvoke('set_dirty', { isDirty: false });
+                                await this.tauriInvoke('close_window');
+                            } else {
+                                console.log('[Bridge] Close canceled after examples dialog (user aborted).');
+                            }
+                        } else if (e === 'Canceled') {
                             // 使用者在系統對話框案取消，不做任何事，讓視窗維持開啟並保持 isDirty=true
                             console.log('[Bridge] Save canceled by user.');
                         } else {
@@ -996,6 +1096,33 @@ export class BridgeTauri extends BaseBridge {
         return '';
     }
 
+    /**
+     * 重新取得目前視窗的專案根錨定狀態，並更新 _anchor 快取。
+     * 呼叫時機：開啟專案後、存檔/另存後，讓 capabilities.isAnchored/projectRoot 與後端同步，
+     * 避免 _anchor（init 時快照）在開檔/存檔後過期。
+     */
+    /**
+     * 正規化後端回傳的錨定物件（相容 camelCase / snake_case），統一為 { isAnchored, projectRoot }
+     */
+    _normalizeAnchor(a) {
+        if (!a) return { isAnchored: false, projectRoot: null };
+        return {
+            isAnchored: !!(a.isAnchored ?? a.is_anchored),
+            projectRoot: (a.projectRoot ?? a.project_root) || null
+        };
+    }
+
+    async _refreshAnchor() {
+        try {
+            this._anchor = this._normalizeAnchor(await this.tauriInvoke('get_project_anchor'));
+            console.log('[Anchor] refreshed -> projectRoot =', this._anchor.projectRoot,
+                '| isAnchored =', this._anchor.isAnchored);
+        } catch (e) {
+            console.error('[Bridge] Failed to refresh project anchor:', e);
+            this._anchor = null;
+        }
+    }
+
     async _handleExamplesSaveDialog(xml) {
         try {
             const { ask, message } = await import('@tauri-apps/plugin-dialog');
@@ -1016,17 +1143,20 @@ export class BridgeTauri extends BaseBridge {
                 try {
                     const filename = await this.tauriInvoke('save_file', { xml, saveAs: false, forceExamples: true });
                     this._dispatchToFrontend({ command: 'saveCompleted', filename: filename });
+                    return true;
                 } catch (e2) {
                     if (e2 !== 'Canceled' && e2 !== 'EXAMPLES_PATH') {
                         this.alert((window.Blockly?.Msg['BKY_SAVE_FAILED'] || 'Save failed: ') + e2);
                     }
+                    return false;
                 }
             } else {
-                // 另存新檔
-                await this.send('saveFileAs', { xml });
+                // 另存新檔：成功（含取消）由 send 回傳判斷
+                return (await this.send('saveFileAs', { xml })) === true;
             }
         } catch (e) {
             console.error('[Bridge] Examples save dialog error:', e);
+            return false;
         }
     }
 

@@ -33,6 +33,8 @@ class AppController {
             await this.app.initializeCocoya(m.data, m.mediaUri, m.lang);
             // 當環境資訊就緒後，執行雲端模式校準
             if (this.ui.syncCloudAiToggle) this.ui.syncCloudAiToggle();
+            // 專案錨定檢查：未錨定則顯示啟動首頁（開新/開啟）
+            if (this.app.showStartupHomeIfNeeded) this.app.showStartupHomeIfNeeded();
         });
         this.handlers.set('loadWorkspace', async (m) => await this.app.loadWorkspace(m.xml, m.filename, m.platform, m.is_read_only));
         this.handlers.set('resetWorkspace', () => this.app.resetWorkspace());

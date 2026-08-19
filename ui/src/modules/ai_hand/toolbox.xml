@@ -5,7 +5,7 @@
     </block>
     <block type="py_ai_hand_process">
         <value name="FRAME">
-            <block type="variables_get">
+            <block type="py_variables_get">
                 <field name="VAR">frame</field>
             </block>
         </value>

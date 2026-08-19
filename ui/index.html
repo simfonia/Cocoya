@@ -282,5 +282,16 @@
     <script type="module" src="src/bridge.js"></script>
     <script type="module" src="src/modules/dataset_manager/index.js"></script>
     <script type="module" src="src/main.js"></script>
+    <!-- 啟動首頁（未錨定時顯示，兩平台共用） -->
+    <div id="startup-home" class="modal-overlay" style="display: none; z-index: 10002; align-items: center; justify-content: center; text-align: center; background: rgba(255,255,255,0.97);">
+        <div style="max-width: 560px; padding: 48px 32px; width: 100%;">
+            <h2 id="startup-home-title" style="color: #FE2F89; font-size: 28px; margin: 0 0 10px;">Cocoya</h2>
+            <p id="startup-home-hint" style="color: #777; font-size: 14px; margin: 0 0 36px;">請先選擇「開新專案」或「開啟專案」以確立專案位置。</p>
+            <div style="display: flex; gap: 16px; justify-content: center;">
+                <button type="button" id="startup-new" style="padding: 14px 30px; font-size: 15px; border: none; border-radius: 8px; background: #FE2F89; color: #fff; cursor: pointer;">開新專案</button>
+                <button type="button" id="startup-open" style="padding: 14px 30px; font-size: 15px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #555; cursor: pointer;">開啟專案</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

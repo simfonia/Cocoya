@@ -113,6 +113,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         await this.setDirty(false); 
         this.triggerCodeUpdate();
         setTimeout(() => { if (this.minimap) { this.minimap._isPaused = false; this.refreshMinimap(); } }, 300);
+        this.hideStartupHome(); // 開啟專案成功 → 已錨定
     },
 
     /**
@@ -137,6 +138,9 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             this.setDirty(false); 
             this.triggerCodeUpdate(); 
         }
+        // X 錨定：開新檔案（newFile）使 currentFilePath 歸零 = 未錨定 → 回到啟動首頁重新錨定。
+        // 已錨定專案切平台（switchPlatform）時 isAnchored 仍為 true，不會誤跳首頁。
+        this.showStartupHomeIfNeeded();
     },
 
     /**
@@ -158,5 +162,76 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
                 window.CocoyaBridge.send('clearBackup');
             }
         }
+        this.hideStartupHome();
+    },
+
+    // --- 啟動首頁 (Startup Home)：未錨定時強制選「開新/開啟」以確立專案根 ---
+
+    /**
+     * 顯示啟動首頁（兩平台共用）。錨定後由 loadWorkspace/onSaveCompleted 隱藏。
+     */
+    showStartupHomeIfNeeded: function() {
+        const home = document.getElementById('startup-home');
+        if (!home) return;
+        const anchored = !!(window.CocoyaBridge && window.CocoyaBridge.capabilities && window.CocoyaBridge.capabilities.isAnchored);
+        const title = home.querySelector('#startup-home-title');
+        const hint = home.querySelector('#startup-home-hint');
+        const newBtn = home.querySelector('#startup-new');
+        const openBtn = home.querySelector('#startup-open');
+        if (title) title.textContent = 'Cocoya';
+        if (hint) hint.textContent = (Blockly.Msg['BKY_STARTUP_HINT'] || '請先選擇「開新專案」或「開啟專案」以確立專案位置。');
+        if (newBtn) newBtn.textContent = (Blockly.Msg['BKY_STARTUP_NEW'] || '開新專案');
+        if (openBtn) openBtn.textContent = (Blockly.Msg['BKY_STARTUP_OPEN'] || '開啟專案');
+        this._bindStartupHome();
+        if (!anchored) home.style.display = 'flex';
+    },
+
+    /**
+     * 隱藏啟動首頁（錨定完成：開啟專案 or 另存新檔）
+     */
+    hideStartupHome: function() {
+        const home = document.getElementById('startup-home');
+        if (home) home.style.display = 'none';
+    },
+
+    /**
+     * 綁定啟動首頁按鈕（僅一次；DOM 未就緒時延遲重試）
+     */
+    _bindStartupHome: function() {
+        if (this._startupBound) return;
+        const newBtn = document.getElementById('startup-new');
+        const openBtn = document.getElementById('startup-open');
+        if (!newBtn || !openBtn) {
+            // DOM 尚未就緒（理論上 index.html 靜態存在），延遲重試
+            setTimeout(() => this._bindStartupHome(), 300);
+            return;
+        }
+        this._startupBound = true;
+        console.log('[StartupHome] Buttons bound:', !!newBtn, !!openBtn);
+        newBtn.onclick = () => this.startNewProjectFromHome();
+        openBtn.onclick = () => this.startOpenProjectFromHome();
+    },
+
+    /**
+     * 啟動首頁「開新專案」：先「另存新檔」取得 .xml 路徑以錨定專案根
+     */
+    startNewProjectFromHome: function() {
+        console.log('[StartupHome] New project from home');
+        let xml = '';
+        try {
+            if (this.workspace) {
+                const dom = Blockly.Xml.workspaceToDom(this.workspace);
+                xml = Blockly.Xml.domToPrettyText(dom);
+            }
+        } catch (e) { xml = ''; }
+        if (window.CocoyaBridge) window.CocoyaBridge.send('saveFileAs', { xml });
+    },
+
+    /**
+     * 啟動首頁「開啟專案」
+     */
+    startOpenProjectFromHome: function() {
+        console.log('[StartupHome] Open project from home');
+        if (window.CocoyaBridge) window.CocoyaBridge.send('openFile', {});
     }
 });

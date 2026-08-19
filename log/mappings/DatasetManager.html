@@ -39,7 +39,7 @@
             </tr>
             <tr>
                 <td><code>validate()</code></td>
-                <td>驗證目前 Spec 完整性。影像模式需有 label，表格模式需有 features。</td>
+                <td>驗證目前 Spec 完整性（專案類型感知，2026-08-09 調整）。影像類（image/object_detection/line_following）無欄位時改以「樣本數」檢查並回引導式 warning；表格類無欄位回報引導式 error；object_detection 已補 features 豁免。</td>
                 <td>() -> { ok, errors, warnings }</td>
             </tr>
             <tr>
@@ -63,6 +63,19 @@
             <tr><td><code>refreshDynamicPanels() / refreshPreview()</code></td><td>主動刷新資料管理器的動態面板與 Spec 預覽。</td><td><span class="status-tag status-stable">Stable</span></td></tr>
         </tbody>
     </table>
+
+    <h2>2.1 UI 模式分流（縮圖點擊行為，2026-08-09）</h2>
+    <table class="api-table">
+        <thead>
+            <tr><th>專案類型</th><th>縮圖點擊行為</th><th>說明</th></tr>
+        </thead>
+        <tbody>
+            <tr><td><code>image</code></td><td>分類標籤校正模式</td><td>中央大圖預覽 + 目前分類下拉重新指派 + 新增類別；不初始化 UICanvas（無 crosshair）。</td></tr>
+            <tr><td><code>object_detection</code></td><td>bbox 標註</td><td>類別選擇器 + 拉框 + 標註列表 + Delete 快捷鍵。</td></tr>
+            <tr><td><code>line_following</code></td><td>line 標註</td><td>單條引導線繪製。</td></tr>
+        </tbody>
+    </table>
+    <p>相關函式（ui_layout.js）：<code>enterClassificationReviewMode()</code>、<code>loadClassificationImage()</code>、<code>renderClassificationControls()</code>、<code>updateClassifyProgress()</code>。未標註檢查（<code>checkUnannotatedOnExit</code> / 匯出前）僅對 bbox/line 模式生效。狀態機：<code>state.annotationMode.mode</code> = null | 'bbox' | 'line' | 'classification'。</p>
 
     <h2>3. 遠端對接與雲端 AI 傳輸 (Cloud Sync APIs)</h2>
     <p>本模組於「雲端 AI 模式」開啟且連線至遠端主機時，提供以下 Host/Webview 傳輸指令：</p>
@@ -156,8 +169,52 @@
         </tbody>
     </table>
 
+    <h2>Dataset Manager 內部函式（2026-08-17 新增/改寫）</h2>
+    <table class="api-table">
+        <thead>
+            <tr><th>函式</th><th>用途</th><th>備註</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>showStatusMessage(message, {duration})</code></td>
+                <td>集中式狀態訊息（modal 頂部中央、所有模式可見），預設 8 秒自動清除；<code>duration=0</code> 不自動清除。</td>
+                <td>定義於 ui_layout.js；顯示前重置 <code>statusMessageTimer</code>。</td>
+            </tr>
+            <tr>
+                <td><code>reconcileProjectName(derivedName, sourcePath)</code></td>
+                <td>名稱/來源對齊決策（方案 A）：首次自動帶入；來源變更顯式 confirm（更新/維持）；basename 碰撞防寫。</td>
+                <td>回傳 <code>Promise&lt;boolean&gt;</code>；false 表示中止匯入。</td>
+            </tr>
+            <tr>
+                <td><code>setNameWarning(on)</code></td>
+                <td>切換 <code>[name="projectName"]</code> 的衝突紅框警示樣式 <code>.dataset-name-warning</code>。</td>
+                <td>配合 oninput 清除。</td>
+            </tr>
+            <tr>
+                <td><code>createLabelMapManager(container, statsContainer)</code></td>
+                <td>統一標籤管理器（下拉＋➕✏️🗑）。供分類標註、物件偵測標註、檢視模式共用；mode-aware（image 改名同步 img.label、刪除改 unlabeled；object_detection 刪除移除對應 class_id 標註）。</td>
+                <td>變更流程：updateSchema(label_map)→syncLabelMap→updateStatsFromImages→重繪→scheduleAutoSave。</td>
+            </tr>
+            <tr>
+                <td><code>updateStatsFromImages()</code></td>
+                <td>以 label_map 為權威重算 stats.label_counts：image 依 img.label；object_detection/line_following 依 annotations class_id；所有 label_map 類別補 0。</td>
+                <td>需在標籤/標註變更時呼叫。</td>
+            </tr>
+            <tr>
+                <td><code>nextLabelId(labelMap)</code></td>
+                <td>回傳下一個可用類別 id = 現有最大 id + 1。</td>
+                <td>避免以 <code>length</code> 指派在刪除後造成 id 碰撞。</td>
+            </tr>
+            <tr>
+                <td><code>UIComponents.getLabelColor(label)</code></td>
+                <td>依標籤名稱產生代表色（HSL）。FNV-1a hash + 黃金比例色相擴散；<code>unlabeled</code> 回灰。</td>
+                <td>短/相近名稱也可分辨。</td>
+            </tr>
+        </tbody>
+    </table>
+
     <footer style="margin-top: 50px; font-size: 12px; color: #999; text-align: center;">
-        最後更新日期: 2026-06-11 | Cocoya AI 工程部
+        最後更新日期: 2026-08-17 | Cocoya AI 工程部
     </footer>
 </body>
 </html>

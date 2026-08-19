@@ -62,6 +62,7 @@
     "DSM_ANNOTATION_UNCLASSIFIED": "未分類",
     "DSM_ANNOTATION_UNKNOWN": "未知類別",
     "DSM_ANNOTATION_EXPORT_UNCLASSIFIED_WARNING": "尚有 %1 個未分類標註框，確定要匯出嗎？",
+    "DSM_ANNOTATION_EXPORT_UNANNOTATED_WARNING": "仍有 %1 張圖片未標註，確定要匯出嗎？",
     "DSM_ANNOTATION_UNSAVED_WARNING": "尚有未儲存的標註，確定要離開？",
     "DSM_ANNOTATION_UNANNOTATED_WARNING": "尚有 %1 張圖片未標註，確定要離開？",
     "DSM_ANNOTATION_SHORTCUTS_HINT": "↑/↓ 切換圖片 · Delete 刪除標註 · Esc 退出",
@@ -116,6 +117,7 @@
     "DSM_STATUS_LOADING": "載入中: %1...",
     "DSM_STATUS_IMPORTING_FOLDER": "正在選取資料夾...",
     "DSM_STATUS_EXPORTING": "📦 正在準備匯出...",
+    "DSM_EXPORT_IN_PROGRESS": "正在打包 ZIP 並產生 dataset.json...",
     "DSM_STATUS_CAPTURETING": "📸 正在採集...",
     "DSM_STATUS_UPLOADING_ZIP": "📦 正在準備上傳本地 ZIP 檔案...",
     "DSM_STATUS_UPLOADING": "☁️ 正在上傳資料集... (%1%)",
@@ -145,7 +147,7 @@
     "DSM_VALIDATE_PROJECT_NAME_REQUIRED": "專案名稱為必填。",
     "DSM_VALIDATE_PROJECT_TYPE_INVALID": "專案類型必須為以下之一：%1。",
     "DSM_VALIDATE_SOURCE_MODE_INVALID": "資料來源模式必須為以下之一：%1。",
-    "DSM_VALIDATE_COLUMN_REQUIRED": "至少需要一個 schema 欄位。",
+    "DSM_VALIDATE_COLUMN_REQUIRED": "尚未定義任何欄位。請先匯入 CSV/JSON 檔案，或點擊「新增 Feature / Label」手動建立。",
     "DSM_VALIDATE_COLUMN_MISSING_NAME": "第 %1 個欄位缺少名稱。",
     "DSM_VALIDATE_COLUMN_DUPLICATE": "重複的欄位名稱：%1。",
     "DSM_VALIDATE_COLUMN_INVALID_TYPE": "欄位 \"%1\" 具有無效的型別 \"%2\"。",
@@ -153,6 +155,37 @@
     "DSM_VALIDATE_FEATURE_NOT_FOUND": "Feature 欄位 \"%1\" 不存在於 schema.columns 中。",
     "DSM_VALIDATE_LABEL_NOT_FOUND": "Label 欄位 \"%1\" 不存在於 schema.columns 中。",
     "DSM_VALIDATE_NO_LABEL": "尚未指定 Label 欄位。",
-    "DSM_VALIDATE_NO_FEATURES": "尚未指定 Feature 欄位。"
+    "DSM_VALIDATE_NO_FEATURES": "尚未指定 Feature 欄位。",
+    "DSM_VALIDATE_NO_SAMPLES": "尚未匯入任何影像。請選擇影像資料夾，或使用攝影機拍攝。",
+
+    // 影像分類標籤校正模式 (Image classification label correction)
+    "DSM_CLASSIFY_MODE_TITLE": "影像分類標籤校正",
+    "DSM_CLASSIFY_CURRENT_LABEL": "目前分類",
+    "DSM_CLASSIFY_ADD_LABEL": "新增類別",
+    "DSM_CLASSIFY_NEW_LABEL_PLACEHOLDER": "輸入新類別名稱",
+    "DSM_CLASSIFY_IMAGE_INFO": "檔案: %1",
+    "DSM_CLASSIFY_PROGRESS": "樣本: %1 / %2 張",
+    "DSM_CLASSIFY_SHORTCUTS_HINT": "↑/↓ 切換圖片 · Esc 退出",
+
+    // 儲存/載入進度 (Save / Load progress)
+    "DSM_AUTOSAVE_ON": "自動儲存已開啟",
+    "DSM_AUTOSAVE_ON_TOOLTIP": "標註/分類/新增/刪除後自動寫入 dataset.json，無需手動儲存",
+    "DSM_SAVE_PROGRESS": "儲存進度",
+    "DSM_SAVE_PROGRESS_TOOLTIP": "儲存目前的資料集規格與標註為 dataset.json",
+    "DSM_STATUS_SAVING_PROGRESS": "💾 正在儲存進度...",
+    "DSM_SUCCESS_SAVE_PROGRESS": "✅ 已儲存資料集進度",
+    "DSM_ERROR_SAVE_PROGRESS_FAILED": "❌ 儲存進度失敗: %1",
+    "DSM_ERROR_SAVE_PROGRESS_NO_ANCHOR": "未錨定專案，無法儲存進度（請先開新或開啟一個 .xml 專案）",
+    "DSM_SUCCESS_LOAD_PROGRESS": "✅ 已從上次進度恢復（套回 %1 張標註）",
+    "DSM_ERROR_LOAD_PROGRESS_FAILED": "❌ 讀取進度失敗: %1",
+
+    // 防呆確認 (Guardrail confirmations)
+    "DSM_CLEAR_CONFIRM": "確定清除所有資料並重置嗎？",
+    "DSM_TYPE_SWITCH_CONFIRM": "切換專案類型將清除目前資料，確定繼續嗎？",
+    "DSM_CLOSE_UNSAVED_CONFIRM": "目前有尚未匯出的資料，確定關閉嗎？",
+    "DSM_SOURCE_RENAME_CONFIRM": "來源已變更為「%1」，但目前資料集名稱為「%2」。\n是否自動更新資料集名稱為「%1」？\n\n（若選擇「取消」將維持「%2」，後續標註進度會儲存至 dataset/%2/，可能覆寫既有進度。若要另立新的資料集，建議先自行複製來源資料夾後再匯入。）",
+    "DSM_SOURCE_COLLISION_CONFIRM": "不同來源資料夾使用了相同名稱「%1」，標註進度將寫入並可能覆寫 dataset/%1/ 的既有進度。\n仍要繼續嗎？",
+    "DSM_IMPORT_CANCELLED": "已取消匯入",
+    "DSM_SOURCE_KEPT_STATUS": "資料集名稱維持「%1」；標註進度將儲存至 dataset/%1/"
   });
 })(Blockly);

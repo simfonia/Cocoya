@@ -4,7 +4,7 @@
     </block>
     <block type="py_ai_pose_process">
         <value name="FRAME">
-            <block type="variables_get">
+            <block type="py_variables_get">
                 <field name="VAR">frame</field>
             </block>
         </value>
@@ -76,10 +76,10 @@
     </block>
     <block type="py_ai_pose_get_velocity">
         <value name="CURR">
-            <block type="variables_get"><field name="VAR">curr_pos</field></block>
+            <block type="py_variables_get"><field name="VAR">curr_pos</field></block>
         </value>
         <value name="PREV">
-            <block type="variables_get"><field name="VAR">prev_pos</field></block>
+            <block type="py_variables_get"><field name="VAR">prev_pos</field></block>
         </value>
     </block>
     <block type="py_ai_pose_detect_punch">
@@ -88,7 +88,19 @@
     </block>
     <block type="py_ai_pose_is_in_frame">
         <value name="POS">
-            <block type="variables_get"><field name="VAR">curr_pos</field></block>
+            <block type="py_variables_get"><field name="VAR">curr_pos</field></block>
+        </value>
+    </block>
+    <sep gap="32"></sep>
+    <block type="py_ai_pose_calc_angle">
+        <value name="POINT_A">
+            <block type="py_variables_get"><field name="VAR">point_a</field></block>
+        </value>
+        <value name="POINT_B">
+            <block type="py_variables_get"><field name="VAR">point_b</field></block>
+        </value>
+        <value name="POINT_C">
+            <block type="py_variables_get"><field name="VAR">point_c</field></block>
         </value>
     </block>
 </category>

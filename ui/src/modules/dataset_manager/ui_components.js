@@ -34,12 +34,14 @@ export const UIComponents = {
                 ${images.map((img, index) => {
                     const label = img.label || 'unlabeled';
                     const color = this.getLabelColor(label);
+                    const isAnnotated = img.annotations && img.annotations.length > 0;
                     return `
-                    <div class="dataset-image-item" data-index="${index}" title="${escapeHTML(img.path)}">
+                    <div class="dataset-image-item ${isAnnotated ? 'annotated' : ''}" data-index="${index}" title="${escapeHTML(img.path)}">
                         <button type="button" class="dataset-image-delete-btn" data-index="${index}" title="${t('DELETE_IMAGE', '刪除照片')}">×</button>
                         <div class="dataset-image-thumb" data-index="${index}">
                             ${img.blobUrl ? `<img src="${img.blobUrl}">` : '<div class="dataset-thumb-placeholder">?</div>'}
                         </div>
+                        ${isAnnotated ? '<span class="dataset-image-check">✓</span>' : ''}
                         <div class="dataset-image-info">
                             <span class="dataset-image-label" style="background-color: ${color} !important;">
                                 ${escapeHTML(label)}
@@ -90,11 +92,17 @@ export const UIComponents = {
             <div class="dataset-annotation-thumb-list">
                 ${images.map((img, index) => {
                     const isCurrent = (index === currentIndex);
+                    const isCheckMode = options.mode === 'classification';
                     const isAnnotated = img.annotations && img.annotations.length > 0;
+                    const badgeHtml = isCheckMode
+                        ? `<span class="dataset-annotation-thumb-label">${escapeHTML(img.label || '?')}</span>`
+                        : (isAnnotated ? '<span class="dataset-annotation-thumb-check">✓</span>' : '');
+                    const itemClass = [isCurrent ? 'current' : '', isCheckMode ? '' : (isAnnotated ? 'annotated' : '')]
+                        .filter(Boolean).join(' ');
                     return `
-                    <div class="dataset-annotation-thumb-item ${isCurrent ? 'current' : ''} ${isAnnotated ? 'annotated' : ''}" data-index="${index}" title="${escapeHTML(img.path || img.name || '')}">
+                    <div class="dataset-annotation-thumb-item ${itemClass}" data-index="${index}" title="${escapeHTML(img.path || img.name || '')}">
                         ${img.blobUrl ? `<img src="${img.blobUrl}" class="dataset-annotation-thumb">` : '<div class="dataset-thumb-placeholder">?</div>'}
-                        ${isAnnotated ? '<span class="dataset-annotation-thumb-check">✓</span>' : ''}
+                        ${badgeHtml}
                     </div>
                     `;
                 }).join('')}
@@ -117,7 +125,7 @@ export const UIComponents = {
     renderLabelStats(container, stats, onLabelChange) {
         if (!container) return;
         const counts = stats.label_counts || {};
-        const labels = Object.keys(counts);
+        const labels = Object.keys(counts).sort((a, b) => a.localeCompare(b));
 
         if (labels.length === 0) {
             container.innerHTML = '<div class="dataset-empty-state">' + t('NO_LABELS', '尚未偵測到標籤') + '</div>';
@@ -387,17 +395,21 @@ export const UIComponents = {
      */
     getLabelColor(label) {
         if (!label || label === 'unlabeled') return '#999';
-        
-        let hash = 0;
+
+        // FNV-1a 32-bit hash：擴散佳，短/相近字串的 hash 差異大（避免 a/b/c 幾乎同色）
+        let hash = 0x811c9dc5;
         for (let i = 0; i < label.length; i++) {
-            hash = label.charCodeAt(i) + ((hash << 5) - hash);
+            hash ^= label.charCodeAt(i);
+            hash = Math.imul(hash, 0x01000193);
         }
-        
+        hash = hash >>> 0; // 轉無號 32-bit
+
         // 使用 HSL 確保顏色鮮艷且具辨識度
-        const h = Math.abs(hash % 360);
-        const s = 65 + (Math.abs(hash % 20)); // 65-85%
-        const l = 40 + (Math.abs(hash % 15)); // 40-55%
-        
+        // 黃金比例(137.508°)擴散色相：即使 hash 相近，色相也至少差約 137°，易分辨
+        const h = Math.floor((hash * 137.508) % 360);
+        const s = 65 + (hash % 20); // 65-85%
+        const l = 40 + (hash % 15); // 40-55%
+
         return `hsl(${h}, ${s}%, ${l}%)`;
     }
 };

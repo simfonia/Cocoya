@@ -22,7 +22,9 @@ export class BaseBridge {
             supportsEraseFS: false,
             isTauri: false,
             isRemoteAware: false,
-            isRemoteConnected: false
+            isRemoteConnected: false,
+            isAnchored: false,
+            projectRoot: null
         };
     }
 
@@ -208,6 +210,23 @@ export class BaseBridge {
             this.onMessage(handler);
             this.send('startTraining', { ...config, requestId });
         });
+    }
+
+    /**
+     * 儲存資料集標註進度（寫入 dataset.json）
+     * @param {string} projectName - 資料集專案名稱
+     * @param {Object} spec - DatasetSpec 的 toJSON() 結果（含 annotations）
+     */
+    saveDatasetProgress(projectName, spec) {
+        this.send('datasetSaveProgress', { projectName, spec });
+    }
+
+    /**
+     * 讀取資料集標註進度（讀取指定資料夾內的 dataset.json）
+     * @param {string} folderPath - 已掃描的資料集資料夾路徑
+     */
+    loadDatasetProgress(folderPath) {
+        this.send('datasetLoadProgress', { folderPath });
     }
 
     /**

@@ -16,6 +16,18 @@ import { EnvOpsHandler } from './handlers/envOps';
 export class CocoyaManager {
     public currentFilePath: string | undefined;
     public currentPlatform: string = 'PC';
+
+    /**
+     * 專案根 SSOT：目前 Cocoya 專案 (.xml) 所在資料夾。
+     * 未存檔（無 currentFilePath）且未開工作區時回傳 undefined（= 未錨定）。
+     */
+    public getProjectRoot(): string | undefined {
+        if (this.currentFilePath) {
+            return path.dirname(this.currentFilePath);
+        }
+        return undefined;
+    }
+
     public localeMessages: any = {};
     public panel: vscode.WebviewPanel;
     public context: vscode.ExtensionContext;
@@ -243,6 +255,12 @@ export class CocoyaManager {
                 case 'datasetExport':
                     await this.datasetOps.handleDatasetExport(message);
                     break;
+                case 'datasetSaveProgress':
+                    await this.datasetOps.handleDatasetSaveProgress(message);
+                    break;
+                case 'datasetLoadProgress':
+                    await this.datasetOps.handleDatasetLoadProgress(message);
+                    break;
                 case 'datasetUploadArchive':
                     await this.datasetOps.handleDatasetUploadArchive(message);
                     break;
@@ -346,7 +364,10 @@ export class CocoyaManager {
         const capabilities = {
             isRemoteAware: true,
             isRemoteConnected: vscode.env.remoteName !== undefined,
-            remoteName: vscode.env.remoteName
+            remoteName: vscode.env.remoteName,
+            // 專案根錨定狀態（供前端 Startup Home 與 Dataset Manager 查詢）
+            projectRoot: this.getProjectRoot() ?? null,
+            isAnchored: !!this.currentFilePath
         };
 
         this.panel.webview.postMessage({

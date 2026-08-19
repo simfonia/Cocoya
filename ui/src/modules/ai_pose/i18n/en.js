@@ -23,5 +23,10 @@ Object.assign(Blockly.Msg, {
   "AI_POSE_GET_VELOCITY": "get velocity between current %1 and previous %2",
   "AI_POSE_GET_VELOCITY_TOOLTIP": "Calculate distance between two coordinate tuples as a velocity reference. Returns: Number.",
   "AI_POSE_IS_IN_FRAME": "is coordinate %1 in frame ( Width %2 Height %3 )",
-  "AI_POSE_IS_IN_FRAME_TOOLTIP": "Check if the coordinate is within the frame bounds (excludes 0 and max values). Returns: Boolean."
+  "AI_POSE_IS_IN_FRAME_TOOLTIP": "Check if the coordinate is within the frame bounds (excludes 0 and max values). Returns: Boolean.",
+  "AI_POSE_CALC_ANGLE": "calculate angle of point %1 %2 %3 type %4",
+  "AI_POSE_CALC_ANGLE_TOOLTIP": "Pass 3 coordinate points A, B, C (x, y) in order; returns the angle at vertex B. Type: Interior (0-180), Exterior (180-360), Signed (-180~+180). Direction rule (±): positive = counterclockwise from ray BA (toward A) to ray BC (toward C), i.e. A→C CCW is positive; negative = clockwise. Note: OpenCV pixel coords have y pointing down, so on-screen direction is reversed vs. math coords (y up). Interior = |signed|; Exterior = 360°−Interior. Returns: Number.",
+  "AI_ANGLE_INTERIOR": "Interior (0-180°)",
+  "AI_ANGLE_EXTERIOR": "Exterior (180-360°)",
+  "AI_ANGLE_SIGNED": "Signed (-180~180°)"
 });

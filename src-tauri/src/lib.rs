@@ -53,7 +53,10 @@ pub fn run() {
             commands::pick_folder,
             commands::export_dataset,
             commands::open_report,
-            commands::find_latest_training_report
+            commands::find_latest_training_report,
+            commands::get_project_anchor,
+            commands::dataset_save_progress,
+            commands::dataset_load_progress
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

@@ -153,7 +153,7 @@ export const Sampler = {
                             }
 
                             if (this.state.onSampleCaptured) {
-                                this.state.onSampleCaptured(blob, this.state.targetLabel);
+                                this.state.onSampleCaptured(blob, this.state.targetLabel, message.savePath || null);
                             }
                             resolve(blob);
                         } catch (err) {

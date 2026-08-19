@@ -1,0 +1,75 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
+  <variables>
+    <variable id="b$*~{YZxhbgOhXE19zNK">item</variable>
+  </variables>
+  <block type="py_definition_zone" id="Q~jMq*MKPuc-J`VL%8jt" x="100" y="20"></block>
+  <block type="mcu_main" id="Dh/,;-hO!wU(DLd]tj[9" x="100" y="200">
+    <statement name="DO">
+      <block type="py_loop_while" id="9D)YC|{CD|ll)x6h^*pH">
+        <value name="CONDITION">
+          <block type="py_logic_boolean" id="+s*2.NQ$/`u8Y26LwJ0W">
+            <field name="BOOL">True</field>
+          </block>
+        </value>
+        <statement name="DO">
+          <block type="mcu_digital_write" id="$CfzDD#{Re}:ifE;h01j">
+            <field name="STATE">True</field>
+            <value name="PIN">
+              <shadow type="mcu_pin_shadow" id="^=TOAHR{Ek/(T35yT9^;">
+                <field name="PIN">board.GP0</field>
+              </shadow>
+            </value>
+            <next>
+              <block type="py_variables_set" id="w~[_}_0Ep]XzA};CE6MC">
+                <field name="VAR" id="b$*~{YZxhbgOhXE19zNK">item</field>
+                <value name="VALUE">
+                  <shadow type="py_math_number" id="`/giXHvmuO6BD%AjDCwN">
+                    <field name="NUM">0</field>
+                  </shadow>
+                  <block type="mcu_digital_read" id="@TIb3,W?$xk`@OTj(O2k">
+                    <value name="PIN">
+                      <shadow type="mcu_pin_shadow" id="cM.[?KEcWFS`uO0D#_4@">
+                        <field name="PIN">board.GP1</field>
+                      </shadow>
+                    </value>
+                  </block>
+                </value>
+                <next>
+                  <block type="mcu_pwm_write" id="ay-Jb6,J8BTj#[?LBwO=">
+                    <value name="PIN">
+                      <shadow type="mcu_pin_shadow" id="|@%sSJm}w|BGwf[1!8@Z">
+                        <field name="PIN">board.GP2</field>
+                      </shadow>
+                    </value>
+                    <value name="VALUE">
+                      <shadow type="py_math_number" id="ooZ%JhboSYC2C2T6aVS1">
+                        <field name="NUM">50</field>
+                      </shadow>
+                    </value>
+                    <next>
+                      <block type="py_variables_set" id="=J%(I%DaG^w}5UJ)!1l[">
+                        <field name="VAR" id="b$*~{YZxhbgOhXE19zNK">item</field>
+                        <value name="VALUE">
+                          <shadow type="py_math_number" id="`/giXHvmuO6BD%AjDCwN">
+                            <field name="NUM">0</field>
+                          </shadow>
+                          <block type="mcu_analog_read" id="vA|*?Te#UpEbETg=Rcbm">
+                            <value name="PIN">
+                              <shadow type="mcu_pin_shadow" id="RqiCRh@|[ALta$Z`2XzB">
+                                <field name="PIN">board.GP26</field>
+                              </shadow>
+                            </value>
+                          </block>
+                        </value>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </statement>
+      </block>
+    </statement>
+  </block>
+</xml>

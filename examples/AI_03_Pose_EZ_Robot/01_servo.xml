@@ -1,0 +1,251 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
+  <variables>
+    <variable id="v_line">thetaL0</variable>
+    <variable id="v_percent_val">thetaR0</variable>
+    <variable id="[9c-_WOYIH$7[?+b5g,d">rotate</variable>
+    <variable id="Zf%k|wx$.N{]HMx:gKI!">thetaL1</variable>
+    <variable id="ep*(S7)de0eTRl]XB+V;">thetaR1</variable>
+  </variables>
+  <comment id="h2J=clurjJ`m)C5XPr=(" x="10" y="-170" w="621" h="165">使用Cytron maker pi RP2040 控制Geekservo 270
+先組裝一個小機器人，面對自己，
+以自己的方向來看，左手 servo 接GP12，右手 servo 接GP13。
+
+  </comment>
+  <block type="py_definition_zone" id="def_root" deletable="false" x="10" y="10"></block>
+  <block type="mcu_main" id="main_root" deletable="false" x="10" y="90">
+    <statement name="DO">
+      <block type="mcu_car_servo_setup" id="_XIkS/^[UQFb`0Fp4i!i">
+        <field name="HAND">board.GP12</field>
+        <field name="TYPE">GEEK_270</field>
+        <field name="MIN">550</field>
+        <field name="MAX">2400</field>
+        <field name="MAX_ANGLE">270</field>
+        <field name="OFFSET">0</field>
+        <next>
+          <block type="mcu_car_servo_setup" id="YgF%74w(hS0xju@~WlF}">
+            <field name="HAND">board.GP13</field>
+            <field name="TYPE">GEEK_270</field>
+            <field name="MIN">550</field>
+            <field name="MAX">2400</field>
+            <field name="MAX_ANGLE">270</field>
+            <field name="OFFSET">0</field>
+            <next>
+              <block type="py_coding_comment" id="C#OuVjw%vi%NML!]s~qi">
+                <field name="TEXT">設定左右手初始角度、要上舉幾度</field>
+                <next>
+                  <block type="py_variables_set" id="e@W[$_iKv%ize(!9OniL">
+                    <field name="VAR" id="v_line">thetaL0</field>
+                    <value name="VALUE">
+                      <shadow type="py_math_number" id="GK4[RX/E#}OJHY030Uk8">
+                        <field name="NUM">0</field>
+                      </shadow>
+                    </value>
+                    <next>
+                      <block type="py_variables_set" id="0/jf5,z|/L/4N2*ANQ{p">
+                        <field name="VAR" id="v_percent_val">thetaR0</field>
+                        <value name="VALUE">
+                          <shadow type="py_math_number" id="YTYa+=rJbj2kI_[K3oW?">
+                            <field name="NUM">90</field>
+                          </shadow>
+                        </value>
+                        <next>
+                          <block type="py_variables_set" id="8nt*#zxwlZZ7p-9`i#;U">
+                            <field name="VAR" id="[9c-_WOYIH$7[?+b5g,d">rotate</field>
+                            <value name="VALUE">
+                              <shadow type="py_math_number" id="NrCBv83.e+3:84F:=n3L">
+                                <field name="NUM">30</field>
+                              </shadow>
+                            </value>
+                            <next>
+                              <block type="py_variables_set" id="GcJT977lV9Gnq08=Bsgd">
+                                <field name="VAR" id="Zf%k|wx$.N{]HMx:gKI!">thetaL1</field>
+                                <value name="VALUE">
+                                  <shadow type="py_math_number" id="r^%]~GG}A7]m)=2V1w2n">
+                                    <field name="NUM">0</field>
+                                  </shadow>
+                                  <block type="py_math_arithmetic" id="G[5RDWmt9-qkWuqY?cG)">
+                                    <field name="OP">+</field>
+                                    <value name="A">
+                                      <shadow type="py_math_number" id="xbQt%fpbJ:m^-UrM.ZC-">
+                                        <field name="NUM">1</field>
+                                      </shadow>
+                                      <block type="py_variables_get" id="jSMmtPNJi^5dM;qk1IQK">
+                                        <field name="VAR" id="v_line">thetaL0</field>
+                                      </block>
+                                    </value>
+                                    <value name="B">
+                                      <shadow type="py_math_number" id="n:1em*IjHZ}z=L_%oqa9">
+                                        <field name="NUM">1</field>
+                                      </shadow>
+                                      <block type="py_variables_get" id="#m:Y?l,5nc`]sFPavf)+">
+                                        <field name="VAR" id="[9c-_WOYIH$7[?+b5g,d">rotate</field>
+                                      </block>
+                                    </value>
+                                  </block>
+                                </value>
+                                <next>
+                                  <block type="py_variables_set" id="3NgHKO)9uDUKZYlRa`Jg">
+                                    <field name="VAR" id="ep*(S7)de0eTRl]XB+V;">thetaR1</field>
+                                    <value name="VALUE">
+                                      <shadow type="py_math_number" id="TS+p.;cMeJz`Z!JYv(A;">
+                                        <field name="NUM">0</field>
+                                      </shadow>
+                                      <block type="py_math_arithmetic" id="`H0YdCsg)%s2ad8Zz+u{">
+                                        <field name="OP">-</field>
+                                        <value name="A">
+                                          <shadow type="py_math_number" id="xbQt%fpbJ:m^-UrM.ZC-">
+                                            <field name="NUM">1</field>
+                                          </shadow>
+                                          <block type="py_variables_get" id="`xX:Yoj4LZX,yQg?h[8M">
+                                            <field name="VAR" id="v_percent_val">thetaR0</field>
+                                          </block>
+                                        </value>
+                                        <value name="B">
+                                          <shadow type="py_math_number" id="n:1em*IjHZ}z=L_%oqa9">
+                                            <field name="NUM">1</field>
+                                          </shadow>
+                                          <block type="py_variables_get" id="DpGeqh5Y|Pa^-4!br]~p">
+                                            <field name="VAR" id="[9c-_WOYIH$7[?+b5g,d">rotate</field>
+                                          </block>
+                                        </value>
+                                      </block>
+                                    </value>
+                                    <next>
+                                      <block type="mcu_car_servo" id="bLN+?3I}2a6_8apR-lA(">
+                                        <field name="PIN">board.GP12</field>
+                                        <field name="TYPE">GEEK_270</field>
+                                        <value name="ANGLE">
+                                          <shadow type="math_number" id="z7+fV-Bf-d*:akjXVJjD">
+                                            <field name="NUM">90</field>
+                                          </shadow>
+                                          <block type="py_variables_get" id="eMe3MR!yJ$1}s(LG$.cz">
+                                            <field name="VAR" id="v_line">thetaL0</field>
+                                          </block>
+                                        </value>
+                                        <next>
+                                          <block type="mcu_car_servo" id="KpkHtq^J?AAkSx/^uYPw">
+                                            <field name="PIN">board.GP13</field>
+                                            <field name="TYPE">GEEK_270</field>
+                                            <value name="ANGLE">
+                                              <shadow type="math_number" id="/?7N/Gwt]$b92#_p,+kg">
+                                                <field name="NUM">0</field>
+                                              </shadow>
+                                              <block type="py_variables_get" id="clPNkRz|QzZ#Ds;*y9IN">
+                                                <field name="VAR" id="v_percent_val">thetaR0</field>
+                                              </block>
+                                            </value>
+                                            <next>
+                                              <block type="mcu_car_tone" id="beep_start">
+                                                <value name="FREQ">
+                                                  <shadow type="math_number" id="beep_freq">
+                                                    <field name="NUM">440</field>
+                                                  </shadow>
+                                                </value>
+                                                <value name="MS">
+                                                  <shadow type="math_number" id="beep_duration">
+                                                    <field name="NUM">200</field>
+                                                  </shadow>
+                                                </value>
+                                                <next>
+                                                  <block type="py_loop_while" id="main_loop">
+                                                    <value name="CONDITION">
+                                                      <block type="py_logic_boolean" id="bool_true">
+                                                        <field name="BOOL">True</field>
+                                                      </block>
+                                                    </value>
+                                                    <statement name="DO">
+                                                      <block type="mcu_car_wait_start" id="*.4djYWXLCAzHW]IR?(0">
+                                                        <field name="PIN">board.GP20</field>
+                                                        <next>
+                                                          <block type="mcu_car_servo" id="tJ*$ESa@e7wGVz]=aeaD">
+                                                            <field name="PIN">board.GP12</field>
+                                                            <field name="TYPE">GEEK_270</field>
+                                                            <value name="ANGLE">
+                                                              <shadow type="math_number" id="eDMqY,0Ll]bufRRW;Pa5">
+                                                                <field name="NUM">0</field>
+                                                              </shadow>
+                                                              <block type="py_variables_get" id="n{SKrZJLSs#N/53Z.Lqe">
+                                                                <field name="VAR" id="Zf%k|wx$.N{]HMx:gKI!">thetaL1</field>
+                                                              </block>
+                                                            </value>
+                                                            <next>
+                                                              <block type="mcu_car_servo" id="-v=~7uaJAuLO98xNv9@z">
+                                                                <field name="PIN">board.GP13</field>
+                                                                <field name="TYPE">GEEK_270</field>
+                                                                <value name="ANGLE">
+                                                                  <shadow type="math_number" id="|!2|fM)CRbsC|bmL3u8D">
+                                                                    <field name="NUM">90</field>
+                                                                  </shadow>
+                                                                  <block type="py_variables_get" id="1wc!MoNR`54cbo`EfYbV">
+                                                                    <field name="VAR" id="ep*(S7)de0eTRl]XB+V;">thetaR1</field>
+                                                                  </block>
+                                                                </value>
+                                                                <next>
+                                                                  <block type="py_time_sleep" id="Z1wy)yz(tpPDLaJxk;=4">
+                                                                    <value name="SECONDS">
+                                                                      <shadow type="py_math_number" id="BrDa};6$-r%~o`QT,~Wc">
+                                                                        <field name="NUM">1</field>
+                                                                      </shadow>
+                                                                    </value>
+                                                                    <next>
+                                                                      <block type="mcu_car_servo" id="UBDJ49p^bkp37[GI27en">
+                                                                        <field name="PIN">board.GP12</field>
+                                                                        <field name="TYPE">GEEK_270</field>
+                                                                        <value name="ANGLE">
+                                                                          <shadow type="math_number" id="jw3+}q{0FE{fxqH9Zz;g">
+                                                                            <field name="NUM">90</field>
+                                                                          </shadow>
+                                                                          <block type="py_variables_get" id="SA@J_oTQ#YR3#7haNih@">
+                                                                            <field name="VAR" id="v_line">thetaL0</field>
+                                                                          </block>
+                                                                        </value>
+                                                                        <next>
+                                                                          <block type="mcu_car_servo" id="Hd_^[%:3[rmR0=3T^lyC">
+                                                                            <field name="PIN">board.GP13</field>
+                                                                            <field name="TYPE">GEEK_270</field>
+                                                                            <value name="ANGLE">
+                                                                              <shadow type="math_number" id="S,NMbr{wRP~mTm3q)7*o">
+                                                                                <field name="NUM">0</field>
+                                                                              </shadow>
+                                                                              <block type="py_variables_get" id="B;$1hjnLE0~r|*?%-D4b">
+                                                                                <field name="VAR" id="v_percent_val">thetaR0</field>
+                                                                              </block>
+                                                                            </value>
+                                                                          </block>
+                                                                        </next>
+                                                                      </block>
+                                                                    </next>
+                                                                  </block>
+                                                                </next>
+                                                              </block>
+                                                            </next>
+                                                          </block>
+                                                        </next>
+                                                      </block>
+                                                    </statement>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

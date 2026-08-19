@@ -28,6 +28,28 @@ pub fn get_module_toolbox(handle: AppHandle, path: String) -> Result<String, Str
     fs::read_to_string(&target_path).map_err(|e| format!("Failed to read toolbox at {:?}: {}", target_path, e))
 }
 
+/// 專案根錨定狀態（供前端 Startup Home / Dataset Manager 查詢）
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProjectAnchor {
+    pub is_anchored: bool,
+    pub project_root: Option<String>,
+}
+
+#[tauri::command]
+pub fn get_project_anchor(window: Window, state: State<'_, AppState>) -> ProjectAnchor {
+    let paths = state.current_paths.lock().unwrap();
+    let project_root = paths.get(window.label()).map(|p| {
+        p.parent()
+            .map(|x| x.to_string_lossy().to_string())
+            .unwrap_or_else(|| p.to_string_lossy().to_string())
+    });
+    ProjectAnchor {
+        is_anchored: project_root.is_some(),
+        project_root,
+    }
+}
+
 #[tauri::command]
 pub async fn open_file(window: Window, handle: AppHandle, state: State<'_, AppState>) -> Result<OpenFileResult, String> {
     let file_path = handle.dialog().file().add_filter("Cocoya XML", &["xml"]).blocking_pick_file();
@@ -418,4 +440,41 @@ fn url_encode_path(path: &str) -> String {
         })
         .collect::<Vec<_>>()
         .join("/")
+}
+
+/// 儲存資料集標註進度（等級一存讀）
+/// 寫入「<folder_path>/dataset/<project_name>/dataset.json」，回傳完整寫入路徑。
+#[tauri::command]
+pub fn dataset_save_progress(folder_path: String, project_name: String, spec_json: String) -> Result<String, String> {
+    let dataset_dir = std::path::Path::new(&folder_path).join("dataset").join(&project_name);
+    if let Err(e) = fs::create_dir_all(&dataset_dir) {
+        return Err(format!("Failed to create dataset dir: {}", e));
+    }
+    let spec_path = dataset_dir.join("dataset.json");
+    fs::write(&spec_path, &spec_json).map_err(|e| format!("Failed to write dataset.json: {}", e))?;
+    Ok(spec_path.to_string_lossy().replace('\\', "/"))
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DatasetProgressResult {
+    pub has_progress: bool,
+    pub spec: Option<serde_json::Value>,
+    pub path: String,
+}
+
+/// 讀取資料集標註進度（等級一存讀）
+/// 檢查「<folder_path>/dataset.json」是否存在；存在則回傳 spec（JSON 物件）。
+#[tauri::command]
+pub fn dataset_load_progress(folder_path: String) -> Result<DatasetProgressResult, String> {
+    let spec_path = std::path::Path::new(&folder_path).join("dataset.json");
+    let path_str = spec_path.to_string_lossy().replace('\\', "/");
+
+    if !spec_path.exists() {
+        return Ok(DatasetProgressResult { has_progress: false, spec: None, path: path_str });
+    }
+
+    let content = fs::read_to_string(&spec_path).map_err(|e| format!("Failed to read dataset.json: {}", e))?;
+    let spec: serde_json::Value = serde_json::from_str(&content).map_err(|e| format!("Failed to parse dataset.json: {}", e))?;
+    Ok(DatasetProgressResult { has_progress: true, spec: Some(spec), path: path_str })
 }

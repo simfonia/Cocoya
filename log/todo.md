@@ -8,7 +8,189 @@
 
 ---
 
-## [已完成] 2026-08-02 — 模型輸出格式選單 + 推論積木模型類型
+## [已完成] 2026-08-17 — Dataset Manager 第二輪（名稱警示/Live 排序/統計同步/統一標籤管理器/排序/顏色）
+
+### 需求與修改
+- [x] `ui_layout.js`：`setNameWarning()` 名稱衝突紅框警示，reconcile 各分支切換；clearBtn/typeSwitch/open/oninput 清除。
+- [x] `ui_layout.js`：Live 縮圖 `push`（舊→新）＋渲染後捲到 `.dataset-image-grid` 最下方。
+- [x] `ui_layout.js`：重寫 `updateStatsFromImages()`（label_map 權威、依 type 統計、類別補 0）；renderAnnotationControls 增/改/刪、onLabelChange、applyLoadedProgress 補呼叫；標註變更(onUpdate/saveCurrentAnnotations)重算統計。
+- [x] `ui_layout.js`：新增 `createLabelMapManager()` 統一於分類/物件偵測標註與檢視模式；`nextLabelId()` 修 id 碰撞；分類/管理器下拉字典序。
+- [x] `ui_components.js`：`renderLabelStats` 字典序；`getLabelColor` 改 FNV-1a + 黃金比例色相。
+- [x] `dataset_manager.css`：`.dataset-name-warning`。
+
+### 決策
+- 專案類型維持「以進度檔為準」（載入會被進度檔 type 拉回）；改類型須用乾淨資料夾/刪 dataset.json 重建。
+
+### 驗證
+- [x] `node --check` 通過；`ui` `vite build` 成功
+- [ ] 實機：統計同步、id 無錯亂、三處標籤管理一致、排序與顏色正確
+
+### 相依性
+- 無（純前端 UI，SSOT）。
+
+*更新日期：2026-08-17*
+
+---
+## [已完成] 2026-08-17 — Dataset Manager UI 修改
+
+### 需求
+1. 訊息區移至「頂部中央」並於 5 秒後自動清除（原先在左欄 `.dataset-source-panel` 內，標註模式會隱藏而看不到）。
+2. 右欄「預覽與標註」新增標籤後，下方案 Spec JSON 預覽未即時更新。
+3. 左欄「選擇檔案或資料夾」按鈕移至最下方，讓使用者依序設定完成後再按。
+
+### 修改
+- [x] `ui_layout.js`：新增集中式訊息 `#dataset-manager-message`（header 下方中央、所有模式皆可見）與 `showStatusMessage(msg, {duration})`（預設 5 秒自動清除、計時器重置防訊息交錯）；移除 `getExportStatusElement()`；所有 `status.textContent` 改用 `showStatusMessage()`（applyLoadedProgress / handleFileImport / handleDirectoryImport / handleSamplerSnapshot / handleExportDataset / handleCloudUpload / handleBridgeMessage 之 checkRemoteEnvironmentResult 與 datasetUploadResult）。
+- [x] `ui_layout.js`：`renderAnnotationControls()`（bbox）新增/編輯/刪除類別後、`refreshDynamicPanels()` 的 `onLabelChange` 新增標籤後呼叫 `refreshPreview()`，讓 Spec JSON 預覽即時更新。
+- [x] `ui_layout.js`：左欄重排（專案類型→來源模式→分隔線→資料集名稱→描述→雲端診斷→分隔線→匯入按鈕移最下方）。
+- [x] `dataset_manager.css`：新增 `.dataset-manager-message` 樣式（淺粉底、居中、適配淺深色主題）。
+
+### 驗證
+- [x] `node --check ui_layout.js` 通過
+- [x] `ui` `npx vite build` 成功
+- [ ] 實機 VSIX / Tauri 雙平台驗證三項行為
+
+### 相依性
+- 無（純前端 UI，SSOT）。
+
+*更新日期：2026-08-17*
+
+## [已完成] 2026-08-17（續）— Dataset Manager 名稱對齊方案 A + 訊息欄置中/時長
+
+### 需求
+1. 資料集名稱欄位：重選來源資料夾時名稱未自動更新，可能靜默覆寫錯誤 namespace（例如 `D1/dataset.json`）。
+2. 訊息欄文字未垂直置中、預設 5 秒消失太快。
+
+### 決策
+經 4 情境評估（新專案/多 dataset 碰撞/另存導引/table 位置）後捨棄「一律同步」：
+- 一律同步無法解決 basename 碰撞（`A/data` 與 `B/data` 同名皆變 `data`）與「開舊進度改存另一 dataset」的改名混淆。
+- 改採「來源變更顯式 confirm」：確認=更新名稱、取消=維持名稱並提示可能覆寫；同名不同來源則警告。
+
+### 修改
+- [x] `ui_layout.js`：新增 `reconcileProjectName(derivedName, sourcePath)`（首次/預設自動帶入；basename 碰撞警告、取消則中止匯入；名稱與來源不同時 confirm 更新或維持；名稱一致僅同步 baseDir）。`handleFileImport`/`handleDirectoryImport` 改用之（移除舊「僅預設才自動填」）。
+- [x] `ui_layout.js`：`showStatusMessage` 新增 `STATUS_MESSAGE_DURATION=8000`（預設 8 秒）、顯示改 `display:flex`。
+- [x] `dataset_manager.css`：`.dataset-manager-message` 改 flex 水平/垂直置中、`min-height:34px`。
+- [x] `i18n`（zh-hant/en）：新增 `DSM_SOURCE_RENAME_CONFIRM` / `DSM_SOURCE_COLLISION_CONFIRM` / `DSM_IMPORT_CANCELLED` / `DSM_SOURCE_KEPT_STATUS`。
+- [x] `AGENTS.md`：更新 `showStatusMessage` 預設 8 秒與 flex 置中說明。
+
+### 驗證
+- [x] `node --check`（ui_layout / zh-hant / en）通過
+- [x] `ui` `npx vite build` 成功（322ms）
+- [ ] 實機：D1→D2 切換彈「更新名稱/維持」、同名不同夾彈碰撞警告、訊息垂直置中且約 8 秒消失
+
+### 技術深挖
+- 名稱即 `專案根/dataset/<名稱>/` 的 namespace；後端會自動建立資料夾（VSIX `mkdirSync(recursive)`、Tauri `create_dir_all`），故新專案無需先建夾。
+- basename 碰撞：以 in-session `state.sourceFolderPath` 比對新來源路徑，名稱相同但路徑不同 → 警告並可取消。
+- confirm 僅布林（OK/取消）：更新=OK、維持=取消，需在文案講清兩者後果。
+
+### 相依性
+- 無（純前端 UI，SSOT）。
+
+*更新日期：2026-08-17*
+
+---
+---
+## [已完成] 2026-08-14 — M4b 等級一存讀（後端指令層 + 前端整合）
+
+### 需求
+為 Dataset Manager「儲存標註進度」提供後端讀寫指令：寫 `dataset.json` 到「專案根/dataset/<專案>/」，並可從已掃描資料夾讀回（含 annotations）並依路徑套回標註。
+
+### 修改
+- [x] `src/handlers/datasetOps.ts`：`handleDatasetSaveProgress`（專案根 SSOT 寫檔、未錨定拒絕）+ `handleDatasetLoadProgress`（讀 `<folderPath>/dataset.json`）
+- [x] `src/cocoyaManager.ts`：註冊 `datasetSaveProgress` / `datasetLoadProgress` 分發 case
+- [x] `src-tauri/src/commands/file.rs`：`dataset_save_progress`、`DatasetProgressResult`（serde camelCase）、`dataset_load_progress`
+- [x] `src-tauri/src/lib.rs`：註冊兩新指令
+- [x] `src-tauri/permissions/commands.toml`：權限 allow 含兩新指令（`allow-all-commands` 已配至 capabilities/default.json）
+- [x] `ui/src/bridge/tauri.js`：新增 `datasetSaveProgress`（動態取專案根）與 `datasetLoadProgress` case
+- [x] `ui/src/bridge/base.js`：新增 `saveDatasetProgress` / `loadDatasetProgress` 便捷方法
+- [x] `ui_layout.js`：`handleSaveProgress()`、`applyLoadedProgress()`、`loadProgressFromFolder()`、`handleDirectoryImport` 掃描後自動載入資料夾內 `dataset.json` 並依 `samples[].image_path` 套回 annotations、新增「儲存進度」按鈕與綁定、`rebuildSourceModeOptions`（type 對齊時同步 mode 選項）
+- [x] `i18n/zh-hant.js` + `i18n/en.js`：新增 `DSM_SAVE_PROGRESS*` / `DSM_STATUS/SUCCESS/ERROR_*_PROGRESS` 8 鍵
+
+### 驗證狀態
+- ⚠️ 本 session 指令執行環境異常（`spawn ... ENOENT`），`node --check` / `vite build` / `cargo check` / `npm run compile` 待下階段執行。
+- 已完成檔案覆讀與結構人工核對（含修正 `handleSaveProgress` 誤嵌進 `handleExportDataset` 的插入錯位）。
+
+### 待辦（實機驗證）
+- [ ] 跑 `node --check`（base.js/tauri.js/ui_layout.js/i18n）、`ui` `vite build`、`cargo check`、VSIX `npm run compile`
+- [ ] 實機驗證 B：儲存進度後 `<專案根>/dataset/<專案>/dataset.json` 產生且 samples[].annotations 含標註
+- [ ] 實機驗證 C：重開該資料夾（含 dataset.json）→ type/schema/stats/樣本回復、bbox/line/分類標註依路徑套回、縮圖綠勾/徽章正確
+- [ ] 回歸 image 分類校正 / object_detection bbox / line_following 標註流程
+- [ ] Tauri 專案根 SSOT 命名空間（dataset/<專案>）與儲存路徑一致：載入時選取此資料夾
+
+### 相依性
+- 依賴 M1（專案根 SSOT）、M3（防呆）、M4a/M4c（live 落盤）。
+
+*更新日期：2026-08-14*
+
+---
+
+## [已完成] 2026-08-15 — live 採集鏡像檔名脫鏈修正（fix A：依 savePath 統一 image_path）
+
+### 需求
+修正「儲存標註進度後重新載入資料夾時取不回標註」的根因：`dataset.json` 記錄的 `image_path` 與磁碟實際檔名不一致。
+
+### 根因（實測確認）
+`test/dataset/data_test` 實測：`dataset.json` 的 `image_path`（例 `1/1_1786674143181.jpg`）與磁碟檔名（例 `1/1_1786674143056.jpg`）完全不匹配，逐一相差約 118~135ms。證實為**兩次獨立 `Date.now()`**：磁碟檔名用 sidecar/bridge 的 savePath 時戳（`datasetOps.ts` L332 / `tauri.js` L411），`image_path` 用前端 `addSampleFromSampler()` 自己的時戳（`ui_layout.js` L1595，無視傳入的 savePath）。
+
+### 修改
+- [x] `ui/src/modules/dataset_manager/ui_layout.js`：`addSampleFromSampler()` 有 `savePath` 時，以 `basename(savePath)` 為 `filename`（`path=${label}/${filename}`）；僅 `savePath` 為 null（未錨定／不落盤）時 fallback `Date.now()`。達成單一時間戳，`img.path`/`image_path`/`diskPath` 與磁碟一致。
+
+### 決策
+- **不救舊資料**（`data_test` 僅測試用、可重建）：不實作任何 fallback 救援，`applyLoadedProgress` 維持精確比對。
+- **載入後續加 Live 資料支援**：掃描端 `img.path` 本就取自磁碟真相；採集端 fix A 後也取自 savePath → 兩端一致，混合存讀可套回。
+
+### 驗證
+- [x] `node --check ui_layout.js` 通過；`ui` `npx vite build` 成功
+- [ ] 實機：重建測試專案採集→標註→儲存→載入資料夾→annotations 套回
+- [ ] 實機：載入進度後再新增 Live 資料→再儲存→再載入，混合資料全數套回
+- [ ] VSIX / Tauri 雙平台各驗證一次
+## [已完成] 2026-08-15 — 標註自動落盤（方案 A）+ 列表縮圖綠勾 + 清除資料二次警告
+
+### 需求
+在標註後自動將進度寫入磁碟（移除「儲存進度」按鈕，降低認知負擔）；列表縮圖牆補綠勾；修正「清除資料」的二次警告順序與誤阻斷。
+
+### 修改
+- [x] `ui_layout.js`：移除 `handleSaveProgress()` 與「儲存進度」按鈕/綁定；新增 `hasData()` / `writeProgressToDisk()` / `scheduleAutoSave(immediate)`（時間防抖 800ms＋切圖/退出/關閉立即 flush），掛接於 `refreshPreview` 尾端、新增/刪除影像、類別增刪改名、分類 onchange、切圖、退出、關閉。未錨定或無資料靜默略過。新增「🛡 自動儲存已開啟」指示。
+- [x] `ui_layout.js`：`exitAnnotationMode(skipUnannotatedCheck=false)`，清除資料用 `exitAnnotationMode(true)` 跳過未標註二次警告。
+- [x] `ui_layout.js`：`closeDatasetManager` 錨定時不彈關閉警示（已自動落盤），僅未錨定且 `hasUnsavedWork()` 才問。
+- [x] `ui_components.js`：`renderImageGrid` 當 `annotations.length>0` 顯示 `.annotated` + ✓ 綠勾。
+- [x] `dataset_manager.css`：`.dataset-image-item.annotated`、`.dataset-image-check`、`.dataset-autosave-indicator`。
+- [x] `i18n`（zh-hant/en）：`DSM_AUTOSAVE_ON` / `DSM_AUTOSAVE_ON_TOOLTIP`。
+
+### 驗證
+- [x] `node --check`（ui_layout/ui_components/zh-hant/en）通過；`ui` `vite build` 成功
+- [x] 實機：錨定專案標註→不按按鈕直接關閉重開→還原
+- [x] 實機：新增 Live／刪圖／改分類／類別增刪改名後自動落盤；未錨定不噴錯
+- [x] 實機：列表縮圖牆與標註縮圖欄綠勾一致；清除資料只彈一次確認
+- [ ] VSIX / Tauri 雙平台各驗證一次
+
+
+---
+
+
+## [已完成] 2026-08-15 — 匯出資料集回饋修正 + 標註模式按鈕布局
+
+### 需求
+1. 「驗證」「匯出資料集」按鈕不應在標註模式重複/突兀顯示。
+2. 匯出走 zip 後看不到訊息；未標註警告語意是「離開」而非「匯出」。
+
+### 根因
+- 匯出狀態寫入 `#dataset-import-status`（位於 `.dataset-source-panel`），標註模式隱藏 source/schema → 匯出結果看不到。
+- 匯出未標註警告誤用 `ANNOTATION_UNANNOTATED_WARNING`（「確定要離開？」）。
+
+### 修改
+- [x] `ui_layout.js`：新增 `getExportStatusElement()`（標註→工具列狀態；否則→來源面板）、`showExportProgress(active)`（modal 頂部不確定進度條）、`setAnnotationHeaderActions(hidden)`（標註進入隱藏 header 的驗證/匯出/自動儲存指示，退出還原）。`handleExportDataset` 改用模式感知狀態＋進度條＋匯出專用未標註文案。兩標註工具列新增「匯出資料集」按鈕與狀態列並綁定。modal 新增 `#dataset-export-progress`。
+- [x] `i18n`（zh-hant/en）：`DSM_ANNOTATION_EXPORT_UNANNOTATED_WARNING`（「仍有 %1 張圖片未標註，確定要匯出嗎？」）、`DSM_EXPORT_IN_PROGRESS`。
+- [x] `dataset_manager.css`：`.dataset-export-progress`（不確定動畫）、標註工具列匯出樣式。
+
+### 驗證
+- [x] `node --check`（ui_layout / i18n）通過；`ui` `vite build` 成功
+- [x] 實機：標註模式有「匯出資料集」及進度條與成功/失敗訊息；header 不重複顯示
+- [x] 實機：未標註匯出提示為「確定要匯出嗎？」（非「離開」）；ZIP 產生後有成功訊息
+- [ ] VSIX / Tauri 雙平台各驗證一次
+
+*更新日期：2026-08-15*
+
+---
 
 ### 需求
 1. 將「產生模型」勾選框整合為「模型輸出」下拉選單，預設「無」
@@ -383,6 +565,36 @@ Cocoya 無法定位 value/expression 積木 (如數字、文字、變數 getter)
 
 ### 修改
 - [x] `ui_layout.js`：重構 enterAnnotationMode/exitAnnotationMode，新增 loadAnnotationImage/navigateToImage/saveCurrentAnnotations/renderAnnotationControls/鍵盤事件/進度/未標註檢查
+
+---
+
+## [進行中] 2026-08-10 — 啟動專案錨定 + Dataset Manager 防呆/存讀（X + 專案根 SSOT）
+
+### 決策（已完成 discussion 收斂）
+- **X 方案**：視窗進入「未錨定」狀態時強制走啟動首頁（開新專案 / 開啟專案）。**「最近專案」取消**。
+- **專案根 SSOT**：「專案根 = 目前 Cocoya 專案（.xml）所在資料夾」；未存檔/無 current_paths ⇒ 未錨定。
+- 拆兩主題：主題一 App 層（啟動首頁）、主題二 Dataset 層（防呆 + 等級一存讀 + live savePath 接回）。
+- **取消重工**：唯讀範例已是「軟性」（VSIX showWarningMessage、Tauri force_examples）；createDefaultBlocks() 已依平台建起始積木——均不另做。
+
+### 計畫文件
+- [x] `log/plan/StartupProjectAnchoring.md`（主題一）
+- [x] `log/plan/DatasetManagerProgressAndGuardrails.md`（主題二）
+
+### 里程碑
+- [x] M1：專案根 SSOT + 錨定查詢（兩平台）— 已完成，三平台 compile 通過
+- [x] M2：啟動首頁（前端共用 Startup Home；未錨定顯示、開新/開啟錨定）；Tauri create_window 新視窗同邏輯 — 完成，vite build 通過
+  - [x] 實測修正：Tauri 關閉時範例存檔分流（EXAMPLES_PATH）、Tauri toolbar closeEditor 補 case、VSIX save/open defaultUri 有效化 — 全數 compile 通過，待實機重測
+- [x] M3：Dataset 防呆（dirty 判定 + 三處確認）— 完成，vite build 通過
+- [x] M4a（D′）：live savePath 接回（image.diskPath）— 完成，build 通過
+- [x] M4c：Tauri live 落盤（datasetCaptureImage 補 savePath）— 完成，build 通過；需實機確認 sidecar mkdir
+- [x] M4b（B/C）：等級一存讀（dataset.json）— 後端指令層完成（VSIX datasetOps + Tauri file.rs 指令 + 權限 + 前端 Bridge）；前端 ui_layout 整合待續
+
+### 待確認/風險
+- [x] Tauri `captureImage` savePath 實機確認（D′）
+- [x] 回歸 openExample / switchPlatform / openFile
+
+*更新日期：2026-08-10*
+
 - [x] `ui_canvas.js`：新增 selectedAnnotationIndex + setSelectedAnnotation，修改 drawBox 高亮，unbindEvents 清理 keydown
 - [x] `ui_components.js`：新增 renderAnnotationThumbnails（單列垂直縮圖欄）
 - [x] `dataset_manager.css`：新增 .dataset-annotation-mode 布局、縮圖勾號、高亮邊框、進度計數器樣式
@@ -398,7 +610,7 @@ Cocoya 無法定位 value/expression 積木 (如數字、文字、變數 getter)
 ### 待驗證
 - [x] 實際啟動 VSIX/Tauri 驗證 bbox 標註 UI 完整流程
 - [x] 深色主題下新 UI 元素顯示
-- [ ] 含未標註圖片匯出警告
+- [x] 含未標註圖片匯出警告
 
 ---
 
@@ -423,7 +635,94 @@ Cocoya 無法定位 value/expression 積木 (如數字、文字、變數 getter)
 
 ### 明日/下次待辦
 - [x] 實機驗證兩平台攝影機選擇與快照流程
-- [ ] 建議為 `dataset_sidecar.py` 增加 `ping`+`listCameras` smoke test
+- [x] 建議為 `dataset_sidecar.py` 增加 `ping`+`listCameras` smoke test
 
 *更新日期：2026-08-08*
+
+---
+
+## [已完成] 2026-08-09 — Dataset Manager UI/UX 優化（專案類型感知驗證 + 分類標籤校正模式）
+
+### 需求
+- 消除「至少需要一個 schema 欄位」紅色 error 對影像類專案的誤導（改為類型感知 + 引導式文案）
+- image（影像分類）縮圖點擊改為「分類標籤校正」模式，不再誤入 bbox 拉框標註
+- 未標註檢查語意依類型修正（僅 object_detection / line_following 檢查 bbox/line）
+
+### 修改
+- [x] **計畫文件**：`log/plan/DatasetManagerUXImprovement.md`（排除 C 項：匯出整合作業暫緩）
+- [x] **spec.js**：新增 `IMAGE_TYPES`；`validate()` 類型感知（影像類無欄位 → 樣本數 warning；表格類 → 引導式 error；補 object_detection features 豁免；避免重複噪音警告）
+- [x] **i18n（zh-hant/en）**：改寫 `DSM_VALIDATE_COLUMN_REQUIRED`、新增 `DSM_VALIDATE_NO_SAMPLES`、新增 `DSM_CLASSIFY_*` 7 鍵
+- [x] **ui_layout.js**：`state.annotationMode.mode` 欄位；`enterClassificationReviewMode()`/`loadClassificationImage()`/`renderClassificationControls()`/`updateClassifyProgress()`/分類鍵盤事件；`navigateToImage`/`updateThumbnailHighlight`/`exitAnnotationMode`/`checkUnannotatedOnExit`/`handleExportDataset` 類型感知化
+- [x] **ui_components.js**：`renderAnnotationThumbnails()` 支援 `mode:'classification'`（標籤徽章取代綠勾）
+- [x] **dataset_manager.css**：`.dataset-annotation-thumb-label` / `.dataset-annotation-info`
+
+### 驗證
+- [x] `node --check` 5 個 JS 檔語法通過
+- [x] Node ESM 行為測試 12 項全數通過（image/table/object_detection/feature/line_following）
+- [x] `ui` `vite build` 成功
+- [x] 實機 VSIX + Tauri 驗證分類校正模式互動流程（含 Live 採集模式 label_map 合併）
+
+### 待辦（後續）
+- [ ] C 項：分類標籤校正的匯出整合（依 `samples[].label` 重整資料夾結構）— 獨立評估
+
+*更新日期：2026-08-09*
+---
+
+## [待辦] C 項：分類標籤校正的匯出整合（依 samples[].label 重整資料夾結構）
+
+### 背景
+- 2026-08-09 完成「分類標籤校正模式」後，`image` 專案可單張改派分類標籤（寫入 `spec.data_source.samples[].label`、`label_map`、`stats`）。
+- 但匯出（`datasetExport`）目前仍**照搬 `sourceFolderPath` 原始資料夾結構**；而 classifier 訓練端（`classifier_dataset.py`）是以「子資料夾名稱 = 類別」載入。
+- 結果：改派單張標籤後，匯出的 ZIP 不會反映修正 → 訓練仍用舊標籤。**功能斷點**。
+
+### 需求
+- `image`（classifier）類型匯出時，sidecar/Rust 端依 `spec.data_source.samples[].label` **重新組織資料夾結構**：每個類別一個子資料夾，將對應影像複製進去。
+- 產生/重寫 `labels.txt`（類別清單）與 `dataset.json`（spec 快照）。
+- 非 `image` 類型（表格、object_detection、line_following）維持現有匯出行為（object_detection 的 YOLO labels 分支不受影響）。
+
+### 實作範圍（待確認細節）
+| 檔案 | 預期異動 |
+|------|----------|
+| `resources/dataset_manager/dataset_sidecar.py` | `run()` 的 `exportDataset` 分支新增 classifier 分支：依 `samples[]` 的 `image_path` + `label` 建立 `<label>/<filename>` 結構並複製；重寫 `labels.txt` / `dataset.json` |
+| `resources/dataset_manager/dataset_io.py` | `DatasetIO.export_dataset` 視需求支援「重新組織」模式或改由 sidecar 預先布置再打包 |
+| `ui/src/modules/dataset_manager/ui_layout.js` | `handleExportDataset()` 確認 spec 已含完整 samples（含 label），無需其他參數 |
+
+### 需先釐清的疑點
+- [ ] **Live 採集影像落盤**：Sampler 的 blob 影像在匯出前是否存在於可複製的路徑？`samples[].image_path` 的實際指向需先確認（前端僅存 blobUrl + 相對 path）。
+- [ ] **雲端上傳**：`uploadDataset`（ZIP）是否共用此結構？遠端訓練同樣以資料夾為類別，原則上共用。
+- [ ] **重複檔名**：不同類別出現同名檔案（如 `unlabeled_xxx.jpg`）時如何避免衝突（建議檔名前綴 label 或在目標夾內保留原名 + 序號）。
+
+### 驗證
+- [x] 改派單張標籤 → 匯出 → 解壓檢查「子資料夾結構 + labels.txt + dataset.json」與改派結果相符。
+- [x] `classifier_dataset.py` 直接載入匯出資料集，確認類別數與各類張數正確。
+- [x] VSIX 與 Tauri 雙平台匯出一致性。
+
+### 相依性
+- 依賴 2026-08-09「分類標籤校正模式」（已完成）。
+- 建議與 `log/plan/DatasetManagerUXImprovement.md`「排除範圍」對照後獨立開案。
+
+*更新日期：2026-08-09*
+
+
+## [已完成] 2026-08-11 — 新增三頂點求夾角積木 (py_ai_pose_calc_angle)
+
+### 需求
+為 AI 視覺 / 姿勢偵測 (ai_pose) 新增積木：依序輸入 3 個 (x, y) 座標點 A、B、C，求中間頂點 B 之夾角；以下拉選單切換內角 / 外角 / 有符號角。
+
+### 修改
+- [x] `ai_pose_blocks.js`：新增 `py_ai_pose_calc_angle`（3 個 Tuple 輸入 + MODE 下拉，輸出 Number，帶 helpUrl）
+- [x] `ai_pose_generators.js`：注入 `cocoya_calc_angle_3pts(a,b,c,mode)`（鍵 `func_calc_angle_3pts`，不覆寫 detect_punch 既有的 cocoya_get_angle）
+- [x] `i18n/zh-hant.js` + `i18n/en.js`：新增 AI_POSE_CALC_ANGLE 及下拉標籤 AI_ANGLE_INTERIOR/EXTERIOR/SIGNED
+- [x] `toolbox.xml`：新增肩 11–肘 13–腕 15 示範積木
+- [x] `docs/help/py_ai_pose_calc_angle_{zh-hant,en}.html`：說明文檔 (含 ± 方向規則)
+
+### 方向規則 (+-)
+正值 = 由指向 A 的射線 (BA) 逆時針到指向 C 的射線 (BC) (A→C 逆時針為正)；負值 = 順時針。OpenCV 像素座標 y 向下，圖形上顯示相反。內角 = |有符號角|；外角 = 360 - 內角。
+
+### 驗證
+- [x] `node --check` 通過 (blocks / generators / 2x i18n)
+- [x] `python py_compile` + 數學單元測試 PASS
+- [x] `npx vite build` 成功；dist 含新積木
+
+*更新日期：2026-08-11*
 

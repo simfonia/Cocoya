@@ -413,6 +413,175 @@ body.vscode-high-contrast .dataset-image-item:hover {
     box-shadow: 0 4px 12px rgba(254, 47, 137, 0.3);
 }
 
+/* 列表縮圖牆的「已標註」綠勾（與標註縮圖欄一致；放左上角避免與右上刪除鈕重疊） */
+.dataset-image-item.annotated {
+    border-color: #4CAF50;
+}
+
+body.vscode-dark .dataset-image-item.annotated,
+body.vscode-high-contrast .dataset-image-item.annotated {
+    border-color: #4CAF50;
+}
+
+.dataset-image-check {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    font-size: 11px;
+    color: #4CAF50;
+    background: rgba(255, 255, 255, 0.85);
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    text-align: center;
+    font-weight: bold;
+    z-index: 3;
+}
+
+body.vscode-dark .dataset-image-check,
+body.vscode-high-contrast .dataset-image-check {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+/* 自動儲存已開啟指示（低噪音） */
+.dataset-autosave-indicator {
+    font-size: 11px;
+    color: #4CAF50;
+    margin-left: 8px;
+    vertical-align: middle;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+body.vscode-dark .dataset-autosave-indicator,
+body.vscode-high-contrast .dataset-autosave-indicator {
+    color: #6fdd8a;
+}
+
+/* 匯出進行中的不確定進度條（modal 頂部，預覽/標註模式皆可見） */
+.dataset-export-progress {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    background: #eefaf1;
+    border-bottom: 1px solid #cdeeda;
+    font-size: 11px;
+}
+
+.dataset-export-progress-bar {
+    flex: 0 0 140px;
+    height: 6px;
+    border-radius: 3px;
+    background: #e0e0e0;
+    overflow: hidden;
+    position: relative;
+}
+
+.dataset-export-progress-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -40%;
+    bottom: 0;
+    width: 40%;
+    background: #4CAF50;
+    border-radius: 3px;
+    animation: dataset-export-indeterminate 1.1s ease-in-out infinite;
+}
+
+@keyframes dataset-export-indeterminate {
+    0% { left: -40%; }
+    100% { left: 100%; }
+}
+
+.dataset-export-progress-label {
+    color: #2e7d32;
+}
+
+body.vscode-dark .dataset-export-progress,
+body.vscode-high-contrast .dataset-export-progress {
+    background: #26302a;
+    border-bottom-color: #3d5543;
+}
+
+body.vscode-dark .dataset-export-progress-label,
+body.vscode-high-contrast .dataset-export-progress-label {
+    color: #8fd49a;
+}
+
+body.vscode-dark .dataset-export-progress-bar,
+body.vscode-high-contrast .dataset-export-progress-bar {
+    background: #444444;
+}
+
+/* 集中式狀態訊息（modal 頂部中央，所有模式皆可見） */
+.dataset-manager-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 14px;
+    min-height: 34px;
+    box-sizing: border-box;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: #fdf2f7;
+    border: 1px solid #f2c6da;
+    color: #c2185b;
+    font-size: 12px;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+body.vscode-dark .dataset-manager-message,
+body.vscode-high-contrast .dataset-manager-message {
+    background: #3a2b32;
+    border-color: #6b4455;
+    color: #ff8fb3;
+}
+
+/* 資料集名稱衝突/需改名時的醒目提示（直到使用者編輯為止） */
+.dataset-name-warning {
+    border-color: #FE2F89 !important;
+    background: #fff0f5 !important;
+    box-shadow: 0 0 0 2px rgba(254, 47, 137, 0.28) !important;
+    animation: dataset-name-warning-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes dataset-name-warning-pulse {
+    0%, 100% { box-shadow: 0 0 0 2px rgba(254, 47, 137, 0.28); }
+    50% { box-shadow: 0 0 0 4px rgba(254, 47, 137, 0.4); }
+}
+
+body.vscode-dark .dataset-name-warning,
+body.vscode-high-contrast .dataset-name-warning {
+    border-color: #ff8fb3 !important;
+    background: #4a2333 !important;
+    box-shadow: 0 0 0 2px rgba(255, 143, 179, 0.35) !important;
+}
+
+/* 標註工具列的匯出按鈕與狀態回饋 */
+.dataset-annotation-toolbar .dataset-annotation-export-status {
+    flex: 1 1 auto;
+    text-align: right;
+    font-size: 11px;
+    color: #FE2F89;
+    min-height: 15px;
+    margin-right: 8px;
+}
+
+.dataset-annotation-toolbar #annotation-export-btn {
+    flex: 0 0 auto;
+}
+
+body.vscode-dark .dataset-annotation-toolbar .dataset-annotation-export-status,
+body.vscode-high-contrast .dataset-annotation-toolbar .dataset-annotation-export-status {
+    color: #ff8fb3;
+}
+
 .dataset-image-delete-btn {
     position: absolute;
     top: 2px;
@@ -978,6 +1147,38 @@ body.vscode-high-contrast .dataset-annotation-thumbnails {
 body.vscode-dark .dataset-annotation-thumb-item.annotated::after,
 body.vscode-high-contrast .dataset-annotation-thumb-item.annotated::after {
     background: rgba(0, 0, 0, 0.7);
+}
+
+/* 分類標籤校正模式的縮圖標籤徽章 */
+.dataset-annotation-thumb-label {
+    position: absolute;
+    bottom: 2px;
+    left: 2px;
+    right: 2px;
+    font-size: 9px;
+    line-height: 1.3;
+    color: #fff;
+    background: rgba(34, 34, 34, 0.75);
+    border-radius: 3px;
+    padding: 1px 3px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 分類標籤校正模式的右側檔案資訊行 */
+.dataset-annotation-info {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #777;
+    line-height: 1.4;
+    word-break: break-all;
+}
+
+body.vscode-dark .dataset-annotation-info,
+body.vscode-high-contrast .dataset-annotation-info {
+    color: #a0a0a0;
 }
 
 /* 中央圖片區 */
