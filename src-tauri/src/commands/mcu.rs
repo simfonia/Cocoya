@@ -271,7 +271,7 @@ pub async fn reset_firmware(
     handle: AppHandle, 
     model: String, 
     should_clear: bool,
-    serial_port: String,
+    serial_port: Option<String>,
 ) -> Result<(), String> {
     let firmware_dir = if model == "custom" {
         None
@@ -351,9 +351,10 @@ pub async fn reset_firmware(
     // 2. 執行燒錄
     if is_serial {
         // --- B 方案：Serial 模式 (esptool) ---
-        if serial_port.is_empty() {
-            return Err("Serial port is required for serial mode".into());
-        }
+        // serial_port is Option<String>; serial mode requires a non-empty port
+        let serial_port: String = serial_port
+            .filter(|s| !s.is_empty())
+            .ok_or_else(|| "Serial port is required for serial mode".to_string())?;
 
         stop_python(window.clone(), state.clone()).await?;
 

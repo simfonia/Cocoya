@@ -139,3 +139,17 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
 - **模組路徑**：`ui/src/modules/` (雙模共用內建模組 SSOT)。
 - **模組快取路徑**：`globalStorage/modules/` 為 VS Code Extension 執行期快取位置，不是 repo 內固定目錄。
 - **Python 套件檢查清單**：`config/python_modules.json` (SSOT 單一事實來源)
+
+---
+## Tauri 跨語言 Invoke 簽名同步規範 (Rust <-> JavaScript / VSIX)
+目的：防止類似 `reset_firmware` 的 Bug — Rust #[tauri::command] 增改參數，前端 Invoke 端未同步 -> 執行期 `invalid args '<name>' for command '<cmd>'`。
+### 鐵則
+1. **增改任意 Tauri command 的參數時，必須同步更新**：
+   - Tauri 前端 ui/src/bridge/tauri.js：this.tauriInvoke('<command>', { camelCase對應 })。
+   - VSIX 前端 ui/src/bridge/vsix.js -> cocoyaManager.ts -> src/handlers/<module>Ops.ts Handler。
+   - **命名對應**：Tauri 自動 camelCase<->snake_case (serialPort<->serial_port, shouldClear<->should_clear, pythonPath<->python_path, serialUploadOnly<->serial_upload_only)。
+2. **Rust 參數類型**：跨邊界可選/字串參數應對應前端 Optional/String；必要串列埠等應改為 Option<String> 並在 Rust 內部驗證 (ref: reset_firmware / erase_filesystem)。
+3. **驗證**：改簽名後必執行 `cargo check` + `npx tsc --noEmit -p tsconfig.json` + `node --check ui/src/bridge/*.js` 三者聯通才合格。
+4. **SSOT**：docs/backend_api_manifest.md 為命令簽名單一事實來源 (含 Parameters)；改簽名時立即更新。
+### 長期解決方案
+- 引入 tauri-codegen 自動從 #[tauri::command] 簽名生成 typed invoke() — 缺參數將在 tsc 編譯期失敗 (見 log/todo.md 待辦)。

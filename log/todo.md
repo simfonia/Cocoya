@@ -726,3 +726,45 @@ Cocoya 無法定位 value/expression 積木 (如數字、文字、變數 getter)
 
 *更新日期：2026-08-11*
 
+---
+
+## [已完成] 2026-08-19 — 修復 firmware 燒錄問題
+
+### 任務
+修復 toolbar/設定/韌體設定/重置韌體燒錄 Maker Pi RP2040 時之 `invalid args 'serialPort' for command 'reset_firmware'` (Tauri + VSIX 均受影響)。
+
+### 修復
+- [x] `ui/src/bridge/tauri.js:330` 傳入 `serialPort` (對應 Rust `serial_port`)
+- [x] `src-tauri/src/commands/mcu.rs`：`serial_port: String` → `Option<String>`，serial 分支驗證非空
+- [x] `src/handlers/firmwareOps.ts`：`srcPath!` 改為 `flashSegments[0].path`
+
+### 驗證
+- [x] `cargo check` 通過；`node --check` 通過；`tsc --noEmit` TSC_EXIT=0
+- [ ] 實機：Tauri + VSIX 雙平台 Maker Pi RP2040 / XIAO ESP32-S3 Sense 燒錄
+
+### 相依性
+- 無
+
+*更新日期：2026-08-19*
+---
+## [已完成] 2026-08-19 — 修復 Deep Repair (VSIX esptool 失敗)
+- [x] `src/handlers/firmwareOps.ts#handleEraseFilesystem`：`esptool erase-flash` -> `deploy_mcu.py --erase-filesystem` (pyserial REPL wipe)，對齊 Tauri mcu.rs:221 與 `handleSetupStableMode` 的 `extensionUri` 解析
+- [x] `tsc --noEmit` TSC_EXIT=0
+- [ ] 實機驗證 VSIX Deep Repair (Tauri 既已驗證正常)
+
+*更新日期：2026-08-19*
+
+---
+## [已完成] 2026-08-19 — MSG_ERASE_START_REFLASH 文案校正
+- [x] firmwareOps.ts fallback (en+zh-hant)：重新撰述為 rebuild filesystem / re-upload code
+- [x] tsc --noEmit TSC_EXIT=0
+
+*更新日期：2026-08-19*
+
+---
+## [待辦] 2026-08-19 — 引入 tauri-codegen 產生 typed invoke
+- [ ] 評估 tauri-codegen / @tauri-apps/types：自動從 #[tauri::command] 簽名生成 TS invoke<cmd>(args)
+- [ ] 目標：command 參數缺漏在 tsc 編譯期發現 (而非執行期 invalid args)
+- [ ] 相依：與 docs/backend_api_manifest.md Parameters 同步維護 (SSOT -> generate type -> manifest)
+
+*加入日期：2026-08-19*

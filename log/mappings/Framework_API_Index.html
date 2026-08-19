@@ -116,5 +116,16 @@ const spec = window.CocoyaDataset.getCurrentSpec();
 console.log(spec.toJSON());
     </pre>
 
+    <h2>5. Tauri 跨語言命令簽名 SSOT</h2>
+    <p><span class="tag tag-vsix">Tauri</span> <span class="tag tag-bridge">Frontend</span> <span class="tag tag-vsix">Rust</span></p>
+    <p><code>docs/backend_api_manifest.md</code> 為 Rust <code>#[tauri::command]</code> 與前端 JS invoke 的單一事實來源 (API Contract)；防治 <code>invalid args &lt;name&gt; for command &lt;cmd&gt;</code> 之未傳参数 Bug。</p>
+    <ul>
+      <li><strong>Command</strong>：命令名稱。</li>
+      <li><strong>Params (Rust, JS-passed)</strong>：前端實際傳遞者；<code>window</code>/<code>state</code>/<code>handle</code> 由 Tauri 自動注入，JS 不傳。</li>
+      <li><strong>JS Invoke Keys</strong>：camelCase；Tauri 2.10.3 自動對映 <code>snake_case</code>↔<code>camelCase</code>。
+      <li><strong>Return</strong>：Rust 回傳型別。</li>
+    </ul>
+    <p>同步規則：<code>#[tauri::command]</code> 簽名增改 -> 立即更新本 manifest + <code>ui/src/bridge/{tauri,vsix}.js</code> 呼叫端 (詳見 AGENTS.md 「Tauri 跨語言 Invoke 簽名同步規範」)。長期：引入 <code>tauri-codegen</code> 自動生成 typed invoke() (log/todo.md 待辦)。</p>
+ 
 </body>
 </html>

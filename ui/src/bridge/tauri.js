@@ -327,7 +327,11 @@ export class BridgeTauri extends BaseBridge {
                     try {
                         const loadingMsg = window.Blockly?.Msg['MSG_BURNING_FIRMWARE'] || 'Burning firmware... Please do not close the window.';
                         window.CocoyaUI.showLoadingModal(loadingMsg);
-                        await this.tauriInvoke('reset_firmware', { model: data.model, shouldClear: data.shouldClear });
+                        await this.tauriInvoke('reset_firmware', {
+                            model: data.model,
+                            shouldClear: data.shouldClear,
+                            serialPort: data.serialPort || ''
+                        });
                         window.CocoyaUI.hideLoadingModal();
                         this.alert(window.Blockly?.Msg['MSG_FIRMWARE_BURN_SUCCESS'] || 'Burn success!');
                     } catch (e) {

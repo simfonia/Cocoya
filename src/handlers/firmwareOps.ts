@@ -19,7 +19,6 @@ export class FirmwareOpsHandler {
     public async handleResetFirmware(model: string, shouldClear: boolean = true, serialPort: string = '') {
         await this.manager.stopAllCocoyaTerminals();
 
-        let srcPath: string | undefined;
         let firmwareFileName: string | undefined;
         let isSerial = model.includes('SERIAL') || model.includes('CAMERA') || model.includes('FACTORY');
         let flashSegments: { addr: string, path: string }[] = [];
@@ -35,7 +34,6 @@ export class FirmwareOpsHandler {
                 firmwareFileName = path.basename(sPath);
                 if (firmwareFileName.endsWith('.bin')) isSerial = true;
                 flashSegments.push({ addr: '0x0', path: sPath });
-                srcPath = sPath;
             } else return;
         } else {
             let subDir = 'XIAO_ESP32_S3';
@@ -141,7 +139,7 @@ export class FirmwareOpsHandler {
                 cancellable: false
             }, async (progress) => {
                 const destPath = path.join(burnTarget!, firmwareFileName!);
-                fs.copyFileSync(srcPath!, destPath);
+                fs.copyFileSync(flashSegments[0].path, destPath);
 
                 if (!shouldClear) {
                     progress.report({ message: "Done. Skip clearing code.py." });
@@ -181,12 +179,13 @@ export class FirmwareOpsHandler {
 
         const ePython = this.manager.getPythonPath();
         const eLang = vscode.env.language.startsWith('zh') ? 'zh-hant' : 'en';
+        const eScript = vscode.Uri.joinPath(this.manager.context.extensionUri, 'resources', 'deploy_mcu.py').fsPath;
         const eTerminal = vscode.window.createTerminal('Cocoya Deep Repair');
         eTerminal.show();
-        eTerminal.sendText(`& "${ePython}" -m esptool --port ${ePort} erase-flash`);
+        eTerminal.sendText(`& "${ePython}" -u "${eScript}" "${ePort}" --erase-filesystem --lang "${eLang}" --tauri`);
 
         const infoMsg = this.manager.localeMessages['MSG_ERASE_START_REFLASH'] ||
-            (eLang === 'zh-hant' ? '已啟動硬體抹除。完成後請務必重新「重置韌體」！' : 'Hardware erase started. Please re-flash firmware after it completes!');
+            (eLang === 'zh-hant' ? '正在重建 MCU 檔案系統。完成後請重新上傳您的程式碼。' : 'Rebuilding filesystem on MCU. Re-upload your code after it completes!');
         vscode.window.showInformationMessage(infoMsg);
     }
 

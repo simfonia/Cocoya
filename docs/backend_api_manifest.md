@@ -57,4 +57,50 @@ This document serves as the Technical Reference and Source of Truth (SSOT) for t
 - [x] 2. Move `AppState` and related logic.
 - [x] 3. Migrate commands category by category.
 - [x] 4. Re-assemble `lib.rs` with new modular imports.
-- [ ] 5. Verify all frontend `invoke` calls remain functional.
+- [x] 5. Verify all frontend `invoke` calls remain functional.
+
+---
+## Command Signatures (Parameters) -- SSOT for Rust<->JS parity
+
+Derived from `#[tauri::command] fn` in `src-tauri/src/commands/*.rs`. `window`/`state`/`handle` are Tauri-injected (JS does NOT pass them); JS only passes the Params (JS-passed) column. Naming follows camelCase<->snake_case (Tauri 2.10.3 auto-maps) -- see AGENTS.md "Tauri cross-language Invoke signature sync rules".
+Notation: `key?` = Optional. **Rule: changing a Rust signature -> immediately update this table AND the JS call site** (guards against `invalid args '<name>' for command '<cmd>'`).
+
+| Module | Command | Params (Rust, JS-passed) | JS Invoke Keys | Return |
+|---|---|---|---|---|
+| app | create_window   | -- | {} | Result<(), String> |
+| app | set_window_title | title: String | {title} | Result<(), String> |
+| app | get_version      | -- | {} | String |
+| app | set_dirty        | is_dirty: bool | {isDirty} | () |
+| app | close_window     | -- | {} | () |
+| app | pick_python_path | -- | {} | Result<String, String> |
+| app | open_help        | help_id: String | {helpId} | Result<(), String> |
+| python | run_python     | code: String, python_path: String | {code, pythonPath} | Result<(), String> |
+| python | stop_python    | -- | {} | Result<(), String> |
+| python | start_training | project_name, task_type, backend, ssh_config: Option<Value> | {projectName, taskType, backend, sshConfig?} | Result<(), String> |
+| python | start_sidecar  | python_path: String | {pythonPath} | Result<(), String> |
+| python | sidecar_send   | command: String, payload: String | {command, payload} | Result<String, String> |
+| python | stop_sidecar   | -- | {} | Result<(), String> |
+| python | export_dataset | spec_json, source_folder_path, python_path: String | {specJson, sourceFolderPath, pythonPath} | Result<String, String> |
+| python | check_environment | python_path: String | {pythonPath} | Result<serde_json::Value, String> |
+| mcu | get_serial_ports    | -- | {} | Result<Vec<SerialPortResult>, String> |
+| mcu | setup_stable_mode   | port: String, lang: String | {port, lang} | Result<(), String> |
+| mcu | deploy_mcu          | python_path, port, code, serial_upload_only: bool, lang | {pythonPath, port, code, serialUploadOnly, lang} | Result<(), String> |
+| mcu | open_serial_monitor | port: String, python_path, lang | {port, pythonPath, lang} | Result<(), String> |
+| mcu | erase_filesystem    | port: String, python_path, lang | {port, pythonPath, lang} | Result<(), String> |
+| mcu | reset_firmware      | model: String, should_clear: bool, serial_port: Option<String> | {model, shouldClear, serialPort?} | Result<(), String> |
+| file | get_manifest       | -- | {} | Result<serde_json::Value, String> |
+| file | get_module_toolbox  | path: String | {path} | Result<String, String> |
+| file | get_project_anchor  | -- | {} | ProjectAnchor |
+| file | open_file          | -- | {} | Result<OpenFileResult, String> |
+| file | open_examples      | -- | {} | Result<OpenFileResult, String> |
+| file | save_file          | xml, save_as: bool, force_examples: Option<bool> | {xml, saveAs, forceExamples?} | Result<String, String> |
+| file | auto_backup        | xml: String | {xml} | Result<(), String> |
+| file | check_startup_backup | -- | {} | Option<String> |
+| file | clear_backup       | -- | {} | Result<(), String> |
+| file | reject_recovery    | -- | {} | Result<(), String> |
+| file | delete_file        | path: String | {path} | Result<(), String> |
+| file | pick_folder        | -- | {} | Result<PickFolderResult, String> |
+| file | dataset_save_progress | folder_path, project_name, spec_json: String | {folderPath, projectName, specJson} | Result<String, String> |
+| file | dataset_load_progress  | folder_path: String | {folderPath} | Result<DatasetProgressResult, String> |
+| training | open_report  | report_path: String | {reportPath} | Result<(), String> |
+| training | find_latest_training_report | -- | {} | Result<Vec<ReportInfo>, String> |
