@@ -13,6 +13,8 @@ C:\Workspace\cocoya\
 │   │   ├── py_ai_get_confidence_zh-hant.html # 取得信心度積木說明
 │   │   ├── py_ai_get_bbox_zh-hant.html      # 取得邊界框積木說明
 │   │   └── py_ai_get_direction_zh-hant.html # 取得方向積木說明
+│   │   ├── py_ai_pose_calc_angle_zh-hant.html # [NEW] 三點夾角積木說明 (計算內/外/符號角)
+│   │   └── py_ai_pose_calc_angle_en.html     # [NEW] Angle of 3 Points block help
 │   ├── system_spec.html   # 系統規格說明書 (v5.0 雙模架構版)
 │   ├── api_manifest.md    # 前端 API SSOT (Source of Truth)
 │   ├── backend_api_manifest.md # [NEW] 後端 Rust API SSOT
@@ -29,13 +31,14 @@ C:\Workspace\cocoya\
 │   │   ├── 07_variables_counter.xml   # 變數計數器 (累加式 LED)
 │   │   └── 08_functions_light_show.xml # 函式定義與聲光表演
 │   ├── πCar/               # πCar 小車控制範例
-│   ├── AI_01_Pose_piCar/   # AI 姿勢辨識控制 πCar
-│   ├── AI_02_classifier/   # AI 影像分類控制 πCar
-│   └── AI_03_detector_pan_tilt/ # [NEW] 物件偵測追蹤雲台範例
-│       ├── 01_README.md    # 完整 PBL 說明文件
-│       ├── 02_PC_train.xml # 物件偵測訓練積木
-│       ├── 03_PC_inference.xml # PC 端推論與視覺化
-│       └── 04_MCU_tracking.xml # MCU 端雲台追蹤控制
+│   ├── AI_01_classifier/   # AI 影像分類控制 πCar
+│   ├── AI_02_detector_pan_tilt/ # [NEW] 物件偵測追蹤雲台範例
+│   │   ├── 01_README.md    # 完整 PBL 說明文件
+│   │   ├── 02_PC_train.xml # 物件偵測訓練積木
+│   │   ├── 03_PC_inference.xml # PC 端推論與視覺化
+│   │   └── 04_MCU_tracking.xml # MCU 端雲台追蹤控制
+│   ├── AI_03_Pose_EZ_Robot/   # AI 姿勢辨識，雙手肘角度控制小機器人
+│   └── AI_04_Pose_piCar/   # AI 姿勢辨識控制 πCar
 ├── log/                   # 專案日誌與任務追蹤
 │   ├── details.md         # 技術細節與 API 踩坑紀錄
 │   ├── handover.md        # 任務交接檔
@@ -68,8 +71,8 @@ C:\Workspace\cocoya\
 │   ├── blockly/           # Blockly 核心庫與靜態插件
 │   ├── src/               # 前端原始碼與模組 (SSOT 單一事實來源)
 │   │   ├── bridge/      # 通訊橋樑子模組
-│   │   │   ├── base.js    # 橋接基底類別
-│   │   │   ├── tauri.js   # Tauri 專屬橋接 (含介面適配)
+│   │   │   ├── base.js    # 橋接基底類別 (含 saveDatasetProgress/loadDatasetProgress 便捷方法 [NEW])
+│   │   │   ├── tauri.js   # Tauri 專屬橋接 (含介面適配；datasetSaveProgress/datasetLoadProgress 路由 [NEW])
 │   │   │   └── vscode.js  # VS Code 專屬橋接
 │   │   ├── ui/          # UI 功能子模組
 │   │   │   ├── terminal.js # 終端機邏輯
@@ -92,18 +95,25 @@ C:\Workspace\cocoya\
 │   │   ├── modules/       # 雙模共用積木模組
 │   │   │   ├── ai_inference/ # AI 訓練與推論積木模組
 │   │   │   │   └── ai_inference_generators.js # 訓練/推論積木 Python 產生器（含多候選路徑搜尋）
+│   │   │   ├── ai_pose/            # AI 姿勢偵測積木模組 (MediaPipe Pose)
+│   │   │   │   ├── ai_pose_blocks.js      # 積木定義 (含 py_ai_pose_calc_angle [NEW])
+│   │   │   │   ├── ai_pose_generators.js  # Python 產生器 (含 cocoya_calc_angle_3pts [NEW])
+│   │   │   │   ├── toolbox.xml             # 工具箱 (含 calc_angle 示範積木 [NEW])
+│   │   │   │   └── i18n/
+│   │   │   │       ├── zh-hant.js          # 繁體中文 (含 AI_ANGLE_* [NEW])
+│   │   │   │       └── en.js               # English (含 AI_ANGLE_* [NEW])
 │   │   │   └── dataset_manager/ # Dataset Spec 與資料集管理器應用層模組
-│   │   │       ├── dataset_manager.css # Dataset Manager Modal、縮圖牆與標註畫布樣式 (含全寬 3 欄標註模式)
+│   │   │       ├── dataset_manager.css # Dataset Manager Modal、縮圖牆與標註畫布樣式 (含 3 欄標註模式、.dataset-name-warning 名稱衝突警示)
 │   │   │       ├── i18n.js # [NEW] 共享 i18n t() 函式庫 (支援佔位符替換)
 │   │   │       ├── index.js # 靜態 ESM 入口與 window.CocoyaDataset API 掛載
 │   │   │       ├── spec.js  # DatasetSpec 類別、Schema 偵測、強健型 CSV 解析與驗證邏輯 (i18n 化)
 │   │   │       ├── sampler.js # [NEW] 攝影機採集核心、連拍邏輯與 Python 擷取備援方案
-│   │   │       ├── ui_layout.js # Modal UI、動態面板管理與標註視圖切換 (含全寬 3 欄標註模式、鍵盤快捷鍵、自動儲存)
-│   │   │       ├── ui_components.js # 動態視圖組件 (影像網格、標籤統計、標註縮圖欄，含 XSS 防護)
+│   │   │       ├── ui_layout.js # Modal UI、動態面板、標註視圖與標籤管理 (3 欄標註模式、鍵盤快捷鍵、自動儲存、儲存/載入進度、名稱對齊/衝突警示 setNameWarning、統一標籤管理器 createLabelMapManager、統計同步 updateStatsFromImages、nextLabelId)
+│   │   │       ├── ui_components.js # 動態視圖組件 (影像網格、字典序標籤統計、標註縮圖欄、getLabelColor FNV-1a+黃金角色相，含 XSS 防護)
 │   │   │       ├── ui_canvas.js # 標註互動畫布 (物件偵測拉框與自駕循線畫線，支援座標限幅防護、bbox 高亮與雙模互動)
 │   │   │       └── i18n/      # 語系檔目錄
-│   │   │           ├── zh-hant.js # 繁體中文 i18n 鍵值 (含 VALIDATE_* 驗證與 ANNOTATION_* 標註訊息)
-│   │   │           └── en.js      # 英文 i18n 鍵值 (含 VALIDATE_* 驗證與 ANNOTATION_* 標註訊息)
+│   │   │           ├── zh-hant.js # 繁體中文 i18n 鍵值 (VALIDATE_* 驗證、ANNOTATION_* 標註、SAVE_PROGRESS_* 存讀進度、SOURCE_* 來源對齊)
+│   │   │           └── en.js      # 英文 i18n 鍵值 (VALIDATE_* 驗證、ANNOTATION_* 標註、SAVE_PROGRESS_* 存讀進度、SOURCE_* 來源對齊)
 │   │   ├── main.js        # Legacy Entry Point
 │   │   ├── ui_manager.js  # Legacy Entry Point
 │   │   ├── utils.js       # [REFACTORED] 入口與命名空間初始化
@@ -122,7 +132,7 @@ C:\Workspace\cocoya\
 │       ├── trainingOps.ts   # 訓練：startTraining, openTrainingReport, openLatestTrainingReport
 │       ├── fileOps.ts       # 檔案：new/open/save/saveAs/backup/recovery
 │       ├── firmwareOps.ts   # 韌體：resetFirmware, eraseFilesystem, setupStableMode
-│       ├── datasetOps.ts    # 資料集：capture/export/upload/scan/pickFolder
+│       ├── datasetOps.ts    # 資料集：capture/export/upload/scan/pickFolder + SaveProgress/LoadProgress 存讀 [NEW]
 │       ├── serialOps.ts     # 序列埠：refreshPorts, serialMonitor, setPythonPath
 │       └── envOps.ts        # 環境：checkEnvironment, installModule, runCode, checkUpdate
 ├── src-tauri/             # Tauri 後端專案 (Rust)
@@ -137,7 +147,7 @@ C:\Workspace\cocoya\
 │       └── commands/      # [NEW] 分類指令處理器
 │           ├── mod.rs       # 指令集匯出
 │           ├── python.rs    # Python 執行與環境診斷
-│           ├── file.rs      # 檔案讀寫、備份與鎖定
+│           ├── file.rs      # 檔案讀寫、備份與鎖定 (+ dataset_save_progress/dataset_load_progress 進度存讀 [NEW])
 │           ├── mcu.rs       # 硬體通訊、韌體與序列埠
 │           ├── app.rs       # 視窗控制與系統資訊
 │           ├── dataset.rs   # [NEW] Sidecar 通訊 (start/send/stop)

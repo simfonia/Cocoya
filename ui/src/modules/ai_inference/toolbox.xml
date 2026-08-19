@@ -16,7 +16,7 @@
     </block>
     <block type="py_ai_model_predict">
         <value name="FRAME">
-            <block type="variables_get">
+            <block type="py_variables_get">
                 <field name="VAR">input_data</field>
             </block>
         </value>

@@ -25,10 +25,26 @@ const state = {
     annotationMode: {
         isActive: false,
         currentIndex: -1,
+        mode: null,             // null | 'bbox' | 'line' | 'classification'
         saveTimer: null,        // debounce timer for auto-save
         originalBodyClass: null // for restoring layout
     }
 };
+
+/**
+ * 判斷 Dataset Manager 是否有「未匯出」的工作（樣本/欄位/標籤/來源資料夾），供防呆確認使用。
+ * 純空白（全新預設 spec、無任何資料）時回傳 false，避免空畫布也被打擾。
+ */
+function hasUnsavedWork() {
+    if (state.images.length > 0 || state.tableRows.length > 0 || state.sourceFolderPath) return true;
+    if (!state.spec) return false;
+    const spec = state.spec.toJSON();
+    if (Array.isArray(spec.schema.columns) && spec.schema.columns.length > 0) return true;
+    if (Array.isArray(spec.data_source.samples) && spec.data_source.samples.length > 0) return true;
+    if (spec.schema.label_map && Object.keys(spec.schema.label_map).length > 0) return true;
+    if ((spec.stats && spec.stats.sample_count) > 0) return true;
+    return false;
+}
 
 function optionList(values, selected) {
     return values
@@ -141,6 +157,124 @@ function syncSpecFromUI(includeSamples = true) {
     });
 }
 
+/**
+ * 正規化路徑（統一使用正斜線 /），供載入進度時比對 sample.image_path 與 images[].path。
+ */
+function normalizePath(value) {
+    return String(value ?? '').replace(/\\/g, '/');
+}
+
+/**
+ * 依專案類型重建 sourceMode 下拉選項（與 createModal 內的 updateSourceModeOptions 等效），
+ * 供「依進度檔恢復 type」時同步 sourceMode 選項。
+ */
+function rebuildSourceModeOptions(projectType) {
+    const modal = getModal();
+    const sourceSelect = modal?.querySelector('[name="sourceMode"]');
+    if (!sourceSelect) return;
+    const allowedModes = TYPE_TO_MODES_MAP[projectType] || ['file'];
+    const currentMode = sourceSelect.value;
+    const nextMode = allowedModes.includes(currentMode) ? currentMode : allowedModes[0];
+    sourceSelect.innerHTML = optionList(allowedModes, nextMode);
+    sourceSelect.value = nextMode;
+}
+
+/**
+ * 等級一存讀（載入）：依已讀回的 dataset.json 將 annotations / label 套回重新掃描出的 images[]，
+ * 並以「檔案為準」同步 type / schema（label_map、features、label）/ stats。
+ * 註：以相對路徑為比對鍵；比對失敗的圖僅略過（不阻斷整體載入）。
+ */
+function applyLoadedProgress(spec) {
+    const currentJson = state.spec.toJSON();
+    const loadedSamples = (spec.data_source && spec.data_source.samples) || [];
+    const savedSchema = spec.schema || {};
+
+    // 1. project.type / sourceMode 對齊（若與 UI 目前不同，更新下拉與 mode 選項）
+    const savedType = spec.project && spec.project.type;
+    if (savedType) {
+        const typeSelect = getModal()?.querySelector('[name="projectType"]');
+        if (typeSelect && typeSelect.value !== savedType) {
+            typeSelect.value = savedType;
+            rebuildSourceModeOptions(savedType);
+        }
+    }
+    if (spec.data_source && spec.data_source.mode) {
+        const modeInput = getModal()?.querySelector('[name="sourceMode"]');
+        if (modeInput) modeInput.value = spec.data_source.mode;
+    }
+
+    // 2. 依 image_path 將 annotations / label 套回重新掃描出的 images[]
+    let matched = 0;
+    state.images.forEach((img) => {
+        const sample = loadedSamples.find((s) => normalizePath(s.image_path) === normalizePath(img.path));
+        if (sample) {
+            img.annotations = Array.isArray(sample.annotations) ? sample.annotations.map((a) => ({ ...a })) : (img.annotations || []);
+            if (sample.label != null) img.label = sample.label;
+            matched++;
+        } else {
+            img.annotations = img.annotations || [];
+        }
+    });
+
+    const newColumns = (savedSchema.columns && savedSchema.columns.length) ? savedSchema.columns : currentJson.schema.columns;
+    const newLabelMap = (savedSchema.label_map && Object.keys(savedSchema.label_map).length) ? savedSchema.label_map : currentJson.schema.label_map;
+
+    // 3. 重建 spec（以「檔案為準」，保留目前 UI 的專案名稱與描述）
+    const projectName = getFormValue('projectName') || (spec.project && spec.project.name) || 'dataset';
+    state.spec = new DatasetSpec({
+        project: {
+            name: projectName,
+            type: savedType || currentJson.project.type,
+            description: getFormValue('description')
+        },
+        data_source: {
+            mode: getFormValue('sourceMode'),
+            files: currentJson.data_source.files,
+            samples: state.images.map((img) => ({
+                image_path: img.path,
+                label: img.label,
+                annotations: img.annotations || []
+            })),
+            base_dir: `dataset/${projectName}/`
+        },
+        schema: {
+            columns: newColumns,
+            features: (savedSchema.features && savedSchema.features.length) ? savedSchema.features : currentJson.schema.features,
+            label: savedSchema.label || currentJson.schema.label,
+            label_map: newLabelMap
+        },
+        stats: (spec.stats && Object.keys(spec.stats).length) ? spec.stats : (currentJson.stats || {})
+    });
+
+    // 以「載入的 label_map + 已套回的 annotations」重算 label_counts，
+    // 確保非資料夾名的類別（曾用於標註）在載入後也納入統計
+    updateStatsFromImages();
+
+    refreshDynamicPanels();
+    refreshPreview();
+    showStatusMessage(t('SUCCESS_LOAD_PROGRESS', '✅ 已從上次進度恢復（套回 %1 張標註）').replace('%1', matched));
+}
+
+/**
+ * 等級一存讀（載入）：向 Bridge 讀取指定資料夾內的 dataset.json。
+ * 有進度 → 套回；無進度或失敗 → 維持目前掃描結果，不清空既有成功訊息。
+ */
+function loadProgressFromFolder(folderPath) {
+    const handler = (msg) => {
+        if (msg.command === 'datasetLoadProgressResult') {
+            window.CocoyaBridge.offMessage(handler);
+            if (!msg.success) {
+                console.error('[DatasetManager] Load progress failed:', msg.error);
+                return;
+            }
+            if (msg.hasProgress && msg.spec) {
+                applyLoadedProgress(msg.spec);
+            }
+        }
+    };
+    window.CocoyaBridge.onMessage(handler);
+    window.CocoyaBridge.loadDatasetProgress(folderPath);
+}
 function renderColumnRow(column = {}) {
     const normalized = DatasetSpec.normalizeColumn(column);
     return `
@@ -202,6 +336,9 @@ export function refreshPreview() {
                 preview.textContent = JSON.stringify(specJson, null, 2);
             }
         }
+
+        // 方案 A：任何 spec/標註異動防抖後自動落盤（時間制；涵蓋「停在同張圖」的標註）
+        scheduleAutoSave();
     }, 300);
 }
 
@@ -244,10 +381,82 @@ function sanitizeName(text) {
     return (text || '').replace(/[^a-zA-Z0-9_-]/g, '');
 }
 
+/**
+ * 切換「資料集名稱衝突」的醒目警示樣式。
+ * @param {boolean} on true=加上警示；false=移除。
+ */
+function setNameWarning(on) {
+    const nameInput = getModal()?.querySelector('[name="projectName"]');
+    if (!nameInput) return;
+    if (on) nameInput.classList.add('dataset-name-warning');
+    else nameInput.classList.remove('dataset-name-warning');
+}
+
+/**
+ * 名稱/來源對齊決策（方案 A）：防止來源切換時「沒注意」而靜默覆寫既有 dataset 進度。
+ * @param {string} derivedName 由來源（資料夾名/檔名）推導出的名稱。
+ * @param {string|null} sourcePath 新來源路徑（資料夾匯入傳入；檔案匯入傳 null，不觸發碰撞檢查）。
+ * @returns {Promise<boolean>} false = 使用者取消（呼叫端應中止匯入）。
+ */
+async function reconcileProjectName(derivedName, sourcePath) {
+    const modal = getModal();
+    const nameInput = modal?.querySelector('[name="projectName"]');
+    const dirInput = modal?.querySelector('[name="baseDir"]');
+    const currentName = nameInput ? (nameInput.value || '').trim() : '';
+
+    // (1) 首次/仍為預設或空白 → 自動帶入來源名稱，並同步 baseDir
+    if (!currentName || currentName === 'dataset') {
+        if (nameInput) nameInput.value = derivedName;
+        if (dirInput) dirInput.value = `dataset/${derivedName}/`;
+        setNameWarning(false);
+        return true;
+    }
+
+    // (2) 已載入來源與新來源路徑不同、且推導名稱相同 → basename 碰撞，可能覆寫既有進度
+    const prevPath = state.sourceFolderPath;
+    if (prevPath && sourcePath && prevPath !== sourcePath && currentName === derivedName) {
+        const ok = await window.CocoyaBridge.confirm(
+            t('SOURCE_COLLISION_CONFIRM',
+                '不同來源資料夾使用了相同名稱「%1」，標註進度將寫入並可能覆寫 dataset/%1/ 的既有進度。\n仍要繼續嗎？',
+                derivedName)
+        );
+        if (!ok) return false;
+        if (dirInput) dirInput.value = `dataset/${currentName}/`;
+        setNameWarning(true);
+        return true;
+    }
+
+    // (3) 名稱與新來源推導名稱不同 → 顯式確認是否更新（確認=更新；取消=維持現稱並提示風險）
+    if (currentName !== derivedName) {
+        const update = await window.CocoyaBridge.confirm(
+            t('SOURCE_RENAME_CONFIRM',
+                '來源已變更為「%1」，但目前資料集名稱為「%2」。\n是否自動更新資料集名稱為「%1」？\n\n（若選擇「取消」將維持「%2」，後續標註進度會儲存至 dataset/%2/，可能覆寫既有進度。若要另立新的資料集，建議先自行複製來源資料夾後再匯入。）',
+                derivedName, currentName)
+        );
+        if (update) {
+            if (nameInput) nameInput.value = derivedName;
+            if (dirInput) dirInput.value = `dataset/${derivedName}/`;
+            setNameWarning(false);
+        } else {
+            // 維持名稱：同步 baseDir 到維持的名稱，並提示將寫到該 namespace
+            if (dirInput) dirInput.value = `dataset/${currentName}/`;
+            setNameWarning(true);
+            showStatusMessage(
+                t('SOURCE_KEPT_STATUS', '資料集名稱維持「%1」；標註進度將儲存至 dataset/%1/', currentName)
+            );
+        }
+        return true;
+    }
+
+    // (4) 名稱一致：僅同步 baseDir（確保與目前名稱相符）
+    if (dirInput) dirInput.value = `dataset/${currentName}/`;
+    setNameWarning(false);
+    return true;
+}
+
 async function handleFileImport(file) {
     if (!file) return;
-    const status = document.getElementById('dataset-import-status');
-    if (status) status.textContent = t('STATUS_LOADING', '載入中: %1...').replace('%1', file.name);
+    showStatusMessage(t('STATUS_LOADING', '載入中: %1...').replace('%1', file.name));
 
     try {
         const text = await file.text();
@@ -268,19 +477,12 @@ async function handleFileImport(file) {
 
         const rawFileName = file.name.split('.')[0];
         const safeFileName = sanitizeName(rawFileName) || rawFileName;
-        const safeBaseDir = `dataset/${sanitizeName(safeFileName) || 'dataset'}/`;
-        
-        // 智慧填充：僅在目前的名稱是預設值時才自動填入
-        const modal = getModal();
-        if (modal) {
-            const nameInput = modal.querySelector('[name="projectName"]');
-            const dirInput = modal.querySelector('[name="baseDir"]');
-            
-            // 如果名稱是預設值 "dataset" 或空的，才進行填充
-            if (nameInput && (nameInput.value === 'dataset' || !nameInput.value)) {
-                nameInput.value = safeFileName;
-                if (dirInput) dirInput.value = safeBaseDir;
-            }
+
+        // 名稱/來源對齊決策（方案 A）：首次自動帶入；來源變更時顯式確認；同名來源碰撞防寫
+        const proceed = await reconcileProjectName(safeFileName, null);
+        if (!proceed) {
+            showStatusMessage(t('IMPORT_CANCELLED', '已取消匯入'));
+            return;
         }
 
         // 更新 State
@@ -291,25 +493,24 @@ async function handleFileImport(file) {
         state.spec.updateSchema(detectedSchema);
         
         refreshDynamicPanels(); 
-        if (status) status.textContent = t('SUCCESS_IMPORT_DATA', '✅ 成功匯入 %1 筆資料').replace('%1', rows.length);
+        showStatusMessage(t('SUCCESS_IMPORT_DATA', '✅ 成功匯入 %1 筆資料').replace('%1', rows.length));
 
         const fileInput = document.getElementById('dataset-file-input');
         if (fileInput) fileInput.value = '';
 
     } catch (e) {
         console.error('[DatasetManager] Import Error:', e);
-        if (status) status.textContent = t('ERROR_PREFIX', '❌ 錯誤: %1').replace('%1', e.message);
+        showStatusMessage(t('ERROR_PREFIX', '❌ 錯誤: %1').replace('%1', e.message));
     }
 }
 
 async function handleDirectoryImport() {
-    const status = document.getElementById('dataset-import-status');
-    if (status) status.textContent = t('STATUS_IMPORTING_FOLDER', '正在選取資料夾...');
+    showStatusMessage(t('STATUS_IMPORTING_FOLDER', '正在選取資料夾...'));
 
     try {
         const result = await window.CocoyaBridge.pickFolder();
         if (!result) {
-            if (status) status.textContent = '';
+            showStatusMessage('');
             return;
         }
 
@@ -318,19 +519,12 @@ async function handleDirectoryImport() {
         // 取得最上層資料夾名稱
         const rawRootDir = folderPath.split(/[\\/]/).pop() || 'dataset';
         const safeRootDir = sanitizeName(rawRootDir) || rawRootDir;
-        const safeBaseDir = `dataset/${safeRootDir}/`;
-
-        // 智慧填充
-        const modal = getModal();
-        if (modal) {
-            const nameInput = modal.querySelector('[name="projectName"]');
-            const dirInput = modal.querySelector('[name="baseDir"]');
-            // 如果名稱是空的、或預設的 "dataset"，則嘗試更新
-            if (nameInput && (nameInput.value === 'dataset' || !nameInput.value)) {
-                // 如果 sanitized 後是空字串 (例如全中文)，則維持原樣或使用 rawName (但後續會 validation)
-                nameInput.value = safeRootDir;
-                if (dirInput) dirInput.value = safeBaseDir;
-            }
+        // 名稱/來源對齊決策（方案 A）：首次自動帶入；來源變更時顯式確認；同名來源碰撞防寫
+        const proceed = await reconcileProjectName(safeRootDir, folderPath);
+        if (!proceed) {
+            // 使用者取消（basename 與已載入來源相同、可能覆寫既有進度）：中止匯入
+            showStatusMessage(t('IMPORT_CANCELLED', '已取消匯入'));
+            return;
         }
 
         // 初始化每張圖的 annotations 為獨立陣列（後端回傳的 images 沒有 annotations 欄位）
@@ -362,43 +556,168 @@ async function handleDirectoryImport() {
             }
         });
 
-        if (status) status.textContent = t('SUCCESS_IMPORT_IMAGES', '✅ 成功匯入 %1 張影像，共 %2 個標籤').replace('%1', images.length).replace('%2', Object.keys(labelCounts).length);
+        showStatusMessage(t('SUCCESS_IMPORT_IMAGES', '✅ 成功匯入 %1 張影像，共 %2 個標籤').replace('%1', images.length).replace('%2', Object.keys(labelCounts).length));
         
         refreshDynamicPanels();
         refreshPreview();
 
+        // 等級一存讀（載入）：檢查該資料夾是否含 dataset.json，若有則依 image_path 套回標註
+        loadProgressFromFolder(folderPath);
+
     } catch (e) {
         console.error('[DatasetManager] Dir Import Error:', e);
-        if (status) status.textContent = t('ERROR_PREFIX', '❌ 錯誤: %1').replace('%1', e.message);
+        showStatusMessage(t('ERROR_PREFIX', '❌ 錯誤: %1').replace('%1', e.message));
     }
+}
+
+/**
+ * 自動落盤（方案 A：全範圍自動，移除「儲存進度」按鈕）
+ * 在標註/分類/新增/刪除/類別增刪改名等任何資料異動後，將 spec（含 samples[].annotations）
+ * 自動寫入「專案根/dataset/<專案>/dataset.json」。時間防抖為主、切圖/退出/關閉立即 flush。
+ */
+let autoSaveTimer = null;
+
+/**
+ * 是否有需要持久化的資料（僅在資料存在時才寫入，避免空 spec 落盤）
+ */
+function hasData() {
+    return (state.images && state.images.length > 0) || (state.tableRows && state.tableRows.length > 0);
+}
+
+/**
+ * 執行一次落盤：同步最新資料 → toJSON → Bridge.saveDatasetProgress。
+ * 低噪音：成功不打擾；僅失敗時 console 記錄（未錨定/失敗不造成錯誤訊息騷擾學生）。
+ */
+function writeProgressToDisk() {
+    try {
+        syncSpecFromUI(true);
+        const spec = state.spec.toJSON();
+        const projectName = getFormValue('projectName') || (spec.project && spec.project.name) || 'dataset';
+
+        const handler = (msg) => {
+            if (msg.command === 'datasetSaveProgressResult') {
+                window.CocoyaBridge.offMessage(handler);
+                if (!msg.success) console.error('[DatasetManager] Auto-save progress failed:', msg.error);
+            }
+        };
+        window.CocoyaBridge.onMessage(handler);
+        window.CocoyaBridge.saveDatasetProgress(projectName, spec);
+    } catch (e) {
+        console.error('[DatasetManager] Auto-save progress Error:', e);
+    }
+}
+
+/**
+ * 排程自動落盤（時間防抖，預設 800ms）。
+ * 說明：標註/分類/新增等常發生在「停在同張圖」上（與切換影像無關），
+ * 因此為主觸發點採用時間防抖；切圖/退出/關閉可用 immediate=true 立即 flush 作為保險。
+ * 未錨定（理論上被 Startup Home 擋住）或無資料 → 靜默略過，不噴錯。
+ * @param {boolean} [immediate] true = 立即寫入
+ */
+function scheduleAutoSave(immediate = false) {
+    const anchored = !!(window.CocoyaBridge
+        && window.CocoyaBridge.capabilities
+        && window.CocoyaBridge.capabilities.isAnchored);
+    if (!anchored || !hasData()) return;
+
+    if (immediate) {
+        if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
+        writeProgressToDisk();
+        return;
+    }
+
+    if (autoSaveTimer) clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(() => {
+        autoSaveTimer = null;
+        writeProgressToDisk();
+    }, 800);
+}
+
+let statusMessageTimer = null;
+
+const STATUS_MESSAGE_DURATION = 8000; // 集中式訊息預設顯示時間（毫秒）
+
+/**
+ * 顯示集中式狀態訊息（modal 頂部中央，所有模式皆可見），預設 8 秒後自動清除。
+ * 顯示前會重置計時器，避免多個訊息交錯時被舊計時器提前清除。
+ * @param {string} message 欲顯示的訊息文字；空字串/undefined 立即隱藏。
+ * @param {object} [options]
+ * @param {number} [options.duration=8000] 顯示毫秒數（0 = 不自動清除）。
+ */
+function showStatusMessage(message, options = {}) {
+    const el = document.getElementById('dataset-manager-message');
+    if (!el) return;
+    if (statusMessageTimer) {
+        clearTimeout(statusMessageTimer);
+        statusMessageTimer = null;
+    }
+    if (!message) {
+        el.style.display = 'none';
+        el.textContent = '';
+        return;
+    }
+    el.textContent = message;
+    el.style.display = 'flex';
+    const duration = options.duration === undefined ? STATUS_MESSAGE_DURATION : options.duration;
+    if (duration > 0) {
+        statusMessageTimer = setTimeout(() => {
+            el.style.display = 'none';
+            el.textContent = '';
+            statusMessageTimer = null;
+        }, duration);
+    }
+}
+
+/**
+ * 顯示/隱藏「匯出進行中」的不確定進度條（置於 modal 頂部，兩種模式皆可見）。
+ */
+function showExportProgress(active) {
+    const bar = document.getElementById('dataset-export-progress');
+    if (bar) bar.style.display = active ? 'block' : 'none';
+}
+
+/**
+ * 進入/退出標註模式時，隱藏/還原預覽面板 header 的「驗證/匯出/自動儲存指示」，
+ * 避免這些列表導向的操作在標註模式重複或突兀（標註工具列自行提供匯出）。
+ */
+function setAnnotationHeaderActions(hidden) {
+    const modal = getModal();
+    if (!modal) return;
+    ['#dataset-manager-validate', '#dataset-manager-export', '.dataset-autosave-indicator'].forEach((sel) => {
+        const el = modal.querySelector(sel);
+        if (el) el.style.display = hidden ? 'none' : '';
+    });
 }
 
 async function handleExportDataset() {
     console.log('[DatasetManager] handleExportDataset triggered');
-    const status = document.getElementById('dataset-import-status');
-    if (status) status.textContent = t('STATUS_EXPORTING', '📦 正在準備匯出...');
+    showStatusMessage(t('STATUS_EXPORTING', '📦 正在準備匯出...'));
+    showExportProgress(true);
 
     try {
-        // 0. 檢查是否有未標註圖片（物件偵測/循線模式）
+        // 0. 檢查是否有未標註圖片（僅物件偵測/循線需要 bbox/line）
         const projectType = getFormValue('projectType');
         const isImage = projectType === 'image' || projectType === 'object_detection' || projectType === 'line_following';
-        if (isImage && state.images.length > 0) {
+        const needsAnnotationCheck = projectType === 'object_detection' || projectType === 'line_following';
+        if (needsAnnotationCheck && state.images.length > 0) {
             const unannotated = state.images.filter(img => !img.annotations || img.annotations.length === 0).length;
             if (unannotated > 0) {
-                if (!(await window.CocoyaBridge.confirm(t('ANNOTATION_UNANNOTATED_WARNING', '尚有 %1 張圖片未標註，確定要離開？').replace('%1', unannotated)))) {
-                    if (status) status.textContent = '';
+                if (!(await window.CocoyaBridge.confirm(t('ANNOTATION_EXPORT_UNANNOTATED_WARNING', '仍有 %1 張圖片未標註，確定要匯出嗎？').replace('%1', unannotated)))) {
+                    showStatusMessage('');
+                    showExportProgress(false);
                     return;
                 }
             }
         }
 
-        // 檢查是否有未分類標註框 (class_id === -1)
-        if (isImage && state.images.length > 0) {
+        // 檢查是否有未分類標註框 (class_id === -1)（僅物件偵測）
+        if (projectType === 'object_detection' && state.images.length > 0) {
             const unclassified = state.images.reduce((sum, img) =>
                 sum + (img.annotations?.filter(a => a.class_id === -1).length || 0), 0);
             if (unclassified > 0) {
                 if (!(await window.CocoyaBridge.confirm(t('ANNOTATION_EXPORT_UNCLASSIFIED_WARNING', '尚有 %1 個未分類標註框，確定要匯出嗎？').replace('%1', unclassified)))) {
-                    if (status) status.textContent = '';
+                    showStatusMessage('');
+                    showExportProgress(false);
                     return;
                 }
             }
@@ -426,10 +745,11 @@ async function handleExportDataset() {
         const handler = (msg) => {
             if (msg.command === 'datasetExportResult') {
                 window.CocoyaBridge.offMessage(handler);
+                showExportProgress(false);
                 if (msg.success) {
-                    if (status) status.textContent = t('SUCCESS_EXPORT', '✅ 資料集匯出成功');
+                    showStatusMessage(t('SUCCESS_EXPORT', '✅ 資料集匯出成功'));
                 } else {
-                    if (status) status.textContent = t('ERROR_EXPORT_FAILED', '❌ 匯出失敗: %1').replace('%1', msg.error);
+                    showStatusMessage(t('ERROR_EXPORT_FAILED', '❌ 匯出失敗: %1').replace('%1', msg.error));
                 }
             }
         };
@@ -437,7 +757,8 @@ async function handleExportDataset() {
 
     } catch (e) {
         console.error('[DatasetManager] Export Error:', e);
-        if (status) status.textContent = t('ERROR_PREFIX', '❌ 錯誤: %1').replace('%1', e.message);
+        showExportProgress(false);
+        showStatusMessage(t('ERROR_PREFIX', '❌ 錯誤: %1').replace('%1', e.message));
     }
 }
 
@@ -472,7 +793,113 @@ function restoreGridScroll() {
     }
 }
 
+/**
+ * 進入影像分類標籤校正模式（image 類型專用）
+ * 中央大圖預覽 + 右側分類標籤重新指派，不使用 UICanvas 拉框
+ */
+function enterClassificationReviewMode(image, index) {
+    const modal = getModal();
+    const previewContent = modal?.querySelector('#dataset-preview-content');
+    const previewHeader = modal?.querySelector('.dataset-preview-panel .dataset-panel-title div');
+    if (!previewContent || !previewHeader) return;
+
+    // 進入前保存縮圖網格捲動位置
+    saveGridScroll();
+
+    // 設定標註模式狀態（沿用統一狀態機）
+    state.annotationMode.isActive = true;
+    state.annotationMode.currentIndex = index;
+    state.annotationMode.mode = 'classification';
+
+    // 更新副標題
+    const subtitle = modal.querySelector('#dataset-manager-subtitle');
+    if (subtitle) subtitle.textContent = t('CLASSIFY_MODE_TITLE', '影像分類標籤校正');
+
+    // 讓 overlay 撐滿
+    modal.classList.add('dataset-annotation-fullscreen');
+
+    // 為 body 添加標註模式 class，切換為全寬布局
+    const body = modal.querySelector('.dataset-manager-body');
+    if (body) {
+        state.annotationMode.originalBodyClass = body.className;
+        body.classList.add('dataset-annotation-mode');
+    }
+
+    // 隱藏 source/schema 面板
+    const sourcePanel = modal.querySelector('.dataset-source-panel');
+    const schemaPanel = modal.querySelector('.dataset-schema-panel');
+    if (sourcePanel) sourcePanel.style.display = 'none';
+    if (schemaPanel) schemaPanel.style.display = 'none';
+
+    // 防禦性移除並重建返回按鈕
+    const existingBackBtn = modal.querySelector('#dataset-annotation-back');
+    if (existingBackBtn) existingBackBtn.remove();
+    previewHeader.insertAdjacentHTML('afterbegin', `
+        <button type="button" id="dataset-annotation-back" class="dataset-small-btn" style="background: #FE2F89; color: white; border: none; margin-right: 8px;">${t('BACK_TO_LIST', '← 返回列表')}</button>
+    `);
+    modal.querySelector('#dataset-annotation-back').onclick = exitAnnotationMode;
+
+    // 渲染 3 欄布局（中央不初始化畫布）
+    previewContent.innerHTML = `
+        <div class="dataset-annotation-layout">
+            <div class="dataset-annotation-thumbnails" id="annotation-thumbnails"></div>
+            <div class="dataset-annotation-main">
+                <div class="dataset-annotation-toolbar">
+                    <span class="dataset-annotation-progress" id="annotation-progress"></span>
+                    <span class="dataset-annotation-shortcuts-hint">${t('CLASSIFY_SHORTCUTS_HINT', '↑/↓ 切換圖片 · Esc 退出')}</span>
+                    <span class="dataset-annotation-export-status" id="annotation-export-status"></span>
+                    <button type="button" id="annotation-export-btn" class="dataset-small-btn">${t('EXPORT', '匯出資料集')}</button>
+                </div>
+                <div class="dataset-annotation-image-container" id="annotation-image-container">
+                    <div id="annotation-classify-container" tabindex="0" style="position: relative; display: inline-block; outline: none;">
+                        <img src="${image.blobUrl}" id="annotation-classify-img" style="max-width: 100%; max-height: 100%; display: block; object-fit: contain;">
+                    </div>
+                </div>
+            </div>
+            <div class="dataset-annotation-controls" id="annotation-controls"></div>
+        </div>
+    `;
+
+    // 渲染縮圖欄（分類模式顯示標籤徽章）
+    const thumbnails = document.getElementById('annotation-thumbnails');
+    UIComponents.renderAnnotationThumbnails(thumbnails, state.images, index, {
+        mode: 'classification',
+        onThumbnailClick: (newIndex) => navigateToImage(newIndex)
+    });
+
+    // 載入目前圖片
+    loadClassificationImage(index);
+
+    // 標註模式：隱藏預覽 header 的驗證/匯出，改用標註工具列的匯出（含即時狀態回饋）
+    setAnnotationHeaderActions(true);
+    const exportBtn = document.getElementById('annotation-export-btn');
+    if (exportBtn) exportBtn.onclick = handleExportDataset;
+}
+
+/**
+ * 載入指定索引的圖片並更新分類校正 UI（image 類型專用）
+ */
+function loadClassificationImage(index) {
+    const image = state.images[index];
+    if (!image) return;
+
+    state.annotationMode.currentIndex = index;
+
+    const img = document.getElementById('annotation-classify-img');
+    if (img) img.src = image.blobUrl;
+
+    renderClassificationControls();
+    updateClassifyProgress();
+    updateThumbnailHighlight();
+    bindClassificationKeyboardEvents();
+}
+
 function enterAnnotationMode(image, index) {
+    // 分流：image（影像分類）類型進入「分類標籤校正」模式，而非 bbox 拉框標註
+    if (getFormValue('projectType') === 'image') {
+        return enterClassificationReviewMode(image, index);
+    }
+
     const modal = getModal();
     const previewContent = modal?.querySelector('#dataset-preview-content');
     const previewHeader = modal?.querySelector('.dataset-preview-panel .dataset-panel-title div');
@@ -525,6 +952,8 @@ function enterAnnotationMode(image, index) {
                 <div class="dataset-annotation-toolbar">
                     <span class="dataset-annotation-progress" id="annotation-progress"></span>
                     <span class="dataset-annotation-shortcuts-hint">${t('ANNOTATION_SHORTCUTS_HINT', '↑/↓ 切換圖片 · Delete 刪除標註 · Esc 退出')}</span>
+                    <span class="dataset-annotation-export-status" id="annotation-export-status"></span>
+                    <button type="button" id="annotation-export-btn" class="dataset-small-btn">${t('EXPORT', '匯出資料集')}</button>
                 </div>
                 <div class="dataset-annotation-image-container" id="annotation-image-container">
                     <div id="annotation-container" style="position: relative; display: inline-block;">
@@ -547,6 +976,11 @@ function enterAnnotationMode(image, index) {
 
     // 載入目前圖片
     loadAnnotationImage(index);
+
+    // 標註模式：隱藏預覽 header 的驗證/匯出，改用標註工具列的匯出（含即時狀態回饋）
+    setAnnotationHeaderActions(true);
+    const exportBtn = document.getElementById('annotation-export-btn');
+    if (exportBtn) exportBtn.onclick = handleExportDataset;
 }
 
 /**
@@ -563,6 +997,9 @@ function saveCurrentAnnotations() {
         clearTimeout(state.annotationMode.saveTimer);
         state.annotationMode.saveTimer = null;
     }
+
+    // 以目前標註重算 label_counts（返回列表/切圖時，中間統計才正確）
+    updateStatsFromImages();
 }
 
 /**
@@ -591,16 +1028,17 @@ function loadAnnotationImage(index) {
         onUpdate: (anns) => {
             image.annotations = anns;
             renderAnnotationListUI(anns);
-            // Debounce refreshPreview
+            // Debounce refreshPreview（並以目前標註重算統計）
             clearTimeout(state.annotationMode.saveTimer);
             state.annotationMode.saveTimer = setTimeout(() => {
+                updateStatsFromImages();
                 refreshPreview();
             }, 300);
         }
     });
 
-    // 物件偵測模式：設定類別選擇器的事件
-    const classSelect = document.getElementById('annotation-class-select');
+    // 物件偵測模式：與「類別管理」下拉同步（#annotation-class-manager 內的 .dataset-label-manager-select）
+    const classSelect = document.querySelector('#annotation-class-manager .dataset-label-manager-select');
     if (classSelect) {
         classSelect.onchange = () => {
             UICanvas.state.currentClassId = parseInt(classSelect.value, 10) || 0;
@@ -625,11 +1063,18 @@ function navigateToImage(newIndex) {
     if (newIndex < 0 || newIndex >= state.images.length) return;
     if (newIndex === state.annotationMode.currentIndex) return;
 
-    // 自動儲存前一張圖的標註
+    // 自動儲存前一張圖的標註（classification 下 annotations 為空陣列，安全）
     saveCurrentAnnotations();
 
-    // 載入新圖
-    loadAnnotationImage(newIndex);
+    // 方案 A：切圖時立即將目前圖標註落盤（不等 800ms 防抖）
+    scheduleAutoSave(true);
+
+    // 依當前模式載入新圖
+    if (state.annotationMode.mode === 'classification') {
+        loadClassificationImage(newIndex);
+    } else {
+        loadAnnotationImage(newIndex);
+    }
 }
 
 /**
@@ -652,10 +1097,13 @@ function updateThumbnailHighlight() {
     if (!thumbnails) return;
 
     const items = thumbnails.querySelectorAll('.dataset-annotation-thumb-item');
+    const isClassification = state.annotationMode.mode === 'classification';
     items.forEach((item, idx) => {
         item.classList.toggle('current', idx === state.annotationMode.currentIndex);
-        const isAnnotated = state.images[idx].annotations && state.images[idx].annotations.length > 0;
-        item.classList.toggle('annotated', isAnnotated);
+        if (!isClassification) {
+            const isAnnotated = state.images[idx].annotations && state.images[idx].annotations.length > 0;
+            item.classList.toggle('annotated', isAnnotated);
+        }
     });
 
     // 自動捲動到當前縮圖
@@ -723,8 +1171,238 @@ function deleteSelectedAnnotation() {
 }
 
 /**
+ * 渲染分類標籤校正模式的右側控制欄（目前分類下拉選單 + 新增類別）
+ * image 類型專用，不涉及 bbox 標註
+ */
+function renderClassificationControls() {
+    const controls = document.getElementById('annotation-controls');
+    if (!controls) return;
+
+    const image = state.images[state.annotationMode.currentIndex];
+    if (!image) return;
+    const labelMap = state.spec.toJSON().schema.label_map || {};
+    const labelEntries = Object.entries(labelMap).sort((a, b) => a[0].localeCompare(b[0]));
+
+    controls.innerHTML = `
+        <div class="dataset-annotation-class-section">
+            <div class="dataset-annotation-section-title">${t('CLASSIFY_CURRENT_LABEL', '目前分類')}</div>
+            <div class="dataset-annotation-class-row">
+                <select id="annotation-classify-select">
+                    ${labelEntries.length > 0
+                        ? labelEntries.map(([name, id]) =>
+                            `<option value="${id}" ${name === (image.label || '') ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('')
+                        : '<option value="" disabled selected>' + t('NO_LABELS', '尚未偵測到標籤') + '</option>'}
+                </select>
+            </div>
+            <div class="dataset-annotation-info">${t('CLASSIFY_IMAGE_INFO', '檔案: %1').replace('%1', escapeHtml(image.path || image.name || ''))}</div>
+            <div class="dataset-annotation-section-title">${t('ANNOTATION_CLASS', '類別管理')}</div>
+            <div id="annotation-classify-manager"></div>
+        </div>
+    `;
+
+    const select = document.getElementById('annotation-classify-select');
+    if (select) {
+        select.onchange = () => {
+            const id = parseInt(select.value, 10);
+            const name = labelEntries.find(([, value]) => value === id)?.[0] || '';
+            if (name && name !== image.label) {
+                image.label = name;
+                // label_counts / label_map 一致化（依 state.images 重算統計）
+                updateStatsFromImages();
+                renderClassificationControls();
+                updateThumbnailHighlight();
+                refreshPreview(); // debounce 內含 syncSpecFromUI(true)，把 label 寫回 samples
+            }
+        };
+    }
+
+    // 標籤管理（新增/改名/刪除，與物件偵測/檢視模式共用）
+    createLabelMapManager(document.getElementById('annotation-classify-manager'));
+}
+
+/**
+ * 更新分類校正模式頂部進度（image 類型顯示樣本位置）
+ */
+function updateClassifyProgress() {
+    const progressEl = document.getElementById('annotation-progress');
+    if (!progressEl) return;
+    progressEl.textContent = t('CLASSIFY_PROGRESS', '樣本: %1 / %2 張')
+        .replace('%1', state.annotationMode.currentIndex + 1)
+        .replace('%2', state.images.length);
+}
+
+let classificationKeyHandler = null; // 分類模式的鍵盤事件 handler（用於清理）
+
+/**
+ * 綁定分類校正模式鍵盤事件（↑/↓ 切換圖片、Esc 退出，無 Delete）
+ */
+function bindClassificationKeyboardEvents() {
+    const container = document.getElementById('annotation-classify-container');
+    if (!container) return;
+
+    unbindClassificationKeyboardEvents();
+    container.tabIndex = 0;
+    classificationKeyHandler = (e) => {
+        if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            navigateToImage(state.annotationMode.currentIndex - 1);
+        } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            navigateToImage(state.annotationMode.currentIndex + 1);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation(); // 阻止冒泡到 modal 的全域 Esc 關閉
+            exitAnnotationMode();
+        }
+    };
+    container.addEventListener('keydown', classificationKeyHandler);
+    container.focus();
+}
+
+/**
+ * 清理分類校正模式的鍵盤事件
+ */
+function unbindClassificationKeyboardEvents() {
+    const container = document.getElementById('annotation-classify-container');
+    if (container && classificationKeyHandler) {
+        container.removeEventListener('keydown', classificationKeyHandler);
+    }
+    classificationKeyHandler = null;
+}
+
+/**
  * 渲染右側控制欄（類別選擇器 + 標註列表）
  */
+/**
+ * 統一「label_map 標籤管理器」（類別下拉 + ➕✏️🗑）。
+ * 供分類(image)標註、物件偵測標註、與檢視模式中間欄共用，行為一致。
+ * 變更流程：updateSchema(label_map) → syncLabelMap() → updateStatsFromImages() → 重繪 → 自動落盤。
+ * 依專案類型處理：image（分類）改名/刪除會同步 img.label、刪除改 unlabeled；object_detection 刪除移除對應 class_id 標註框。
+ * 新增類別後自動選取新類別。
+ * @param {HTMLElement} container 欲放置元件的容器（建議有 id）。
+ * @param {HTMLElement|null} [statsContainer] 統計列表容器；非 null 時變更後於此重繪標籤統計（檢視模式使用）。
+ */
+function createLabelMapManager(container, statsContainer = null) {
+    if (!container) return;
+    const spec = state.spec.toJSON();
+    const projectType = spec.project.type || getFormValue('projectType') || 'table';
+    const labelMap = spec.schema.label_map || {};
+    const entries = Object.entries(labelMap).sort((a, b) => a[0].localeCompare(b[0]));
+
+    container.innerHTML = `
+        <div class="dataset-annotation-class-row">
+            <select class="dataset-label-manager-select">
+                ${entries.length > 0
+                    ? entries.map(([name, id]) => `<option value="${id}">${escapeHtml(name)}</option>`).join('')
+                    : '<option value="-1" disabled selected>' + t('ANNOTATION_EMPTY', '尚未有標註') + '</option>'}
+            </select>
+            <button type="button" class="dataset-icon-btn" data-action="add" title="${t('ANNOTATION_CLASS_ADD', '新增')}">+</button>
+            <button type="button" class="dataset-icon-btn" data-action="edit" title="${t('ANNOTATION_CLASS_EDIT', '編輯')}">✏️</button>
+            <button type="button" class="dataset-icon-btn" data-action="delete" title="${t('ANNOTATION_CLASS_DELETE', '刪除')}">🗑️</button>
+        </div>
+    `;
+
+    const select = container.querySelector('.dataset-label-manager-select');
+    if (!select) return;
+
+    const currentId = () => {
+        const v = parseInt(select.value, 10);
+        return Number.isInteger(v) ? v : -1;
+    };
+    // 物件偵測：選取類別即作為畫布當前類別
+    if (projectType === 'object_detection') {
+        select.onchange = () => { UICanvas.state.currentClassId = currentId(); };
+    }
+
+    const reRender = () => {
+        if (state.annotationMode && state.annotationMode.isActive) {
+            if (projectType === 'image') renderClassificationControls();
+            else renderAnnotationControls();
+            updateThumbnailHighlight();
+        } else {
+            createLabelMapManager(container, statsContainer);
+            if (statsContainer) UIComponents.renderLabelStats(statsContainer, state.spec.toJSON().stats);
+        }
+        scheduleAutoSave();
+        refreshPreview();
+    };
+    const freshContainer = () => (container.id ? (document.getElementById(container.id) || container) : container);
+
+// 新增
+    container.querySelector('[data-action="add"]').onclick = async () => {
+        const name = await window.CocoyaBridge.prompt(t('ANNOTATION_NEW_CLASS_PLACEHOLDER', '輸入新類別名稱'));
+        if (!(name && name.trim())) return;
+        const trimmed = name.trim();
+        const map = state.spec.toJSON().schema.label_map || {};
+        if (map[trimmed] !== undefined) return;
+        map[trimmed] = nextLabelId(map);
+        state.spec.updateSchema({ label_map: map });
+        syncLabelMap();
+        updateStatsFromImages();
+        reRender();
+        const sel = freshContainer().querySelector('.dataset-label-manager-select');
+        if (sel) {
+            sel.value = map[trimmed];
+            if (projectType === 'object_detection') UICanvas.state.currentClassId = map[trimmed];
+        }
+    };
+
+    // 編輯（改名）
+    container.querySelector('[data-action="edit"]').onclick = async () => {
+        const id = currentId();
+        const entry = entries.find(([, v]) => v === id);
+        if (!entry) return;
+        const newName = await window.CocoyaBridge.prompt(t('ANNOTATION_NEW_CLASS_PLACEHOLDER', '輸入新類別名稱'), entry[0]);
+        if (newName && newName.trim() && newName.trim() !== entry[0]) {
+            const trimmed = newName.trim();
+            const map = state.spec.toJSON().schema.label_map || {};
+            delete map[entry[0]];
+            map[trimmed] = id;
+            if (projectType === 'image') {
+                // 分類：一併更新所有使用該 label 的影像
+                state.images.forEach(img => { if (img.label === entry[0]) img.label = trimmed; });
+            }
+            state.spec.updateSchema({ label_map: map });
+            syncLabelMap();
+            updateStatsFromImages();
+            reRender();
+        }
+    };
+
+    // 刪除
+    container.querySelector('[data-action="delete"]').onclick = async () => {
+        const id = currentId();
+        const entry = entries.find(([, v]) => v === id);
+        if (!entry) return;
+        const count = (projectType === 'image')
+            ? state.images.filter(img => img.label === entry[0]).length
+            : state.images.reduce((s, img) => s + (img.annotations?.filter(a => a.class_id === id).length || 0), 0);
+        const confirmed = await window.CocoyaBridge.confirm(
+            t('ANNOTATION_DELETE_CLASS_CONFIRM', '確定刪除類別「%1」及其 %2 個標註框嗎？')
+                .replace('%1', entry[0]).replace('%2', count)
+        );
+        if (confirmed) {
+            const map = state.spec.toJSON().schema.label_map || {};
+            delete map[entry[0]];
+            if (projectType === 'image') {
+                // 分類：把使用該 label 的影像改為 unlabeled，避免載入時又被回填進 label_map
+                state.images.forEach(img => { if (img.label === entry[0]) img.label = 'unlabeled'; });
+            } else {
+                state.images.forEach(img => { if (img.annotations) img.annotations = img.annotations.filter(a => a.class_id !== id); });
+                if (UICanvas.state.annotations) {
+                    UICanvas.state.annotations = UICanvas.state.annotations.filter(a => a.class_id !== id);
+                    UICanvas.state.selectedAnnotationIndex = -1;
+                    UICanvas.render();
+                }
+            }
+            state.spec.updateSchema({ label_map: map });
+            syncLabelMap();
+            updateStatsFromImages();
+            reRender();
+        }
+    };
+}
+
 function renderAnnotationControls() {
     const controls = document.getElementById('annotation-controls');
     if (!controls) return;
@@ -733,22 +1411,13 @@ function renderAnnotationControls() {
     const labelMap = state.spec.toJSON().schema.label_map || {};
     const labelEntries = Object.entries(labelMap);
 
-    // 類別選擇器（僅物件偵測模式顯示）
+    // 類別選擇器（僅物件偵測模式顯示；標籤管理由共用 createLabelMapManager 處理）
     let classSelectorHtml = '';
     if (projectType === 'object_detection') {
         classSelectorHtml = `
             <div class="dataset-annotation-class-section">
                 <div class="dataset-annotation-section-title">${t('ANNOTATION_CLASS', '類別')}</div>
-                <div class="dataset-annotation-class-row">
-                    <select id="annotation-class-select" class="dataset-annotation-class-select">
-                        ${labelEntries.length > 0
-                            ? labelEntries.map(([name, id]) => `<option value="${id}">${escapeHtml(name)}</option>`).join('')
-                            : '<option value="-1" disabled selected>' + t('ANNOTATION_EMPTY', '尚未有標註') + '</option>'}
-                    </select>
-                    <button type="button" class="dataset-icon-btn" id="annotation-class-add" title="${t('ANNOTATION_CLASS_ADD', '新增')}">+</button>
-                    <button type="button" class="dataset-icon-btn" id="annotation-class-edit" title="${t('ANNOTATION_CLASS_EDIT', '編輯')}">✏️</button>
-                    <button type="button" class="dataset-icon-btn" id="annotation-class-delete" title="${t('ANNOTATION_CLASS_DELETE', '刪除')}">🗑️</button>
-                </div>
+                <div id="annotation-class-manager"></div>
             </div>
         `;
     }
@@ -761,97 +1430,9 @@ function renderAnnotationControls() {
         </div>
     `;
 
-    // 綁定類別管理事件
+    // 類別管理（標註模式，共用 createLabelMapManager，與檢視/分類一致）
     if (projectType === 'object_detection') {
-        const classSelect = document.getElementById('annotation-class-select');
-        const addBtn = document.getElementById('annotation-class-add');
-        const editBtn = document.getElementById('annotation-class-edit');
-        const deleteBtn = document.getElementById('annotation-class-delete');
-
-        if (classSelect) {
-            classSelect.onchange = () => {
-                UICanvas.state.currentClassId = parseInt(classSelect.value, 10) || 0;
-            };
-        }
-
-        if (addBtn) {
-            addBtn.onclick = async () => {
-                const name = await window.CocoyaBridge.prompt(t('ANNOTATION_NEW_CLASS_PLACEHOLDER', '輸入新類別名稱'));
-                if (name && name.trim()) {
-                    const trimmed = name.trim();
-                    const spec = state.spec.toJSON();
-                    const map = spec.schema.label_map || {};
-                    if (map[trimmed] === undefined) {
-                        map[trimmed] = Object.keys(map).length;
-                        state.spec.updateSchema({ label_map: map });
-                        syncLabelMap();
-                        renderAnnotationControls();
-                        // 立即更新畫布顯示新的類別名稱
-                        if (UICanvas.state.annotations) {
-                            UICanvas.render();
-                        }
-                    }
-                }
-            };
-        }
-
-        if (editBtn) {
-            editBtn.onclick = async () => {
-                const selectedId = parseInt(classSelect.value, 10);
-                const entry = labelEntries.find(([, id]) => id === selectedId);
-                if (!entry) return;
-                const newName = await window.CocoyaBridge.prompt(t('ANNOTATION_NEW_CLASS_PLACEHOLDER', '輸入新類別名稱'), entry[0]);
-                if (newName && newName.trim()) {
-                    const spec = state.spec.toJSON();
-                    const map = spec.schema.label_map || {};
-                    delete map[entry[0]];
-                    map[newName.trim()] = selectedId;
-                    state.spec.updateSchema({ label_map: map });
-                    syncLabelMap();
-                    renderAnnotationControls();
-                    // 立即更新畫布顯示新的類別名稱
-                    if (UICanvas.state.annotations) {
-                        UICanvas.render();
-                    }
-                }
-            };
-        }
-
-        if (deleteBtn) {
-            deleteBtn.onclick = async () => {
-                const selectedId = parseInt(classSelect.value, 10);
-                const entry = labelEntries.find(([, id]) => id === selectedId);
-                if (!entry) return;
-                // 計算該類別的標註框總數
-                const count = state.images.reduce((sum, img) =>
-                    sum + (img.annotations?.filter(a => a.class_id === selectedId).length || 0), 0);
-                const confirmed = await window.CocoyaBridge.confirm(
-                    t('ANNOTATION_DELETE_CLASS_CONFIRM', '確定刪除類別「%1」及其 %2 個標註框嗎？')
-                        .replace('%1', entry[0]).replace('%2', count)
-                );
-                if (confirmed) {
-                    const spec = state.spec.toJSON();
-                    const map = spec.schema.label_map || {};
-                    delete map[entry[0]];
-                    state.spec.updateSchema({ label_map: map });
-                    syncLabelMap();
-
-                    // 刪除該類別的所有標註框（bbox + line）
-                    state.images.forEach(img => {
-                        if (img.annotations) {
-                            img.annotations = img.annotations.filter(ann => ann.class_id !== selectedId);
-                        }
-                    });
-
-                    renderAnnotationControls();
-                    if (UICanvas.state.annotations) {
-                        UICanvas.state.annotations = UICanvas.state.annotations.filter(ann => ann.class_id !== selectedId);
-                        UICanvas.state.selectedAnnotationIndex = -1;
-                        UICanvas.render();
-                    }
-                }
-            };
-        }
+        createLabelMapManager(document.getElementById('annotation-class-manager'));
     }
 
     // 重新渲染標註列表（controls.innerHTML 重置會清空 #annotation-list-ui，需恢復）
@@ -924,6 +1505,8 @@ function renderAnnotationListUI(anns) {
  * @returns {boolean} true = 繼續離開，false = 取消
  */
 async function checkUnannotatedOnExit() {
+    // 分類校正模式不做 bbox/line 未標註檢查
+    if (state.annotationMode.mode === 'classification') return true;
     const unannotated = state.images.filter(img => !img.annotations || img.annotations.length === 0).length;
     if (unannotated > 0) {
         return await window.CocoyaBridge.confirm(t('ANNOTATION_UNANNOTATED_WARNING', '尚有 %1 張圖片未標註，確定要離開？').replace('%1', unannotated));
@@ -931,26 +1514,32 @@ async function checkUnannotatedOnExit() {
     return true;
 }
 
-async function exitAnnotationMode() {
+async function exitAnnotationMode(skipUnannotatedCheck = false) {
     // 非標註模式下安全返回
     if (!state.annotationMode.isActive) {
         UICanvas.unbindEvents();
+        unbindClassificationKeyboardEvents();
         const modal = getModal();
         const backBtn = modal?.querySelector('#dataset-annotation-back');
         if (backBtn) backBtn.remove();
         if (modal) modal.classList.remove('dataset-annotation-fullscreen');
+        setAnnotationHeaderActions(false);
         refreshDynamicPanels();
         return;
     }
 
-    // 檢查未標註圖片
-    if (!(await checkUnannotatedOnExit())) return;
+    // 檢查未標註圖片（清除資料等「已確認銷毀一切」的呼叫端可跳過，避免二次警告干擾/誤阻斷）
+    if (!(skipUnannotatedCheck || (await checkUnannotatedOnExit()))) return;
 
     // 自動儲存當前圖標註
     saveCurrentAnnotations();
 
+    // 方案 A：正常退出時將目前圖標註立即落盤（清除流程不需落盤）
+    if (!skipUnannotatedCheck) scheduleAutoSave(true);
+
     // 清理鍵盤事件
     UICanvas.unbindEvents();
+    unbindClassificationKeyboardEvents();
 
     const modal = getModal();
     if (!modal) return;
@@ -978,9 +1567,13 @@ async function exitAnnotationMode() {
     if (sourcePanel) sourcePanel.style.display = '';
     if (schemaPanel) schemaPanel.style.display = '';
 
+    // 還原預覽 header 的驗證/匯出/自動儲存指示
+    setAnnotationHeaderActions(false);
+
     // 重置標註模式狀態
     state.annotationMode.isActive = false;
     state.annotationMode.currentIndex = -1;
+    state.annotationMode.mode = null;
     state.annotationMode.originalBodyClass = null;
 
     // 恢復縮圖網格
@@ -1020,7 +1613,20 @@ export function refreshDynamicPanels() {
     if (isImage || isLive) {
         structureTitle.textContent = t('LABEL_STATS_TITLE', '標籤與樣本統計');
         structureActions.style.display = 'none';
-        UIComponents.renderLabelStats(structureContent, state.spec.toJSON().stats);
+        if (projectType === 'image' || projectType === 'object_detection') {
+            // 統一標籤管理器（新增/改名/刪除）+ 統計，與標註模式一致
+            structureContent.innerHTML = `
+                <div id="view-label-class-manager"></div>
+                <div id="view-label-stats"></div>
+            `;
+            createLabelMapManager(
+                document.getElementById('view-label-class-manager'),
+                document.getElementById('view-label-stats')
+            );
+            UIComponents.renderLabelStats(document.getElementById('view-label-stats'), state.spec.toJSON().stats);
+        } else {
+            UIComponents.renderLabelStats(structureContent, state.spec.toJSON().stats);
+        }
     } else {
         structureTitle.textContent = t('STRUCTURE_TITLE', '欄位與標籤');
         structureActions.style.display = 'block';
@@ -1059,8 +1665,8 @@ export function refreshDynamicPanels() {
         }
 
         // [關鍵修正] 綁定採集回調，讓連拍也能觸發 UI 更新
-        Sampler.state.onSampleCaptured = (blob) => {
-            addSampleFromSampler(blob);
+        Sampler.state.onSampleCaptured = (blob, label, savePath) => {
+            addSampleFromSampler(blob, savePath);
         };
 
         // 自動列舉可用攝影機 (但僅在清單為空時)
@@ -1077,11 +1683,12 @@ export function refreshDynamicPanels() {
                 const spec = state.spec.toJSON();
                 const labelMap = spec.schema.label_map || {};
                 if (labelMap[l] === undefined) {
-                    labelMap[l] = Object.keys(labelMap).length;
+                    labelMap[l] = nextLabelId(labelMap);
                     state.spec.updateSchema({ label_map: labelMap });
                 }
 
-                // 更新左側標籤統計
+                // 重新以 label_map 為權威計算統計，確保新標籤/改名即時反映
+                updateStatsFromImages();
                 const structureContent = modal.querySelector('#dataset-structure-content');
                 if (structureContent) {
                     UIComponents.renderLabelStats(structureContent, state.spec.toJSON().stats);
@@ -1095,6 +1702,9 @@ export function refreshDynamicPanels() {
                         `<option value="${lb}" ${lb === l ? 'selected' : ''}>${lb}</option>`
                     ).join('');
                 }
+
+                // 新增標籤後即時刷新 Spec JSON 預覽
+                refreshPreview();
             },
             onSnapshot: () => handleSamplerSnapshot(),
             onBurstToggle: () => handleSamplerBurstToggle(),
@@ -1125,15 +1735,14 @@ export function refreshDynamicPanels() {
 }
 
 async function handleSamplerSnapshot() {
-    const status = document.getElementById('dataset-import-status');
-    if (status) status.textContent = t('STATUS_CAPTURETTING', '📸 正在採集...');
+    showStatusMessage(t('STATUS_CAPTURETTING', '📸 正在採集...'));
     
     try {
         const projectName = getFormValue('projectName') || 'dataset';
         await Sampler.takeSnapshot(projectName);
-        if (status) status.textContent = t('SUCCESS_CAPTURE', '✅ 採集成功');
+        showStatusMessage(t('SUCCESS_CAPTURE', '✅ 採集成功'));
     } catch (e) {
-        if (status) status.textContent = t('ERROR_CAPTURE_FAILED', '❌ 採集失敗: %1').replace('%1', e.message);
+        showStatusMessage(t('ERROR_CAPTURE_FAILED', '❌ 採集失敗: %1').replace('%1', e.message));
     }
 }
 
@@ -1202,10 +1811,18 @@ function handleSamplerBurstToggle() {
     }
 }
 
-function addSampleFromSampler(blob) {
+function addSampleFromSampler(blob, savePath = null) {
     const label = Sampler.state.targetLabel || 'unlabeled';
-    const timestamp = Date.now();
-    const filename = `${label}_${timestamp}.jpg`;
+    // [關鍵修正] 單一時間戳：若 sidecar/bridge 已給 savePath（磁碟實際落盤檔），
+    // 直接以其 basename 作為檔名，讓 img.path / image_path / diskPath 與磁碟檔名完全一致，
+    // 避免「載入資料夾時取不回標註」的檔名脫鏈（先前 image_path 用獨立的 Date.now() 產生虛幻檔名）。
+    let filename;
+    if (savePath) {
+        filename = savePath.split(/[\\/]/).pop();
+    } else {
+        // 未錨定 / 不落盤時才 fallback 到前端時戳（無磁碟檔，不需還原）
+        filename = `${label}_${Date.now()}.jpg`;
+    }
     const blobUrl = URL.createObjectURL(blob);
     
     const newImage = {
@@ -1213,10 +1830,12 @@ function addSampleFromSampler(blob) {
         path: `${label}/${filename}`, 
         label: label,
         blobUrl: blobUrl,
+        // 真磁碟路徑（VSIX 由 host 端產生；Tauri 若提供即帶入），供「儲存進度」還原與下次載入掃描
+        diskPath: savePath || null,
         annotations: []
     };
 
-    state.images.unshift(newImage);
+    state.images.push(newImage);
     
     // 更新統計與 Spec
     updateStatsFromImages();
@@ -1238,27 +1857,62 @@ function addSampleFromSampler(blob) {
                 onImageClick: (img, idx) => enterAnnotationMode(img, idx),
                 onDeleteImage: (idx) => handleDeleteImage(idx)
             });
+            // 排序統一為「舊→新」：拍攝後自動捲到最下方（最新一張），方便檢視
+            const grid = imagePreview.querySelector('.dataset-image-grid');
+            if (grid) grid.scrollTop = grid.scrollHeight;
         }
     }
 
     refreshPreview();
 }
 
+/**
+ * 產生下一個可用的 label_map 類別 id：取現有最大 id + 1。
+ * 避免「以 length 產生 id」在刪除類別後與現存類別碰撞（例如保留 {B:1} 後新增會拿到 1 與 B 衝突）。
+ * @param {Object} labelMap 目前的 label_map（name → id）。
+ * @returns {number} 新類別應使用的 id（>= 0）。
+ */
+function nextLabelId(labelMap) {
+    const values = Object.values(labelMap || {})
+        .map((v) => Number(v))
+        .filter((v) => Number.isInteger(v) && v >= 0);
+    return values.length ? Math.max(...values) + 1 : 0;
+}
+
 function updateStatsFromImages() {
     const currentSpec = state.spec.toJSON();
+    const projectType = currentSpec.project.type || getFormValue('projectType') || 'table';
     const existingLabelMap = currentSpec.schema.label_map || {};
+    const isClassification = projectType === 'image';
 
-    const labelCounts = state.images.reduce((acc, img) => {
-        acc[img.label] = (acc[img.label] || 0) + 1;
-        return acc;
-    }, {});
-
-    // [關鍵修正] 合併目前的 label_map 與從影像中偵測到的標籤，確保「手動新增但尚無照片」的標籤不會消失
+    // 以 label_map 為權威；分類時一併納入影像出現的 img.label
     const labelMap = Object.assign({}, existingLabelMap);
-    Object.keys(labelCounts).forEach((label) => {
-        if (labelMap[label] === undefined) {
-            labelMap[label] = Object.keys(labelMap).length;
-        }
+    const labelCounts = {};
+
+    if (isClassification) {
+        // 分類（image）：每張圖一個 img.label
+        state.images.forEach((img) => {
+            const key = String(img.label || 'unlabeled').trim() || 'unlabeled';
+            labelCounts[key] = (labelCounts[key] || 0) + 1;
+            if (labelMap[key] === undefined) {
+                labelMap[key] = nextLabelId(labelMap);
+            }
+        });
+    } else {
+        // 物件偵測 / 線跟隨（bbox / line）：以 label_map 的 id→名稱，逐筆 annotation 的 class_id 計數
+        const idToName = {};
+        Object.keys(labelMap).forEach((name) => { idToName[labelMap[name]] = name; });
+        state.images.forEach((img) => {
+            (img.annotations || []).forEach((ann) => {
+                const name = idToName[ann.class_id];
+                if (name !== undefined) labelCounts[name] = (labelCounts[name] || 0) + 1;
+            });
+        });
+    }
+
+    // 補上 label_map 中所有類別（尚無樣本的以 0 呈現），確保「改名/新增後即時反映」與「非資料夾名的類別也納入統計」
+    Object.keys(labelMap).forEach((label) => {
+        if (labelCounts[label] === undefined) labelCounts[label] = 0;
     });
 
     state.spec = new DatasetSpec({
@@ -1283,9 +1937,16 @@ function bindModalEvents(modal) {
 
     const clearBtn = modal.querySelector('#dataset-manager-clear');
     if (clearBtn) {
-        clearBtn.onclick = () => {
+        clearBtn.onclick = async () => {
+            // 防呆：有未匯出工作時先確認，避免誤按清空整批資料
+            if (hasUnsavedWork()) {
+                const ok = await window.CocoyaBridge.confirm(t('CLEAR_CONFIRM', '確定清除所有資料並重置嗎？'));
+                if (!ok) return;
+            }
+
             // 0. 確保退出標註模式，清空畫布與事件綁定，並移除返回按鈕
-            exitAnnotationMode();
+            //    （清除資料是銷毀一切的確認操作，跳過未標註二次警告，避免無關阻斷）
+            exitAnnotationMode(true);
 
             // 1. 停止攝影機與連拍動作
             Sampler.stopCamera();
@@ -1299,6 +1960,7 @@ function bindModalEvents(modal) {
             // 3. 還原 UI 欄位值
             const nameInput = modal.querySelector('[name="projectName"]');
             if (nameInput) nameInput.value = 'dataset';
+            setNameWarning(false);
 
             const descInput = modal.querySelector('[name="description"]');
             if (descInput) descInput.value = '';
@@ -1316,9 +1978,7 @@ function bindModalEvents(modal) {
                 mode: 'file'
             });
 
-            // 6. 清理檔案選擇值與狀態訊息
-            const status = modal.querySelector('#dataset-import-status');
-            if (status) status.textContent = '';
+            // 6. 清理檔案選擇值（集中式狀態訊息由面板自動清除）
             
             const fi = modal.querySelector('#dataset-file-input');
             if (fi) fi.value = '';
@@ -1362,8 +2022,7 @@ function bindModalEvents(modal) {
             if (!file) return;
 
             window.CocoyaUI.ensureSshConfig(async (sshConfig) => {
-                const status = modal.querySelector('#dataset-import-status');
-                if (status) status.textContent = t('STATUS_UPLOADING_ZIP', '📦 正在準備上傳本地 ZIP 檔案...');
+                showStatusMessage(t('STATUS_UPLOADING_ZIP', '📦 正在準備上傳本地 ZIP 檔案...'));
 
                 try {
                     const chunkSize = 65536; // 64KB 分塊
@@ -1390,10 +2049,8 @@ function bindModalEvents(modal) {
                             reader.readAsArrayBuffer(blob);
                         });
 
-                        if (status) {
-                            const progress = Math.round(((i + 1) / totalChunks) * 100);
-                            status.textContent = t('STATUS_UPLOADING', '☁️ 正在上傳資料集... (%1%)').replace('%1', progress);
-                        }
+                        const progress = Math.round(((i + 1) / totalChunks) * 100);
+                        showStatusMessage(t('STATUS_UPLOADING', '☁️ 正在上傳資料集... (%1%)').replace('%1', progress));
 
                         // 發送分塊訊息，合併 SSH 帳密資訊
                         window.CocoyaBridge.send('datasetUploadArchive', Object.assign({
@@ -1409,9 +2066,9 @@ function bindModalEvents(modal) {
                         if (i % 5 === 0) await new Promise(resolve => setTimeout(resolve, 50));
                     }
 
-                    if (status) status.textContent = t('STATUS_DECOMPRESSING', '⌛ 正在雲端進行解壓縮，請稍候...');
+                    showStatusMessage(t('STATUS_DECOMPRESSING', '⌛ 正在雲端進行解壓縮，請稍候...'));
                 } catch (err) {
-                    if (status) status.textContent = t('ERROR_READ_FAILED', '❌ 讀取失敗: %1').replace('%1', err.message);
+                    showStatusMessage(t('ERROR_READ_FAILED', '❌ 讀取失敗: %1').replace('%1', err.message));
                 }
             });
         };
@@ -1433,7 +2090,6 @@ function bindModalEvents(modal) {
     // 監聽 Extension 回傳的結果
     const handleBridgeMessage = (msg) => {
         const diagResult = modal.querySelector('#dataset-cloud-diagnostic-result');
-        const status = modal.querySelector('#dataset-import-status');
 
         if (msg.command === 'checkRemoteEnvironmentResult') {
             if (diagResult) {
@@ -1454,13 +2110,11 @@ function bindModalEvents(modal) {
                 }
             }
         } else if (msg.command === 'datasetUploadResult') {
-            if (status) {
-                if (msg.success) {
-                    status.textContent = t('SUCCESS_UPLOAD', '✅ 資料集已成功上傳並在遠端解壓縮！');
-                    if (cloudZipInput) cloudZipInput.value = '';
-                } else {
-                    status.textContent = t('ERROR_UPLOAD_FAILED', '❌ 上傳失敗: %1').replace('%1', msg.error);
-                }
+            if (msg.success) {
+                showStatusMessage(t('SUCCESS_UPLOAD', '✅ 資料集已成功上傳並在遠端解壓縮！'));
+                if (cloudZipInput) cloudZipInput.value = '';
+            } else {
+                showStatusMessage(t('ERROR_UPLOAD_FAILED', '❌ 上傳失敗: %1').replace('%1', msg.error));
             }
         }
     };
@@ -1484,9 +2138,21 @@ function bindModalEvents(modal) {
 
     const typeSelect = modal.querySelector('[name="projectType"]');
     if (typeSelect) {
-        typeSelect.onchange = () => {
+        typeSelect._prevType = typeSelect.value; // 記錄初始值供取消時回滾
+        typeSelect.onchange = async () => {
             const newType = typeSelect.value;
-            
+            const prevType = typeSelect._prevType || typeSelect.options[0]?.value || 'table';
+
+            // 防呆：切換類型會清空目前資料，若有未匯出工作需先確認；取消則回滾選項
+            if (prevType !== newType && hasUnsavedWork()) {
+                const ok = await window.CocoyaBridge.confirm(t('TYPE_SWITCH_CONFIRM', '切換專案類型將清除目前資料，確定繼續嗎？'));
+                if (!ok) {
+                    typeSelect.value = prevType;
+                    return;
+                }
+            }
+            typeSelect._prevType = newType;
+
             // 1. 徹底關閉攝影機與連拍
             Sampler.stopCamera();
             Sampler.stopBurst();
@@ -1495,6 +2161,7 @@ function bindModalEvents(modal) {
             state.images = [];
             state.tableRows = [];
             state.sourceFolderPath = null;
+            setNameWarning(false);
             
             // 3. 動態連動過濾 Mode 的 options 並重設 value
             updateSourceModeOptions(newType);
@@ -1506,9 +2173,7 @@ function bindModalEvents(modal) {
                 mode: getFormValue('sourceMode')
             });
 
-            // 5. 清理 UI 狀態文字與 input
-            const status = modal.querySelector('#dataset-import-status');
-            if (status) status.textContent = '';
+            // 5. 清理 input（集中式狀態訊息由面板自動清除）
             
             const fi = modal.querySelector('#dataset-file-input');
             if (fi) fi.value = '';
@@ -1545,6 +2210,8 @@ function bindModalEvents(modal) {
     const nameInput = modal.querySelector('[name="projectName"]');
     if (nameInput) {
         nameInput.oninput = () => {
+            // 使用者開始編輯名稱 → 清除衝突警示
+            nameInput.classList.remove('dataset-name-warning');
             const pos = nameInput.selectionStart;
             const original = nameInput.value;
             // 過濾非英數字符
@@ -1589,6 +2256,13 @@ function createModal() {
                 </div>
             </header>
 
+            <div id="dataset-export-progress" class="dataset-export-progress" style="display: none;">
+                <div class="dataset-export-progress-bar"></div>
+                <span class="dataset-export-progress-label">${t('EXPORT_IN_PROGRESS', '正在打包 ZIP 並產生 dataset.json...')}</span>
+            </div>
+
+            <div id="dataset-manager-message" class="dataset-manager-message" style="display: none;"></div>
+
             <div class="dataset-manager-body">
                 <section class="dataset-panel dataset-source-panel">
                     <h3>${t('SOURCE', '資料來源')}</h3>
@@ -1601,21 +2275,6 @@ function createModal() {
                         <span>${t('SOURCE_MODE', '來源模式')}</span>
                         <select name="sourceMode">${optionList(TYPE_TO_MODES_MAP['table'], 'file')}</select>
                     </label>
-
-                    <div class="dataset-panel-divider"></div>
-
-                    <div id="dataset-import-area-table" class="dataset-import-area">
-                        <button type="button" id="dataset-import-btn" class="dataset-secondary-btn" style="width: 100%">${t('SELECT_CSV', '選擇 CSV / JSON 檔案')}</button>
-                        <input type="file" id="dataset-file-input" accept=".csv,.json" style="display: none;">
-                    </div>
-
-                    <div id="dataset-import-area-image" class="dataset-import-area" style="display: none;">
-                        <button type="button" id="dataset-dir-import-btn" class="dataset-secondary-btn" style="width: 100%">${t('SELECT_IMAGE_FOLDER', '選擇影像資料夾')}</button>
-                        <button type="button" id="dataset-cloud-upload-btn" class="dataset-secondary-btn" style="width: 100%; margin-top: 8px; background: #9c27b0; color: white; border: none; display: none;">${t('UPLOAD_ZIP', '☁️ 上傳本地資料集 (ZIP)')}</button>
-                        <input type="file" id="dataset-cloud-zip-input" accept=".zip" style="display: none;">
-                    </div>
-
-                    <div id="dataset-import-status" style="margin-top: 8px; font-size: 11px; color: #FE2F89; min-height: 15px;"></div>
 
                     <div class="dataset-panel-divider"></div>
 
@@ -1640,6 +2299,20 @@ function createModal() {
                         <div id="dataset-cloud-diagnostic-result" style="font-size: 11px; color: #555; line-height: 1.4;">
                             ${t('CLOUD_DIAGNOSE_HINT', '請點擊「執行診斷」檢查 GPU 與 Docker 環境。')}
                         </div>
+                    </div>
+
+                    <!-- 匯入按鈕移至左欄最下方：使用者可先在上方依序完成設定，最後再選擇來源 -->
+                    <div class="dataset-panel-divider"></div>
+
+                    <div id="dataset-import-area-table" class="dataset-import-area">
+                        <button type="button" id="dataset-import-btn" class="dataset-secondary-btn" style="width: 100%">${t('SELECT_CSV', '選擇 CSV / JSON 檔案')}</button>
+                        <input type="file" id="dataset-file-input" accept=".csv,.json" style="display: none;">
+                    </div>
+
+                    <div id="dataset-import-area-image" class="dataset-import-area" style="display: none;">
+                        <button type="button" id="dataset-dir-import-btn" class="dataset-secondary-btn" style="width: 100%">${t('SELECT_IMAGE_FOLDER', '選擇影像資料夾')}</button>
+                        <button type="button" id="dataset-cloud-upload-btn" class="dataset-secondary-btn" style="width: 100%; margin-top: 8px; background: #9c27b0; color: white; border: none; display: none;">${t('UPLOAD_ZIP', '☁️ 上傳本地資料集 (ZIP)')}</button>
+                        <input type="file" id="dataset-cloud-zip-input" accept=".zip" style="display: none;">
                     </div>
                 </section>
 
@@ -1667,6 +2340,7 @@ function createModal() {
                         <h3>${t('PREVIEW_TITLE', '預覽與標註')}</h3>
                         <div>
                             <button type="button" id="dataset-manager-validate" class="dataset-small-btn">${t('VALIDATE', '驗證')}</button>
+                            <span class="dataset-autosave-indicator" title="${t('AUTOSAVE_ON_TOOLTIP', '標註/分類/新增/刪除後自動寫入 dataset.json')}">🛡 ${t('AUTOSAVE_ON', '自動儲存已開啟')}</span>
                             <button type="button" id="dataset-manager-export" class="dataset-small-btn" style="background: #FE2F89; color: white; border: none;">${t('EXPORT', '匯出資料集')}</button>
                         </div>
                     </div>
@@ -1729,11 +2403,25 @@ export function openDatasetManager() {
     refreshDynamicPanels();
     refreshPreview();
     
+    modal.querySelector('input[name="projectName"]')?.classList.remove('dataset-name-warning');
     modal.querySelector('input[name="projectName"]')?.focus();
     return state.spec;
 }
 
-export function closeDatasetManager() {
+export async function closeDatasetManager() {
+    // 方案 A：錨定時資料已自動落盤，關閉不需再問；
+    // 僅「未錨定且有未匯出工作」（理論上被 Startup Home 擋住的邊緣）才提示，避免誤關遺失。
+    const anchored = !!(window.CocoyaBridge
+        && window.CocoyaBridge.capabilities
+        && window.CocoyaBridge.capabilities.isAnchored);
+    if (state.isOpen && !anchored && hasUnsavedWork()) {
+        const ok = await window.CocoyaBridge.confirm(t('CLOSE_UNSAVED_CONFIRM', '目前有尚未匯出的資料，確定關閉嗎？'));
+        if (!ok) return;
+    }
+
+    // 關閉前立即落盤，避免最後異動遺失
+    scheduleAutoSave(true);
+
     const modal = getModal();
     state.isOpen = false;
     Sampler.stopCamera();

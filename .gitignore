@@ -2,6 +2,7 @@ nul
 
 # 測試用
 mvp_hand_gesture/
+test/
 
 # Dependency directories
 node_modules/

@@ -23,5 +23,10 @@ Object.assign(Blockly.Msg, {
   "AI_POSE_GET_VELOCITY": "計算點 %1 與前次點 %2 的位移速度",
   "AI_POSE_GET_VELOCITY_TOOLTIP": "計算兩個像素座標點之間的距離作為速度參考。傳回：數值。",
   "AI_POSE_IS_IN_FRAME": "座標 %1 是否位於畫面內 ( 寬 %2 高 %3 )",
-  "AI_POSE_IS_IN_FRAME_TOOLTIP": "檢查座標點是否落在指定的畫面寬高範圍內（排除邊界值 0 與最大值）。傳回：布林值。"
+  "AI_POSE_IS_IN_FRAME_TOOLTIP": "檢查座標點是否落在指定的畫面寬高範圍內（排除邊界值 0 與最大值）。傳回：布林值。",
+  "AI_POSE_CALC_ANGLE": "計算點 %1、%2、%3 之夾角 類型 %4",
+  "AI_POSE_CALC_ANGLE_TOOLTIP": "依序傳入三個座標點 (x, y) A、B、C，求中間頂點 B 的夾角。類型：內角 (0-180°)、外角 (180-360°)、有符號角 (-180~+180°)。方向規則 (±)：正值 = 由指向 A 的射線 (BA) 逆時針旋轉到指向 C 的射線 (BC)，即 A→C 逆時針為正；負值為順時針。注意：OpenCV 像素座標 y 軸向下，圖形上顯示方向與數學座標 (y 向上) 相反。內角 = |有符號角|；外角 = 360° − 內角。傳回：數值。",
+  "AI_ANGLE_INTERIOR": "內角",
+  "AI_ANGLE_EXTERIOR": "外角",
+  "AI_ANGLE_SIGNED": "有符號角"
 });

@@ -316,9 +316,16 @@ export class DatasetOpsHandler {
     }
 
     public handleDatasetCaptureImage(message: any) {
-        const baseDir = (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)
-            ? vscode.workspace.workspaceFolders[0].uri.fsPath
-            : path.join(this.manager.context.extensionPath, 'temp_scripts');
+        // 依「專案根 SSOT」決定 live 拍照落盤位置：xml 專案所在資料夾優先；
+        // 其次工作區根；再降級 temp_scripts（未錨定）。
+        const projectRoot = this.manager.currentFilePath
+            ? path.dirname(this.manager.currentFilePath)
+            : undefined;
+        const baseDir = projectRoot
+            || ((vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)
+                ? vscode.workspace.workspaceFolders[0].uri.fsPath
+                : undefined)
+            || path.join(this.manager.context.extensionPath, 'temp_scripts');
 
         const projectName = message.projectName || 'dataset';
         const label = message.label || 'unlabeled';
@@ -335,5 +342,105 @@ export class DatasetOpsHandler {
             console.log(`[Host] Capture result received for ID: ${resp.requestId}`);
             this.manager.panel.webview.postMessage(Object.assign({ command: 'datasetCaptureResult' }, resp));
         });
+    }
+/**
+     * 儲存資料集標註進度（等級一存讀）
+     * 寫入「專案根/dataset/<專案>/dataset.json」（內含 spec + annotations）
+     */
+    public async handleDatasetSaveProgress(message: any) {
+        const { projectName, spec } = message;
+        if (!spec) {
+            this.manager.panel.webview.postMessage({
+                command: 'datasetSaveProgressResult',
+                success: false,
+                error: '缺少資料集規格 (spec)'
+            });
+            return;
+        }
+
+        // 依「專案根 SSOT」決定位置：xml 專案所在資料夾優先；其次工作區根；未錨定則拒絕（避免亂放）。
+        const projectRoot = this.manager.currentFilePath
+            ? path.dirname(this.manager.currentFilePath)
+            : ((vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)
+                ? vscode.workspace.workspaceFolders[0].uri.fsPath
+                : undefined);
+
+        if (!projectRoot) {
+            this.manager.panel.webview.postMessage({
+                command: 'datasetSaveProgressResult',
+                success: false,
+                error: '未錨定專案，請先開新或開啟一個 .xml 專案後再儲存進度'
+            });
+            return;
+        }
+
+        const datasetDir = path.join(projectRoot, 'dataset', projectName || 'dataset');
+        const specPath = path.join(datasetDir, 'dataset.json');
+
+        try {
+            if (!fs.existsSync(datasetDir)) {
+                fs.mkdirSync(datasetDir, { recursive: true });
+            }
+            fs.writeFileSync(specPath, JSON.stringify(spec, null, 2));
+            console.log(`[Host] Saved dataset progress: ${specPath}`);
+            this.manager.panel.webview.postMessage({
+                command: 'datasetSaveProgressResult',
+                success: true,
+                path: specPath.replace(/\\/g, '/')
+            });
+        } catch (e: any) {
+            console.error(`[Host] Failed to save dataset progress: ${e}`);
+            this.manager.panel.webview.postMessage({
+                command: 'datasetSaveProgressResult',
+                success: false,
+                error: e.message
+            });
+        }
+    }
+
+    /**
+     * 讀取資料集標註進度（等級一存讀）
+     * 檢查 <folderPath>/dataset.json 是否存在，存在則回傳 spec。
+     */
+    public async handleDatasetLoadProgress(message: any) {
+        const { folderPath } = message;
+        if (!folderPath) {
+            this.manager.panel.webview.postMessage({
+                command: 'datasetLoadProgressResult',
+                success: false,
+                error: '缺少資料夾路徑'
+            });
+            return;
+        }
+
+        const specPath = path.join(folderPath, 'dataset.json');
+
+        try {
+            if (fs.existsSync(specPath)) {
+                const content = fs.readFileSync(specPath, 'utf-8');
+                console.log(`[Host] Loaded dataset progress: ${specPath}`);
+                this.manager.panel.webview.postMessage({
+                    command: 'datasetLoadProgressResult',
+                    success: true,
+                    hasProgress: true,
+                    spec: JSON.parse(content),
+                    path: specPath.replace(/\\/g, '/')
+                });
+            } else {
+                this.manager.panel.webview.postMessage({
+                    command: 'datasetLoadProgressResult',
+                    success: true,
+                    hasProgress: false,
+                    path: specPath.replace(/\\/g, '/')
+                });
+            }
+        } catch (e: any) {
+            console.error(`[Host] Failed to load dataset progress: ${e}`);
+            this.manager.panel.webview.postMessage({
+                command: 'datasetLoadProgressResult',
+                success: false,
+                error: e.message
+            });
+        }
     }
 }

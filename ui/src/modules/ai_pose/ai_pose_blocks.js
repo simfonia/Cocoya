@@ -223,3 +223,30 @@ Blockly.Blocks['py_ai_pose_is_in_frame'] = {
     });
   }
 };
+
+Blockly.Blocks['py_ai_pose_calc_angle'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["AI_POSE_CALC_ANGLE"],
+      "args0": [
+        { "type": "input_value", "name": "POINT_A", "check": "Tuple" },
+        { "type": "input_value", "name": "POINT_B", "check": "Tuple" },
+        { "type": "input_value", "name": "POINT_C", "check": "Tuple" },
+        {
+          "type": "field_dropdown",
+          "name": "MODE",
+          "options": [
+            [Blockly.Msg["AI_ANGLE_INTERIOR"] || "內角", "interior"],
+            [Blockly.Msg["AI_ANGLE_EXTERIOR"] || "外角", "exterior"],
+            [Blockly.Msg["AI_ANGLE_SIGNED"] || "有符號角", "signed"]
+          ]
+        }
+      ],
+      "inputsInline": true,
+      "output": "Number",
+      "colour": Blockly.Msg["COLOUR_AI_POSE"],
+      "tooltip": Blockly.Msg["AI_POSE_CALC_ANGLE_TOOLTIP"],
+      "helpUrl": "py_ai_pose_calc_angle"
+    });
+  }
+};

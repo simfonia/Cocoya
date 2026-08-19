@@ -3,6 +3,8 @@ import { t } from './i18n.js';
 const SPEC_VERSION = '1.0';
 
 const PROJECT_TYPES = new Set(['image', 'object_detection', 'feature', 'serial', 'table', 'line_following']);
+// 影像類專案：schema.columns 為匯入/採集時自動生成，不需使用者手動定義欄位
+const IMAGE_TYPES = new Set(['image', 'object_detection', 'line_following']);
 const SOURCE_MODES = new Set(['live', 'file', 'hybrid']);
 const COLUMN_TYPES = new Set(['float', 'int', 'string', 'boolean', 'image_path', 'timestamp']);
 const COLUMN_ROLES = new Set(['feature', 'label', 'id', 'timestamp', 'metadata', 'ignore']);
@@ -177,8 +179,20 @@ export class DatasetSpec {
         if (!SOURCE_MODES.has(spec.data_source.mode)) {
             errors.push(t('VALIDATE_SOURCE_MODE_INVALID', 'Data source mode must be one of: %1.', Array.from(SOURCE_MODES).join(', ')));
         }
+        const isImageType = IMAGE_TYPES.has(spec.project.type);
+        const sampleCount = spec.stats.sample_count
+            || (Array.isArray(spec.data_source.samples) ? spec.data_source.samples.length : 0);
+
         if (!Array.isArray(spec.schema.columns) || spec.schema.columns.length === 0) {
-            errors.push(t('VALIDATE_COLUMN_REQUIRED', 'At least one schema column is required.'));
+            if (isImageType) {
+                // 影像類：欄位由匯入/採集自動生成；尚未有樣本時以引導式 warning 呈現
+                if (sampleCount === 0) {
+                    warnings.push(t('VALIDATE_NO_SAMPLES', 'No images imported yet. Select an image folder or capture photos with the camera.'));
+                }
+            } else {
+                // 表格類：欄位為匯出必要條件，維持 error 但文案改為引導式
+                errors.push(t('VALIDATE_COLUMN_REQUIRED', 'No columns defined yet. Import a CSV/JSON file, or click "Add Feature / Add Label" to create one.'));
+            }
         }
 
         spec.schema.columns.forEach((column, index) => {
@@ -207,10 +221,14 @@ export class DatasetSpec {
         if (spec.schema.label && !columnNames.has(spec.schema.label)) {
             errors.push(t('VALIDATE_LABEL_NOT_FOUND', 'Label column "%1" does not exist in schema.columns.', spec.schema.label));
         }
+        // Label 檢查：影像類若尚未有任何樣本，不重複發出 NO_LABEL 警告
         if (!spec.schema.label && spec.project.type !== 'table' && spec.project.type !== 'line_following') {
-            warnings.push(t('VALIDATE_NO_LABEL', 'No label column is assigned yet.'));
+            if (!(isImageType && sampleCount === 0)) {
+                warnings.push(t('VALIDATE_NO_LABEL', 'No label column is assigned yet.'));
+            }
         }
-        if (spec.schema.features.length === 0 && spec.project.type !== 'image' && spec.project.type !== 'line_following') {
+        // Features 檢查：補上 object_detection 豁免；僅在有欄位但未指定 role=feature 時提醒，避免與無欄位的 COLUMN_REQUIRED 重複
+        if (spec.schema.features.length === 0 && !isImageType && spec.schema.columns.length > 0) {
             warnings.push(t('VALIDATE_NO_FEATURES', 'No feature columns are assigned yet.'));
         }
 

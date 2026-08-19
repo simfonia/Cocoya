@@ -1,8 +1,4 @@
-<xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
-  <comment id="`UUn2Y!E{4:4`pM73)[N" x="233.30770874023426" y="270.1539001464844" w="120" h="100">test</comment>
-  <block type="py_definition_zone" id="eg[W-0dB,+`[|r=obc}$" x="100" y="20"></block>
-  <block type="py_coding_comment" id="81bIbE@0M:1PzYxWb$yp" x="170" y="70">
-    <field name="TEXT"></field>
-  </block>
-  <block type="py_main" id="%fQ}Uj013_+LWAO:~2-W" x="100" y="140"></block>
+<xml xmlns="https://developers.google.com/blockly/xml">
+  <block type="py_definition_zone" id="(1lzfVhN-,Jdu1P6Iw@}" x="100" y="20"></block>
+  <block type="py_main" id="{6ZItniDu8LLPDS$/gCQ" x="100" y="140"></block>
 </xml>

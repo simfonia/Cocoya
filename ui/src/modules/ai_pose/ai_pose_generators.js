@@ -126,3 +126,27 @@ Blockly.Python.forBlock['py_ai_pose_is_in_frame'] = function(block, generator) {
   var code = '(0 < ' + pos + '[0] < ' + w + ' and 0 < ' + pos + '[1] < ' + h + ')';
   return [code, Blockly.Python.ORDER_RELATIONAL];
 };
+
+Blockly.Python.forBlock['py_ai_pose_calc_angle'] = function(block, generator) {
+  var ptA = generator.valueToCode(block, 'POINT_A', Blockly.Python.ORDER_ATOMIC) || '(0, 0)';
+  var ptB = generator.valueToCode(block, 'POINT_B', Blockly.Python.ORDER_ATOMIC) || '(0, 0)';
+  var ptC = generator.valueToCode(block, 'POINT_C', Blockly.Python.ORDER_ATOMIC) || '(0, 0)';
+  var mode = block.getFieldValue('MODE');
+
+  generator.definitions_['import_math'] = 'import math';
+  generator.definitions_['func_calc_angle_3pts'] = `
+def cocoya_calc_angle_3pts(a, b, c, mode='interior'):
+    # a, b, c: (x, y) coordinate tuples; vertex is the middle point b
+    # signed>0 means CCW rotation from ray BA (toward a) to ray BC (toward c)
+    if not a or not b or not c: return 0
+    v1x, v1y = a[0]-b[0], a[1]-b[1]
+    v2x, v2y = c[0]-b[0], c[1]-b[1]
+    dot = v1x*v2x + v1y*v2y
+    cross = v1x*v2y - v1y*v2x
+    signed = math.degrees(math.atan2(cross, dot))
+    if mode == 'signed': return signed
+    interior = abs(signed)
+    return (360 - interior) if mode == 'exterior' else interior
+`;
+  return ['cocoya_calc_angle_3pts(' + ptA + ', ' + ptB + ', ' + ptC + ", '" + mode + "')", Blockly.Python.ORDER_FUNCTION_CALL];
+};

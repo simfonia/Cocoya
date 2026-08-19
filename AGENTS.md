@@ -17,11 +17,44 @@ Cocoya 是一個針對 Python AI 視覺的教學工具。它透過 Blockly 產�
 - **權限重要性**：若未完成上述二階段定義，指令在生產環境 (Release Build) 會被攔截，導致功能失效。
 - **能力分發**：偏好透過 `bridge.capabilities` (前端) 查詢環境特性，而非直接檢查 `isTauri` 旗標。
 
+### Rust 序列化命名規範 (serde camelCase)
+- **坑例**：Rust `#[derive(serde::Serialize)]` 結構在 Tauri command 回傳時，欄位名**預設為 snake_case**（Rust 慣例），前端 JS 以 camelCase 讀取（如 `data.projectRoot`）會得到 `undefined`——**物件存在但欄位全 undefined**，log 極難察覺。
+- **鐵律**：所有跨邊界（Rust → JS）的 `#[derive(serde::Serialize)]` 結構，**必須加 `#[serde(rename_all = "camelCase")]`**，使序列化欄位名為 `projectRoot` / `isAnchored` 等 camelCase。
+- **前端雙保險**：可提供 normalize 函式相容兩種命名（如 `a.isAnchored ?? a.is_anchored`），並在解析處統一套用，避免未來欄位名變動造成回歸。
+- **已踩坑紀錄**：
+  - 2026-07-29 `ScanedImage.blob_url`（Rust 預設 snake → 前端 `img.blobUrl` undefined，縮圖失效）。
+  - 2026-08-10 `ProjectAnchor.is_anchored`（`get_project_anchor` 未加 serde → 前端 `projectRoot` undefined，導致 Tauri live 影像 savePath 無法生成、拍照不落盤）。
+- **驗證注意**：`cargo check` 僅保證 Rust 編譯，**不保證欄位命名符合前端期望**；新增 Rust → JS 回傳型別時，須以「前端實際讀到的欄位名」實機驗證一次。
+
 ### 多視窗完整性規範 (Multi-Window Integrity Protocol)
 - **精準通訊**：在 Tauri 後端發送視窗專屬事件時，必須使用 `window.emit_to(&label, "event-name", payload)`，嚴禁使用全域廣播的 `emit`，以防止觸發多個視窗 of 對話框。
 - **原子化狀態同步**：前端在執行「儲存並關閉」流程時，必須 `await window.CocoyaBridge.send('setDirty', { isDirty: false })` 確保後端狀態更新後，才呼叫 `close_window`。
 - **備份宣示權**：處理未命名備份時，必須遵循「偵測後立即重新命名為 `.recovering`」的宣示模式，確保同一個備份檔不會被多個視窗同時抓取。
 - **強制鎖定**：後端 `save_file` 指令必須檢查路徑擁有者。若非目前視窗鎖定的路徑，必須回傳錯誤並由前端 Alert 提示使用者「另存新檔」。
+
+### 前端狀態訊息慣例 (showStatusMessage)
+Dataset Manager 的狀態/錯誤/結果訊息一律透過集中式函式 `showStatusMessage(message, options)` 顯示於 modal 頂部中央的 `#dataset-manager-message` 面板（**所有模式下皆可見**，含標註模式），取代直接寫入各處 `status.textContent` 或 `#dataset-import-status`。
+
+- **定義位置**：`ui/src/modules/dataset_manager/ui_layout.js`（模組級 function 宣告；因 hoisting 可於檔案任何位置之函式內呼叫）。
+- **行為**：
+  - 顯示於 `#dataset-manager-message`（header 下方中央，flex 置中顯示）。
+  - **預設 8 秒後自動清除**；可用 `{ duration }` 覆寫（`0` = 不自動清除）。
+  - 顯示前會重置全域 `statusMessageTimer`，避免多筆訊息交錯時被舊計時器提前隱藏（例：上傳進度的連續更新以最後一筆起算 8 秒）。
+  - 傳入空字串/`undefined` 立即隱藏。
+- **用法**：
+  ```js
+  // 一般提示（8 秒後自動清除）
+  showStatusMessage(t('SUCCESS_IMPORT_DATA', '✅ 成功匯入 %1 筆資料').replace('%1', rows.length));
+
+  // 自訂顯示時間（毫秒）
+  showStatusMessage('正在處理...', { duration: 8000 });
+
+  // 立即隱藏
+  showStatusMessage('');
+  ```
+- **鐵律**：
+  - **禁止**直接寫 `document.getElementById('dataset-import-status').textContent = ...`，或針對標註模式另設專用狀態列；統一改走 `showStatusMessage(...)`，確保跨模式可見性與自動清除一致。
+  - 進行中/成功/錯誤皆統一在此呈現；勿手動 `textContent = ''` 清理（由面板自動清除）。
 
 ### 產生器開發規範 (Generator Standards)
 - **基準縮排 (Base 4-Space Indent)**: 
