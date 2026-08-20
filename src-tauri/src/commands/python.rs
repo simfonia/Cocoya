@@ -103,10 +103,14 @@ pub async fn run_python(
 
     // 4. 即時串流日誌到前端
     // 對齊 VSIX 版：顯示實際執行命令，讓使用者知道使用了哪個腳本
-    let _ = window.emit("python-log", format!(
+    let own_label = window.label().to_string();
+    // 精準單播：只發給本視窗，避免多視窗終端機互相污染
+    let _ = window.emit_to(&own_label, "python-log", format!(
         "& \"{}\" \"{}\"\n",
         python_path, script_path.display()
     ));
+
+    let run_stdout_label = own_label.clone();
 
     let window_clone = window.clone();
     std::thread::spawn(move || {
@@ -121,7 +125,7 @@ pub async fn run_python(
                     let raw = String::from_utf8_lossy(&buffer);
                     // 過濾 ANSI 色碼，對齊 VSIX 終端機輸出
                     let cleaned = strip_ansi_codes(&raw);
-                    let _ = window_clone.emit("python-log", cleaned);
+                    let _ = window_clone.emit_to(&run_stdout_label, "python-log", cleaned);
                 }
                 Err(_) => break,
             }
@@ -130,6 +134,8 @@ pub async fn run_python(
 
     // stderr 使用獨立事件，前端可用不同樣式顯示
     // 不再混入 stdout 串流，避免亂碼片段出現在正常輸出中
+    let run_stderr_label = own_label.clone();
+
     let window_clone_err = window.clone();
     std::thread::spawn(move || {
         let mut reader = BufReader::new(stderr);
@@ -141,7 +147,7 @@ pub async fn run_python(
                 Ok(_) => {
                     let raw = String::from_utf8_lossy(&buffer);
                     let cleaned = strip_ansi_codes(&raw);
-                    let _ = window_clone_err.emit("python-error", cleaned);
+                    let _ = window_clone_err.emit_to(&run_stderr_label, "python-error", cleaned);
                 }
                 Err(_) => break,
             }
@@ -153,10 +159,14 @@ pub async fn run_python(
 
 #[tauri::command]
 pub async fn stop_python(window: Window, state: State<'_, AppState>) -> Result<(), String> {
-    let mut procs = state.python_processes.lock().unwrap();
-    if let Some(mut child) = procs.remove(window.label()) {
-        let _ = child.kill();
+    {
+        let mut procs = state.python_processes.lock().unwrap();
+        if let Some(mut child) = procs.remove(window.label()) {
+            let _ = child.kill();
+        }
     }
+    // 一併釋放該視窗的串列埠監看（若有），避免與執行/部署資源重疊
+    let _ = crate::commands::mcu::stop_serial_monitor(state, window.label().to_string());
     Ok(())
 }
 
@@ -203,11 +213,13 @@ pub async fn start_training(
         "taskType": task_type
     });
     
+    let own_label = window.label().to_string();
+
     // 如果是 DGX 模式，加入 SSH 配置
     if backend == "dgx" && ssh_config.is_some() {
         // 這裡應該處理 DGX 訓練流程
         // 目前先專注在本地訓練
-        window.emit("training-error", serde_json::json!({
+        window.emit_to(&own_label, "training-error", serde_json::json!({
             "error": "DGX 訓練功能開發中，請使用本地訓練"
         })).ok();
         return Err("DGX training not implemented yet".to_string());
@@ -220,6 +232,8 @@ pub async fn start_training(
     drop(stdin);
     
     // 讀取回應
+    let train_stdout_label = own_label.clone();
+
     let window_clone = window.clone();
     std::thread::spawn(move || {
         let reader = BufReader::new(stdout);
@@ -228,10 +242,10 @@ pub async fn start_training(
                 if let Ok(json) = serde_json::from_str::<serde_json::Value>(&l) {
                     if json.get("type") == Some(&serde_json::Value::String("event".to_string())) {
                         if json.get("event") == Some(&serde_json::Value::String("trainingLog".to_string())) {
-                            let _ = window_clone.emit("training-log", json.get("data"));
+                            let _ = window_clone.emit_to(&train_stdout_label, "training-log", json.get("data"));
                         }
                     } else if json.get("type") == Some(&serde_json::Value::String("response".to_string())) {
-                        let _ = window_clone.emit("training-complete", json);
+                        let _ = window_clone.emit_to(&train_stdout_label, "training-complete", json);
                     }
                 }
             }
@@ -239,12 +253,14 @@ pub async fn start_training(
     });
     
     // 讀取 stderr
+    let train_stderr_label = own_label.clone();
+
     let window_clone_err = window.clone();
     std::thread::spawn(move || {
         let reader = BufReader::new(stderr);
         for line in reader.lines() {
             if let Ok(l) = line {
-                let _ = window_clone_err.emit("training-error", serde_json::json!({"error": l}));
+                let _ = window_clone_err.emit_to(&train_stderr_label, "training-error", serde_json::json!({"error": l}));
             }
         }
     });

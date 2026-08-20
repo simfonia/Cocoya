@@ -2,9 +2,10 @@
   <variables>
     <variable id="v_data">received_data</variable>
   </variables>
-  <block type="py_coding_comment" id="c1" x="10" y="10">
-    <field name="TEXT">PC 端序列埠讀取範例 (自動讀取最新數據版)&amp;#10;1. 請先執行 'pip install pyserial'。&amp;#10;2. 修改下面 'COM4' 為你的埠號。</field>
-  </block>
+  <comment id="s8TXF;fgab9y_kbT2=4G" x="10" y="-90" w="332.923095703125" h="155.38462829589844">PC 端序列埠讀取範例 (自動讀取最新數據版)
+1. 請先執行 'pip install pyserial'。
+2. 修改下面 'COM4' 為你的埠號。
+  </comment>
   <block type="py_definition_zone" id="def_root" x="10" y="110">
     <statement name="DEFS">
       <block type="py_io_serial_init" id="ser_init">

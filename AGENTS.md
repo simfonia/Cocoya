@@ -27,7 +27,21 @@ Cocoya 是一個針對 Python AI 視覺的教學工具。它透過 Blockly 產�
 - **驗證注意**：`cargo check` 僅保證 Rust 編譯，**不保證欄位命名符合前端期望**；新增 Rust → JS 回傳型別時，須以「前端實際讀到的欄位名」實機驗證一次。
 
 ### 多視窗完整性規範 (Multi-Window Integrity Protocol)
-- **精準通訊**：在 Tauri 後端發送視窗專屬事件時，必須使用 `window.emit_to(&label, "event-name", payload)`，嚴禁使用全域廣播的 `emit`，以防止觸發多個視窗 of 對話框。
+- **精準通訊（emit_to 鐵則）**：在 Tauri 後端發送「視窗專屬」事件時，**一律**使用 `window.emit_to(&label, "event-name", payload)`；**嚴禁**使用全域廣播的 `emit`（含 `window_clone.emit(...)`），否則事件會送達每個視窗的 listener，導致多視窗終端機/對話框互相污染。
+  - `emit_to` 語法（與現有 `lib.rs` 的 `closeRequested` 相同）：
+    ```rust
+    // 指令開頭抓取本視窗 label（String），thread 內沿用
+    let own_label = window.label().to_string();
+    // 假設輸出執行緒持有 window_clone / window_clone_err：
+    let _ = window_clone    .emit_to(&own_label, "python-log",   payload);
+    let _ = window_clone_err.emit_to(&own_label, "python-error", payload);
+    ```
+  - **前端對應**：前端以 `getCurrentWebviewWindow().listen("事件名", cb)` 訂閱即可（`ui/src/bridge/tauri.js` 已一致採用 `appWindow.listen(...)`）。
+  - **已轉換清單（SSOT）**：`run_python`（`python-log`/`python-error`）、`start_training`（`training-*`）、`deploy_mcu`、`open_serial_monitor`、`erase_filesystem`、`reset_firmware`（`python-log`/`python-error`）皆已由 `.emit()` 改為 `.emit_to(&own_label, ...)`。
+- **視窗焦點切換／串列埠交接 (方案 B)**：多視窗下，串列埠監控採「失焦自動釋放、重新聚焦自動重取」。
+  - 前端 `ui/src/bridge/tauri.js` 以 `document.addEventListener('blur'/'focus', ...)` 偵測視窗層級失焦/聚焦，呼叫 `this.tauriInvoke('set_window_focus', { focused: bool })`。
+  - 後端 `mcu.rs::set_window_focus`：`focused=true` 時若該視窗有 `serial_wants`（曾開過監看-Label → 埠）且無啟用 session → 自動 `spawn_serial_monitor` 重取；`focused=false` 時 `stop_serial_monitor` 釋放（保留 wants 供下次聚焦重開）。
+  - **狀態**：`AppState.serial_monitors`（視窗 label → 啟用中 session，含 child）、`AppState.serial_wants`（label → 想重開的埠/python_path/lang）。`stop_python` 亦一併釋放該視窗的 monitor，避免與執行/部署資源重疊。
 - **原子化狀態同步**：前端在執行「儲存並關閉」流程時，必須 `await window.CocoyaBridge.send('setDirty', { isDirty: false })` 確保後端狀態更新後，才呼叫 `close_window`。
 - **備份宣示權**：處理未命名備份時，必須遵循「偵測後立即重新命名為 `.recovering`」的宣示模式，確保同一個備份檔不會被多個視窗同時抓取。
 - **強制鎖定**：後端 `save_file` 指令必須檢查路徑擁有者。若非目前視窗鎖定的路徑，必須回傳錯誤並由前端 Alert 提示使用者「另存新檔」。

@@ -117,6 +117,10 @@ pub async fn deploy_mcu(
         procs.insert(window.label().to_string(), child);
     }
 
+    let own_label = window.label().to_string();
+
+    let deploy_stdout_label = own_label.clone();
+
     let window_clone = window.clone();
     std::thread::spawn(move || {
         use std::io::Read;
@@ -124,9 +128,11 @@ pub async fn deploy_mcu(
         while let Ok(n) = stdout.read(&mut buffer) {
             if n == 0 { break; }
             let s = String::from_utf8_lossy(&buffer[..n]).to_string();
-            let _ = window_clone.emit("python-log", s);
+            let _ = window_clone.emit_to(&deploy_stdout_label, "python-log", s);
         }
     });
+
+    let deploy_stderr_label = own_label.clone();
 
     let window_clone_err = window.clone();
     std::thread::spawn(move || {
@@ -135,15 +141,27 @@ pub async fn deploy_mcu(
         while let Ok(n) = stderr.read(&mut buffer) {
             if n == 0 { break; }
             let s = String::from_utf8_lossy(&buffer[..n]).to_string();
-            let _ = window_clone_err.emit("python-error", s);
+            let _ = window_clone_err.emit_to(&deploy_stderr_label, "python-error", s);
         }
     });
 
     Ok(())
 }
 
-#[tauri::command]
-pub async fn open_serial_monitor(
+/// 停止指定視窗的串列埠監視 session（失焦釋放用）。
+/// 只釋放 monitor session，保留 `serial_wants` 以便重新聚焦自動重開。
+pub fn stop_serial_monitor(state: State<'_, AppState>, label: String) -> bool {
+    let mut monitors = state.serial_monitors.lock().unwrap();
+    if let Some(mut session) = monitors.remove(&label) {
+        // monitor child 不存於 python_processes（避免與執行 python/部署混淆）
+        let _ = session.child.kill();
+        return true;
+    }
+    false
+}
+
+/// 啟動串列埠監視進程（open_serial_monitor 與重新聚焦自動重取共用）
+fn spawn_serial_monitor(
     window: Window,
     state: State<'_, AppState>,
     handle: AppHandle,
@@ -151,7 +169,29 @@ pub async fn open_serial_monitor(
     python_path: String,
     lang: String,
 ) -> Result<(), String> {
-    stop_python(window.clone(), state.clone()).await?;
+    let label = window.label().to_string();
+
+    // 若同一埠已被其他視窗佔用 → 先停止該視窗，避免雙重衝突
+    let occupied_by: Option<String> = {
+        let mut owner: Option<String> = None;
+        let monitors = state.serial_monitors.lock().unwrap();
+        for (other_label, sess) in monitors.iter() {
+            if *other_label != label && sess.port == port {
+                owner = Some(other_label.to_string());
+                break;
+            }
+        }
+        owner
+    };
+    if let Some(occupier) = occupied_by {
+        let _ = stop_serial_monitor(state.clone(), occupier);
+    }
+
+    // 記錄「想要」的監看埠（跨失焦保留，供重新聚焦後自動重開）
+    {
+        let mut wants = state.serial_wants.lock().unwrap();
+        wants.insert(label.clone(), crate::state::SerialMonitorWant { port: port.clone(), python_path: python_path.clone(), lang: lang.clone() });
+    }
 
     let script_path = get_deployer_path(&handle);
 
@@ -172,9 +212,11 @@ pub async fn open_serial_monitor(
     let mut stderr = child.stderr.take().unwrap();
 
     {
-        let mut procs = state.python_processes.lock().unwrap();
-        procs.insert(window.label().to_string(), child);
+        let mut monitors = state.serial_monitors.lock().unwrap();
+        monitors.insert(label.clone(), crate::state::SerialMonitorSession { port: port.clone(), python_path: python_path.clone(), lang: lang.clone(), child: child });
     }
+
+    let monitor_stdout_label = label.clone();
 
     let window_clone = window.clone();
     std::thread::spawn(move || {
@@ -183,9 +225,12 @@ pub async fn open_serial_monitor(
         while let Ok(n) = stdout.read(&mut buffer) {
             if n == 0 { break; }
             let s = String::from_utf8_lossy(&buffer[..n]).to_string();
-            let _ = window_clone.emit("python-log", s);
+            // 精準單播：只發給本視窗，避免多視窗終端機互相污染
+            let _ = window_clone.emit_to(&monitor_stdout_label, "python-log", s);
         }
     });
+
+    let monitor_stderr_label = label.clone();
 
     let window_clone_err = window.clone();
     std::thread::spawn(move || {
@@ -194,10 +239,59 @@ pub async fn open_serial_monitor(
         while let Ok(n) = stderr.read(&mut buffer) {
             if n == 0 { break; }
             let s = String::from_utf8_lossy(&buffer[..n]).to_string();
-            let _ = window_clone_err.emit("python-error", s);
+            let _ = window_clone_err.emit_to(&monitor_stderr_label, "python-error", s);
         }
     });
 
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn open_serial_monitor(
+    window: Window,
+    state: State<'_, AppState>,
+    handle: AppHandle,
+    port: String,
+    python_path: String,
+    lang: String,
+) -> Result<(), String> {
+    stop_python(window.clone(), state.clone()).await?;
+    let _ = spawn_serial_monitor(window.clone(), state.clone(), handle, port, python_path, lang)?;
+    Ok(())
+}
+
+/// 視窗焦點切換（前端 document blur/focus 事件觸發）。
+/// - focused=true ：若此視窗先前有串列埠監看設定 → 自動重新開啟監看。
+/// - focused=false：釋放此視窗的串列埠監看（保留 wants 供下次聚焦自動重取）。
+#[tauri::command]
+pub async fn set_window_focus(
+    window: Window,
+    handle: AppHandle,
+    state: State<'_, AppState>,
+    focused: bool,
+) -> Result<(), String> {
+    let label = window.label().to_string();
+    if focused {
+        let want: Option<crate::state::SerialMonitorWant> = {
+            let wants = state.serial_wants.lock().unwrap();
+            wants.get(&label)
+                .map(|w| crate::state::SerialMonitorWant { port: w.port.clone(), python_path: w.python_path.clone(), lang: w.lang.clone() })
+        };
+        let already_active = {
+            let monitors = state.serial_monitors.lock().unwrap();
+            monitors.contains_key(&label)
+        };
+        if let Some(w) = want {
+            if !already_active {
+                // 略為延遲讓 OS 徹底釋放前一位鎖定的埠，再重開避免衝突
+                std::thread::sleep(std::time::Duration::from_millis(400));
+                let _ = spawn_serial_monitor(window.clone(), state.clone(), handle, w.port, w.python_path, w.lang)?;
+            }
+        }
+    } else {
+        // 失焦：釋放監看（保留 wants）
+        let _ = stop_serial_monitor(state, label);
+    }
     Ok(())
 }
 
@@ -234,22 +328,28 @@ pub async fn erase_filesystem(
     let stdout = child.stdout.take().unwrap();
     let stderr = child.stderr.take().unwrap();
 
+    let own_label = window.label().to_string();
+
+    let erase_stdout_label = own_label.clone();
+
     let window_clone = window.clone();
     std::thread::spawn(move || {
         let reader = BufReader::new(stdout);
         for line in reader.lines() {
             if let Ok(l) = line {
-                let _ = window_clone.emit("python-log", l);
+                let _ = window_clone.emit_to(&erase_stdout_label, "python-log", l);
             }
         }
     });
+
+    let erase_stderr_label = own_label.clone();
 
     let window_clone_err = window.clone();
     std::thread::spawn(move || {
         let reader = BufReader::new(stderr);
         for line in reader.lines() {
             if let Ok(l) = line {
-                let _ = window_clone_err.emit("python-error", l);
+                let _ = window_clone_err.emit_to(&erase_stderr_label, "python-error", l);
             }
         }
     });
@@ -401,22 +501,27 @@ pub async fn reset_firmware(
             procs.insert(window.label().to_string(), child);
         }
 
+        let own_label = window.label().to_string();
+        let reset_stdout_label = own_label.clone();
+
         let window_clone = window.clone();
         std::thread::spawn(move || {
             let reader = BufReader::new(stdout);
             for line in reader.lines() {
                 if let Ok(l) = line {
-                    let _ = window_clone.emit("python-log", l);
+                    let _ = window_clone.emit_to(&reset_stdout_label, "python-log", l);
                 }
             }
         });
+
+        let reset_stderr_label = own_label.clone();
 
         let window_clone_err = window.clone();
         std::thread::spawn(move || {
             let reader = BufReader::new(stderr);
             for line in reader.lines() {
                 if let Ok(l) = line {
-                    let _ = window_clone_err.emit("python-error", l);
+                    let _ = window_clone_err.emit_to(&reset_stderr_label, "python-error", l);
                 }
             }
         });

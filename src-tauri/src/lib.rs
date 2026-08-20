@@ -20,6 +20,8 @@ pub fn run() {
             dirty_states: Arc::new(Mutex::new(HashMap::new())),
             sidecar_processes: Arc::new(Mutex::new(HashMap::new())),
             sidecar_responses: Arc::new(Mutex::new(HashMap::new())),
+            serial_monitors: Arc::new(Mutex::new(HashMap::new())),
+            serial_wants: Arc::new(Mutex::new(HashMap::new())),
         })
         .invoke_handler(tauri::generate_handler![
             commands::run_python, 
@@ -56,7 +58,8 @@ pub fn run() {
             commands::find_latest_training_report,
             commands::get_project_anchor,
             commands::dataset_save_progress,
-            commands::dataset_load_progress
+            commands::dataset_load_progress,
+            commands::set_window_focus
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -88,6 +91,15 @@ pub fn run() {
                             let _: std::process::Child = child;
                             let _ = child.kill();
                         }
+                    }
+                    {
+                        let mut monitors = state.serial_monitors.lock().unwrap();
+                        if let Some(mut session) = monitors.remove(&label) {
+                            let _: crate::state::SerialMonitorSession = session;
+                            let _ = session.child.kill();
+                        }
+                        let mut wants = state.serial_wants.lock().unwrap();
+                        wants.remove(&label);
                     }
                 }
             }

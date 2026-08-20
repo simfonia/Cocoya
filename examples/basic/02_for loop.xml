@@ -2,8 +2,13 @@
   <variables>
     <variable id="U!T-@VPz.I%l#e}Ezue@">i</variable>
   </variables>
-  <block type="py_definition_zone" id="fZIf/kj)qz,ZyK:aZlMV" x="100" y="20"></block>
-  <block type="mcu_main" id=":iaVv|K(}.pHeOdi={MR" x="100" y="200">
+  <comment id="$XMV,a3IDn2T6`6gUQRi" x="10" y="-150" w="306.4615478515625" h="104.923095703125">使用 for 迴圈執行重複的工作
+
+for i in range(start, stop, step):
+
+  </comment>
+  <block type="py_definition_zone" id="fZIf/kj)qz,ZyK:aZlMV" x="10" y="10"></block>
+  <block type="mcu_main" id=":iaVv|K(}.pHeOdi={MR" x="10" y="90">
     <statement name="DO">
       <block type="py_time_sleep" id="jA=oY;84;hyJp/-u!T{2">
         <value name="SECONDS">
@@ -39,7 +44,7 @@
                     <mutation items="2"></mutation>
                     <value name="ADD0">
                       <shadow type="py_text" id="X%6hld`3WErXNkui^S+*">
-                        <field name="TEXT">Hello Cocoya -</field>
+                        <field name="TEXT">Hello Cocoya : </field>
                       </shadow>
                     </value>
                     <value name="ADD1">

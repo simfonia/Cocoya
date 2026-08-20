@@ -36,5 +36,6 @@ commands.allow = [
   "find_latest_training_report",
   "get_project_anchor",
   "dataset_save_progress",
-  "dataset_load_progress"
+  "dataset_load_progress",
+  "set_window_focus"
 ]

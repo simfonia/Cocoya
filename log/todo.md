@@ -8,6 +8,37 @@
 
 ---
 
+## [已完成] 2026-08-20 — Tauri 多視窗 terminal/serial 隔離 + 視窗焦點交接（方案 B）
+
+### 需求
+1. Tauri 多視窗下終端機畫面彼此共用（污染）。
+2. 多視窗切換時，希望失焦視窗自動釋放 Serial port、聚焦視窗自動重取。
+
+### 修改（階段一：終端機隔離）
+- `src-tauri/src/commands/python.rs` + `mcu.rs`：`python-log`/`python-error`/`training-*` 全部由 `.emit()` → `.emit_to(&own_label, ...)`（Tauri `emit` 為全域廣播，是多視窗終端機共用的根因；`closeRequested` 早已改 `emit_to`）。執行緒以 `xxx_label = own_label.clone()` 避免 `move` 閉包 double move。
+- `python.rs::stop_python`：kill 程序後一併 `crate::commands::mcu::stop_serial_monitor(state, label)`。
+- `mcu.rs`：`deploy_mcu`/`open_serial_monitor`/`erase_filesystem`/`reset_firmware` 的 `python-log`/`python-error` 亦全部 `.emit_to`。
+
+### 修改（階段二：方案 B 焦點交接）
+- `src-tauri/src/state.rs`：新增 `SerialMonitorSession{port,python_path,lang,child}`、`SerialMonitorWant{port,python_path,lang}`；`AppState` 新增 `serial_monitors`、`serial_wants`（皆以 window label 為 key）。
+- `mcu.rs`：抽出 `spawn_serial_monitor()`（同埠被其他視窗佔用先停）；`open_serial_monitor()` 改用該 helper；新增 `stop_serial_monitor()`、`#[tauri::command] set_window_focus(focused)`（失焦釋放、聚焦自動重取）。
+- `lib.rs`：AppState 初始化兩新欄位、invoke_handler 註冊 `set_window_focus`、on_window_event 關閉時清理 serial 狀態。
+- `ui/src/bridge/tauri.js` `_setupTauriListeners`：`document.addEventListener('blur'/'focus')` → `this.tauriInvoke('set_window_focus', { focused: bool })`。
+- `permissions/commands.toml` / `docs/backend_api_manifest.md` / `AGENTS.md`：同步註冊與文件說明。
+
+### 驗證
+- [x] `cargo check`（src-tauri）Finished 無 error
+- [x] `npx tsc --noEmit -p tsconfig.json` 通過
+- [x] `node --check ui/src/bridge/tauri.js` OK
+- [ ] 實機：雙視窗 run/serial 不再污染、切窗自動釋放/重取
+
+### 相依性
+- 無（純 Tauri 後端 + 前端 Tauri bridge）。
+
+*更新日期：2026-08-20*
+
+---
+
 ## [已完成] 2026-08-17 — Dataset Manager 第二輪（名稱警示/Live 排序/統計同步/統一標籤管理器/排序/顏色）
 
 ### 需求與修改
