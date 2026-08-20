@@ -32,6 +32,7 @@ This document serves as the Technical Reference and Source of Truth (SSOT) for t
 | `setup_stable_mode` | Configures MCU for stable mode (mpremote based) | Migrated | `commands/mcu.rs` |
 | `erase_filesystem` | Rebuilds the MCU filesystem (formatting) | Migrated | `commands/mcu.rs` |
 | `reset_firmware` | Burns MicroPython firmware to RPI-RP2 drive | Migrated | `commands/mcu.rs` |
+| `set_window_focus` | Releases/re-acquires serial monitor on window focus change (Multi-window handover) | Migrated | `commands/mcu.rs` |
 
 ### App Commands (`app.rs`)
 | Command Name | Description | Status | Target Module |
@@ -88,6 +89,7 @@ Notation: `key?` = Optional. **Rule: changing a Rust signature -> immediately up
 | mcu | open_serial_monitor | port: String, python_path, lang | {port, pythonPath, lang} | Result<(), String> |
 | mcu | erase_filesystem    | port: String, python_path, lang | {port, pythonPath, lang} | Result<(), String> |
 | mcu | reset_firmware      | model: String, should_clear: bool, serial_port: Option<String> | {model, shouldClear, serialPort?} | Result<(), String> |
+| mcu | set_window_focus    | focused: bool | {focused} | Result<(), String> |
 | file | get_manifest       | -- | {} | Result<serde_json::Value, String> |
 | file | get_module_toolbox  | path: String | {path} | Result<String, String> |
 | file | get_project_anchor  | -- | {} | ProjectAnchor |

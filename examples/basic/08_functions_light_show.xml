@@ -2,9 +2,12 @@
   <variables>
     <variable id="i_var">i</variable>
   </variables>
-  <block type="py_coding_comment" id="c01" x="10" y="10">
-    <field name="TEXT">函式入門 — 自訂聲光表演&amp;#10;函式就像「打包好的動作」，取個名字就能重複使用&amp;#10;def blink_all(): 定義閃燈函式&amp;#10;def play_beep(): 定義音效函式&amp;#10;主程式只需呼叫函式名稱即可執行</field>
-  </block>
+  <comment id="%r7~4p[n0=;vVClEq)!C" x="10" y="-50" w="374.76922607421875" h="162.15383911132812">函式入門 — 自訂聲光表演
+函式就像「打包好的動作」，取個名字就能重複使用
+def blink_all(): 定義閃燈函式
+def play_beep(): 定義音效函式
+主程式只需呼叫函式名稱即可執行
+  </comment>
   <block type="py_definition_zone" id="dz01" x="10" y="150"></block>
   <block type="py_function_def" id="fd01" x="10" y="230">
     <mutation params="0"></mutation>

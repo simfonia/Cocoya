@@ -55,7 +55,8 @@ C:\Workspace\cocoya\
 │   │   ├── 2026-06-05.html # [NEW] 初始化今日日誌與開發 context
 │   │   ├── 2026-06-24.html # Phase 5 MVP 驗證 + DGX Spark Docker 建置
 │   │   ├── 2026-08-06.md  # [NEW] BBox 標註 UI 重構（全寬 3 欄布局）
-│   │   └── 2026-08-07.md  # [NEW] BBox 標註 UI 除錯（Tauri/VSIX 雙平台驗證通過）
+│   │   ├── 2026-08-07.md  # [NEW] BBox 標註 UI 除錯（Tauri/VSIX 雙平台驗證通過）
+│   │   ├── 2026-08-20.md  # [NEW] Tauri 多視窗 terminal/serial 隔離 + 視窗焦點交接（方案 B）
 │   └── mappings/          # 長期結構化知識庫（對照表）
 │       ├── cocoya_ssh_sftp_api.html # SSH/SFTP API 使用對照表
 │       ├── Framework_API_Index.html # Framework API 索引 (含 findLocatableBlock)

@@ -2,9 +2,10 @@
   <variables>
     <variable id="i_var">i</variable>
   </variables>
-  <block type="py_coding_comment" id="c01" x="10" y="10">
-    <field name="TEXT">for 迴圈入門 — LED 跑馬燈&amp;#10;for 迴圈讓變數 i 從 start 跑到 stop-1&amp;#10;每次跑一步，執行 DO 裡面的程式</field>
-  </block>
+  <comment id="0?T{HRguz26N%76!VcPJ" x="10" y="-30" w="287.8053741455078" h="119.69232177734375">for 迴圈入門 — LED 跑馬燈
+for 迴圈讓變數 i 從 start 跑到 stop-1
+每次跑一步，執行 DO 裡面的程式
+  </comment>
   <block type="py_definition_zone" id="dz01" x="10" y="110"></block>
   <block type="mcu_main" id="main01" x="10" y="190">
     <statement name="DO">
@@ -25,7 +26,7 @@
                     </value>
                     <statement name="DO">
                       <block type="py_coding_comment" id="c04">
-                        <field name="TEXT">LED 依序亮起（0 → 7）</field>
+                        <field name="TEXT">LED 依序亮起（0 → 7）共8顆</field>
                         <next>
                           <block type="py_loop_for_range" id="fr01">
                             <field name="VAR" id="i_var">i</field>
@@ -82,6 +83,23 @@
                                                     <field name="NUM">0.5</field>
                                                   </shadow>
                                                 </value>
+                                                <next>
+                                                  <block type="mcu_car_set_led_io" id="doS;x.|LJ`h~=l:%@lkm">
+                                                    <value name="PIN">
+                                                      <shadow type="py_math_number" id="mn04">
+                                                        <field name="NUM">0</field>
+                                                      </shadow>
+                                                      <block type="py_variables_get" id="{t}nuW_a%55yJqC{Xw3e">
+                                                        <field name="VAR" id="i_var">i</field>
+                                                      </block>
+                                                    </value>
+                                                    <value name="STATE">
+                                                      <shadow type="py_logic_boolean" id="s98C:(R[A;4T!%bQVtUj">
+                                                        <field name="BOOL">False</field>
+                                                      </shadow>
+                                                    </value>
+                                                  </block>
+                                                </next>
                                               </block>
                                             </next>
                                           </block>
@@ -94,18 +112,18 @@
                             </statement>
                             <next>
                               <block type="py_coding_comment" id="c08">
-                                <field name="TEXT">LED 依序熄滅（7 → 0）</field>
+                                <field name="TEXT">LED 依序熄滅（6 → 1），兩端不重複</field>
                                 <next>
                                   <block type="py_loop_for_range" id="fr02">
                                     <field name="VAR" id="i_var">i</field>
                                     <value name="START">
                                       <shadow type="py_math_number" id="mn06">
-                                        <field name="NUM">7</field>
+                                        <field name="NUM">6</field>
                                       </shadow>
                                     </value>
                                     <value name="STOP">
                                       <shadow type="py_math_number" id="mn07">
-                                        <field name="NUM">-1</field>
+                                        <field name="NUM">0</field>
                                       </shadow>
                                     </value>
                                     <value name="STEP">
@@ -128,7 +146,7 @@
                                             </value>
                                             <value name="STATE">
                                               <shadow type="py_logic_boolean" id="lb03">
-                                                <field name="BOOL">False</field>
+                                                <field name="BOOL">True</field>
                                               </shadow>
                                             </value>
                                             <next>
@@ -148,6 +166,23 @@
                                                         <field name="NUM">0.5</field>
                                                       </shadow>
                                                     </value>
+                                                    <next>
+                                                      <block type="mcu_car_set_led_io" id="4d9H#lTThlb:I!~5b+wn">
+                                                        <value name="PIN">
+                                                          <shadow type="py_math_number" id="mn09">
+                                                            <field name="NUM">0</field>
+                                                          </shadow>
+                                                          <block type="py_variables_get" id="ukWwZq3g2e/sYTgi@hw8">
+                                                            <field name="VAR" id="i_var">i</field>
+                                                          </block>
+                                                        </value>
+                                                        <value name="STATE">
+                                                          <shadow type="py_logic_boolean" id="OJP@!Xvx(0u$,L#oCO/f">
+                                                            <field name="BOOL">False</field>
+                                                          </shadow>
+                                                        </value>
+                                                      </block>
+                                                    </next>
                                                   </block>
                                                 </next>
                                               </block>

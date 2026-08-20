@@ -3,9 +3,10 @@
     <variable id="Rb.GL`^/o?^663^S)aFC">i</variable>
     <variable id="count_var">count</variable>
   </variables>
-  <block type="py_coding_comment" id="c01" x="10" y="10">
-    <field name="TEXT">變數入門 — 按鈕計數器&amp;#10;變數就像一個盒子，可以存入數字&amp;#10;按按鈕1 加1，按按鈕2 減1，用 LED 顯示數字</field>
-  </block>
+  <comment id="*2]Fk-3`u[+~i:Kgi2m," x="10" y="-70" w="361.4465026855469" h="154.15383911132812">變數入門 — 按鈕計數器
+變數就像一個盒子，可以存入數字
+按按鈕1 加1，按按鈕2 減1，用 LED 顯示數字
+  </comment>
   <block type="py_definition_zone" id="dz01" x="10" y="110"></block>
   <block type="mcu_main" id="main01" x="10" y="190">
     <statement name="DO">

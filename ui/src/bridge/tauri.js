@@ -663,6 +663,23 @@ export class BridgeTauri extends BaseBridge {
                 this._handleCloseDialog(appWindow);
             });
 
+            // 視窗焦點/失焦偵測（方案 B：多視窗自動交接串列埠監控）。
+            // document blur 於視窗層級失焦時觸發（切換到別的 Cocoya 視窗/其他應用），
+            // 呼叫後端釋放（blur）或重取（focus）monitor。
+            const doc = window.document;
+            if (doc && this.tauriInvoke) {
+                doc.addEventListener('blur', () => {
+                    if (this.tauriInvoke) {
+                        this.tauriInvoke('set_window_focus', { focused: false }).catch(() => {});
+                    }
+                });
+                doc.addEventListener('focus', () => {
+                    if (this.tauriInvoke) {
+                        this.tauriInvoke('set_window_focus', { focused: true }).catch(() => {});
+                    }
+                });
+            }
+
             // 監聽日誌
             await appWindow.listen('python-log', (event) => {
                 if (!this._firstLogReceived) {
