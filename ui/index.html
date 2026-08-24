@@ -20,20 +20,26 @@
             <div id="toolbar">
                 <!-- 左側群組：平台與檔案 -->
                 <div class="toolbar-group">
-                    <select id="platform-selector" class="platform-select">
-                        <option value="PC">%{BKY_TLB_MODE_PC}</option>
-                        <option value="MicroPython">%{BKY_TLB_MODE_MCU}</option>
-                    </select>
+                    <span id="current-platform" class="platform-badge">%{BKY_TLB_MODE_PC}</span>
                     <div class="toolbar-separator"></div>
                     <div id="file-breadcrumb">
                         <img src="src/icons/module-puzzle.png" style="width: 14px; opacity: 0.5;">
                         <span id="current-filename">%{BKY_TLB_FILE_NEW}</span>
                     </div>
+                    <div class="toolbar-btn" id="btn-new-window" title="%{BKY_TLB_NEW_WINDOW}" style="display:none;">
+                        <img src="src/icons/app-window-multiple-bold.png">
+                    </div>
                     <div class="toolbar-btn" id="btn-examples" title="%{BKY_TLB_EXAMPLES}">
                         <img src="src/icons/gift.png">
                     </div>
-                    <div class="toolbar-btn" id="btn-new" title="%{BKY_TLB_NEW}">
-                        <img src="src/icons/doc-new.png">
+                    <div class="startup-new-dropdown" id="toolbar-new-wrap">
+                        <div class="toolbar-btn" id="btn-new" title="%{BKY_TLB_NEW}">
+                            <img src="src/icons/doc-new.png">
+                        </div>
+                        <div class="startup-new-menu" id="toolbar-new-menu">
+                            <button type="button" class="startup-new-option" data-platform="PC"></button>
+                            <button type="button" class="startup-new-option" data-platform="MicroPython"></button>
+                        </div>
                     </div>
                     <div class="toolbar-btn" id="btn-open" title="%{BKY_TLB_OPEN}">
                         <img src="src/icons/open-file.png">
@@ -131,9 +137,6 @@
                     </div>
                     <div class="toolbar-btn" id="btn-terminal" title="%{BKY_TLB_TERMINAL}">
                         <img src="src/icons/terminal_24dp_1F1F1F.png">
-                    </div>
-                    <div class="toolbar-btn" id="btn-update" title="%{BKY_TLB_UPDATE}">
-                        <img src="src/icons/published_with_changes_24dp_1F1F1F.png" class="update-icon">
                     </div>
                     <div class="toolbar-btn" id="btn-close" title="%{BKY_TLB_CLOSE_EDITOR}" style="display: none;">
                         <img src="src/icons/close-octagon.png">
@@ -284,12 +287,50 @@
     <script type="module" src="src/main.js"></script>
     <!-- 啟動首頁（未錨定時顯示，兩平台共用） -->
     <div id="startup-home" class="modal-overlay" style="display: none; z-index: 10002; align-items: center; justify-content: center; text-align: center; background: rgba(255,255,255,0.97);">
+        <!-- 版本檢查：固定右上角，不自動隱藏 -->
+        <div class="toolbar-btn startup-update-btn" id="btn-update" title="%{BKY_TLB_UPDATE}" style="position: absolute; top: 18px; right: 22px; display: flex; align-items: center; gap: 6px; padding: 10px 14px; font-size: 14px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #555; cursor: pointer;">
+            <img src="src/icons/published_with_changes_24dp_1F1F1F.png" class="update-icon" style="width: 20px; height: 20px;">
+        </div>
         <div style="max-width: 560px; padding: 48px 32px; width: 100%;">
-            <h2 id="startup-home-title" style="color: #FE2F89; font-size: 28px; margin: 0 0 10px;">Cocoya</h2>
-            <p id="startup-home-hint" style="color: #777; font-size: 14px; margin: 0 0 36px;">請先選擇「開新專案」或「開啟專案」以確立專案位置。</p>
+            <img src="src/icons/cocoya.png" id="startup-home-logo" style="display: block; margin: 0 auto 18px auto; width: 360px; height: auto;">
             <div style="display: flex; gap: 16px; justify-content: center;">
-                <button type="button" id="startup-new" style="padding: 14px 30px; font-size: 15px; border: none; border-radius: 8px; background: #FE2F89; color: #fff; cursor: pointer;">開新專案</button>
+                <div class="startup-new-dropdown" id="startup-new-wrap">
+                    <button type="button" id="startup-new" style="padding: 14px 30px; font-size: 15px; border: none; border-radius: 8px; background: #FE2F89; color: #fff; cursor: pointer;">開新專案</button>
+                    <div class="startup-new-menu">
+                        <button type="button" class="startup-new-option" data-platform="PC">💻 Python (PC)</button>
+                        <button type="button" class="startup-new-option" data-platform="MicroPython">📟 MicroPython (MCU)</button>
+                    </div>
+                </div>
                 <button type="button" id="startup-open" style="padding: 14px 30px; font-size: 15px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #555; cursor: pointer;">開啟專案</button>
+            </div>
+            <div style="margin: 18px 0 0 0;">
+                <button type="button" id="startup-examples" style="padding: 12px 26px; font-size: 14px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #555; cursor: pointer;">開啟範例</button>
+            </div>
+            <div id="startup-settings-panel" style="margin-top: 28px; text-align: left;">
+                <details>
+                    <summary style="cursor: pointer; font-size: 14px; color: #555; user-select: none;">%{BKY_STARTUP_SETTINGS}</summary>
+                    <div style="display: flex; gap: 12px; margin-top: 12px;">
+                        <button type="button" id="startup-set-python-path" style="flex: 1; padding: 10px 12px; font-size: 13px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #555; cursor: pointer;">設定 Python 路徑</button>
+                        <button type="button" id="startup-diagnose" style="flex: 1; padding: 10px 12px; font-size: 13px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #555; cursor: pointer;">檢查 Python 套件</button>
+                    </div>
+                    <div style="display: flex; gap: 12px; margin-top: 12px;">
+                        <label style="flex: 1; display: flex; align-items: center; gap: 8px; font-size: 13px; color: #555;">
+                            <span id="startup-lang-label">%{BKY_STARTUP_LANG}</span>
+                            <select id="startup-lang" style="flex: 1; padding: 8px; font-size: 13px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #555; cursor: pointer;">
+                                <option value="zh-hant">繁體中文</option>
+                                <option value="en">English</option>
+                            </select>
+                        </label>
+                        <label style="flex: 1; display: flex; align-items: center; gap: 8px; font-size: 13px; color: #555;">
+                            <span id="startup-theme-label">%{BKY_STARTUP_THEME}</span>
+                            <select id="startup-theme" style="flex: 1; padding: 8px; font-size: 13px; border: 1px solid #ddd; border-radius: 8px; background: #fff; color: #555; cursor: pointer;">
+                                <option value="auto">%{BKY_THEME_AUTO}</option>
+                                <option value="light">%{BKY_THEME_LIGHT}</option>
+                                <option value="dark">%{BKY_THEME_DARK}</option>
+                            </select>
+                        </label>
+                    </div>
+                </details>
             </div>
         </div>
     </div>

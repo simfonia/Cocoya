@@ -183,7 +183,7 @@ export class BridgeTauri extends BaseBridge {
                         const xml = data.xml || this._getCurrentXml();
                         try {
                             const filename = await this.tauriInvoke('save_file', { xml, saveAs: isSaveAs });
-                            this._dispatchToFrontend({ command: 'saveCompleted', filename: filename });
+                            this._dispatchToFrontend({ command: 'saveCompleted', filename: filename, tag: data.tag });
                             await this._refreshAnchor(); // 存檔後同步前端錨定（首檔另存即錨定）
                             return true;
                         } catch (e) {
@@ -278,14 +278,6 @@ export class BridgeTauri extends BaseBridge {
                         this._firstLogReceived = true;
                         window.CocoyaUI.hideLoadingModal();
                         this.alert('Erase failed: ' + e);
-                    }
-                    break;
-
-                case 'confirmSwitch':
-                    const { ask } = await import('@tauri-apps/plugin-dialog');
-                    const ok = await ask(data.message, { title: 'Cocoya', kind: 'warning' });
-                    if (ok) {
-                        this._dispatchToFrontend({ command: 'switchPlatform', platform: data.newPlatform });
                     }
                     break;
 
@@ -858,7 +850,7 @@ export class BridgeTauri extends BaseBridge {
 
     async _handleCheckUpdate() {
         try {
-            const currentVersion = await this.tauriInvoke('get_version').catch(() => '0.7.5');
+            const currentVersion = await this.tauriInvoke('get_version').catch(() => '0.8.0');
             const GITHUB_REPO_API = "https://api.github.com/repos/simfonia/Cocoya/releases/latest";
             const DOWNLOAD_URL = "https://github.com/simfonia/Cocoya/releases";
 
@@ -884,7 +876,7 @@ export class BridgeTauri extends BaseBridge {
         } catch (e) {
             console.error('[Bridge] Check update failed:', e);
             if (window.CocoyaUI) {
-                const current = await this.tauriInvoke('get_version').catch(() => '0.7.5');
+                const current = await this.tauriInvoke('get_version').catch(() => '0.8.0');
                 window.CocoyaUI.setUpdateStatus({ hasUpdate: false, currentVersion: current, latestVersion: current, url: '' });
             }
         }
@@ -1110,7 +1102,7 @@ export class BridgeTauri extends BaseBridge {
     _getCurrentXml() {
         if (typeof Blockly !== 'undefined' && Blockly.getMainWorkspace) {
             const dom = Blockly.Xml.workspaceToDom(Blockly.getMainWorkspace());
-            const platform = document.getElementById('platform-selector')?.value || 'PC';
+            const platform = window.CocoyaApp?.currentPlatform;
             dom.setAttribute('platform', platform);
             return Blockly.Xml.domToPrettyText(dom);
         }

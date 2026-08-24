@@ -142,7 +142,7 @@ export class FileOpsHandler {
             fs.writeFileSync(this.manager.currentFilePath, message.xml, 'utf8');
             this.manager.lastDirtyState = false;
             this.manager.updateTitle();
-            this.manager.panel.webview.postMessage({ command: 'saveCompleted', success: true, filename: path.basename(this.manager.currentFilePath) });
+            this.manager.panel.webview.postMessage({ command: 'saveCompleted', success: true, filename: path.basename(this.manager.currentFilePath), tag: message.tag });
         }
     }
 

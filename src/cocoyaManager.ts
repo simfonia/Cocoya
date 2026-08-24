@@ -199,9 +199,6 @@ export class CocoyaManager {
                     this.lastDirtyState = message.isDirty;
                     this.updateTitle();
                     break;
-                case 'confirmSwitch':
-                    await this.handleConfirmSwitch(message);
-                    break;
                 case 'checkEnvironment':
                     await this.envOps.handleCheckEnvironment();
                     break;
@@ -284,29 +281,6 @@ export class CocoyaManager {
                     break;
             }
         }, undefined, this.context.subscriptions);
-    }
-
-    private async handleConfirmSwitch(message: any) {
-        const choice = await vscode.window.showWarningMessage(
-            message.message,
-            { modal: true },
-            this.t('MSG_SAVE'), this.t('MSG_DONT_SAVE')
-        );
-        if (choice === this.t('MSG_SAVE')) {
-            if (await this.fileOps.performSave(message.xml)) {
-                this.currentPlatform = message.newPlatform;
-                this.currentFilePath = undefined;
-                this.lastDirtyState = false;
-                this.updateTitle();
-                this.panel.webview.postMessage({ command: 'switchPlatform', platform: message.newPlatform });
-            }
-        } else if (choice === this.t('MSG_DONT_SAVE')) {
-            this.currentPlatform = message.newPlatform;
-            this.currentFilePath = undefined;
-            this.lastDirtyState = false;
-            this.updateTitle();
-            this.panel.webview.postMessage({ command: 'switchPlatform', platform: message.newPlatform });
-        }
     }
 
     /**

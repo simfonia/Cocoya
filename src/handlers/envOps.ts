@@ -18,7 +18,7 @@ export class EnvOpsHandler {
         let pythonPath = this.manager.getPythonPath();
         
         // SSOT: 從 config/python_modules.json 讀取套件清單
-        const configPath = path.join(this.manager.context.extensionPath, '..', 'config', 'python_modules.json');
+        const configPath = path.join(this.manager.context.extensionPath, 'config', 'python_modules.json');
         let moduleDefs: any[] = [];
         try {
             const configContent = fs.readFileSync(configPath, 'utf-8');

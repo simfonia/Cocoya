@@ -101,6 +101,91 @@ body.vscode-high-contrast #file-breadcrumb {
     height: 28px;
 }
 
+/* 唯讀平台標籤 (取代舊的 platform-selector) */
+.platform-badge {
+    display: inline-flex;
+    align-items: center;
+    background-color: #f3f3f3;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 2px 10px;
+    font-size: 12px;
+    color: #333;
+    height: 28px;
+    white-space: nowrap;
+}
+
+/* Startup Home「開新專案」hover 平台選單 */
+.startup-new-dropdown {
+    position: relative;
+    display: inline-block;
+}
+.startup-new-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 100%;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    z-index: 11000;
+    padding: 4px;
+    white-space: nowrap;
+}
+.startup-new-dropdown:hover .startup-new-menu {
+    display: block;
+}
+.startup-new-option {
+    display: block;
+    width: 100%;
+    padding: 10px 16px;
+    font-size: 14px;
+    border: none;
+    border-radius: 6px;
+    background: #fff;
+    color: #555;
+    cursor: pointer;
+    text-align: left;
+}
+.startup-new-option:hover {
+    background-color: #f0f0f0;
+}
+
+/* === Startup Home 深色變體（手動主題：body.cocoya-dark-mode） === */
+body.cocoya-dark-mode #startup-home {
+    background: #1e1e1e;
+}
+body.cocoya-dark-mode #startup-home button,
+body.cocoya-dark-mode #startup-home select,
+body.cocoya-dark-mode #startup-home summary,
+body.cocoya-dark-mode #startup-home label {
+    color: #d4d4d4 !important;
+}
+body.cocoya-dark-mode #startup-home button:not(#startup-new),
+body.cocoya-dark-mode #startup-home select {
+    background: #2d2d2d !important;
+    border-color: #444 !important;
+}
+body.cocoya-dark-mode .startup-new-menu {
+    background: #2d2d2d;
+    border-color: #444;
+}
+body.cocoya-dark-mode .startup-new-option {
+    background: #2d2d2d;
+    color: #d4d4d4;
+}
+body.cocoya-dark-mode .startup-new-option:hover {
+    background-color: #3a3a3a;
+}
+/* Startup Home 的版本檢查按鈕（#btn-update 搬入首頁） */
+body.cocoya-dark-mode .startup-update-btn {
+    background: #2d2d2d !important;
+    border-color: #444 !important;
+    color: #d4d4d4;
+}
+
 .serial-select {
     min-width: 80px;
     max-width: 150px; /* 限制寬度以免破壞版面 */
@@ -703,6 +788,11 @@ body.vscode-dark #panel-resizer.is-dragging {
     z-index: 1000;
 }
 
+/* 診斷視窗在 Startup Home (z-index:10002) 上方顯示，避免被隱藏 */
+#diagnose-modal {
+    z-index: 10050;
+}
+
 .modal-content {
     background: white;
     padding: 20px;
@@ -1192,7 +1282,9 @@ body.vscode-high-contrast .toolbar-separator {
 }
 
 body.vscode-dark .platform-select,
-body.vscode-high-contrast .platform-select {
+body.vscode-high-contrast .platform-select,
+body.vscode-dark .platform-badge,
+body.vscode-high-contrast .platform-badge {
     background-color: #3c3c3c;
     border-color: #555;
     color: #e0e0e0;

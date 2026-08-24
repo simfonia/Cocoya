@@ -13,7 +13,7 @@
     "HW_DIGITAL_WRITE": "數位輸出 腳位 %1 %2",
     "HW_DIGITAL_READ": "數位讀入 腳位 %1",
     "HW_ANALOG_READ": "類比讀入 腳位 %1",
-    "HW_PWM_WRITE": "PWM 輸出 腳位 %1 %2",
+    "HW_PWM_WRITE": "PWM 輸出 腳位 %1 %2 %",
     "HW_I2C_SCAN": "I2C 掃描",
     "HW_PIN_HIGH": "高電位",
     "HW_PIN_LOW": "低電位",
@@ -22,7 +22,7 @@
     "HW_DIGITAL_WRITE_TOOLTIP": "數位輸出: 高電位 (True) 或 低電位 (False)",
     "HW_DIGITAL_READ_TOOLTIP": "數位讀入: 回傳布林值 (True/False)",
     "HW_ANALOG_READ_TOOLTIP": "類比讀入: 回傳數值 (0-65535)",
-    "HW_PWM_WRITE_TOOLTIP": "PWM 輸出: 設定佔空比 (0-100% 或 0-65535)",
+    "HW_PWM_WRITE_TOOLTIP": "PWM 輸出: 佔空比百分比 (0-100%)，自動對應為 0-65535。",
     "HW_I2C_SCAN_TOOLTIP": "I2C 掃描: 回傳裝置地址清單"
   });
 })(Blockly);

@@ -19,7 +19,6 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         this.setupThemeSync();
         this.setupBlocklyPrompts();
         this.setupWindowListeners();
-        this.setupPlatformSelector();
         this.setupIndentSelector();
         window.CocoyaBridge.send('getManifest');
 
@@ -148,8 +147,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             }, 1000);
 
             if (Blockly.Python) Blockly.Python.PLATFORM = this.currentPlatform;
-            const selector = document.getElementById('platform-selector');
-            if (selector) selector.value = this.currentPlatform;
+            this.updatePlatformLabel();
             
             if (window.CocoyaUI) window.CocoyaUI.applyI18n();
             if (window.CocoyaUI) window.CocoyaUI.initToolbar((msg) => window.CocoyaBridge.send(msg.command, msg));

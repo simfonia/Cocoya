@@ -1,4 +1,4 @@
-﻿# Cocoya 專案任務清單 (Todo List)
+# Cocoya 專案任務清單 (Todo List)
 **專案名稱**：Cocoya (Code, Compute, Yield AI)
 **核心目標**：建立一個以 Blockly 為介面，幫助 Python 初學者進入 AI 世界的 VSCode extension 與獨立桌面應用程式。
 
@@ -611,6 +611,62 @@ Cocoya 無法定位 value/expression 積木 (如數字、文字、變數 getter)
 - [x] `log/plan/StartupProjectAnchoring.md`（主題一）
 - [x] `log/plan/DatasetManagerProgressAndGuardrails.md`（主題二）
 
+---
+
+## [已完成] 2026-08-21 — Startup Home：平台選擇 + 範例 + 快速設定移至首頁
+
+### 背景
+切換 PC/MCU 平台會清空工作區，但 VSIX 後端 `handleConfirmSwitch` 會執行 `currentFilePath = undefined`，導致專案失去錨定、Startup Home 重新顯示。平台類型是專案創建時的不可變屬性 (XML 含 `platform` attribute)，應移至 Startup Home 的「開新專案」流程中。
+
+### 計畫文件
+- [x] `log/plan/StartupHomePlatformAndExamples.md`
+
+### 範圍
+1. **平台選擇**：從 toolbar `<select id="platform-selector">` 移至 Startup Home `#startup-platform` select，僅於「開新專案」時選擇
+2. **開啟範例**：加入 Startup Home (`#startup-examples`)，同時保留 toolbar `#btn-examples` 供中途參考
+3. **快速設定**：加入 Startup Home 收合面板 (Python 路徑 / 套件檢查)，同時保留 toolbar 設定下拉
+4. **主視覺圖片**：Startup Home 上方加入 `ui/src/icons/cocoya.png` (水平置中)
+5. **平台屬性稽核**：修正 `startNewProjectFromHome()` 未注入 `platform` attribute；將 `base.js`、`tauri.js` 的 `#platform-selector` 讀取改為 `CocoyaApp.currentPlatform`
+
+### 狀態：等待實作 (Act 模式)
+
+### [已完成] 實作紀錄 (2026-08-21)
+- [x] **A1/A3 HTML**：`ui/index.html` Startup Home 加 logo(`cocoya.png`)+`#startup-examples`+快速設定收合面板(`#startup-set-python-path`/`#startup-diagnose`)+`#startup-platform`；toolbar `<select id="platform-selector">` → 唯讀 `<span id="current-platform" class="platform-badge">`
+- [x] **A8 i18n**：`zh-hant.js`/`en.js` 新增 `BKY_STARTUP_EXAMPLES/SETTINGS/PYTHON_PATH/DIAGNOSE/HINT_WITH_PLATFORM`
+- [x] **A3 config.js**：移除 `setupPlatformSelector()`/`switchPlatform()`；新增 `updatePlatformLabel()`；`setPlatformUI()` 改用 `updatePlatformLabel()`
+- [x] **A4b lifecycle.js**：移除 `setupPlatformSelector()` 呼叫；初始化改用 `updatePlatformLabel()`
+- [x] **A2 persistence.js**：`startNewProjectFromHome()` 讀 `#startup-platform`、跨平台時 `setPlatformUI`+`resetWorkspace()` 重建初始積木、`_serializeAndSaveAs()` 注入 `platform` attr；`_bindStartupHome()` 綁 3 新按鈕；`showStartupHomeIfNeeded()` 初始化 select + i18n
+- [x] **A4 base.js**：L258/L286 以 `CocoyaApp.currentPlatform` 取代 `#platform-selector`
+- [x] **A5 tauri.js**：L1113 同改；移除 `confirmSwitch` case
+- [x] **A6/A6b**：`cocoyaManager.ts` 移除 `confirmSwitch` case + `handleConfirmSwitch()`；`controller.js` 移除 `switchPlatform` handler
+- [x] **A9 style.css**：新增 `.platform-badge`（含 dark 變體）
+- [x] 驗證：`node --check` 8 js 通過、`npx tsc --noEmit` TSC_EXIT=0、`npm run build`(ui) 成功、source/dist 無殘留舊引用
+
+*加入日期：2026-08-21*
+
+*加入日期：2026-08-21*
+
+### [已完成] UX 追加 (2026-08-21)
+- [x] **平台 hover 選單**：移除下方獨立 `#startup-platform` select；「開新專案」改為 hover 展開 `.startup-new-menu` 選平台 (`.startup-new-option` data-platform)，點選即 `startNewProjectFromHome(platform)` 開新專案
+- [x] **診斷無動作修正**：`#startup-diagnose` 原僅 `send('checkEnvironment')` 不開啟視窗；改為 `CocoyaUI.showDiagnoseModal()` + `send('checkEnvironment')`，對齊 base.js `btn-diagnose`
+- [x] **清理已刪標題/說明**：移除持久化對 `#startup-home-title`/`#startup-home-hint` 的 query/textContent；移除 i18n `BKY_STARTUP_HINT_WITH_PLATFORM`
+- [x] 驗證：`node --check` persistence/zh-hant/en 通過、source 掃描無殘留、`npm run build` 成功
+
+### [已完成] UX 追加2 (2026-08-21)
+- [x] **hover gap 修正**：`.startup-new-menu` `top: calc(100%+6px)` → `100%`，移除按鈕/選單間 6px gap，滑鼠可連續滑入
+- [x] **診斷 modal 顯示修正**：根因為 `.modal-overlay z-index:1000` < Startup Home `10002`，診斷視窗被蓋住；新增 `#diagnose-modal { z-index: 10050 }`
+- [x] 驗證：`ui` `npm run build` 成功
+
+### [已完成] tool 開新檔：平台 hover 選單 + 分平台語意 (2026-08-21)
+- [x] **VSIX 檢查套件路徑 bug 修正**：`envOps.ts` L21 多餘 `'..'` → `extensionPath, 'config', 'python_modules.json'`（原拼成 `c:\Workspace\config\...`）
+- [x] **toolbar 開新檔改平台 hover 選單**：`index.html` `#btn-new` 包入 `#toolbar-new-wrap` + `.startup-new-menu`（`data-platform` 兩選項）；`base.js` 移除 `bind('btn-new','newFile')`，改綁定選單選項
+- [x] **VSIX = 直接開新錨定**：選平台 → `CocoyaApp.startNewProjectFromHome(platform)`（`setPlatformUI`+`resetWorkspace` 建初始積木+`saveFileAs` 錨定），不再回首頁
+- [x] **Tauri = 先錨定目前窗再開新窗**：`base.js` 設 `_pendingNewWindowAfterSave` 旗標 → `persistence.onSaveCompleted` 存檔成功後 `send('newFile')` → `create_window()`
+- [x] **tooltip 分平台**：`TLB_NEW_VSIX` = 開新專案；`TLB_NEW_TAURI` = 以新視窗開新專案（zh-hant/en）
+- [x] **`_bindStartupHome` 範圍限縮**：綁定 `.startup-new-option` 限 `#startup-home .startup-new-option`，避免抓到 toolbar 選項覆寫 onclick
+- [x] 驗證：`node --check`、`tsc --noEmit` TSC_EXIT=0、`npm run build` 成功
+
+
 ### 里程碑
 - [x] M1：專案根 SSOT + 錨定查詢（兩平台）— 已完成，三平台 compile 通過
 - [x] M2：啟動首頁（前端共用 Startup Home；未錨定顯示、開新/開啟錨定）；Tauri create_window 新視窗同邏輯 — 完成，vite build 通過
@@ -799,3 +855,29 @@ Cocoya 無法定位 value/expression 積木 (如數字、文字、變數 getter)
 - [ ] 相依：與 docs/backend_api_manifest.md Parameters 同步維護 (SSOT -> generate type -> manifest)
 
 *加入日期：2026-08-19*
+
+### [已完成] Startup Home 除錯：開新專案流程雙平台修正 (2026-08-24)
+- [x] VSIX：toolbar 新增改走後端 newFile（checkDirtyAndConfirm → 存回原檔 → resetWorkspace），不再無檢查跳另存對話框
+- [x] Tauri：前端 _confirmSaveBeforeNew（showSaveConfirm+saveFile）dirty 檢查 → 同窗重置初始積木；移除 _pendingNewWindowAfterSave 開新窗邏輯
+- [x] startNewProjectFromHome() 重寫：首頁選平台直接進入初始積木（不另存、不錨定延後到首次存檔）
+- [x] resetWorkspace() 改 hideStartupHome()，開新不再回首頁
+- [x] 驗證：git grep 殘留清掃 / node --check / ui build 通過；實機驗證待做
+
+### [已完成] Tauri 版：錨定鐵律恢復 + toolbar 開新視窗按鈕分離 (2026-08-24)
+- [x] startNewProjectFromHome() Tauri 分支恢復另存錨定流程（dirty 檢查 → 跨平台重建初始積木 → saveFileAs）
+- [x] toolbar 新增 btn-new-window（僅 Tauri 顯示，createWindow）；btn-new tooltip 改為「在本視窗開新專案」
+- [x] file.rs 另存預設檔名改「未命名專案.xml」；i18n 新增 TLB_NEW_WINDOW、調整 TLB_NEW_TAURI
+- [x] 驗證：node --check / cargo check / ui build 通過；實機待驗證
+
+
+### [已完成] 另存新專案寫入乾淨初始 XML，消除磁碟暫態 (2026-08-24 追加2)
+- [x] 新增 _getInitialProjectXml(platform) 靜態模板取代序列化目前工作區；B.xml 不再帶入 A 內容
+- [x] 驗證：node --check / ui build 通過
+
+
+### [已完成] 前幾輪修改同步至 VSIX — 稽核確認 (2026-08-24 追加3)
+- [x] 稽核結論：前端 ui/ 為雙模共用 SSOT，開新流程（先確認後破壞+乾淨初始XML+tag回傳鏈）已自動涵蓋 VSIX；fileOps.ts saveCompleted 已帶 tag
+- [x] btn-new-window 僅 isTauri 顯示，VSIX 不受影響（新視窗由 VS Code 管理）
+- [x] handleNewFile/case newFile 已不被 UI 觸發，保留不動
+- [x] 驗證：tsc EXIT=0 / node --check / ui build 通過；VSIX 實機清單待驗（首頁開新錨定、跨平台新增、取消零副作用、另存不受影響）
+

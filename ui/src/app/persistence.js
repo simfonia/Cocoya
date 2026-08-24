@@ -138,31 +138,59 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             this.setDirty(false); 
             this.triggerCodeUpdate(); 
         }
-        // X 錨定：開新檔案（newFile）使 currentFilePath 歸零 = 未錨定 → 回到啟動首頁重新錨定。
-        // 已錨定專案切平台（switchPlatform）時 isAnchored 仍為 true，不會誤跳首頁。
-        this.showStartupHomeIfNeeded();
+        // 「開新專案」語意：直接以目前平台重建初始積木，不再回到啟動首頁
+        // （首頁僅在 app 初始未錨定時由 controller 顯示一次）
+        this.hideStartupHome();
     },
 
     /**
      * 儲存完成後的回調
      */
-    onSaveCompleted: async function(filename) { 
+    onSaveCompleted: async function(filename, tag) {
         if (filename) {
             // 存檔成功，不論之前是否為唯讀，現在我就是這個新檔的擁有者了
             this.isReadOnly = false;
-            
+
             if (window.CocoyaUI && window.CocoyaUI.setSaveButtonState) {
                 window.CocoyaUI.setSaveButtonState(true, '');
             }
 
-            if (window.CocoyaUI) window.CocoyaUI.updateFileStatus(filename); 
-            await this.setDirty(false); 
-            if (window.CocoyaUI) window.CocoyaUI.flashButton('btn-save', '#e3f2fd'); 
+            if (window.CocoyaUI) window.CocoyaUI.updateFileStatus(filename);
+            await this.setDirty(false);
+            if (window.CocoyaUI) window.CocoyaUI.flashButton('btn-save', '#e3f2fd');
             if (window.CocoyaBridge) {
                 window.CocoyaBridge.send('clearBackup');
             }
         }
+
+        // 開新專案流程：另存已成功錨定 → 此時才套用目標平台初始積木（先確認、後破壞）
+        if (tag === 'newProject' && this._pendingNewProjectPlatform) {
+            const target = this._pendingNewProjectPlatform;
+            this._pendingNewProjectPlatform = null;
+            if (target !== this.currentPlatform) await this.setPlatformUI(target);
+            this._applyInitialBlocks();
+        }
+
         this.hideStartupHome();
+    },
+
+    /**
+     * 套用目前平台的初始積木（開新專案錨定成功後呼叫）
+     * 與 resetWorkspace 不同：不清檔名、不觸發首頁邏輯，保留剛錨定的檔名狀態
+     */
+    _applyInitialBlocks: function() {
+        if (!this.workspace) return;
+        this.isReadOnly = false;
+        Blockly.Events.disable();
+        try {
+            this.workspace.clear();
+            this.createDefaultBlocks();
+        } finally {
+            Blockly.Events.enable();
+        }
+        this.setDirty(false);
+        this.triggerCodeUpdate();
+        setTimeout(() => { if (this.minimap) { this.minimap._isPaused = false; this.refreshMinimap(); } }, 300);
     },
 
     // --- 啟動首頁 (Startup Home)：未錨定時強制選「開新/開啟」以確立專案根 ---
@@ -174,14 +202,51 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         const home = document.getElementById('startup-home');
         if (!home) return;
         const anchored = !!(window.CocoyaBridge && window.CocoyaBridge.capabilities && window.CocoyaBridge.capabilities.isAnchored);
-        const title = home.querySelector('#startup-home-title');
-        const hint = home.querySelector('#startup-home-hint');
         const newBtn = home.querySelector('#startup-new');
         const openBtn = home.querySelector('#startup-open');
-        if (title) title.textContent = 'Cocoya';
-        if (hint) hint.textContent = (Blockly.Msg['BKY_STARTUP_HINT'] || '請先選擇「開新專案」或「開啟專案」以確立專案位置。');
+        const examplesBtn = home.querySelector('#startup-examples');
+        const summary = home.querySelector('#startup-settings-panel summary');
+        const setPythonBtn = home.querySelector('#startup-set-python-path');
+        const diagnoseBtn = home.querySelector('#startup-diagnose');
+        const langSelect = home.querySelector('#startup-lang');
+        const themeSelect = home.querySelector('#startup-theme');
+        const newOptions = home.querySelectorAll('.startup-new-option');
         if (newBtn) newBtn.textContent = (Blockly.Msg['BKY_STARTUP_NEW'] || '開新專案');
         if (openBtn) openBtn.textContent = (Blockly.Msg['BKY_STARTUP_OPEN'] || '開啟專案');
+        if (examplesBtn) examplesBtn.textContent = (Blockly.Msg['BKY_STARTUP_EXAMPLES'] || '開啟範例');
+        if (summary) summary.textContent = (Blockly.Msg['BKY_STARTUP_SETTINGS'] || '⚙ 快速設定');
+        if (setPythonBtn) setPythonBtn.textContent = (Blockly.Msg['BKY_STARTUP_PYTHON_PATH'] || '設定 Python 路徑');
+        if (diagnoseBtn) diagnoseBtn.textContent = (Blockly.Msg['BKY_STARTUP_DIAGNOSE'] || '檢查 Python 套件');
+        for (const opt of newOptions) {
+            const platform = opt.getAttribute('data-platform');
+            if (platform === 'PC') opt.textContent = (Blockly.Msg['TLB_MODE_PC'] || '💻 Python (PC)');
+            else if (platform === 'MicroPython') opt.textContent = (Blockly.Msg['TLB_MODE_MCU'] || '📟 MicroPython (MCU)');
+        }
+        // 語系 / 主題偏好：反映目前設定值 + 顯式填充文案（不依賴全域 applyI18n 掃描）
+        const langLabel = home.querySelector('#startup-lang-label');
+        const themeLabel = home.querySelector('#startup-theme-label');
+        if (langLabel) langLabel.textContent = (Blockly.Msg['BKY_STARTUP_LANG'] || 'Language');
+        if (themeLabel) themeLabel.textContent = (Blockly.Msg['BKY_STARTUP_THEME'] || 'Theme');
+        if (themeSelect) {
+            const labels = {
+                auto: (Blockly.Msg['BKY_THEME_AUTO'] || 'Auto (System)'),
+                light: (Blockly.Msg['BKY_THEME_LIGHT'] || 'Light'),
+                dark: (Blockly.Msg['BKY_THEME_DARK'] || 'Dark')
+            };
+            for (const opt of themeSelect.options) {
+                if (labels[opt.value]) opt.textContent = labels[opt.value];
+            }
+        }
+        if (langSelect) {
+            let savedLang = '';
+            try { savedLang = localStorage.getItem('cocoya_lang') || ''; } catch (e) { }
+            langSelect.value = savedLang || this.currentLang || 'zh-hant';
+        }
+        if (themeSelect) {
+            let mode = 'auto';
+            try { mode = localStorage.getItem('cocoya_theme_mode') || 'auto'; } catch (e) { }
+            themeSelect.value = mode;
+        }
         this._bindStartupHome();
         if (!anchored) home.style.display = 'flex';
     },
@@ -208,23 +273,126 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         }
         this._startupBound = true;
         console.log('[StartupHome] Buttons bound:', !!newBtn, !!openBtn);
-        newBtn.onclick = () => this.startNewProjectFromHome();
+        // 「開新專案」為 hover 選單：點選平台選項即依該平台開新專案
+        // 僅限 Startup Home 範圍，避免抓到 toolbar 的 #toolbar-new-menu 選項
+        const newOptions = document.querySelectorAll('#startup-home .startup-new-option');
+        for (const opt of newOptions) {
+            // hover 高亮交由 .startup-new-option:hover CSS（支援深色變體）
+            opt.onclick = () => this.startNewProjectFromHome(opt.getAttribute('data-platform'));
+        }
         openBtn.onclick = () => this.startOpenProjectFromHome();
+        const examplesBtn = document.getElementById('startup-examples');
+        if (examplesBtn) examplesBtn.onclick = () => window.CocoyaBridge.send('openExamples', { includeXml: true });
+        const setPythonBtn = document.getElementById('startup-set-python-path');
+        if (setPythonBtn) setPythonBtn.onclick = () => window.CocoyaBridge.send('setPythonPath');
+        const diagnoseBtn = document.getElementById('startup-diagnose');
+        if (diagnoseBtn) diagnoseBtn.onclick = () => {
+            if (window.CocoyaUI && window.CocoyaUI.showDiagnoseModal) window.CocoyaUI.showDiagnoseModal();
+            window.CocoyaBridge.send('checkEnvironment');
+        };
+        // 語系切換：存偏好 → 重載 webview（manifestData handler 會以偏好覆寫 lang）
+        const langSelect = document.getElementById('startup-lang');
+        if (langSelect) {
+            langSelect.onchange = () => {
+                try { localStorage.setItem('cocoya_lang', langSelect.value); } catch (e) { }
+                location.reload();
+            };
+        }
+        // 主題切換：存偏好 → 即時套用（不需重載）
+        const themeSelect = document.getElementById('startup-theme');
+        if (themeSelect) {
+            themeSelect.onchange = () => {
+                try { localStorage.setItem('cocoya_theme_mode', themeSelect.value); } catch (e) { }
+                if (this.applyAutoTheme) this.applyAutoTheme(true);
+            };
+        }
     },
 
     /**
-     * 啟動首頁「開新專案」：先「另存新檔」取得 .xml 路徑以錨定專案根
+     * 「開新專案」（Startup Home 選平台 / toolbar 新增選單共用，雙平台統一）：
+     * 1. 檢查 dirty（有未存變更時提示 儲存/不儲存/取消；已錨定故「儲存」=靜默寫回原檔）
+     * 2. 送出「另存新檔」對話框（XML 的 platform 屬性直接標目標平台）
+     * 3. ★ 先確認、後破壞：存檔成功（saveCompleted + tag='newProject'）之前，
+     *    不清工作區、不改檔名、不隱藏首頁 —— 取消對話框時原狀態完整保留
+     * @param {string} [selectedPlatform] 選單選擇的平台 (PC / MicroPython)
      */
-    startNewProjectFromHome: function() {
-        console.log('[StartupHome] New project from home');
-        let xml = '';
+    startNewProjectFromHome: async function(selectedPlatform) {
+        console.log('[StartupHome] New project', selectedPlatform);
+        const nextPlatform = (selectedPlatform || this.currentPlatform).trim();
+
+        // 檢查 dirty：取消則中止，不進入開新流程
+        if (!(await this._confirmSaveBeforeNew())) return;
+
+        // 記錄目標平台，待另存成功後（onSaveCompleted 收到 tag='newProject'）才套用初始積木
+        this._pendingNewProjectPlatform = nextPlatform;
+        // ★ 另存寫入的是「目標平台的乾淨初始專案」，絕不帶入目前工作區（原專案）的內容
+        if (!window.CocoyaBridge) return;
+        window.CocoyaBridge.send('saveFileAs', {
+            xml: this._getInitialProjectXml(nextPlatform),
+            tag: 'newProject'
+        });
+    },
+
+    /**
+     * 序列化目前工作區 XML 並注入目前平台屬性（用於 dirty 存回原檔）
+     */
+    _getCurrentXmlWithPlatform: function() {
         try {
-            if (this.workspace) {
-                const dom = Blockly.Xml.workspaceToDom(this.workspace);
-                xml = Blockly.Xml.domToPrettyText(dom);
-            }
-        } catch (e) { xml = ''; }
-        if (window.CocoyaBridge) window.CocoyaBridge.send('saveFileAs', { xml });
+            if (!this.workspace) return '';
+            const dom = Blockly.Xml.workspaceToDom(this.workspace);
+            dom.setAttribute('platform', this.currentPlatform);
+            return Blockly.Xml.domToPrettyText(dom);
+        } catch (e) { return ''; }
+    },
+
+    /**
+     * 產生目標平台的新專案初始 XML（靜態模板，結構對應 createDefaultBlocks）：
+     * - PC：py_definition_zone + py_main
+     * - MicroPython：py_definition_zone + mcu_main(DO) > py_loop_while(CONDITION) > py_logic_boolean(True)
+     * @param {string} platform PC / MicroPython
+     */
+    _getInitialProjectXml: function(platform) {
+        const header = '<xml xmlns="https://developers.google.com/blockly/xml" platform="' + platform + '">';
+        let body;
+        if (platform === 'MicroPython') {
+            body =
+                '  <block type="py_definition_zone" x="100" y="20"></block>\n' +
+                '  <block type="mcu_main" x="100" y="200">\n' +
+                '    <statement name="DO">\n' +
+                '      <block type="py_loop_while">\n' +
+                '        <value name="CONDITION">\n' +
+                '          <block type="py_logic_boolean">\n' +
+                '            <field name="BOOL">True</field>\n' +
+                '          </block>\n' +
+                '        </value>\n' +
+                '      </block>\n' +
+                '    </statement>\n' +
+                '  </block>';
+        } else {
+            body =
+                '  <block type="py_definition_zone" x="100" y="20"></block>\n' +
+                '  <block type="py_main" x="100" y="140"></block>';
+        }
+        return header + '\n' + body + '\n</xml>';
+    },
+
+    /**
+     * 開新專案前的 dirty 檢查：回傳 false 表示使用者取消，應中止開新
+     */
+    _confirmSaveBeforeNew: async function() {
+        if (!this.isDirty) return true;
+        const msg = (window.Blockly && Blockly.Msg['MSG_SAVE_CONFIRM']) || 'Do you want to save changes to the current project?';
+        let choice = 'cancel';
+        if (window.CocoyaUI && window.CocoyaUI.showSaveConfirm) {
+            choice = await window.CocoyaUI.showSaveConfirm(msg);
+        }
+        if (choice === 'cancel') return false;
+        if (choice === 'save') {
+            // 已錨定存回原檔（靜默寫回）；VSIX send 無回傳值，以 undefined 容錯
+            const saved = await window.CocoyaBridge.send('saveFile', { xml: this._getCurrentXmlWithPlatform() });
+            return saved !== false;
+        }
+        return true; // discard
     },
 
     /**
