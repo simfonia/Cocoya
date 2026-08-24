@@ -227,25 +227,27 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         const themeLabel = home.querySelector('#startup-theme-label');
         if (langLabel) langLabel.textContent = (Blockly.Msg['BKY_STARTUP_LANG'] || 'Language');
         if (themeLabel) themeLabel.textContent = (Blockly.Msg['BKY_STARTUP_THEME'] || 'Theme');
-        if (themeSelect) {
-            const labels = {
-                auto: (Blockly.Msg['BKY_THEME_AUTO'] || 'Auto (System)'),
-                light: (Blockly.Msg['BKY_THEME_LIGHT'] || 'Light'),
-                dark: (Blockly.Msg['BKY_THEME_DARK'] || 'Dark')
-            };
-            for (const opt of themeSelect.options) {
-                if (labels[opt.value]) opt.textContent = labels[opt.value];
+        // 主題下拉選單：由 ThemeManager registry 動態生成（auto 固定第一個）
+        if (themeSelect && window.CocoyaTheme) {
+            const savedMode = window.CocoyaTheme.getMode();
+            themeSelect.innerHTML = '';
+            const autoOpt = document.createElement('option');
+            autoOpt.value = 'auto';
+            autoOpt.textContent = (Blockly.Msg['BKY_THEME_AUTO'] || 'Auto (System)');
+            themeSelect.appendChild(autoOpt);
+            for (const t of window.CocoyaTheme.getThemes()) {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = (t.labelKey && Blockly.Msg[t.labelKey]) || t.labelFallback || t.id;
+                themeSelect.appendChild(opt);
             }
+            themeSelect.value = savedMode;
+            if (themeSelect.selectedIndex < 0) themeSelect.value = 'auto';
         }
         if (langSelect) {
             let savedLang = '';
             try { savedLang = localStorage.getItem('cocoya_lang') || ''; } catch (e) { }
             langSelect.value = savedLang || this.currentLang || 'zh-hant';
-        }
-        if (themeSelect) {
-            let mode = 'auto';
-            try { mode = localStorage.getItem('cocoya_theme_mode') || 'auto'; } catch (e) { }
-            themeSelect.value = mode;
         }
         this._bindStartupHome();
         if (!anchored) home.style.display = 'flex';
@@ -290,20 +292,23 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             if (window.CocoyaUI && window.CocoyaUI.showDiagnoseModal) window.CocoyaUI.showDiagnoseModal();
             window.CocoyaBridge.send('checkEnvironment');
         };
-        // 語系切換：存偏好 → 重載 webview（manifestData handler 會以偏好覆寫 lang）
+        // 語系切換：存偏好 → 重載 webview（VSIX 需由 host 重建 HTML，避免白屏）
         const langSelect = document.getElementById('startup-lang');
         if (langSelect) {
             langSelect.onchange = () => {
                 try { localStorage.setItem('cocoya_lang', langSelect.value); } catch (e) { }
-                location.reload();
+                if (window.CocoyaBridge && typeof window.CocoyaBridge.send === 'function') {
+                    window.CocoyaBridge.send('reloadWebview');
+                } else {
+                    location.reload();
+                }
             };
         }
-        // 主題切換：存偏好 → 即時套用（不需重載）
+        // 主題切換：交由 ThemeManager 存偏好 → 即時套用（不需重載）
         const themeSelect = document.getElementById('startup-theme');
         if (themeSelect) {
             themeSelect.onchange = () => {
-                try { localStorage.setItem('cocoya_theme_mode', themeSelect.value); } catch (e) { }
-                if (this.applyAutoTheme) this.applyAutoTheme(true);
+                if (window.CocoyaTheme) window.CocoyaTheme.setMode(themeSelect.value);
             };
         }
     },

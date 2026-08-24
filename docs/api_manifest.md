@@ -24,7 +24,7 @@ This document serves as the Technical Reference and Source of Truth (SSOT) for t
 | `workspace` | Blockly Workspace instance | Migrated | `app/workspace.js` |
 | `currentPlatform` | Current hardware platform (MicroPython/PC) | Migrated | `app/config.js` |
 | `init()` | Entry point for initialization | Migrated | `app/lifecycle.js` |
-| `setupThemeSync()` | Auto-sync theme with VS Code/System | Migrated | `app/config.js` |
+| `setupThemeSync()` | Auto-sync theme with VS Code/System (delegates to `window.CocoyaTheme`) | Migrated | `modules/theme_manager/theme_manager.js` |
 | `setupIndentSelector()` | UI listener for indentation size | Migrated | `app/config.js` |
 | `updatePlatformLabel()` | Updates readonly platform badge | Migrated (replaces setupPlatformSelector) | `app/config.js` |
 | `setPlatformUI(p)` | Updates UI components for new platform | Migrated | `app/config.js` |

@@ -19,76 +19,16 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
     currentLang: 'zh-hant',
 
     /**
-     * 設定自動主題同步
+     * 設定自動主題同步（委派至 Theme Manager 模組；保留方法簽名相容既有呼叫點）
      */
     setupThemeSync: function() {
-        const self = this;
-        let lastIsDark = null;
-
-        const applyTheme = (force = false) => {
-            if (!self.workspace) return;
-
-            const isVSCodeDark = document.body.classList.contains('vscode-dark') ||
-                                 document.body.classList.contains('vscode-high-contrast');
-            let isDark = isVSCodeDark ||
-                           (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
-
-            // 手動主題偏好（首頁快速設定）：auto=跟隨系統 / light / dark
-            let themeMode = 'auto';
-            try { themeMode = localStorage.getItem('cocoya_theme_mode') || 'auto'; } catch (e) { }
-            if (themeMode === 'light') isDark = false;
-            else if (themeMode === 'dark') isDark = true;
-
-            // 同步 body class，供 CSS（如 Startup Home）做深/淺色變體
-            document.body.classList.toggle('cocoya-dark-mode', isDark);
-            document.body.classList.toggle('cocoya-light-mode', !isDark);
-
-            if (!force && isDark === lastIsDark) return;
-            lastIsDark = isDark;
-
-            if (isDark && !self.darkThemeInstance && typeof Blockly.Theme === 'function') {
-                try {
-                    self.darkThemeInstance = new Blockly.Theme('cocoya_dark', {}, {}, {
-                        'workspaceBackgroundColour': '#1e1e1e',
-                        'toolboxBackgroundColour': '#2d2d2d',
-                        'toolboxTextColour': '#e0e0e0',
-                        'flyoutBackgroundColour': '#252526',
-                        'flyoutTextColour': '#ccc',
-                        'scrollbarColour': '#797979',
-                        'insertionMarkerColour': '#fff',
-                        'insertionMarkerOpacity': 0.3,
-                        'scrollbarOpacity': 0.4,
-                        'cursorColour': '#d0d0d0'
-                    });
-                } catch (e) { }
-            }
-
-            try {
-                const theme = isDark ? (self.darkThemeInstance || 'dark') : (Blockly.Themes.Classic || 'classic');
-                self.workspace.setTheme(theme);
-                const grid = self.workspace.getGrid();
-                if (grid && typeof grid.setVisible === 'function') grid.setVisible(!isDark);
-                if (self.minimap && self.minimap.minimapWorkspace) {
-                    self.minimap.minimapWorkspace.setTheme(theme);
-                }
-            } catch (e) { }
-        };
-
-        const observer = new MutationObserver((mutations) => {
-            for (const mutation of mutations) {
-                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                    applyTheme();
-                    break;
-                }
-            }
-        });
-        observer.observe(document.body, { attributes: true });
-
-        if (window.matchMedia) {
-            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme());
+        if (window.CocoyaTheme) {
+            window.CocoyaTheme.startWatching();
+            window.CocoyaTheme.apply(true);
+            this.applyAutoTheme = function(force) {
+                window.CocoyaTheme.apply(!!force);
+            };
         }
-
-        this.applyAutoTheme = applyTheme;
     },
 
     /**

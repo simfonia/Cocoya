@@ -112,6 +112,7 @@
     "BKY_THEME_AUTO": "Auto (System)",
     "BKY_THEME_LIGHT": "Light",
     "BKY_THEME_DARK": "Dark",
+    "BKY_THEME_CANDY": "Candy Pop",
     "BKY_STARTUP_PYTHON_PATH": "Set Python Path",
     "BKY_STARTUP_DIAGNOSE": "Check Python Modules",
     "TLB_DIAGNOSE": "Check Python Package Requirements",
