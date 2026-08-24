@@ -131,11 +131,6 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                 label = `${label}: v${data.currentVersion}`;
             }
             btn.setAttribute('title', label);
-            
-            // 3秒後自動隱藏
-            setTimeout(() => {
-                btn.classList.add('update-hidden');
-            }, 3000);
         }
     },
 
@@ -255,7 +250,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                 if (options.includeXml && typeof Blockly !== 'undefined') {
                     const dom = Blockly.Xml.workspaceToDom(Blockly.getMainWorkspace());
                     // 注入 platform屬性標記 (PC 或 MicroPython)
-                    const platform = document.getElementById('platform-selector')?.value || 'PC';
+                    const platform = window.CocoyaApp?.currentPlatform;
                     dom.setAttribute('platform', platform);
                     
                     msg.xml = Blockly.Xml.domToPrettyText(dom);
@@ -283,7 +278,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                     if (window.CocoyaApp.refreshMinimap) window.CocoyaApp.refreshMinimap();
 
                     msg.code = code;
-                    msg.platform = document.getElementById('platform-selector')?.value || 'PC';
+                    msg.platform = window.CocoyaApp?.currentPlatform;
                     msg.serialPort = document.getElementById('serial-selector')?.value || '';
                     msg.serialUploadOnly = localStorage.getItem('cocoya_serial_upload_only') === 'true';
                     if (self.flashButton) self.flashButton(id, '#e8f5e9'); // 綠色回饋
@@ -302,11 +297,49 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         bind('btn-examples', 'openExamples', { includeXml: true });
 
         // 綁定檔案操作
-        bind('btn-new', 'newFile', { includeXml: true });
         bind('btn-open', 'openFile', { includeXml: true });
         bind('btn-save', 'saveFile', { includeXml: true });
         bind('btn-save-as', 'saveFileAs', { includeXml: true });
         bind('btn-close', 'closeEditor', { includeXml: true }); // VSIX 模式關閉編輯器
+
+        // === 開新檔案：平台 hover 選單 (雙平台共用) ===
+        // 點選平台 → startNewProjectFromHome(platform)：檢查 dirty 後另存錨定，
+        // 於本視窗重建該平台初始積木（不回首頁、不開新視窗）。
+        const toolbarNewWrap = document.getElementById('toolbar-new-wrap');
+        const toolbarNewMenu = document.getElementById('toolbar-new-menu');
+        if (toolbarNewWrap && toolbarNewMenu) {
+            const pcBtn = toolbarNewMenu.querySelector('.startup-new-option[data-platform="PC"]');
+            const mcuBtn = toolbarNewMenu.querySelector('.startup-new-option[data-platform="MicroPython"]');
+            if (pcBtn) pcBtn.textContent = (Blockly.Msg['TLB_MODE_PC'] || '💻 Python (PC)');
+            if (mcuBtn) mcuBtn.textContent = (Blockly.Msg['TLB_MODE_MCU'] || '📟 MicroPython (MCU)');
+
+            // tooltip 依平台語意
+            const newBtn = document.getElementById('btn-new');
+            const isTauri = !!(window.CocoyaBridge && window.CocoyaBridge.capabilities && window.CocoyaBridge.capabilities.isTauri);
+            if (newBtn) {
+                const tip = isTauri
+                    ? (Blockly.Msg['TLB_NEW_TAURI'] || '在本視窗開新專案')
+                    : (Blockly.Msg['TLB_NEW_VSIX'] || '開新專案');
+                newBtn.setAttribute('title', tip);
+            }
+            // 「開新視窗」按鈕：僅 Tauri 顯示（多視窗能力），與本視窗檔案狀態無關
+            const newWindowBtn = document.getElementById('btn-new-window');
+            if (newWindowBtn && isTauri) {
+                newWindowBtn.style.display = '';
+                newWindowBtn.onclick = () => window.CocoyaBridge.send('createWindow', {});
+            }
+            const handleOption = (platform) => {
+                if (window.CocoyaApp && window.CocoyaApp.startNewProjectFromHome) {
+                    window.CocoyaApp.startNewProjectFromHome(platform);
+                }
+            };
+            for (const opt of [pcBtn, mcuBtn]) {
+                if (!opt) continue;
+                opt.onmouseover = () => { opt.style.background = '#e9e9e9'; };
+                opt.onmouseout = () => { opt.style.background = '#fff'; };
+                opt.onclick = () => handleOption(opt.getAttribute('data-platform'));
+            }
+        }
         
         // 綁定設定與功能按鈕
         bind('btn-set-python-path', 'setPythonPath');

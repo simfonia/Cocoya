@@ -148,7 +148,7 @@ pub async fn save_file(window: Window, handle: AppHandle, state: State<'_, AppSt
     if path_to_save.is_none() {
         let picked = handle.dialog().file()
             .add_filter("Cocoya XML", &["xml"])
-            .set_file_name("project.xml")
+            .set_file_name("未命名專案.xml")
             .blocking_save_file();
         
         if let Some(p) = picked {

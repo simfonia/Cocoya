@@ -28,10 +28,20 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         const applyTheme = (force = false) => {
             if (!self.workspace) return;
 
-            const isVSCodeDark = document.body.classList.contains('vscode-dark') || 
+            const isVSCodeDark = document.body.classList.contains('vscode-dark') ||
                                  document.body.classList.contains('vscode-high-contrast');
-            const isDark = isVSCodeDark || 
+            let isDark = isVSCodeDark ||
                            (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+            // 手動主題偏好（首頁快速設定）：auto=跟隨系統 / light / dark
+            let themeMode = 'auto';
+            try { themeMode = localStorage.getItem('cocoya_theme_mode') || 'auto'; } catch (e) { }
+            if (themeMode === 'light') isDark = false;
+            else if (themeMode === 'dark') isDark = true;
+
+            // 同步 body class，供 CSS（如 Startup Home）做深/淺色變體
+            document.body.classList.toggle('cocoya-dark-mode', isDark);
+            document.body.classList.toggle('cocoya-light-mode', !isDark);
 
             if (!force && isDark === lastIsDark) return;
             lastIsDark = isDark;
@@ -99,32 +109,15 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
     },
 
     /**
-     * 設定平台切換選擇器
+     * 更新唯讀平台標籤 (取代舊的 platform-selector)
      */
-    setupPlatformSelector: function() {
-        const selector = document.getElementById('platform-selector');
-        if (!selector) return;
-        selector.onchange = async () => {
-            const newPlatform = selector.value;
-            if (newPlatform === this.currentPlatform) return;
-            
-            const confirmMsg = (Blockly.Msg['MSG_SWITCH_CONFIRM'] || '確定要切換至 %1 模式嗎？這將會重置工作區。').replace('%1', newPlatform);
-            window.CocoyaBridge.send('confirmSwitch', { 
-                message: confirmMsg, 
-                newPlatform: newPlatform, 
-                xml: Blockly.Xml.domToPrettyText(Blockly.Xml.workspaceToDom(this.workspace)) 
-            });
-            
-            selector.value = this.currentPlatform;
-        };
-    },
-
-    /**
-     * 執行平台切換
-     */
-    switchPlatform: async function(platform) {
-        await this.setPlatformUI(platform);
-        this.resetWorkspace();
+    updatePlatformLabel: function() {
+        const label = document.getElementById('current-platform');
+        if (!label) return;
+        label.textContent = (Blockly.Msg['TLB_MODE_PC'] || '💻 Python (PC)');
+        if (this.currentPlatform === 'MicroPython') {
+            label.textContent = (Blockly.Msg['TLB_MODE_MCU'] || '📟 MicroPython (MCU)');
+        }
     },
 
     /**
@@ -133,8 +126,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
     setPlatformUI: async function(platform) {
         this.currentPlatform = platform;
         localStorage.setItem('cocoya_platform', platform);
-        const selector = document.getElementById('platform-selector');
-        if (selector) selector.value = platform;
+        this.updatePlatformLabel();
         if (Blockly.Python) Blockly.Python.PLATFORM = platform;
         
         if (this.manifest) {

@@ -46,6 +46,15 @@ C:\Workspace\cocoya\
 │   ├── todo/              # 任務規格與開發流程文件
 │   │   ├── dataset_manager_development_spec.md # Dataset Manager 分階段開發規格
 │   │   └── hand_gesture_pitch_pbl_plan.md # 手勢分類控制 πCar 音高 PBL 計畫
+│   ├── plan/              # 開發方案與架構決策 (Markdown)
+│   │   ├── StartupProjectAnchoring.md # 啟動專案錨定 + Startup Home 計畫
+│   │   ├── StartupHomePlatformAndExamples.md # [NEW] Startup Home 平台選擇 + 範例 + 設定計畫
+│   │   ├── DatasetManagerProgressAndGuardrails.md # Dataset Manager 進度與防呆
+│   │   ├── DatasetManagerUXImprovement.md # Dataset Manager UX 改善
+│   │   ├── BboxAnnotationUIImprovement.md # BBox 標註 UI 改善
+│   │   ├── DatasetManagerOptimization.md # Dataset Manager 優化
+│   │   ├── ObjectDetectorTrain.md # 物件偵測訓練計畫
+│   │   └── openTrainingReport.md # 開啟訓練報告計畫
 │   ├── work/              # 每日工作紀錄
 │   │   ├── 2026-05-03.md  # UI/UX 響應式佈局與收合面板實作
 │   │   ├── 2026-05-04.md  # 重大修復：Tauri 多視窗關閉攔截與備份隔離

@@ -26,8 +26,7 @@ This document serves as the Technical Reference and Source of Truth (SSOT) for t
 | `init()` | Entry point for initialization | Migrated | `app/lifecycle.js` |
 | `setupThemeSync()` | Auto-sync theme with VS Code/System | Migrated | `app/config.js` |
 | `setupIndentSelector()` | UI listener for indentation size | Migrated | `app/config.js` |
-| `setupPlatformSelector()` | UI listener for platform switching | Migrated | `app/config.js` |
-| `switchPlatform(p)` | Core logic to switch platform | Migrated | `app/config.js` |
+| `updatePlatformLabel()` | Updates readonly platform badge | Migrated (replaces setupPlatformSelector) | `app/config.js` |
 | `setPlatformUI(p)` | Updates UI components for new platform | Migrated | `app/config.js` |
 | `buildToolboxXml(...)` | Dynamically builds Toolbox XML | Migrated | `app/lifecycle.js` |
 | `setupWindowListeners()` | Bridge message listener setup | Migrated | `app/lifecycle.js` |

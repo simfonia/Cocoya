@@ -20,6 +20,11 @@ class AppController {
     _initHandlers() {
         // App 核心邏輯
         this.handlers.set('manifestData', async (m) => {
+            // 使用者語系偏好覆寫（首頁快速設定 → localStorage），雙平台統一
+            try {
+                const savedLang = localStorage.getItem('cocoya_lang');
+                if (savedLang === 'zh-hant' || savedLang === 'en') m.lang = savedLang;
+            } catch (e) { }
             // 先更新 Bridge 的能力資訊 (包含重要的 isRemoteConnected 狀態)
             if (this.bridge.updateCapabilities && m.capabilities) {
                 this.bridge.updateCapabilities(m.capabilities);
@@ -38,8 +43,7 @@ class AppController {
         });
         this.handlers.set('loadWorkspace', async (m) => await this.app.loadWorkspace(m.xml, m.filename, m.platform, m.is_read_only));
         this.handlers.set('resetWorkspace', () => this.app.resetWorkspace());
-        this.handlers.set('saveCompleted', (m) => this.app.onSaveCompleted(m.filename));
-        this.handlers.set('switchPlatform', async (m) => await this.app.switchPlatform(m.platform));
+        this.handlers.set('saveCompleted', (m) => this.app.onSaveCompleted(m.filename, m.tag));
         this.handlers.set('recoveryData', async (m) => await this.app.checkAutoBackup(m.xml));
         this.handlers.set('promptResponse', (m) => this.app.handlePromptResponse(m));
         this.handlers.set('toolboxData', (m) => this.app.handleToolboxData(m));

@@ -95,9 +95,8 @@ Blockly.Python.forBlock['mcu_pwm_write'] = function(block, generator) {
   generator.definitions_['init_' + pinVar] = 
     pinVar + ' = machine.PWM(machine.Pin(' + pinNum + '), freq=5000)';
 
-  // 支援 0-100 轉 0-65535 的簡單偵測
-  var code = 'if ' + value + ' <= 100: ' + pinVar + '.duty_u16(int(' + value + ' * 655.35))\n' +
-             'else: ' + pinVar + '.duty_u16(int(' + value + '))\n';
+  // VALUE 使用百分比 (0-100%)，對應 duty_u16 0-65535；數值範圍限制 [0,100]
+  var code = pinVar + '.duty_u16(int(max(0, min(100, ' + value + ')) * 655.35))\n';
   
   return code;
 };
