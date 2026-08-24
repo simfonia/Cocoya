@@ -115,6 +115,7 @@
     "BKY_THEME_AUTO": "跟隨系統",
     "BKY_THEME_LIGHT": "淺色",
     "BKY_THEME_DARK": "深色",
+    "BKY_THEME_CANDY": "🍬 糖果繽紛",
     "BKY_STARTUP_PYTHON_PATH": "設定 Python 路徑",
     "BKY_STARTUP_DIAGNOSE": "檢查 Python 套件",
     "TLB_DIAGNOSE": "檢查 Python 套件需求",

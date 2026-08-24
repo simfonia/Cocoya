@@ -8,6 +8,7 @@ import { FirmwareOpsHandler } from './handlers/firmwareOps';
 import { DatasetOpsHandler } from './handlers/datasetOps';
 import { SerialOpsHandler } from './handlers/serialOps';
 import { EnvOpsHandler } from './handlers/envOps';
+import { getWebviewContent } from './extension';
 
 /**
  * Cocoya Extension 主管理器
@@ -144,6 +145,16 @@ export class CocoyaManager {
                     break;
                 case 'getManifest':
                     this.handleGetManifest();
+                    break;
+                case 'reloadWebview':
+                    // 主題/語系切換：重建 webview HTML（前端 init 會重新 getManifest 完成啟動流程）
+                    // ★ VS Code 對相同 HTML 字串的賦值不會重載 webview，注入時間戳註解強制刷新
+                    console.log('[Cocoya Host] reloadWebview received, rebuilding webview HTML...');
+                    {
+                        const html = getWebviewContent(this.panel.webview, this.context.extensionUri)
+                            .replace('</body>', '<!-- cocoya-rebuild: ' + Date.now() + ' -->\n</body>');
+                        this.panel.webview.html = html;
+                    }
                     break;
                 case 'getModuleToolbox':
                     this.handleGetModuleToolbox(message);

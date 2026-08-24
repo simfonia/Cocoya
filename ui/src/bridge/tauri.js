@@ -80,6 +80,12 @@ export class BridgeTauri extends BaseBridge {
                     this._dispatchToFrontend({ command: 'manifestData', data: result, mediaUri: 'src', lang: 'zh-hant' });
                     break;
 
+                case 'reloadWebview':
+                    // 主題/語系切換：Tauri 無 host HTML 管理，直接重載頁面
+                    location.reload();
+                    result = true;
+                    break;
+
                 case 'getModuleToolbox':
                     const toolboxPath = `${data.moduleId}/toolbox.xml`;
                     result = await this.tauriInvoke('get_module_toolbox', { path: toolboxPath });

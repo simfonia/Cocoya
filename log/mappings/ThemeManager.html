@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>Cocoya Theme Manager 模組對照表</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; border-left: 5px solid #FE2F89; }
+        h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 40px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; font-size: 0.95em; }
+        th { background: #f9f2f5; }
+    </style>
+</head>
+<body>
+    <h1>Cocoya Theme Manager 模組對照表</h1>
+    <p>位置：<code>ui/src/modules/theme_manager/</code>（window.CocoyaTheme，雙模共用 SSOT）<br>
+    計畫：<code>log/plan/ThemeManagerModule.md</code>　實作日誌：<code>log/work/2026-08-24.md</code>（追加9~25）</p>
+
+    <h2>1. 架構總覽</h2>
+    <pre>
+theme_manager.js            核心：registry / 模式解析 / cssVars+css 套用 / Msg 覆寫
+themes/
+├── cocoya_light.js         淺色（Blockly Classic，css 留空）
+├── cocoya_dark.js          深色（完全自足：componentStyles + cssVars + css 行為補丁字串）
+└── cocoya_candy.js         糖果繽紛（msgColours 積木色示範）
+    </pre>
+    <p><b>設計原則</b>：一主題一檔；auto 是「模式」不是主題；style.css 不含任何主題規則（僅 FOUC Guard 8 個變數）。</p>
+
+    <h2>2. Theme Definition 格式</h2>
+    <pre>
+CocoyaTheme.registerTheme({
+    id: 'cocoya_candy',              // 唯一 id（localStorage 儲存值）
+    labelKey: 'BKY_THEME_CANDY',     // 下拉選單 i18n key
+    labelFallback: 'Candy Pop',
+    isDark: false,                   // 深色行為（icon 反轉/grid 隱藏由 class 涵蓋）與 auto 解析
+    hideGrid: false,
+    blockly: {                       // Blockly Theme（componentStyles 即時生效）
+        name: 'cocoya_candy', componentStyles: { ... }
+    },
+    msgColours: { LOGIC:'#8E7CF8', ... },  // 覆寫 Blockly.Msg['COLOUR_'+key]（選配）
+    cssVars: { '--toolbar-bg': '#...', ... },  // UI 調色盤（body inline style）
+    css: `.some-selector { ... }`          // 主題專屬規則（注入 &lt;style id=cocoya-theme-css&gt;，選配）
+});
+    </pre>
+
+    <h2>3. API 對照</h2>
+    <table>
+        <tr><th>方法</th><th>說明</th></tr>
+        <tr><td>registerTheme(def)</td><td>註冊主題（themes/*.js 於載入時呼叫）</td></tr>
+        <tr><td>getThemes()</td><td>回傳 [{id,labelKey,labelFallback,isDark}]，首頁下拉由此生成</td></tr>
+        <tr><td>getMode()</td><td>'auto' 或主題 id；舊值 light/dark 自動遷移為 cocoya_light/dark</td></tr>
+        <tr><td>setMode(mode)</td><td>存 localStorage['cocoya_theme_mode'] → CocoyaBridge.send('reloadWebview')（fallback location.reload()）＋800ms 保險絲</td></tr>
+        <tr><td>applyMsgColours()</td><td>語系載入後、積木註冊前覆寫 COLOUR_*（lifecycle.initializeCocoya 呼叫）；僅覆寫有定義的鍵</td></tr>
+        <tr><td>apply(force)</td><td>body class + cssVars(inline) + _applyThemeCss + workspace.setTheme + grid/minimap</td></tr>
+        <tr><td>startWatching()</td><td>MutationObserver(body.vscode-*) + matchMedia → auto 即時跟隨系統</td></tr>
+    </table>
+
+    <h2>4. reloadWebview 跨平台重載鏈</h2>
+    <pre>
+前端 setMode() ──send('reloadWebview')──▶ Host
+  VSIX: cocoyaManager.ts case reloadWebview
+        → webview.html = getWebviewContent(...) + '&lt;!-- cocoya-rebuild: Date.now() --&gt;'
+        （★ 相同 HTML 字串賦值不會重載，時間戳強制刷新）
+  Tauri: bridge/tauri.js case reloadWebview → location.reload()
+保險絲：送出後掛 800ms 計時器，host 未重建則 fallback location.reload()
+注意：改動 src/*.ts 後必須 npm run compile（out/ 才會更新）
+    </pre>
+
+    <h2>5. 新增主題 / 新增分類 SOP</h2>
+    <p><b>新主題</b>：複製任一 themes/*.js 改定義 + index.html 一行 script；首頁下拉自動出現。<br>
+    <b>新分類</b>：見 AGENTS.md「新增積木模組檢查清單」——顏色 SSOT 在 zh-hant/en 的 COLOUR_*；主題 msgColours 為選配覆寫。</p>
+</body>
+</html>

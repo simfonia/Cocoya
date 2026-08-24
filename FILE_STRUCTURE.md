@@ -72,6 +72,7 @@ C:\Workspace\cocoya\
 │       ├── DatasetManager.html      # Dataset Manager API 對照表
 │       ├── Tauri_Sidecar_API.html   # Tauri Sidecar API 使用對照表
 │       └── Renderer_API.html        # UI Renderer API (syncSelection, findLocatableBlock)
+│       └── ThemeManager.html        # [NEW] 主題管理模組對照表（API/主題定義格式/reloadWebview 鏈/新增主題 SOP）
 
 
 ├── ui/                    # 雙模共用前端根目錄 (Vite Project)
@@ -103,6 +104,11 @@ C:\Workspace\cocoya\
 │   │   │   ├── mutator.js   # Mutator Undo 方案
 │   │   │   └── search.js    # 積木搜尋引擎
 │   │   ├── modules/       # 雙模共用積木模組
+│   │   │   ├── theme_manager/ # [NEW] 主題管理模組（registry + 模式切換 + 系統深淺色偵測）
+│   │   │   │   ├── theme_manager.js # 核心：registerTheme/getThemes/setMode/getMode/apply/startWatching (window.CocoyaTheme)
+│   │   │   │   └── themes/    # 內建主題（一主題一檔，載入時 registerTheme）
+│   │   │   │       ├── cocoya_light.js # 淺色主題 (Blockly Classic + 淺色 cssVars)
+│   │   │   │       └── cocoya_dark.js  # 深色主題 (Blockly Theme componentStyles + 深色 cssVars, hideGrid)
 │   │   │   ├── ai_inference/ # AI 訓練與推論積木模組
 │   │   │   │   └── ai_inference_generators.js # 訓練/推論積木 Python 產生器（含多候選路徑搜尋）
 │   │   │   ├── ai_pose/            # AI 姿勢偵測積木模組 (MediaPipe Pose)
@@ -218,4 +224,4 @@ C:\Workspace\cocoya\
 │   └── media_pipe_service.py # AI 特徵提取服務 (MediaPipe)
 ├── temp_scripts/          # 執行期間暫存目錄
 ├── package.json           # 根目錄設定
-└── tsconfig.json          # TS 編譯設定
+└── tsconfig.json          # TS 編譯設定ui/src/modules/theme_manager/themes/cocoya_dark.js # [REFACTORED] 完全自足深色主題：componentStyles+cssVars+css（主題專屬規則由 ThemeManager 注入 <style>，style.css 不再含任何深色規則）

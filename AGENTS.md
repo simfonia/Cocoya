@@ -167,3 +167,26 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
 4. **SSOT**：docs/backend_api_manifest.md 為命令簽名單一事實來源 (含 Parameters)；改簽名時立即更新。
 ### 長期解決方案
 - 引入 tauri-codegen 自動從 #[tauri::command] 簽名生成 typed invoke() — 缺參數將在 tsc 編譯期失敗 (見 log/todo.md 待辦)。
+
+---
+## 新增積木模組檢查清單 (Add New Block Module Checklist)
+新增一個積木模組（含分類）時，依序確認以下項目：
+### 1. 模組本體（必改）
+- `ui/src/modules/<新模組>/<名稱>_blocks.js`：積木定義，顏色用 `"colour": Blockly.Msg["COLOUR_XXX"]`
+- `ui/src/modules/<新模組>/<名稱>_generators.js`：Python 產生器（註冊於 `Blockly.Python.forBlock[]`）
+- `ui/src/modules/<新模組>/toolbox.xml`：分類寫法 `<category name="%{BKY_CAT_XXX}" colour="%{BKY_COLOUR_XXX}">`
+- `ui/src/modules/<新模組>/i18n/zh-hant.js`、`en.js`：積木文案
+- 模組註冊：core_manifest.json / module_loader 對應清單
+### 2. 顏色 SSOT（必改）
+- `ui/src/zh-hant.js` 與 `ui/src/en.js`：定義 `"COLOUR_XXX": "#色碼"`（兩邊同值）——這是所有主題的預設色 fallback
+- i18n 文案鍵：`BKY_CAT_XXX`（分類顯示名）
+### 3. 主題選配（可不改）
+- 各主題 `ui/src/modules/theme_manager/themes/*.js` 的 `msgColours`：**有定義才覆寫**該分類在該主題下的顏色；不加 = 沿用第 2 點的預設色，不會壞
+- 若新分類要參與深色行為（icon 反轉等）：無需處理，由主題 `isDark` class 自動涵蓋
+### 4. 文件（必改）
+- `docs/help/<積木id>_{zh-hant,en}.html`：右鍵 Help 文件
+- `FILE_STRUCTURE.md`：模組目錄描述
+### 5. 驗證
+- `node --check` 所有新 JS；`npx vite build`（ui/）；實機檢查 toolbox 分類、flyout 積木色與產生的 Python 代碼
+### 注意
+- 主題切換採「存偏好 + reloadWebview」：VSIX 由 host 重建 HTML（cocoyaManager.ts reloadWebview case）、Tauri 為 location.reload()；新模組無需處理此機制

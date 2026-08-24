@@ -59,7 +59,7 @@ export function activate(context: vscode.ExtensionContext) {
     }));
 }
 
-function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri): string {
+export function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri): string {
     const htmlPath = vscode.Uri.joinPath(extensionUri, 'ui', 'index.html');
     let html = fs.readFileSync(htmlPath.fsPath, 'utf8');
     const uiPath = vscode.Uri.joinPath(extensionUri, 'ui');

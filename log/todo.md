@@ -881,3 +881,11 @@ Cocoya 無法定位 value/expression 積木 (如數字、文字、變數 getter)
 - [x] handleNewFile/case newFile 已不被 UI 觸發，保留不動
 - [x] 驗證：tsc EXIT=0 / node --check / ui build 通過；VSIX 實機清單待驗（首頁開新錨定、跨平台新增、取消零副作用、另存不受影響）
 
+
+### [已完成] 主題樣式表模組化 — Theme Manager (2026-08-24)
+- [x] 新增 ui/src/modules/theme_manager/（theme_manager.js + themes/cocoya_light.js + themes/cocoya_dark.js）：registry 一主題一檔、auto 模式動態解析、CSS 變數換膚
+- [x] config.js setupThemeSync 薄委派至 CocoyaTheme；persistence.js 首頁主題下拉由 registry 動態生成；style.css 改 --cocoya-* 變數消除深色 !important 覆寫
+- [x] localStorage cocoya_theme_mode 舊值 light/dark 自動遷移為 cocoya_light/cocoya_dark
+- [x] 計畫：log/plan/ThemeManagerModule.md；驗證：node --check / vite build 通過
+- [ ] 實機：首頁切主題即時套用、auto 跟隨系統、重啟記住偏好
+- 未來擴充：自訂主題 JSON 載入、主題編輯器

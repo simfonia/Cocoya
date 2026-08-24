@@ -4,7 +4,7 @@ body {
     margin: 0;
     padding: 0;
     overflow: hidden;
-    background-color: #f0f0f0;
+    background-color: var(--bg-color, #f0f0f0);
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
@@ -25,8 +25,8 @@ body {
 #toolbar {
     min-height: 40px;
     height: auto;
-    background-color: #ffffff;
-    border-bottom: 1px solid #ddd;
+    background-color: var(--toolbar-bg, #ffffff);
+    border-bottom: 1px solid var(--toolbar-border, #ddd);
     display: flex;
     flex-wrap: wrap; /* 允許在空間不足時換行 */
     align-items: center;
@@ -46,7 +46,7 @@ body {
 .toolbar-separator {
     width: 1px;
     height: 20px;
-    background-color: #ddd;
+    background-color: var(--toolbar-border, #ddd);
     margin: 0 4px;
 }
 
@@ -83,7 +83,9 @@ body {
 
 /* 深色模式下的檔名標籤 */
 body.vscode-dark #file-breadcrumb,
-body.vscode-high-contrast #file-breadcrumb {
+body.cocoya-dark-mode #file-breadcrumb,
+body.vscode-high-contrast #file-breadcrumb,
+body.cocoya-dark-mode #file-breadcrumb {
     background-color: #333;
     border-color: #444;
     color: #bbb;
@@ -126,8 +128,8 @@ body.vscode-high-contrast #file-breadcrumb {
     top: 100%;
     left: 0;
     min-width: 100%;
-    background: #fff;
-    border: 1px solid #ddd;
+    background: var(--cocoya-surface, #fff);
+    border: 1px solid var(--cocoya-border, #ddd);
     border-radius: 8px;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
     z-index: 11000;
@@ -144,46 +146,30 @@ body.vscode-high-contrast #file-breadcrumb {
     font-size: 14px;
     border: none;
     border-radius: 6px;
-    background: #fff;
-    color: #555;
+    background: var(--cocoya-surface, #fff);
+    color: var(--cocoya-fg, #555);
     cursor: pointer;
     text-align: left;
 }
 .startup-new-option:hover {
-    background-color: #f0f0f0;
+    background-color: var(--cocoya-hover, #f0f0f0);
 }
 
-/* === Startup Home 深色變體（手動主題：body.cocoya-dark-mode） === */
-body.cocoya-dark-mode #startup-home {
-    background: #1e1e1e;
+/* === 主題 CSS 變數（Theme Manager 套用；預設淺色，body.cocoya-dark-mode 覆寫） === */
+body {
+    --cocoya-overlay: rgba(255,255,255,0.97);
+    --cocoya-surface: #ffffff;
+    --cocoya-fg: #555555;
+    --cocoya-border: #dddddd;
+    --cocoya-hover: #f0f0f0;
 }
-body.cocoya-dark-mode #startup-home button,
-body.cocoya-dark-mode #startup-home select,
-body.cocoya-dark-mode #startup-home summary,
-body.cocoya-dark-mode #startup-home label {
-    color: #d4d4d4 !important;
-}
-body.cocoya-dark-mode #startup-home button:not(#startup-new),
-body.cocoya-dark-mode #startup-home select {
-    background: #2d2d2d !important;
-    border-color: #444 !important;
-}
-body.cocoya-dark-mode .startup-new-menu {
-    background: #2d2d2d;
-    border-color: #444;
-}
-body.cocoya-dark-mode .startup-new-option {
-    background: #2d2d2d;
-    color: #d4d4d4;
-}
-body.cocoya-dark-mode .startup-new-option:hover {
-    background-color: #3a3a3a;
-}
-/* Startup Home 的版本檢查按鈕（#btn-update 搬入首頁） */
-body.cocoya-dark-mode .startup-update-btn {
-    background: #2d2d2d !important;
-    border-color: #444 !important;
-    color: #d4d4d4;
+/* Startup Home 深色變體（主題亦可透過 cssVars 直接覆寫這些變數；背景須實色避免透出編輯區） */
+body.cocoya-dark-mode {
+    --cocoya-overlay: #1e1e1e;
+    --cocoya-surface: #2d2d2d;
+    --cocoya-fg: #d4d4d4;
+    --cocoya-border: #444444;
+    --cocoya-hover: #3a3a3a;
 }
 
 .serial-select {
@@ -421,11 +407,11 @@ body.cocoya-dark-mode .startup-update-btn {
 
 #codeArea {
     width: 400px;
-    background-color: #ffffff;
-    color: #333333;
+    background-color: var(--code-bg, #ffffff);
+    color: var(--text-primary, #333333);
     display: flex;
     flex-direction: column;
-    border-left: 1px solid #ddd;
+    border-left: 1px solid var(--code-border, #ddd);
     transition: width 0.3s ease, opacity 0.3s ease;
     overflow: visible; /* 改為 visible 以顯示 toggle handle */
     position: relative;
@@ -505,26 +491,30 @@ body.resizing-panel {
 
 /* 深色模式下的切換鈕與調整棒 */
 body.vscode-dark #code-toggle,
-body.vscode-high-contrast #code-toggle {
+body.cocoya-dark-mode #code-toggle,
+body.vscode-high-contrast #code-toggle,
+body.cocoya-dark-mode #code-toggle {
     background-color: #2d2d2d;
     border-color: #404040;
 }
 
 body.vscode-dark #panel-resizer:hover,
-body.vscode-dark #panel-resizer.is-dragging {
+body.cocoya-dark-mode #panel-resizer:hover,
+body.vscode-dark #panel-resizer.is-dragging,
+body.cocoya-dark-mode #panel-resizer.is-dragging {
     background-color: #FE2F89;
 }
 
 #codeHeader {
     height: 40px;
     padding: 0 12px;
-    background-color: #f3f3f3;
-    color: #666;
+    background-color: var(--code-header-bg, #f3f3f3);
+    color: var(--text-secondary, #666);
     font-size: 12px;
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 1px;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid var(--code-border, #ddd);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -556,7 +546,7 @@ body.vscode-dark #panel-resizer.is-dragging {
     font-size: 13px;
     line-height: 1.5;
     counter-reset: line;
-    background-color: #fff;
+    background-color: var(--code-bg, #fff);
 }
 
 .hljs {
@@ -892,35 +882,47 @@ body.vscode-dark #panel-resizer.is-dragging {
 
 /* 深色模式支援 */
 body.vscode-dark .quick-pick-item,
-body.vscode-high-contrast .quick-pick-item {
+body.cocoya-dark-mode .quick-pick-item,
+body.vscode-high-contrast .quick-pick-item,
+body.cocoya-dark-mode .quick-pick-item {
     color: #cccccc;
     border-bottom-color: #333;
 }
 
 body.vscode-dark .quick-pick-item:hover,
-body.vscode-high-contrast .quick-pick-item:hover {
+body.cocoya-dark-mode .quick-pick-item:hover,
+body.vscode-high-contrast .quick-pick-item:hover,
+body.cocoya-dark-mode .quick-pick-item:hover {
     background-color: #3e3e3e;
     color: #FE2F89;
 }
 
 body.vscode-dark .modal-content,
-body.vscode-high-contrast .modal-content {
+body.cocoya-dark-mode .modal-content,
+body.vscode-high-contrast .modal-content,
+body.cocoya-dark-mode .modal-content {
     background-color: #2d2d2d;
     color: #e0e0e0;
 }
 
 body.vscode-dark .modal-header,
-body.vscode-high-contrast .modal-header {
+body.cocoya-dark-mode .modal-header,
+body.vscode-high-contrast .modal-header,
+body.cocoya-dark-mode .modal-header {
     border-bottom-color: #444 !important;
 }
 
 body.vscode-dark .modal-footer,
-body.vscode-high-contrast .modal-footer {
+body.cocoya-dark-mode .modal-footer,
+body.vscode-high-contrast .modal-footer,
+body.cocoya-dark-mode .modal-footer {
     border-top-color: #444 !important;
 }
 
 body.vscode-dark .btn-close,
-body.vscode-high-contrast .btn-close {
+body.cocoya-dark-mode .btn-close,
+body.vscode-high-contrast .btn-close,
+body.cocoya-dark-mode .btn-close {
     background-color: #3c3c3c;
     border-color: #555;
     color: #e0e0e0;
@@ -1136,7 +1138,9 @@ input:checked + .slider:before {
 
 /* 深色模式支援 */
 body.vscode-dark .cloud-ai-wrapper,
-body.vscode-high-contrast .cloud-ai-wrapper {
+body.cocoya-dark-mode .cloud-ai-wrapper,
+body.vscode-high-contrast .cloud-ai-wrapper,
+body.cocoya-dark-mode .cloud-ai-wrapper {
     background: rgba(254, 47, 137, 0.1);
     border-color: rgba(254, 47, 137, 0.3);
 }
@@ -1171,9 +1175,10 @@ body.vscode-high-contrast .cloud-ai-wrapper {
     display: none !important;
 }
 
-/* --- VS Code / System Theme Integration --- */
 
-/* 深色模式全局變數 */
+/* === 防閃白守衛（FOUC Guard）===
+   主題 CSS 由 ThemeManager 於 JS 啟動時注入；此處僅保留最小關鍵表面，
+   讓 VS Code 原生深色 class 在 JS 執行前就有正確底色，其餘全由主題檔決定 */
 body.vscode-dark,
 body.vscode-high-contrast {
     --bg-color: #1e1e1e;
@@ -1184,205 +1189,4 @@ body.vscode-high-contrast {
     --code-border: #404040;
     --text-primary: #e0e0e0;
     --text-secondary: #aaaaaa;
-    --highlight-bg: #3a3d41;
 }
-
-/* 1. 強制修正 Blockly 內部組件顏色 (最高優先權) */
-body.vscode-dark .blocklyMainBackground,
-body.vscode-high-contrast .blocklyMainBackground,
-body.vscode-dark .blocklyFlyoutBackground,
-body.vscode-high-contrast .blocklyFlyoutBackground {
-    fill: #1e1e1e !important;
-}
-
-/* 隱藏格點 (透過 CSS) */
-body.vscode-dark .blocklyGrid,
-body.vscode-high-contrast .blocklyGrid {
-    display: none;
-}
-
-/* 修正 Toolbox 背景與文字 */
-body.vscode-dark .blocklyToolboxDiv,
-body.vscode-high-contrast .blocklyToolboxDiv {
-    background-color: #252526 !important;
-    color: #cccccc !important;
-}
-
-/* 修正分類展開三角形與圖示 (終極補丁) */
-body.vscode-dark .blocklyToolboxDiv [class*="blocklyTreeIcon"],
-body.vscode-dark .blocklyToolboxDiv [class*="TreeIcon"],
-body.vscode-dark .blocklyTreeRow i,
-body.vscode-dark .blocklyTreeRow span,
-body.vscode-dark .blocklyTreeRow div {
-    filter: invert(1) brightness(10) !important; /* 強力增亮 */
-    color: #ffffff !important; /* 如果是字體圖示 */
-    fill: #ffffff !important;  /* 如果是 SVG */
-    opacity: 1 !important;
-}
-
-/* 針對可能的嵌入式 SVG path */
-body.vscode-dark .blocklyToolboxDiv svg path {
-    fill: #ffffff !important;
-}
-
-/* 確保文字清晰度 */
-body.vscode-dark .blocklyTreeLabel {
-    color: #ffffff !important;
-    font-weight: 500 !important;
-}
-
-/* 修正 Flyout (積木抽屜) 中的標籤文字與分隔線 */
-body.vscode-dark .blocklyFlyoutLabelText,
-body.vscode-high-contrast .blocklyFlyoutLabelText {
-    fill: #cccccc !important; /* SVG 文字使用 fill */
-}
-
-/* 修正積木群組的分隔線 */
-body.vscode-dark .blocklyTreeSeparator,
-body.vscode-high-contrast .blocklyTreeSeparator {
-    border-bottom: 1px solid #444 !important;
-}
-
-/* --- 停用 (孤兒) 積木視覺 --- */
-.blocklyDisabled > .blocklyPath {
-    fill-opacity: 0.3 !important;
-    stroke-opacity: 0.5 !important;
-}
-
-.blocklyDisabled > .blocklyText,
-.blocklyDisabled > .blocklyIconGroup {
-    fill-opacity: 0.5 !important;
-    opacity: 0.5 !important;
-}
-
-/* 深色模式下的停用視覺增強 */
-body.vscode-dark .blocklyDisabled > .blocklyPath,
-body.vscode-high-contrast .blocklyDisabled > .blocklyPath {
-    fill: #444444 !important;
-    fill-opacity: 0.4 !important;
-    stroke: #666666 !important;
-}
-
-/* 確保 Minimap 中的停用視覺同步 */
-.blocklyMinimap .blocklyDisabled > .blocklyPath {
-    fill: #555555 !important;
-    fill-opacity: 0.5 !important;
-}
-
-/* 2. 修正 UI 元件 */
-body.vscode-dark #toolbar,
-body.vscode-high-contrast #toolbar {
-    background-color: var(--toolbar-bg);
-    border-bottom: 1px solid var(--toolbar-border);
-}
-
-body.vscode-dark .toolbar-separator,
-body.vscode-high-contrast .toolbar-separator {
-    background-color: var(--toolbar-border);
-}
-
-body.vscode-dark .platform-select,
-body.vscode-high-contrast .platform-select,
-body.vscode-dark .platform-badge,
-body.vscode-high-contrast .platform-badge {
-    background-color: #3c3c3c;
-    border-color: #555;
-    color: #e0e0e0;
-}
-
-body.vscode-dark .dropdown-content,
-body.vscode-high-contrast .dropdown-content,
-body.vscode-dark .submenu-content,
-body.vscode-high-contrast .submenu-content {
-    background-color: #2d2d2d;
-    border-color: #404040;
-    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.5);
-}
-
-body.vscode-dark .dropdown-separator {
-    background-color: #444;
-}
-
-body.vscode-dark .dropdown-item,
-body.vscode-high-contrast .dropdown-item {
-    color: #cccccc;
-}
-
-body.vscode-dark .dropdown-item:hover,
-body.vscode-high-contrast .dropdown-item:hover {
-    background-color: #3e3e3e;
-    color: #FE2F89;
-}
-/* 自動反轉圖示顏色 (排除 Python Logo 與停止按鈕) */
-body.vscode-dark .normal-icon:not([src*="python"]):not([src*="stop_24dp_EA3323"]),
-body.vscode-high-contrast .normal-icon:not([src*="python"]):not([src*="stop_24dp_EA3323"]) {
-    filter: invert(1) brightness(0.9);
-}
-
-#btn-run:hover {
-    background-color: #e8f5e9 !important; /* 淺綠色背景 */
-}
-
-#btn-stop:hover {
-    background-color: #fdecea !important; /* 淺紅色背景 */
-}
-
-body.vscode-dark #btn-run:hover,
-body.vscode-high-contrast #btn-run:hover {
-    background-color: #1b3a1f !important; /* 深綠色背景 */
-}
-
-body.vscode-dark #btn-stop:hover,
-body.vscode-high-contrast #btn-stop:hover {
-    background-color: #442a2a !important; /* 深紅色背景 */
-}
-
-/* 3. 修正程式碼預覽區 */
-
-body.vscode-dark .dropdown-item img:not([src*="python"]) {
-    filter: invert(1) brightness(0.9);
-}
-
-/* 3. 修正程式碼預覽區 */
-body.vscode-dark #codeArea,
-body.vscode-high-contrast #codeArea {
-    background-color: var(--code-bg);
-    color: var(--text-primary);
-    border-left: 1px solid var(--code-border);
-}
-
-body.vscode-dark #codeHeader,
-body.vscode-high-contrast #codeHeader {
-    background-color: var(--code-header-bg);
-    color: var(--text-secondary);
-    border-bottom: 1px solid var(--code-border);
-}
-
-body.vscode-dark #codeContent,
-body.vscode-high-contrast #codeContent {
-    background-color: var(--code-bg) !important;
-    color: #d4d4d4; /* VS Code 預設文字色 */
-}
-
-body.vscode-dark .code-line:before,
-body.vscode-high-contrast .code-line:before {
-    color: #858585;
-    border-right: 1px solid #333333;
-    background-color: #1e1e1e;
-}
-
-/* 深色模式下的 Minimap */
-body.vscode-dark .blockly-minimap,
-body.vscode-dark .blockly-minimap .blocklySvg {
-    background-color: #1e1e1e !important;
-}
-
-/* 4. Highlight.js 深色模式覆寫 (避免載入兩個 CSS) */
-body.vscode-dark .hljs-keyword, 
-body.vscode-dark .hljs-selector-tag { color: #569cd6; }
-body.vscode-dark .hljs-string { color: #ce9178; }
-body.vscode-dark .hljs-number { color: #b5cea8; }
-body.vscode-dark .hljs-comment { color: #6a9955; }
-body.vscode-dark .hljs-title { color: #dcdcaa; }
-body.vscode-dark .hljs-params { color: #9cdcfe; }
-body.vscode-dark .hljs-built_in { color: #4ec9b0; }

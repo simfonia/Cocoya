@@ -102,6 +102,8 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
 
         try {
             await CocoyaLoader.loadScript(`${mediaUri}/${this.currentLang}.js`);
+            // ★ 主題積木色：語系預設色載入後、模組積木註冊前，以偏好主題的 msgColours 覆寫 COLOUR_*
+            if (window.CocoyaTheme) window.CocoyaTheme.applyMsgColours();
             this.registerPlugins();
             this.setupBlocklyPrompts();
 
