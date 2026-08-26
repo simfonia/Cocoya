@@ -225,3 +225,5 @@ C:\Workspace\cocoya\
 ├── temp_scripts/          # 執行期間暫存目錄
 ├── package.json           # 根目錄設定
 └── tsconfig.json          # TS 編譯設定ui/src/modules/theme_manager/themes/cocoya_dark.js # [REFACTORED] 完全自足深色主題：componentStyles+cssVars+css（主題專屬規則由 ThemeManager 注入 <style>，style.css 不再含任何深色規則）
+
+| log/KNOWLEDGE_BASE.md | 知識蒸餾基礎（2026-08-24）：十章整理重大技術、開發鐵律、踩坑快查表與過時知識校正；關鍵點已對照現行程式碼求證 |

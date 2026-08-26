@@ -279,7 +279,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
 
                     msg.code = code;
                     msg.platform = window.CocoyaApp?.currentPlatform;
-                    msg.serialPort = document.getElementById('serial-selector')?.value || '';
+                    msg.serialPort = window.CocoyaUI && window.CocoyaUI.getSerialPort ? window.CocoyaUI.getSerialPort() : (document.getElementById('serial-selector')?.getAttribute('data-value') || '') || '';
                     msg.serialUploadOnly = localStorage.getItem('cocoya_serial_upload_only') === 'true';
                     if (self.flashButton) self.flashButton(id, '#e8f5e9'); // 綠色回饋
                 }
@@ -367,6 +367,62 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             };
         }
 
+        // --- 語系開關：[中文 ⇄ English] 膠囊雙選項（沿用首頁 cocoya_lang 偏好 + reloadWebview 機制） ---
+        const langToggleBtn = document.getElementById('btn-toggle-language');
+        if (langToggleBtn) {
+            // tooltip 顯式填充（不依賴全域 applyI18n 掃描）
+            const langTip = Blockly.Msg['BKY_STARTUP_LANG'] || 'Language';
+            langToggleBtn.setAttribute('title', langTip);
+            const currentLang = (() => {
+                try { return localStorage.getItem('cocoya_lang') || 'zh-hant'; } catch (e) { return 'zh-hant'; }
+            })();
+            // 高亮目前語系側
+            const langOpts = langToggleBtn.querySelectorAll('.lang-switch-opt');
+            for (const opt of langOpts) {
+                opt.classList.toggle('active', opt.getAttribute('data-lang') === currentLang);
+                opt.onclick = (e) => {
+                    e.stopPropagation();
+                    const nextLang = opt.getAttribute('data-lang');
+                    if (nextLang === currentLang) return; // 點擊目前語系側不動作
+                    try { localStorage.setItem('cocoya_lang', nextLang); } catch (err) { }
+                    if (window.CocoyaBridge && typeof window.CocoyaBridge.send === 'function') {
+                        window.CocoyaBridge.send('reloadWebview');
+                    } else {
+                        location.reload();
+                    }
+                };
+            }
+        }
+
+        // --- 主題子選單：由 ThemeManager registry 動態生成（auto 固定第一個，✔ 標示目前模式） ---
+        const themeMenuTitle = document.getElementById('theme-menu-title');
+        if (themeMenuTitle) {
+            themeMenuTitle.textContent = Blockly.Msg['BKY_STARTUP_THEME'] || 'Theme';
+        }
+        const themeMenuItems = document.getElementById('theme-menu-items');
+        if (themeMenuItems && window.CocoyaTheme) {
+            const savedMode = window.CocoyaTheme.getMode();
+            const buildOption = (value, text) => {
+                const opt = document.createElement('div');
+                opt.className = 'dropdown-item';
+                const check = document.createElement('span');
+                check.style.cssText = 'width: 16px; margin-right: 8px; display: inline-block;';
+                check.textContent = (savedMode === value) ? '✔' : '';
+                const label = document.createElement('span');
+                label.textContent = text;
+                opt.appendChild(check);
+                opt.appendChild(label);
+                opt.onclick = () => window.CocoyaTheme.setMode(value);
+                return opt;
+            };
+            themeMenuItems.appendChild(buildOption('auto',
+                Blockly.Msg['BKY_THEME_AUTO'] || 'Auto (System)'));
+            for (const t of window.CocoyaTheme.getThemes()) {
+                themeMenuItems.appendChild(buildOption(t.id,
+                    (t.labelKey && Blockly.Msg[t.labelKey]) || t.labelFallback || t.id));
+            }
+        }
+
         // --- 穩定教學模式：切換開關 ---
         const serialUploadBtn = document.getElementById('btn-toggle-serial-upload');
         const serialUploadCheck = document.getElementById('serial-upload-check');
@@ -387,7 +443,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         const setupStableBtn = document.getElementById('btn-setup-stable-mcu');
         if (setupStableBtn) {
             setupStableBtn.onclick = async () => {
-                const port = document.getElementById('serial-selector')?.value;
+                const port = window.CocoyaUI && window.CocoyaUI.getSerialPort ? window.CocoyaUI.getSerialPort() : (document.getElementById('serial-selector')?.getAttribute('data-value') || '');
                 if (!port) {
                     window.CocoyaBridge.alert(Blockly.Msg['MSG_SELECT_PORT'] || 'Please select a port first.');
                     return;
@@ -404,7 +460,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         const eraseFsBtn = document.getElementById('btn-erase-filesystem');
         if (eraseFsBtn) {
             eraseFsBtn.onclick = async () => {
-                const port = document.getElementById('serial-selector')?.value;
+                const port = window.CocoyaUI && window.CocoyaUI.getSerialPort ? window.CocoyaUI.getSerialPort() : (document.getElementById('serial-selector')?.getAttribute('data-value') || '');
                 if (!port) {
                     window.CocoyaBridge.alert(Blockly.Msg['MSG_SELECT_PORT'] || 'Please select a port first.');
                     return;
@@ -441,7 +497,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                         );
                     }
 
-                    const port = document.getElementById('serial-selector')?.value || '';
+                    const port = window.CocoyaUI && window.CocoyaUI.getSerialPort ? window.CocoyaUI.getSerialPort() : (document.getElementById('serial-selector')?.getAttribute('data-value') || '') || '';
                     if (model.includes('SERIAL') && !port) {
                         window.CocoyaBridge.alert(Blockly.Msg['MSG_SELECT_PORT'] || 'Please select a port first.');
                         return;
@@ -455,7 +511,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         const refreshBtn = document.getElementById('btn-refresh-serial');
         if (refreshBtn) {
             refreshBtn.onclick = () => {
-                const port = document.getElementById('serial-selector')?.value;
+                const port = window.CocoyaUI && window.CocoyaUI.getSerialPort ? window.CocoyaUI.getSerialPort() : (document.getElementById('serial-selector')?.getAttribute('data-value') || '');
                 // 1. 執行原本的整理清單
                 postMessageFunc({ command: 'refreshSerialPorts' });
                 // 2. 如果有選埠，則嘗試開啟監控器 (對齊使用者想重新進入的需求)

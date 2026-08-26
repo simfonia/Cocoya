@@ -188,6 +188,92 @@ body.cocoya-dark-mode {
     white-space: nowrap;
 }
 
+/* 自繪 Serial 下拉（取代原生 select） */
+.serial-dropdown {
+    position: relative;
+    display: inline-block;
+    min-width: 80px;
+    max-width: 150px;
+    vertical-align: middle;
+}
+.serial-dropdown-trigger {
+    position: relative;
+    width: 100%;
+    box-sizing: border-box;
+    background-color: #f3f3f3;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 4px 22px 4px 6px;
+    font-size: 11px;
+    color: #333;
+    cursor: pointer;
+    outline: none;
+    height: 28px;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.serial-dropdown-trigger::after {
+    content: "";
+    position: absolute;
+    right: 7px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid #888;
+    pointer-events: none;
+}
+.serial-dropdown-trigger:hover {
+    background-color: #e9e9e9;
+    border-color: #FE2F89;
+}
+.serial-dropdown-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 100%;
+    max-width: 300px;
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    z-index: 12000;
+    padding: 4px;
+    overflow: auto;
+    max-height: 260px;
+    white-space: nowrap;
+}
+.serial-dropdown.open .serial-dropdown-menu {
+    display: block;
+}
+.serial-dropdown-item {
+    padding: 5px 10px;
+    font-size: 12px;
+    color: #333;
+    cursor: pointer;
+    border-radius: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.serial-dropdown-item:hover {
+    background-color: #f0f0f0;
+    color: #FE2F89;
+}
+.serial-dropdown-item.active {
+    background-color: #FFF0F5;
+    color: #FE2F89;
+    font-weight: 600;
+}
+.serial-dropdown-item.placeholder {
+    color: #999;
+    cursor: default;
+}
+
+
 /* 響應式微調：當視窗太小時縮小間距或隱藏非關鍵元件 */
 @media (max-width: 1000px) {
     #file-breadcrumb {
@@ -305,10 +391,85 @@ body.cocoya-dark-mode {
     filter: brightness(0) saturate(100%) invert(24%) sepia(89%) saturate(6543%) hue-rotate(317deg) brightness(98%) contrast(93%);
 }
 
+/* 深色主題：下拉選單 hover 一律不變色 icon，僅文字變色（含 AI 選單） */
+body.cocoya-dark-mode .dropdown-item:hover img {
+    filter: none;
+}
+
 .dropdown-separator {
     height: 1px;
     background-color: #eee;
     margin: 4px 0;
+}
+
+/* 語系切換開關：[中文 ⇄ English] 膠囊雙選項，目前語系高亮 */
+.lang-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    padding: 2px;
+    border: 1px solid var(--cocoya-border, #ddd);
+    border-radius: 999px;
+    background: var(--cocoya-surface, #fff);
+}
+
+.lang-switch-opt {
+    font-size: 10px;
+    line-height: 1;
+    padding: 3px 8px;
+    border-radius: 999px;
+    color: var(--cocoya-fg, #555);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.lang-switch-opt:hover {
+    background: var(--cocoya-hover, #f0f0f0);
+}
+
+.lang-switch-opt.active {
+    background: #FE2F89;
+    color: #fff;
+    font-weight: bold;
+}
+
+.lang-switch-arrow {
+    font-size: 11px;
+    color: var(--cocoya-fg, #999);
+    opacity: 0.7;
+}
+
+/* 首頁右上角膠囊：與更新按鈕（top:18px、高約 28px）同高對齊 */
+#startup-home #startup-lang-switch {
+    position: absolute;
+    top: 18px;
+    right: 76px;
+}
+
+#startup-home #startup-lang-switch .lang-switch-opt {
+    font-size: 12px;
+    padding: 5px 10px;
+}
+
+/* 首頁開檔與快速設定按鈕：統一靜態樣式，hover 才變粉色
+   （inline style 優先序高於 :hover 規則，故須 !important） */
+#startup-home #startup-new,
+#startup-home #startup-open,
+#startup-home #startup-examples,
+#startup-home #startup-set-python-path,
+#startup-home #startup-diagnose {
+    transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+#startup-home #startup-new:hover,
+#startup-home #startup-open:hover,
+#startup-home #startup-examples:hover,
+#startup-home #startup-set-python-path:hover,
+#startup-home #startup-diagnose:hover {
+    background: #FE2F89 !important;
+    border-color: #FE2F89;
+    color: #fff !important;
 }
 
 /* 子選單樣式 */
@@ -521,20 +682,73 @@ body.cocoya-dark-mode #panel-resizer.is-dragging {
     box-sizing: border-box;
 }
 
-.indent-select {
-    background: transparent;
+.indent-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.indent-dropdown-trigger {
+    position: relative;
+    background: #ffffff;
     border: 1px solid #ccc;
     border-radius: 3px;
     font-size: 10px;
     color: #666;
     cursor: pointer;
     outline: none;
-    padding: 1px 4px;
+    padding: 1px 18px 1px 6px;
+    line-height: 1.4;
+    white-space: nowrap;
 }
-
-.indent-select:hover {
+.indent-dropdown-trigger::after {
+    content: "";
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 5px solid #888;
+    pointer-events: none;
+}
+.indent-dropdown-trigger:hover {
     border-color: #FE2F89;
     color: #FE2F89;
+}
+
+.indent-dropdown-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 100%;
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    z-index: 12000;
+    padding: 4px;
+    white-space: nowrap;
+}
+.indent-dropdown.open .indent-dropdown-menu {
+    display: block;
+}
+
+.indent-dropdown-item {
+    padding: 5px 10px;
+    font-size: 12px;
+    color: #333;
+    cursor: pointer;
+    border-radius: 4px;
+}
+.indent-dropdown-item:hover {
+    background-color: #f0f0f0;
+    color: #FE2F89;
+}
+.indent-dropdown-item.active {
+    background-color: #FFF0F5;
+    color: #FE2F89;
+    font-weight: 600;
 }
 
 #codeContent {

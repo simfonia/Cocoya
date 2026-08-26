@@ -8,41 +8,93 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
      * @param {string[]} ports 序列埠列表
      */
     updateSerialPorts: function(ports) {
-        const selector = document.getElementById('serial-selector');
-        if (!selector) return;
+        const root = document.getElementById('serial-selector');
+        if (!root) return;
+        const trigger = root.querySelector('.serial-dropdown-trigger');
+        const labelEl = root.querySelector('.serial-dropdown-label');
+        const menu = root.querySelector('.serial-dropdown-menu');
+        if (!trigger || !menu) return;
 
-        const currentVal = selector.value;
-        selector.innerHTML = '';
+        const currentVal = root.getAttribute('data-value') || '';
+
+        // 清空清單（保留初始「無連接埠」項）
+        menu.innerHTML = '';
+
+        const addItem = (value, label) => {
+            const item = document.createElement('div');
+            item.className = 'serial-dropdown-item';
+            item.setAttribute('data-value', value);
+            if (value === '') item.classList.add('placeholder');
+            item.textContent = label;
+            menu.appendChild(item);
+        };
 
         if (!ports || ports.length === 0) {
-            const opt = document.createElement('option');
-            opt.value = '';
-            opt.textContent = '(No Port)';
-            selector.appendChild(opt);
-            return;
+            root.setAttribute('data-value', '');
+            addItem('', '(No Port)');
+        } else {
+            ports.forEach(p => {
+                const portValue = typeof p === 'string' ? p : p.port;
+                const portLabel = typeof p === 'string' ? p : p.label;
+                addItem(portValue, portLabel);
+            });
+            // 嘗試保留上次選取（若埠仍在）
+            if (currentVal && Array.from(menu.children).some(c => c.getAttribute('data-value') === currentVal)) {
+                root.setAttribute('data-value', currentVal);
+            }
         }
 
-        ports.forEach(p => {
-            const opt = document.createElement('option');
-            // 兼容舊有的 string 格式與新的物件格式
-            const portValue = typeof p === 'string' ? p : p.port;
-            const portLabel = typeof p === 'string' ? p : p.label;
-            
-            opt.value = portValue;
-            opt.textContent = portLabel;
-            if (portValue === currentVal) {
-                opt.selected = true;
-                // 同步將完整名稱設為 selector 的 title，讓 hover 時能看完整名字
-                selector.setAttribute('title', portLabel);
-            }
-            selector.appendChild(opt);
-        });
+        this._bindSerialDropdown(root, trigger, labelEl, menu);
+        this.setSerialPortLabel(root, labelEl);
+    },
 
-        // 監聽改變事件，同步更新 title
-        selector.onchange = (e) => {
-            const selectedOpt = selector.options[selector.selectedIndex];
-            if (selectedOpt) selector.setAttribute('title', selectedOpt.textContent);
+    /** 從自繪 serial 下拉讀取目前選取的埠 */
+    getSerialPort: function() {
+        const root = document.getElementById('serial-selector');
+        if (!root) return '';
+        return root.getAttribute('data-value') || '';
+    },
+
+    /** 設定 serial 下拉目前的選取值（data-value + label + active 樣式） */
+    setSerialPortLabel: function(root, labelEl) {
+        const currentVal = root.getAttribute('data-value') || '';
+        const menu = root.querySelector('.serial-dropdown-menu');
+        if (!labelEl) return;
+        if (menu) {
+            const active = Array.from(menu.children).find(c => c.getAttribute('data-value') === currentVal);
+            Array.from(menu.children).forEach(c => c.classList.toggle('active', c === active));
+            labelEl.textContent = active ? active.textContent : (currentVal || '');
+        }
+        if (currentVal && menu) {
+            const activeEl = Array.from(menu.children).find(c => c.getAttribute('data-value') === currentVal);
+            if (activeEl) root.setAttribute('title', activeEl.textContent);
+        }
+    },
+
+    /** 綁定 serial 自繪下拉的開闔與點選 */
+    _bindSerialDropdown: function(root, trigger, labelEl, menu) {
+        if (root.__serialBound) return;
+        root.__serialBound = true;
+
+        const close = () => {
+            root.classList.remove('open');
+            trigger.setAttribute('aria-expanded', 'false');
         };
+        trigger.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = root.classList.toggle('open');
+            trigger.setAttribute('aria-expanded', String(isOpen));
+        });
+        menu.addEventListener('click', (e) => {
+            const item = e.target.closest('.serial-dropdown-item');
+            if (!item) return;
+            const val = item.getAttribute('data-value');
+            if (val === '') return; // 忽略「無連接埠」
+            root.setAttribute('data-value', val);
+            this.setSerialPortLabel(root, labelEl);
+            close();
+        });
+        document.addEventListener('click', () => close());
     },
 
     /**

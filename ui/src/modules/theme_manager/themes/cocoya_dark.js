@@ -285,9 +285,68 @@ body.cocoya-dark-mode .serial-select {
     color-scheme: light;
 }
 
-/* indent 下拉清下拉清單：維持與淺色主題相同外觀（含彈出選單） */
-body.cocoya-dark-mode .indent-select {
-    color-scheme: light;
+/* indent 自繪下拉：深色主題配色 */
+body.cocoya-dark-mode .indent-dropdown-trigger {
+    background: #2d2d2d;
+    border-color: #555;
+    color: #d4d4d4;
+}
+body.cocoya-dark-mode .indent-dropdown-trigger::after {
+    border-top-color: #ccc;
+}
+body.cocoya-dark-mode .indent-dropdown-trigger:hover {
+    border-color: #FE2F89;
+    color: #FE2F89;
+}
+body.cocoya-dark-mode .indent-dropdown-menu {
+    background: #2d2d2d;
+    border-color: #404040;
+    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.5);
+}
+body.cocoya-dark-mode .indent-dropdown-item {
+    color: #e0e0e0;
+}
+body.cocoya-dark-mode .indent-dropdown-item:hover {
+    background-color: #3e3e3e;
+    color: #FE2F89;
+}
+body.cocoya-dark-mode .indent-dropdown-item.active {
+    background-color: rgba(254, 47, 137, 0.15);
+    color: #FE2F89;
+}
+
+/* Serial 自繪下拉：深色主題配色 */
+body.cocoya-dark-mode .serial-dropdown-trigger {
+    background-color: #2d2d2d;
+    border-color: #555;
+    color: #d4d4d4;
+}
+body.cocoya-dark-mode .serial-dropdown-trigger::after {
+    border-top-color: #ccc;
+}
+body.cocoya-dark-mode .serial-dropdown-trigger:hover {
+    background-color: #3e3e3e;
+    border-color: #FE2F89;
+    color: #FE2F89;
+}
+body.cocoya-dark-mode .serial-dropdown-menu {
+    background: #2d2d2d;
+    border-color: #404040;
+    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.5);
+}
+body.cocoya-dark-mode .serial-dropdown-item {
+    color: #e0e0e0;
+}
+body.cocoya-dark-mode .serial-dropdown-item:hover {
+    background-color: #3e3e3e;
+    color: #FE2F89;
+}
+body.cocoya-dark-mode .serial-dropdown-item.active {
+    background-color: rgba(254, 47, 137, 0.15);
+    color: #FE2F89;
+}
+body.cocoya-dark-mode .serial-dropdown-item.placeholder {
+    color: #888;
 }
 
 /* 原生表單控制項（下拉彈出、捲軸）跟隨深色渲染。
