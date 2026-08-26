@@ -104,5 +104,6 @@ Notation: `key?` = Optional. **Rule: changing a Rust signature -> immediately up
 | file | pick_folder        | -- | {} | Result<PickFolderResult, String> |
 | file | dataset_save_progress | folder_path, project_name, spec_json: String | {folderPath, projectName, specJson} | Result<String, String> |
 | file | dataset_load_progress  | folder_path: String | {folderPath} | Result<DatasetProgressResult, String> |
+| dataset | dataset_upload_chunk | file_id, chunk_index, total_chunks, zip_data_chunk, project_name, is_last | {fileId, chunkIndex, totalChunks, zipDataChunk, projectName, isLast} | Result<Option<String>, String> |
 | training | open_report  | report_path: String | {reportPath} | Result<(), String> |
 | training | find_latest_training_report | -- | {} | Result<Vec<ReportInfo>, String> |

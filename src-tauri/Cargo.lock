@@ -316,6 +316,7 @@ dependencies = [
 name = "cocoya"
 version = "0.8.0"
 dependencies = [
+ "base64 0.22.1",
  "open",
  "serde",
  "serde_json",

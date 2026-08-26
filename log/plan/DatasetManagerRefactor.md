@@ -262,3 +262,16 @@ UI presenters/controllers
 2. canonical save/load path 是否統一以 project root + dataset namespace 為準，並對 legacy folder path 提供相容讀取。
 3. core 是否全面改為 error/warning code，由 UI 負責翻譯。
 4. 是否批准新增 DOM/E2E 測試工具；若不新增，須指定現有 Node/Rust 工具的替代驗證方案。
+
+---
+
+## 執行紀錄追加（2026-08-26）
+
+- 使用者確認：VSIX/Tauri parity 與 Tauri cloud upload 均納入本次施工範圍。
+- Stage 0 基線完成：Extension compile 與 UI Vite build 通過；Dataset Manager 已建立 `backup/dataset_manager_stage0_20260826_130259/` 備份。
+- 已完成第一個 P0 修正：Tauri Dataset sidecar 的 `sidecar-log`、`sidecar-event` 改用 `emit_to(window_label, ...)`，通過 `cargo check`。
+- 已完成 cloud upload 第一切片：Tauri 分塊落地 command、Base64/大小/命名驗證、sidecar `uploadDataset` 接線、permission 與 Release resource 設定；自動化驗證通過，待 Tauri Dev、SSH/SFTP、Release 實機測試後才可標記 parity 完成。
+- 目前狀態：Stage 0 / parity slice `READY_FOR_TEST`；save/load canonical path、檔案 confinement 與跨平台事件語意仍是後續 P0 工作。
+- 匯出回歸：已修正 Tauri `export_dataset` 自行啟動 sidecar 分支缺少 stdout response reader 導致 30 秒 timeout；待使用者以 `examples/test/dataset/classifier_dataset` 重跑本機匯出確認。
+- 匯出回歸完成：使用者已確認 Tauri Dev 的 `image/file` classifier_dataset 匯出成功，ZIP 含 `dataset.json`，且不再 timeout；VSIX、Tauri Release 與其他 parity 流程仍待驗證。
+- Stage 1 core 初步施工完成：新增 `core/labelMap.js`、`core/stats.js`、`core/state.js`、`core/projectNaming.js`、`core/pathPolicy.js`；`ui_layout.js` 已以相容 wrapper 接入 label map、stats、DatasetStore 與名稱清理，Node core smoke 與 UI build 通過。尚未完成完整 action 化、path policy 實際接入與手動 C1 Gate。

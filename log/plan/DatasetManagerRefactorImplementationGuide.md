@@ -317,6 +317,47 @@ Domain core 只能處理資料與規則，不得依賴 DOM、`window.CocoyaBridg
 
 **預期：** dev 與 release 的 command 行為一致；拒絕非法路徑；錯誤不吞掉且不暴露不必要的系統資訊。
 
+#### A2-5：無 SSH 環境的本機 upload 驗證
+
+本案例不驗證遠端 SFTP 成功，只驗證 Tauri 前端與本機分塊 command 的行為。SSH 不可用時，以下項目仍必須完成：
+
+1. 準備一個小型 ZIP，內容包含 `dataset.json` 與至少一張圖片。
+2. 在 Tauri Dev 開啟 Dataset Manager，進入雲端 ZIP 上傳流程。
+3. 輸入測試用 SSH 欄位，但不要使用真實密碼；使用不存在的 host 或暫時不可連線的位址。
+4. 觀察上傳進度是否從 0% 往前更新，UI 是否仍可操作。
+5. 觀察最後是否收到單一 `datasetUploadResult` 失敗事件。
+6. 檢查 console 是否出現清楚的連線失敗或 sidecar 錯誤，而不是未捕捉例外。
+7. 關閉並重新開啟 Dataset Manager，確認沒有殘留上傳狀態、重複錯誤訊息或卡住的按鈕。
+
+**預期：** 本機分塊流程可執行；遠端連線失敗時能正常回報失敗並恢復 UI。此案例不得宣稱 SFTP 成功。
+
+#### A2-6：無 SSH 環境的輸入驗證
+
+若能使用 Tauri DevTools，於目前 Tauri webview console 逐一執行下列測試請求；若無法直接取得 invoke，記錄為 `BLOCKED`，不要修改產品程式碼來繞過 UI：
+
+1. `fileId` 為空字串。
+2. `fileId` 含 `../` 或反斜線。
+3. `chunkIndex` 等於 `totalChunks`。
+4. `totalChunks` 為 0 或大於上限。
+5. `isLast=true` 但不是最後一個 chunk。
+6. `zipDataChunk` 不是合法 Base64。
+7. `projectName` 含 `/`、`\\`、`..` 或空字串。
+8. Base64 解碼後超過 1 MiB 的 chunk。
+
+**預期：** 每一項都被拒絕，錯誤不造成程式崩潰，也不會建立越界路徑。若無 DevTools invoke 能力，至少透過 UI 的錯誤回傳確認非法 project name 與失敗連線流程。
+
+#### A2-7：無 SSH 環境的分塊順序與遺失測試
+
+此案例需要測試 harness 或開發者工具能直接呼叫 `dataset_upload_chunk`；不能從一般 UI 產生亂序或缺塊時，標記 `BLOCKED`。
+
+1. 使用同一 `fileId` 傳送 chunk 1，再傳送 chunk 0，最後傳送最後一塊。
+2. 省略其中一塊，卻送出 `isLast=true`。
+3. 重送同一 `chunkIndex`，確認結果不會靜默組成錯誤 ZIP。
+4. 使用兩個不同 `fileId`、相同 project name，同時組裝兩個 ZIP。
+5. 檢查暫存檔名稱與內容是否互相覆寫。
+
+**預期：** 完整且可識別的 chunk 才能組裝；缺塊、非法最後索引與錯誤 Base64 明確失敗；不同 file id 不互相覆寫。沒有 harness 時，此案例保持 BLOCKED，不能以人工推測代替。
+
 ### 5.4 Stage 2 Gate
 
 - [ ] direct Bridge 呼叫已完成清單並遷移，或明確列為尚未遷移。
@@ -324,7 +365,8 @@ Domain core 只能處理資料與規則，不得依賴 DOM、`window.CocoyaBridg
 - [ ] requestId、timeout、cancel、unsubscribe 測試通過。
 - [ ] 兩個視窗的 sidecar event 完全隔離。
 - [ ] Tauri permission 與 `emit_to` 規則通過。
-- [ ] Tauri cloud upload 已完成 parity，或明確移出本次成功條件。
+- [ ] 無 SSH 時，A2-5 的本機錯誤處理已通過；A2-6/A2-7 依工具能力標記 PASS 或 BLOCKED。
+- [ ] Tauri cloud upload 的 SSH/SFTP 成功流程仍須等遠端環境可用後通過，未通過前不可標記完整 parity。
 - [ ] 審核者簽核：________ 日期：________
 
 ---
@@ -663,6 +705,20 @@ cargo tauri build --config src-tauri/tauri.conf.json
 | locale reload | [ ] | [ ] | [ ] |
 | theme switching | [ ] | [ ] | [ ] |
 | multi-window event isolation | N/A | [ ] | [ ] |
+
+### 10.2.1 無 SSH 時的測試標記規則
+
+在 SSH 主機不可連線期間，cloud upload 的矩陣必須拆開記錄：
+
+| 子案例 | VSIX | Tauri Dev | Tauri Release | 無 SSH 判定 |
+|---|---:|---:|---:|---|
+| 本機 ZIP 讀取與分塊進度 | [ ] | [ ] | [ ] | 可測，應完成。 |
+| 非法 file id/project name/chunk/Base64 拒絕 | N/A | [ ] | [ ] | 有 invoke harness 才可測，否則 BLOCKED。 |
+| 缺塊、亂序、重複 chunk | N/A | [ ] | [ ] | 需要 harness；不可人工推定。 |
+| SSH 連線失敗錯誤回報與 UI 復原 | [ ] | [ ] | [ ] | 可使用不可連線 host 測試。 |
+| SFTP 上傳與遠端解壓成功 | [ ] | BLOCKED | BLOCKED | 必須等待 SSH 主機。 |
+
+無 SSH 時，cloud upload 整體狀態保持 `PARTIAL/BLOCKED`；只有本機分塊與錯誤處理案例可個別標記 PASS。
 
 ### 10.3 Release 專用測試
 

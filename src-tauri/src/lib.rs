@@ -51,6 +51,7 @@ pub fn run() {
             commands::start_sidecar,
             commands::sidecar_send,
             commands::stop_sidecar,
+            commands::dataset_upload_chunk,
             commands::delete_file,
             commands::pick_folder,
             commands::export_dataset,
