@@ -208,7 +208,6 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         const summary = home.querySelector('#startup-settings-panel summary');
         const setPythonBtn = home.querySelector('#startup-set-python-path');
         const diagnoseBtn = home.querySelector('#startup-diagnose');
-        const langSelect = home.querySelector('#startup-lang');
         const themeSelect = home.querySelector('#startup-theme');
         const newOptions = home.querySelectorAll('.startup-new-option');
         if (newBtn) newBtn.textContent = (Blockly.Msg['BKY_STARTUP_NEW'] || '開新專案');
@@ -223,9 +222,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             else if (platform === 'MicroPython') opt.textContent = (Blockly.Msg['TLB_MODE_MCU'] || '📟 MicroPython (MCU)');
         }
         // 語系 / 主題偏好：反映目前設定值 + 顯式填充文案（不依賴全域 applyI18n 掃描）
-        const langLabel = home.querySelector('#startup-lang-label');
         const themeLabel = home.querySelector('#startup-theme-label');
-        if (langLabel) langLabel.textContent = (Blockly.Msg['BKY_STARTUP_LANG'] || 'Language');
         if (themeLabel) themeLabel.textContent = (Blockly.Msg['BKY_STARTUP_THEME'] || 'Theme');
         // 主題下拉選單：由 ThemeManager registry 動態生成（auto 固定第一個）
         if (themeSelect && window.CocoyaTheme) {
@@ -244,10 +241,16 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             themeSelect.value = savedMode;
             if (themeSelect.selectedIndex < 0) themeSelect.value = 'auto';
         }
-        if (langSelect) {
+        // 語系膠囊開關（右上角）：高亮目前語系側 + tooltip 顯式填充
+        const langSwitch = document.getElementById('startup-lang-switch');
+        if (langSwitch) {
+            langSwitch.setAttribute('title', (Blockly.Msg['BKY_STARTUP_LANG'] || 'Language'));
             let savedLang = '';
             try { savedLang = localStorage.getItem('cocoya_lang') || ''; } catch (e) { }
-            langSelect.value = savedLang || this.currentLang || 'zh-hant';
+            const currentLang = savedLang || this.currentLang || 'zh-hant';
+            for (const opt of langSwitch.querySelectorAll('.lang-switch-opt')) {
+                opt.classList.toggle('active', opt.getAttribute('data-lang') === currentLang);
+            }
         }
         this._bindStartupHome();
         if (!anchored) home.style.display = 'flex';
@@ -292,17 +295,24 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             if (window.CocoyaUI && window.CocoyaUI.showDiagnoseModal) window.CocoyaUI.showDiagnoseModal();
             window.CocoyaBridge.send('checkEnvironment');
         };
-        // 語系切換：存偏好 → 重載 webview（VSIX 需由 host 重建 HTML，避免白屏）
-        const langSelect = document.getElementById('startup-lang');
-        if (langSelect) {
-            langSelect.onchange = () => {
-                try { localStorage.setItem('cocoya_lang', langSelect.value); } catch (e) { }
-                if (window.CocoyaBridge && typeof window.CocoyaBridge.send === 'function') {
-                    window.CocoyaBridge.send('reloadWebview');
-                } else {
-                    location.reload();
-                }
-            };
+        // 語系膠囊開關（右上角）：點擊任一側 → 存偏好 → 重載 webview（VSIX 需由 host 重建 HTML，避免白屏）
+        const langSwitch = document.getElementById('startup-lang-switch');
+        if (langSwitch) {
+            let currentLang = 'zh-hant';
+            try { currentLang = localStorage.getItem('cocoya_lang') || this.currentLang || 'zh-hant'; } catch (e) { }
+            for (const opt of langSwitch.querySelectorAll('.lang-switch-opt')) {
+                opt.onclick = (e) => {
+                    e.stopPropagation();
+                    const nextLang = opt.getAttribute('data-lang');
+                    if (nextLang === currentLang) return; // 點擊目前語系側不動作
+                    try { localStorage.setItem('cocoya_lang', nextLang); } catch (err) { }
+                    if (window.CocoyaBridge && typeof window.CocoyaBridge.send === 'function') {
+                        window.CocoyaBridge.send('reloadWebview');
+                    } else {
+                        location.reload();
+                    }
+                };
+            }
         }
         // 主題切換：交由 ThemeManager 存偏好 → 即時套用（不需重載）
         const themeSelect = document.getElementById('startup-theme');

@@ -32,20 +32,67 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
     },
 
     /**
-     * 設定縮排選擇器
+     * 設定縮排選擇器（自繪 dropdown）
      */
     setupIndentSelector: function() {
-        const selector = document.getElementById('indent-selector');
-        if (!selector) return;
-        selector.onchange = () => {
-            if (Blockly.Python) {
-                const indentSize = parseInt(selector.value, 10);
+        const root = document.getElementById('indent-selector');
+        if (!root) return;
+        const trigger = root.querySelector('.indent-dropdown-trigger');
+        const labelEl = root.querySelector('.indent-dropdown-label');
+        const menu = root.querySelector('.indent-dropdown-menu');
+        const items = root.querySelectorAll('.indent-dropdown-item');
+        if (!trigger || !menu) return;
+
+        // i18n 文案填充：每次呼叫都重填（語系檔於 initializeCocoya 才載入，需二次填充）
+        const label2 = (Blockly.Msg['TLB_INDENT_2'] || '2 空格');
+        const label4 = (Blockly.Msg['TLB_INDENT_4'] || '4 空格');
+        const labelMap = { 2: label2, 4: label4 };
+        items.forEach((it) => {
+            it.textContent = labelMap[it.getAttribute('data-value')] || it.textContent;
+        });
+
+        // 事件綁定僅一次（本函式會被 initialize 與 initializeCocoya 各呼叫一次）
+        if (!this._indentBound) {
+            this._indentBound = true;
+
+            const applyValue = (value) => {
+                if (!Blockly.Python) return;
+                const indentSize = parseInt(value, 10);
+                if (!indentSize) return;
                 Blockly.Python.INDENT = ' '.repeat(indentSize);
+                labelEl.textContent = labelMap[indentSize] || value;
+                items.forEach((it) => {
+                    it.classList.toggle('active', it.getAttribute('data-value') === String(indentSize));
+                });
+                close();
                 if (Blockly.Python.init) Blockly.Python.init(this.workspace);
                 this.triggerCodeUpdate();
-            }
-        };
-        if (Blockly.Python) Blockly.Python.INDENT = '    ';
+            };
+
+            const close = () => {
+                root.classList.remove('open');
+                trigger.setAttribute('aria-expanded', 'false');
+            };
+            const toggle = () => {
+                const isOpen = root.classList.toggle('open');
+                trigger.setAttribute('aria-expanded', String(isOpen));
+            };
+
+            trigger.addEventListener('click', (e) => { e.stopPropagation(); toggle(); });
+            items.forEach((it) => {
+                it.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    applyValue(it.getAttribute('data-value'));
+                });
+            });
+            document.addEventListener('click', () => close());
+        }
+
+        // 同步目前縮排欄位到 UI（初始/平台切換/語系載入後）
+        const currentIndent = (Blockly.Python && Blockly.Python.INDENT) ? Blockly.Python.INDENT.length : 4;
+        const currentValue = String(currentIndent === 2 ? 2 : 4);
+        items.forEach((it) => it.classList.toggle('active', it.getAttribute('data-value') === currentValue));
+        labelEl.textContent = labelMap[currentIndent === 2 ? 2 : 4];
     },
 
     /**

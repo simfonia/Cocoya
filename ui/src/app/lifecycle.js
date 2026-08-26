@@ -153,6 +153,8 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             
             if (window.CocoyaUI) window.CocoyaUI.applyI18n();
             if (window.CocoyaUI) window.CocoyaUI.initToolbar((msg) => window.CocoyaBridge.send(msg.command, msg));
+            // 語系檔此時已載入，重填縮排選單文案（initialize 時期 Msg 尚未就緒）
+            if (typeof this.setupIndentSelector === 'function') this.setupIndentSelector();
             
             window.CocoyaBridge.send('setLocale', { messages: Blockly.Msg });
 

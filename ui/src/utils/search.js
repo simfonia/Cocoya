@@ -122,7 +122,7 @@
                     container.id = 'block-search-container';
                     container.innerHTML = `
                         <div class="search-input-wrapper">
-                            <input type="text" id="block-search" placeholder="${Blockly.Msg['BKY_CAT_SEARCH'] || '搜尋積木...'}" autocomplete="off">
+                            <input type="text" id="block-search" placeholder="${Blockly.Msg['CAT_SEARCH'] || '搜尋積木...'}" autocomplete="off">
                             <div id="block-search-clear" style="display: none;">
                                 <img src="${mediaUri}/icons/cancel_24dp_FE2F89.png" style="width: 16px; height: 16px; cursor: pointer;">
                             </div>
