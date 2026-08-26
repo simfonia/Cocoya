@@ -51,6 +51,7 @@
       "../ui/src/core_manifest.json": "resources/core_manifest.json",
       "../resources/firmware": "resources/firmware",
       "../resources/train_templates": "resources/train_templates",
+      "../resources/dataset_manager": "resources/dataset_manager",
       "../ui/src/modules": "resources/modules",
       "../docs/help": "docs/help",
       "../examples": "examples"

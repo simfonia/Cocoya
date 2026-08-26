@@ -12,6 +12,7 @@ export class BridgeTauri extends BaseBridge {
         this.tauriGetCurrent = null;
         this._firstLogReceived = false;
         this._isClosing = false;
+        this._datasetUploadChain = Promise.resolve();
         this._anchor = null; // { isAnchored, projectRoot } 由 init() 從後端取得
     }
 
@@ -506,8 +507,43 @@ export class BridgeTauri extends BaseBridge {
                     break;
 
                 case 'datasetUploadArchive':
-                    // 尚未實作 sidecar 支援，先 dispatch 到前端
-                    this._dispatchToFrontend({ command, ...data });
+                    {
+                        const uploadTask = async () => {
+                            try {
+                                const localZipPath = await this.tauriInvoke('dataset_upload_chunk', {
+                                    fileId: data.fileId,
+                                    chunkIndex: data.chunkIndex,
+                                    totalChunks: data.totalChunks,
+                                    zipDataChunk: data.zipDataChunk,
+                                    projectName: data.projectName || 'dataset',
+                                    isLast: !!data.isLast
+                                });
+                                if (!localZipPath) return;
+
+                                const uploadPayload = Object.assign({}, data, { localZipPath });
+                                delete uploadPayload.zipDataChunk;
+                                delete uploadPayload.chunkIndex;
+                                delete uploadPayload.totalChunks;
+                                delete uploadPayload.isLast;
+                                await this._handleDatasetCommand('uploadDataset', uploadPayload, (response) => {
+                                    this._dispatchToFrontend({
+                                        command: 'datasetUploadResult',
+                                        success: !!response.success,
+                                        error: response.error
+                                    });
+                                });
+                            } catch (e) {
+                                console.error('[Bridge] Dataset upload failed:', e);
+                                this._dispatchToFrontend({
+                                    command: 'datasetUploadResult',
+                                    success: false,
+                                    error: String(e)
+                                });
+                            }
+                        };
+                        this._datasetUploadChain = this._datasetUploadChain.then(uploadTask, uploadTask);
+                        await this._datasetUploadChain;
+                    }
                     break;
 
                 case 'datasetSaveProgress':

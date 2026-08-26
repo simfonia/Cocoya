@@ -3,6 +3,10 @@ import { Sampler } from './sampler.js';
 import { UIComponents } from './ui_components.js';
 import { UICanvas } from './ui_canvas.js';
 import { t } from './i18n.js';
+import { buildLabelMap as buildCoreLabelMap, nextLabelId as getNextLabelId } from './core/labelMap.js';
+import { calculateStats } from './core/stats.js';
+import { createInitialDatasetState, DatasetStore } from './core/state.js';
+import { sanitizeProjectName } from './core/projectNaming.js';
 
 const MODAL_ID = 'dataset-manager-modal';
 
@@ -15,21 +19,10 @@ const TYPE_TO_MODES_MAP = {
     'line_following': ['live', 'file']
 };
 
-const state = {
-    spec: DatasetSpec.createDefault({ name: 'dataset', type: 'table', mode: 'file' }),
-    isOpen: false,
-    images: [], // 儲存匯入的影像資訊
-    tableRows: [], // 儲存匯入的表格資料 (前幾筆)
-    sourceFolderPath: null, // 儲存來源資料夾路徑
-    _savedGridScrollTop: 0,  // 進入標註模式前保留的縮圖捲動位置
-    annotationMode: {
-        isActive: false,
-        currentIndex: -1,
-        mode: null,             // null | 'bbox' | 'line' | 'classification'
-        saveTimer: null,        // debounce timer for auto-save
-        originalBodyClass: null // for restoring layout
-    }
-};
+const datasetStore = new DatasetStore(createInitialDatasetState(
+    DatasetSpec.createDefault({ name: 'dataset', type: 'table', mode: 'file' })
+));
+const state = datasetStore.getState();
 
 /**
  * 判斷 Dataset Manager 是否有「未匯出」的工作（樣本/欄位/標籤/來源資料夾），供防呆確認使用。
@@ -95,18 +88,7 @@ function getColumnsFromUI() {
 
 function buildLabelMap(columns) {
     const current = state.spec.toJSON().schema.label_map || {};
-    const labelColumn = columns.find((column) => column.role === 'label');
-    // 如果目前有 label_map 但沒選 label 欄位，暫且保留，以免剛匯入就清空
-    if (!labelColumn && Object.keys(current).length > 0) return current;
-    if (!labelColumn) return {};
-    // 有 label 欄位時，過濾掉無效的條目（值不為非負整數的），避免髒資料殘留
-    return Object.keys(current).reduce((acc, key) => {
-        const val = current[key];
-        if (Number.isInteger(val) && val >= 0) {
-            acc[key] = val;
-        }
-        return acc;
-    }, {});
+    return buildCoreLabelMap(columns, current);
 }
 
 function syncSpecFromUI(includeSamples = true) {
@@ -378,7 +360,7 @@ function renderPreviewTable(container, rows) {
 }
 
 function sanitizeName(text) {
-    return (text || '').replace(/[^a-zA-Z0-9_-]/g, '');
+    return sanitizeProjectName(text);
 }
 
 /**
@@ -1873,47 +1855,13 @@ function addSampleFromSampler(blob, savePath = null) {
  * @returns {number} 新類別應使用的 id（>= 0）。
  */
 function nextLabelId(labelMap) {
-    const values = Object.values(labelMap || {})
-        .map((v) => Number(v))
-        .filter((v) => Number.isInteger(v) && v >= 0);
-    return values.length ? Math.max(...values) + 1 : 0;
+    return getNextLabelId(labelMap);
 }
 
 function updateStatsFromImages() {
     const currentSpec = state.spec.toJSON();
     const projectType = currentSpec.project.type || getFormValue('projectType') || 'table';
-    const existingLabelMap = currentSpec.schema.label_map || {};
-    const isClassification = projectType === 'image';
-
-    // 以 label_map 為權威；分類時一併納入影像出現的 img.label
-    const labelMap = Object.assign({}, existingLabelMap);
-    const labelCounts = {};
-
-    if (isClassification) {
-        // 分類（image）：每張圖一個 img.label
-        state.images.forEach((img) => {
-            const key = String(img.label || 'unlabeled').trim() || 'unlabeled';
-            labelCounts[key] = (labelCounts[key] || 0) + 1;
-            if (labelMap[key] === undefined) {
-                labelMap[key] = nextLabelId(labelMap);
-            }
-        });
-    } else {
-        // 物件偵測 / 線跟隨（bbox / line）：以 label_map 的 id→名稱，逐筆 annotation 的 class_id 計數
-        const idToName = {};
-        Object.keys(labelMap).forEach((name) => { idToName[labelMap[name]] = name; });
-        state.images.forEach((img) => {
-            (img.annotations || []).forEach((ann) => {
-                const name = idToName[ann.class_id];
-                if (name !== undefined) labelCounts[name] = (labelCounts[name] || 0) + 1;
-            });
-        });
-    }
-
-    // 補上 label_map 中所有類別（尚無樣本的以 0 呈現），確保「改名/新增後即時反映」與「非資料夾名的類別也納入統計」
-    Object.keys(labelMap).forEach((label) => {
-        if (labelCounts[label] === undefined) labelCounts[label] = 0;
-    });
+    const stats = calculateStats(projectType, state.images, currentSpec.schema.label_map || {});
 
     state.spec = new DatasetSpec({
         project: currentSpec.project,
@@ -1922,11 +1870,11 @@ function updateStatsFromImages() {
             columns: currentSpec.schema.columns,
             features: currentSpec.schema.features,
             label: currentSpec.schema.label,
-            label_map: labelMap
+            label_map: stats.labelMap
         },
         stats: {
-            sample_count: state.images.length,
-            label_counts: labelCounts
+            sample_count: stats.sampleCount,
+            label_counts: stats.labelCounts
         }
     });
 }

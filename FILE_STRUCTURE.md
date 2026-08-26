@@ -119,6 +119,12 @@ C:\Workspace\cocoya\
 │   │   │   │       ├── zh-hant.js          # 繁體中文 (含 AI_ANGLE_* [NEW])
 │   │   │   │       └── en.js               # English (含 AI_ANGLE_* [NEW])
 │   │   │   └── dataset_manager/ # Dataset Spec 與資料集管理器應用層模組
+│   │   │       ├── core/      # 純資料規則層，禁止依賴 DOM、Bridge、window 與 i18n
+│   │   │       │   ├── labelMap.js # label map 清理、建立與下一個類別 id
+│   │   │       │   ├── projectNaming.js # 專案名稱純函式清理與比較
+│   │   │       │   ├── pathPolicy.js # 專案名稱與路徑安全規則
+│   │   │       │   ├── stats.js # 影像、bbox、line 統計純計算
+│   │   │       │   └── state.js # DatasetStore 與初始狀態（逐步接入中）
 │   │   │       ├── dataset_manager.css # Dataset Manager Modal、縮圖牆與標註畫布樣式 (含 3 欄標註模式、.dataset-name-warning 名稱衝突警示)
 │   │   │       ├── i18n.js # [NEW] 共享 i18n t() 函式庫 (支援佔位符替換)
 │   │   │       ├── index.js # 靜態 ESM 入口與 window.CocoyaDataset API 掛載

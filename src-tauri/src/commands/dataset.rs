@@ -2,7 +2,8 @@ use std::fs;
 use std::process::{Command, Stdio};
 use std::io::{BufReader, BufRead, Write};
 use std::sync::Mutex;
-use tauri::{State, Window, Emitter};
+use tauri::{Manager, State, Window, Emitter};
+use base64::Engine;
 use tauri_plugin_dialog::DialogExt;
 use crate::state::{AppState, SidecarProcess};
 
@@ -52,7 +53,7 @@ pub async fn start_sidecar(
     stop_sidecar_inner(window.label(), &state.sidecar_processes);
 
     // 2. 找到 sidecar 腳本路徑
-    let sidecar_dir = get_sidecar_dir()?;
+    let sidecar_dir = get_sidecar_dir(&window.app_handle())?;
     let script_path = sidecar_dir.join("dataset_sidecar.py");
     if !script_path.exists() {
         return Err(format!("Sidecar script not found: {}", script_path.display()));
@@ -87,13 +88,14 @@ pub async fn start_sidecar(
 
     // 6. 啟動 stderr 監聽執行緒 (輸出 sidecar 日誌)
     let window_clone = window.clone();
+    let sidecar_log_label = window.label().to_string();
     std::thread::spawn(move || {
         let reader = BufReader::new(stderr);
         for line in reader.lines() {
             if let Ok(l) = line {
                 let trimmed = l.trim().to_string();
                 if !trimmed.is_empty() {
-                    let _ = window_clone.emit("sidecar-log", trimmed);
+                    let _ = window_clone.emit_to(&sidecar_log_label, "sidecar-log", trimmed);
                 }
             }
         }
@@ -101,6 +103,7 @@ pub async fn start_sidecar(
 
     // 7. 啟動 stdout 監聽執行緒，收集 response 與 event，並即時轉發給前端
     let window_stdout = window.clone();
+    let sidecar_event_label = window.label().to_string();
     let responses = state.sidecar_responses.clone();
     std::thread::spawn(move || {
         let reader = BufReader::new(stdout);
@@ -120,7 +123,7 @@ pub async fn start_sidecar(
                     }
 
                     if val.get("type").and_then(|t| t.as_str()) == Some("event") {
-                        let _ = window_stdout.emit("sidecar-event", &trimmed);
+                        let _ = window_stdout.emit_to(&sidecar_event_label, "sidecar-event", &trimmed);
                     }
                 }
             }
@@ -262,7 +265,7 @@ pub async fn export_dataset(
 
     if !sidecar_ready {
         // 啟動 sidecar
-        let sidecar_dir = get_sidecar_dir()?;
+        let sidecar_dir = get_sidecar_dir(&window.app_handle())?;
         let script_path = sidecar_dir.join("dataset_sidecar.py");
         if !script_path.exists() {
             let _ = fs::remove_dir_all(&temp_dir);
@@ -285,12 +288,35 @@ pub async fn export_dataset(
 
         // stderr 監聽
         let wc = window.clone();
+        let export_log_label = window.label().to_string();
         std::thread::spawn(move || {
             let reader = BufReader::new(stderr);
             for line in reader.lines() {
                 if let Ok(l) = line {
                     let t = l.trim().to_string();
-                    if !t.is_empty() { let _ = wc.emit("sidecar-log", t); }
+                    if !t.is_empty() { let _ = wc.emit_to(&export_log_label, "sidecar-log", t); }
+                }
+            }
+        });
+
+        // stdout response 監聽：export_dataset 會等待此 map 裡的 requestId。
+        let export_responses = state.sidecar_responses.clone();
+        std::thread::spawn(move || {
+            let reader = BufReader::new(stdout);
+            for line in reader.lines() {
+                if let Ok(raw_line) = line {
+                    let trimmed = raw_line.trim().to_string();
+                    if trimmed.is_empty() {
+                        continue;
+                    }
+                    if let Ok(value) = serde_json::from_str::<serde_json::Value>(&trimmed) {
+                        if value.get("type").and_then(|kind| kind.as_str()) == Some("response") {
+                            if let Some(response_id) = value.get("requestId").and_then(|id| id.as_str()) {
+                                let mut responses = export_responses.lock().unwrap();
+                                responses.insert(response_id.to_string(), trimmed.clone());
+                            }
+                        }
+                    }
                 }
             }
         });
@@ -386,7 +412,80 @@ fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> Result<()
     Ok(())
 }
 
-fn get_sidecar_dir() -> Result<std::path::PathBuf, String> {
+#[tauri::command]
+pub fn dataset_upload_chunk(
+    file_id: String,
+    chunk_index: u32,
+    total_chunks: u32,
+    zip_data_chunk: String,
+    project_name: String,
+    is_last: bool,
+) -> Result<Option<String>, String> {
+    if file_id.is_empty()
+        || file_id.len() > 100
+        || !file_id.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+    {
+        return Err("Invalid upload file id".to_string());
+    }
+    if total_chunks == 0 || total_chunks > 4096 || chunk_index >= total_chunks {
+        return Err("Invalid upload chunk range".to_string());
+    }
+    if project_name.is_empty()
+        || project_name.len() > 100
+        || !project_name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+    {
+        return Err("Invalid project name".to_string());
+    }
+    if is_last && chunk_index + 1 != total_chunks {
+        return Err("Last upload chunk index does not match total chunks".to_string());
+    }
+
+    let upload_root = std::env::temp_dir().join("cocoya_dataset_upload");
+    let chunk_dir = upload_root.join(&file_id);
+    fs::create_dir_all(&chunk_dir).map_err(|e| format!("Failed to create upload dir: {}", e))?;
+    let chunk_path = chunk_dir.join(format!("chunk_{:04}", chunk_index));
+    let bytes = base64::engine::general_purpose::STANDARD
+        .decode(zip_data_chunk.as_bytes())
+        .map_err(|e| format!("Invalid upload chunk encoding: {}", e))?;
+    if bytes.len() > 1024 * 1024 {
+        return Err("Upload chunk exceeds 1 MiB limit".to_string());
+    }
+    fs::write(&chunk_path, bytes).map_err(|e| format!("Failed to write upload chunk: {}", e))?;
+
+    if !is_last {
+        return Ok(None);
+    }
+
+    let output_path = upload_root.join(format!("{}_{}_upload.zip", project_name, file_id));
+    let mut output = fs::File::create(&output_path)
+        .map_err(|e| format!("Failed to create upload archive: {}", e))?;
+    for index in 0..total_chunks {
+        let current_path = chunk_dir.join(format!("chunk_{:04}", index));
+        if !current_path.exists() {
+            let _ = fs::remove_dir_all(&chunk_dir);
+            let _ = fs::remove_file(&output_path);
+            return Err(format!("Missing upload chunk {}", index));
+        }
+        let current = fs::read(&current_path)
+            .map_err(|e| format!("Failed to read upload chunk {}: {}", index, e))?;
+        output.write_all(&current)
+            .map_err(|e| format!("Failed to assemble upload archive: {}", e))?;
+    }
+    output.flush().map_err(|e| format!("Failed to flush upload archive: {}", e))?;
+    let _ = fs::remove_dir_all(&chunk_dir);
+    Ok(Some(output_path.to_string_lossy().replace('\\', "/")))
+}
+
+fn get_sidecar_dir(handle: &tauri::AppHandle) -> Result<std::path::PathBuf, String> {
+    if let Ok(resource_path) = handle.path().resolve(
+        "resources/dataset_manager",
+        tauri::path::BaseDirectory::Resource,
+    ) {
+        if resource_path.exists() {
+            return Ok(resource_path);
+        }
+    }
+
     // 開發模式：從專案根目錄找
     let mut dev_path = std::env::current_dir().map_err(|e| e.to_string())?;
     if dev_path.ends_with("src-tauri") {

@@ -29,6 +29,7 @@ commands.allow = [
   "start_sidecar",
   "sidecar_send",
   "stop_sidecar",
+  "dataset_upload_chunk",
   "delete_file",
   "pick_folder",
   "export_dataset",
