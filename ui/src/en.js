@@ -182,6 +182,7 @@
     "MSG_ERASE_FS_CONFIRM": "WARNING: This will force stop the program and ERASE ALL USER FILES (main.py, etc.) on the MCU. This cannot be undone! Continue?",
     "MSG_CLOUD_AI_REQUIRES_REMOTE": "Cloud AI mode requires a Remote SSH connection. Please connect to your server first.",
     "MSG_NO_TRAINING_RESULT": "No training results yet. Please run training first.",
+    "MSG_RELOAD_HOME_CONFIRM": "Reloading will return to the Startup Home; unsaved changes will be lost. Continue?",
     "MSG_TRAINING_RESULT_TITLE": "Training Results",
     "MSG_TRAINING_RESULT_PROJECT": "Project Name",
     "MSG_TRAINING_RESULT_ACCURACY": "Validation Accuracy",

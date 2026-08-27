@@ -202,6 +202,16 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         const home = document.getElementById('startup-home');
         if (!home) return;
         const anchored = !!(window.CocoyaBridge && window.CocoyaBridge.capabilities && window.CocoyaBridge.capabilities.isAnchored);
+        if (!anchored) this.showStartupHomeOverlay();
+    },
+
+    /**
+     * 無條件顯示啟動首頁 overlay（填充文案 + 綁定按鈕）。
+     * 供 Ctrl+R/F5 攔截回首頁使用——該情境後端可能仍錨定，不能走 isAnchored 檢查。
+     */
+    showStartupHomeOverlay: function() {
+        const home = document.getElementById('startup-home');
+        if (!home) return;
         const newBtn = home.querySelector('#startup-new');
         const openBtn = home.querySelector('#startup-open');
         const examplesBtn = home.querySelector('#startup-examples');
@@ -253,7 +263,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             }
         }
         this._bindStartupHome();
-        if (!anchored) home.style.display = 'flex';
+        home.style.display = 'flex';
     },
 
     /**
@@ -262,6 +272,26 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
     hideStartupHome: function() {
         const home = document.getElementById('startup-home');
         if (home) home.style.display = 'none';
+    },
+
+    /**
+     * Ctrl+R / F5 攔截處理（2026-08-26）：
+     * webview 真重載會清空前端狀態（編輯區清空、顯示未命名），但後端錨定仍在，
+     * 造成「看起來未命名、實際已錨定」的不一致（還能開 Dataset Manager）。
+     * 改為：dirty 時先確認放棄 → resetWorkspace 清空 → 無條件回首頁 overlay，
+     * 由使用者明確「開新/開啟」重建一致性狀態。
+     */
+    handleReloadRequest: async function() {
+        if (this.isDirty) {
+            const discard = await window.CocoyaBridge.confirm(
+                (Blockly.Msg['MSG_RELOAD_HOME_CONFIRM'] || '重新載入將回到啟動首頁，目前未儲存的變更將遺失。確定嗎？')
+            );
+            if (!discard) return;
+            // 同步後端 dirty 狀態（原子化狀態同步鐵律）
+            await this.setDirty(false);
+        }
+        this.resetWorkspace();
+        this.showStartupHomeOverlay();
     },
 
     /**

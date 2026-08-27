@@ -169,6 +169,11 @@
 
     // 儲存/載入進度 (Save / Load progress)
     "DSM_AUTOSAVE_ON": "自動儲存已開啟",
+    "DSM_NEED_ANCHOR": "請先開新或開啟一個 xml 積木專案後，再使用 Dataset Manager。\n（資料集必須存放於專案根的 dataset/<資料集名稱> 資料夾內）",
+    "DSM_IMPORT_COPY_CONFIRM": "資料集必須位於專案根的 dataset/<資料集名稱> 資料夾內。\n\n要將所選資料夾複製到：\n%1\n嗎？（已存在的檔案不會被覆寫）",
+    "DSM_IMPORT_REJECTED_EXTERNAL": "❌ 已取消：資料集必須位於專案根的 dataset/<資料集名稱> 資料夾內",
+    "DSM_IMPORT_COPYING": "正在複製資料集至專案根...",
+    "DSM_IMPORT_COPIED": "✅ 已複製 %1 個檔案至專案根",
     "DSM_AUTOSAVE_ON_TOOLTIP": "標註/分類/新增/刪除後自動寫入 dataset.json，無需手動儲存",
     "DSM_SAVE_PROGRESS": "儲存進度",
     "DSM_SAVE_PROGRESS_TOOLTIP": "儲存目前的資料集規格與標註為 dataset.json",

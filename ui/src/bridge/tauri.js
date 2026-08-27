@@ -561,6 +561,7 @@ export class BridgeTauri extends BaseBridge {
                             this._dispatchToFrontend({
                                 command: 'datasetSaveProgressResult',
                                 success: false,
+                                errorCode: 'PROJECT_ROOT_REQUIRED',
                                 error: '未錨定專案，請先開新或開啟一個 .xml 專案後再儲存進度'
                             });
                             break;
@@ -574,7 +575,85 @@ export class BridgeTauri extends BaseBridge {
                         this._dispatchToFrontend({ command: 'datasetSaveProgressResult', success: true, path: savedPath });
                     } catch (e) {
                         console.error('[Bridge] Save progress failed:', e);
-                        this._dispatchToFrontend({ command: 'datasetSaveProgressResult', success: false, error: String(e) });
+                        // 後端錯誤字串以 "CODE: message" 前綴回傳，解析為穩定 errorCode
+                        const errStr = String(e || '');
+                        const codeMatch = errStr.match(/^([A-Z][A-Z0-9_]*):/);
+                        this._dispatchToFrontend({
+                            command: 'datasetSaveProgressResult',
+                            success: false,
+                            errorCode: codeMatch ? codeMatch[1] : 'IO_ERROR',
+                            error: errStr
+                        });
+                    }
+                    break;
+
+                case 'setCloudAiMode':
+                    // 對齊 VSIX handleSetCloudAiMode：保存狀態 + 回 cloudAiModeStatus 同步 UI
+                    try {
+                        await this.tauriInvoke('set_cloud_ai_mode', { enabled: !!data.enabled });
+                        this._dispatchToFrontend({ command: 'cloudAiModeStatus', enabled: !!data.enabled });
+                    } catch (e) {
+                        console.error('[Bridge] setCloudAiMode failed:', e);
+                    }
+                    break;
+
+                case 'getProjectAnchor':
+                    try {
+                        const anchorNow = this._normalizeAnchor(await this.tauriInvoke('get_project_anchor'));
+                        this._anchor = anchorNow; // 順便刷新快照
+                        this._dispatchToFrontend({
+                            command: 'projectAnchorResult',
+                            requestId: data.requestId,
+                            isAnchored: anchorNow.isAnchored,
+                            projectRoot: anchorNow.projectRoot
+                        });
+                    } catch (e) {
+                        console.error('[Bridge] getProjectAnchor failed:', e);
+                        this._dispatchToFrontend({
+                            command: 'projectAnchorResult',
+                            requestId: data.requestId,
+                            isAnchored: false,
+                            projectRoot: null
+                        });
+                    }
+                    break;
+
+                case 'datasetImportFromFolder':
+                    try {
+                        const importResult = await this.tauriInvoke('dataset_import_from_folder', {
+                            sourcePath: data.sourcePath,
+                            projectName: data.projectName,
+                            confirmed: !!data.confirmed
+                        });
+                        // 與 pickFolder 同規範：Rust 回傳原始絕對路徑，必須轉 asset protocol URL 才能在 webview 顯示
+                        const { convertFileSrc } = await import('@tauri-apps/api/core');
+                        const importImagesConverted = (importResult.images || []).map(img => ({
+                            name: img.name,
+                            path: img.path,
+                            label: img.label,
+                            blobUrl: convertFileSrc(img.blobUrl)
+                        }));
+                        this._dispatchToFrontend({
+                            command: 'datasetImportFromFolderResult',
+                            requestId: data.requestId,
+                            action: importResult.action,
+                            path: importResult.path || null,
+                            canonicalDir: importResult.canonicalDir,
+                            copiedFiles: importResult.copiedFiles || null,
+                            images: importImagesConverted,
+                            labelCounts: importResult.labelCounts || {},
+                            labelMap: importResult.labelMap || {}
+                        });
+                    } catch (e) {
+                        console.error('[Bridge] Dataset import from folder failed:', e);
+                        const errStr = String(e || '');
+                        const codeMatch = errStr.match(/^([A-Z][A-Z0-9_]*):/);
+                        this._dispatchToFrontend({
+                            command: 'datasetImportFromFolderResult',
+                            requestId: data.requestId,
+                            errorCode: codeMatch ? codeMatch[1] : 'IO_ERROR',
+                            error: errStr
+                        });
                     }
                     break;
 
@@ -586,11 +665,19 @@ export class BridgeTauri extends BaseBridge {
                             success: true,
                             hasProgress: result.hasProgress,
                             spec: result.spec || null,
-                            path: result.path
+                            path: result.path,
+                            errorCode: result.errorCode || undefined
                         });
                     } catch (e) {
                         console.error('[Bridge] Load progress failed:', e);
-                        this._dispatchToFrontend({ command: 'datasetLoadProgressResult', success: false, error: String(e) });
+                        const errStr = String(e || '');
+                        const codeMatch = errStr.match(/^([A-Z][A-Z0-9_]*):/);
+                        this._dispatchToFrontend({
+                            command: 'datasetLoadProgressResult',
+                            success: false,
+                            errorCode: codeMatch ? codeMatch[1] : 'IO_ERROR',
+                            error: errStr
+                        });
                     }
                     break;
 

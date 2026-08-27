@@ -29,6 +29,20 @@ pub fn set_dirty(window: Window, state: State<'_, AppState>, is_dirty: bool) {
     dirty_states.insert(window.label().to_string(), is_dirty);
 }
 
+/// 雲端 AI（遠端訓練）模式開關，依視窗 label 隔離（對齊 VSIX handleSetCloudAiMode 語意）。
+/// 僅保存狀態；SSH/SFTP 實際連線由 sidecar/uploadDataset 流程負責。
+#[tauri::command]
+pub fn set_cloud_ai_mode(window: Window, state: State<'_, AppState>, enabled: bool) {
+    let mut cloud_ai = state.cloud_ai_enabled.lock().unwrap();
+    cloud_ai.insert(window.label().to_string(), enabled);
+}
+
+#[tauri::command]
+pub fn get_cloud_ai_mode(window: Window, state: State<'_, AppState>) -> bool {
+    let cloud_ai = state.cloud_ai_enabled.lock().unwrap();
+    cloud_ai.get(window.label()).copied().unwrap_or(false)
+}
+
 #[tauri::command]
 pub fn close_window(window: Window) {
     let _ = window.close();

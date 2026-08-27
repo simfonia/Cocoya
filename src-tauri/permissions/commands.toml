@@ -38,5 +38,8 @@ commands.allow = [
   "get_project_anchor",
   "dataset_save_progress",
   "dataset_load_progress",
+  "dataset_import_from_folder",
+  "set_cloud_ai_mode",
+  "get_cloud_ai_mode",
   "set_window_focus"
 ]

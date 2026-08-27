@@ -164,7 +164,20 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             
             this.registerVariablesCallback();
             if (window.CocoyaUtils && CocoyaUtils.setupGeneratorOverrides) CocoyaUtils.setupGeneratorOverrides();
-            
+
+            // Ctrl+R / F5 攔截（2026-08-26）：webview 真重載會造成「前端未命名、後端仍錨定」的
+            // 狀態不一致（Dataset Manager 進入閘因此誤放行）。改為 dirty 確認後回首頁。
+            if (!this._reloadInterceptBound) {
+                this._reloadInterceptBound = true;
+                window.addEventListener('keydown', (e) => {
+                    const isReload = ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R')) || e.key === 'F5';
+                    if (!isReload) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.handleReloadRequest();
+                }, true);
+            }
+
             if (this.workspace.getTopBlocks(false).length === 0) {
                 this.createDefaultBlocks();
             }
