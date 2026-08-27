@@ -122,7 +122,8 @@ C:\Workspace\cocoya\
 │   │   │       ├── core/      # 純資料規則層，禁止依賴 DOM、Bridge、window 與 i18n
 │   │   │       │   ├── labelMap.js # label map 清理、建立與下一個類別 id
 │   │   │       │   ├── projectNaming.js # 專案名稱純函式清理與比較
-│   │   │       │   ├── pathPolicy.js # 專案名稱與路徑安全規則
+│   │   │       │   ├── pathPolicy.js # 專案名稱與路徑安全規則（canonical path 組裝、containment、traversal 防護）
+│   │   │       │   ├── pathPolicy.test.mjs # path contract Node 測試（node --test 執行，不打包）
 │   │   │       │   ├── stats.js # 影像、bbox、line 統計純計算
 │   │   │       │   └── state.js # DatasetStore 與初始狀態（逐步接入中）
 │   │   │       ├── dataset_manager.css # Dataset Manager Modal、縮圖牆與標註畫布樣式 (含 3 欄標註模式、.dataset-name-warning 名稱衝突警示)

@@ -7,6 +7,7 @@ import { buildLabelMap as buildCoreLabelMap, nextLabelId as getNextLabelId } fro
 import { calculateStats } from './core/stats.js';
 import { createInitialDatasetState, DatasetStore } from './core/state.js';
 import { sanitizeProjectName } from './core/projectNaming.js';
+import { validateDeletableImagePath } from './core/pathPolicy.js';
 
 const MODAL_ID = 'dataset-manager-modal';
 
@@ -509,10 +510,42 @@ async function handleDirectoryImport() {
             return;
         }
 
+        // 決策（2026-08-26）：資料集必須位於專案根 dataset/<資料集名稱>。
+        // 用詞鐵律：「專案」= xml 積木專案；dataset/ 下子資料夾名稱 = 資料集名稱（表單 projectName 欄位值）。
+        // 錨定與 canonical 計算由後端裁決（前端 capabilities 快照可能過期）。
+        let importData = await window.CocoyaBridge.prepareDatasetImport(folderPath, getFormValue('projectName') || safeRootDir, false);
+        if (importData.error) {
+            throw new Error(importData.error);
+        }
+        if (importData.action === 'confirm_required') {
+            const copyOk = await window.CocoyaBridge.confirm(t('DSM_IMPORT_COPY_CONFIRM',
+                '資料集必須位於專案根的 dataset/<資料集名稱> 資料夾內。\n\n要將所選資料夾複製到：\n%1\n嗎？（已存在的檔案不會被覆寫）'
+            ).replace('%1', importData.canonicalDir));
+            if (!copyOk) {
+                showStatusMessage(t('DSM_IMPORT_REJECTED_EXTERNAL', '❌ 已取消：資料集必須位於專案根的 dataset/<資料集名稱> 資料夾內'));
+                return;
+            }
+            showStatusMessage(t('DSM_IMPORT_COPYING', '正在複製資料集至專案根...'));
+            importData = await window.CocoyaBridge.prepareDatasetImport(folderPath, getFormValue('projectName') || safeRootDir, true);
+            if (importData.error) {
+                throw new Error(importData.error);
+            }
+        }
+        if (!importData.path) {
+            throw new Error('Import target path missing');
+        }
+        const targetFolderPath = importData.path;
+        const importImages = importData.images || [];
+        const importLabelCounts = importData.labelCounts || {};
+        const importLabelMap = importData.labelMap || {};
+        if (importData.action === 'copied') {
+            showStatusMessage(t('DSM_IMPORT_COPIED', '✅ 已複製 %1 個檔案至專案根').replace('%1', String(importData.copiedFiles ?? 0)));
+        }
+
         // 初始化每張圖的 annotations 為獨立陣列（後端回傳的 images 沒有 annotations 欄位）
-        state.images = images.map(img => ({ ...img, annotations: img.annotations || [] }));
+        state.images = importImages.map(img => ({ ...img, annotations: img.annotations || [] }));
         state.tableRows = []; 
-        state.sourceFolderPath = folderPath; // 儲存來源路徑以便匯出時同步
+        state.sourceFolderPath = targetFolderPath; // 儲存來源路徑以便匯出時同步（決策後一律為專案根 canonical 目錄）
         
         // 更新 Spec 資訊
         state.spec.updateSchema({
@@ -522,7 +555,7 @@ async function handleDirectoryImport() {
             ],
             features: ['image_path'],
             label: 'label',
-            label_map: labelMap
+            label_map: importLabelMap
         });
         
         // 更新統計
@@ -532,19 +565,19 @@ async function handleDirectoryImport() {
             data_source: currentJson.data_source,
             schema: currentJson.schema,
             stats: {
-                sample_count: images.length,
-                label_counts: labelCounts,
+                sample_count: importImages.length,
+                label_counts: importLabelCounts,
                 last_updated: currentJson.stats.last_updated
             }
         });
 
-        showStatusMessage(t('SUCCESS_IMPORT_IMAGES', '✅ 成功匯入 %1 張影像，共 %2 個標籤').replace('%1', images.length).replace('%2', Object.keys(labelCounts).length));
+        showStatusMessage(t('SUCCESS_IMPORT_IMAGES', '✅ 成功匯入 %1 張影像，共 %2 個標籤').replace('%1', importImages.length).replace('%2', Object.keys(importLabelCounts).length));
         
         refreshDynamicPanels();
         refreshPreview();
 
         // 等級一存讀（載入）：檢查該資料夾是否含 dataset.json，若有則依 image_path 套回標註
-        loadProgressFromFolder(folderPath);
+        loadProgressFromFolder(targetFolderPath);
 
     } catch (e) {
         console.error('[DatasetManager] Dir Import Error:', e);
@@ -579,10 +612,18 @@ function writeProgressToDisk() {
         const handler = (msg) => {
             if (msg.command === 'datasetSaveProgressResult') {
                 window.CocoyaBridge.offMessage(handler);
-                if (!msg.success) console.error('[DatasetManager] Auto-save progress failed:', msg.error);
+                if (!msg.success) {
+                    console.error('[DatasetManager] Auto-save progress failed:',
+                        msg.errorCode ? `[${msg.errorCode}] ` : '', msg.error);
+                } else {
+                    console.info('[DatasetManager] Auto-save OK ->', msg.path);
+                }
             }
         };
         window.CocoyaBridge.onMessage(handler);
+        console.debug('[DatasetManager] Auto-save sending:', projectName,
+            '| samples:', spec.data_source.samples.length,
+            '| type:', spec.project.type);
         window.CocoyaBridge.saveDatasetProgress(projectName, spec);
     } catch (e) {
         console.error('[DatasetManager] Auto-save progress Error:', e);
@@ -593,14 +634,23 @@ function writeProgressToDisk() {
  * 排程自動落盤（時間防抖，預設 800ms）。
  * 說明：標註/分類/新增等常發生在「停在同張圖」上（與切換影像無關），
  * 因此為主觸發點採用時間防抖；切圖/退出/關閉可用 immediate=true 立即 flush 作為保險。
- * 未錨定（理論上被 Startup Home 擋住）或無資料 → 靜默略過，不噴錯。
+ * 錨定與否由後端裁決（未錨定回 PROJECT_ROOT_REQUIRED）；無資料 → 靜默略過。
  * @param {boolean} [immediate] true = 立即寫入
  */
 function scheduleAutoSave(immediate = false) {
-    const anchored = !!(window.CocoyaBridge
-        && window.CocoyaBridge.capabilities
-        && window.CocoyaBridge.capabilities.isAnchored);
-    if (!anchored || !hasData()) return;
+    const bridgeCaps = window.CocoyaBridge && window.CocoyaBridge.capabilities;
+
+    // 錨定裁決交還後端（SSOT）：capabilities.isAnchored 是載入時快照，
+    // VSIX 為 manifest 一次性注入、Tauri 為 _anchor 快照，開檔/存檔後都可能過期，
+    // 曾導致物件偵測標註自動落盤被靜默擋下（2026-08-26 使用者實測 root cause）。
+    // 後端未錨定時會回 PROJECT_ROOT_REQUIRED 並由 handler 記錄，此處不再硬擋。
+    if (bridgeCaps && !bridgeCaps.isAnchored) {
+        console.debug('[DatasetManager] Auto-save: capabilities snapshot says not anchored; delegating to backend anchor check');
+    }
+    if (!hasData()) {
+        console.debug('[DatasetManager] Auto-save skipped: no data');
+        return;
+    }
 
     if (immediate) {
         if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
@@ -1735,10 +1785,14 @@ function handleDeleteImage(index) {
     const removed = state.images[index];
     if (!removed) return;
 
-    // 計算實際檔案路徑並通知後端刪除實體檔案
+    // 計算實際檔案路徑並通知後端刪除實體檔案（前端預檢：拒絕絕對路徑與 traversal，防越界刪除）
     if (state.sourceFolderPath && removed.path) {
-        const fullPath = state.sourceFolderPath.replace(/\\/g, '/') + '/' + removed.path;
-        window.CocoyaBridge.send('datasetDeleteImage', { filePath: fullPath });
+        const pathCheck = validateDeletableImagePath(state.sourceFolderPath, removed.path);
+        if (!pathCheck.ok) {
+            console.error('[DatasetManager] Blocked delete of unsafe image path:', removed.path, pathCheck.code);
+            return;
+        }
+        window.CocoyaBridge.send('datasetDeleteImage', { filePath: pathCheck.value });
     }
 
     // 釋放 blobUrl 避免記憶體洩漏
@@ -2154,7 +2208,7 @@ function bindModalEvents(modal) {
         role: 'label'
     });
 
-    // 專案名稱即時過濾 (僅限英數下劃線)
+    // 專案名稱即時過濾 (僅限英數下劃線；此欄位值 = dataset/ 下的「資料集名稱」，非 xml 積木專案名)
     const nameInput = modal.querySelector('[name="projectName"]');
     if (nameInput) {
         nameInput.oninput = () => {
@@ -2341,8 +2395,25 @@ export function refreshI18n() {
     return initDatasetManagerUI();
 }
 
-export function openDatasetManager() {
+export async function openDatasetManager() {
     if (typeof document === 'undefined') return state.spec;
+
+    // 進入閘（2026-08-26 決策）：開啟 Dataset Manager 前先以後端權威來源檢查錨定；
+    // 未錨定一律擋下（capabilities 快照會過期，不作為依據）。
+    try {
+        const anchor = await window.CocoyaBridge.getProjectAnchor();
+        if (!anchor || !anchor.isAnchored) {
+            window.CocoyaBridge.alert(t('DSM_NEED_ANCHOR',
+                '請先開新或開啟一個 xml 積木專案後，再使用 Dataset Manager。\n（資料集必須存放於專案根的 dataset/<資料集名稱> 資料夾內）'));
+            return state.spec;
+        }
+    } catch (e) {
+        console.error('[DatasetManager] Anchor check failed:', e);
+        window.CocoyaBridge.alert(t('DSM_NEED_ANCHOR',
+            '請先開新或開啟一個 xml 積木專案後，再使用 Dataset Manager。\n（資料集必須存放於專案根的 dataset/<資料集名稱> 資料夾內）'));
+        return state.spec;
+    }
+
     const modal = getModal() || createModal();
     state.isOpen = true;
     modal.style.display = 'flex';
@@ -2357,15 +2428,10 @@ export function openDatasetManager() {
 }
 
 export async function closeDatasetManager() {
-    // 方案 A：錨定時資料已自動落盤，關閉不需再問；
-    // 僅「未錨定且有未匯出工作」（理論上被 Startup Home 擋住的邊緣）才提示，避免誤關遺失。
-    const anchored = !!(window.CocoyaBridge
-        && window.CocoyaBridge.capabilities
-        && window.CocoyaBridge.capabilities.isAnchored);
-    if (state.isOpen && !anchored && hasUnsavedWork()) {
-        const ok = await window.CocoyaBridge.confirm(t('CLOSE_UNSAVED_CONFIRM', '目前有尚未匯出的資料，確定關閉嗎？'));
-        if (!ok) return;
-    }
+    // 方案 A + 進入閘（2026-08-26）：openDatasetManager 已用後端權威錨定擋下未錨定使用者，
+    // 且關閉前一律立即落盤（scheduleAutoSave(true)），資料不會遺失。
+    // 舊「未錨定才詢問」邏輯依賴會過期的 capabilities.isAnchored 快照，反而造成誤彈確認框，已移除。
+    // 保留 CLOSE_UNSAVED_CONFIRM i18n key 供未來情境使用。
 
     // 關閉前立即落盤，避免最後異動遺失
     scheduleAutoSave(true);

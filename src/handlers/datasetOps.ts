@@ -66,6 +66,79 @@ export class DatasetOpsHandler {
         }
     }
 
+    /**
+     * 資料集匯入前置檢查（2026-08-26 決策：資料集必須位於專案根 dataset/<專案名>）。
+     * 來源即 canonical → action='use'；來源在外 → confirm_required；confirmed=true 時複製後掃描 canonical。
+     */
+    public async handleDatasetImportFromFolder(message: any) {
+        const { requestId, sourcePath, projectName, confirmed } = message;
+        const post = (payload: any) => this.manager.panel.webview.postMessage(
+            Object.assign({ command: 'datasetImportFromFolderResult', requestId }, payload)
+        );
+
+        if (!sourcePath || !projectName) {
+            return post({ errorCode: 'PARAM_REQUIRED', error: '缺少 sourcePath 或 projectName' });
+        }
+
+        // 專案根 SSOT：xml 所在資料夾優先，其次工作區根
+        const projectRoot = this.manager.currentFilePath
+            ? path.dirname(this.manager.currentFilePath)
+            : ((vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)
+                ? vscode.workspace.workspaceFolders[0].uri.fsPath
+                : undefined);
+        if (!projectRoot) {
+            return post({ errorCode: 'PROJECT_ROOT_REQUIRED', error: '未錨定專案，請先開新或開啟一個 .xml 專案' });
+        }
+
+        const safeName = String(projectName).trim();
+        if (!safeName || safeName === '.' || safeName === '..' || !/^[A-Za-z0-9_-]+$/.test(safeName)) {
+            return post({ errorCode: 'PROJECT_NAME_INVALID', error: `專案名稱不可用於路徑: ${projectName}` });
+        }
+
+        const canonicalDir = path.join(projectRoot, 'dataset', safeName);
+        const norm = (p: string) => {
+            let s = String(p).replace(/\\/g, '/').replace(/\/+$/, '');
+            if (process.platform === 'win32') s = s.toLowerCase();
+            return s;
+        };
+
+        try {
+            if (norm(sourcePath) === norm(canonicalDir)) {
+                const scan = await this.scanDatasetFolder(canonicalDir);
+                return post({ action: 'use', path: canonicalDir.replace(/\\/g, '/'), ...scan });
+            }
+
+            if (!confirmed) {
+                return post({ action: 'confirm_required', canonicalDir: canonicalDir.replace(/\\/g, '/') });
+            }
+
+            if (!fs.existsSync(sourcePath)) {
+                return post({ errorCode: 'IO_ERROR', error: '來源資料夾不存在' });
+            }
+            let copiedFiles = 0;
+            const copyMerge = (src: string, dst: string) => {
+                fs.mkdirSync(dst, { recursive: true });
+                for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+                    const s = path.join(src, entry.name);
+                    const d = path.join(dst, entry.name);
+                    if (entry.isDirectory()) {
+                        copyMerge(s, d);
+                    } else if (!fs.existsSync(d)) {
+                        fs.copyFileSync(s, d);
+                        copiedFiles++;
+                    }
+                }
+            };
+            copyMerge(sourcePath, canonicalDir);
+
+            const scan = await this.scanDatasetFolder(canonicalDir);
+            post({ action: 'copied', path: canonicalDir.replace(/\\/g, '/'), copiedFiles, ...scan });
+        } catch (e: any) {
+            console.error('[Host] Dataset import from folder failed:', e);
+            post({ errorCode: 'IO_ERROR', error: e.message });
+        }
+    }
+
     public async scanDatasetFolder(folderPath: string) {
         const images: any[] = [];
         const labelCounts: { [key: string]: number } = {};
@@ -353,7 +426,20 @@ export class DatasetOpsHandler {
             this.manager.panel.webview.postMessage({
                 command: 'datasetSaveProgressResult',
                 success: false,
+                errorCode: 'SPEC_REQUIRED',
                 error: '缺少資料集規格 (spec)'
+            });
+            return;
+        }
+
+        // 專案名稱驗證（對齊 core/pathPolicy 契約：[A-Za-z0-9_-]+，拒絕 . 與 ..）
+        const safeName = String(projectName || 'dataset').trim();
+        if (!safeName || safeName === '.' || safeName === '..' || !/^[A-Za-z0-9_-]+$/.test(safeName)) {
+            this.manager.panel.webview.postMessage({
+                command: 'datasetSaveProgressResult',
+                success: false,
+                errorCode: 'PROJECT_NAME_INVALID',
+                error: `專案名稱不可用於路徑: ${projectName}`
             });
             return;
         }
@@ -369,12 +455,13 @@ export class DatasetOpsHandler {
             this.manager.panel.webview.postMessage({
                 command: 'datasetSaveProgressResult',
                 success: false,
+                errorCode: 'PROJECT_ROOT_REQUIRED',
                 error: '未錨定專案，請先開新或開啟一個 .xml 專案後再儲存進度'
             });
             return;
         }
 
-        const datasetDir = path.join(projectRoot, 'dataset', projectName || 'dataset');
+        const datasetDir = path.join(projectRoot, 'dataset', safeName);
         const specPath = path.join(datasetDir, 'dataset.json');
 
         try {
@@ -393,6 +480,7 @@ export class DatasetOpsHandler {
             this.manager.panel.webview.postMessage({
                 command: 'datasetSaveProgressResult',
                 success: false,
+                errorCode: 'IO_ERROR',
                 error: e.message
             });
         }
@@ -400,7 +488,9 @@ export class DatasetOpsHandler {
 
     /**
      * 讀取資料集標註進度（等級一存讀）
-     * 檢查 <folderPath>/dataset.json 是否存在，存在則回傳 spec。
+     * 契約（2026-08-26 canonical-only 匯入閘後精簡）：
+     * folderPath 必為 `<專案根>/dataset/<專案名>`，直接讀取 "folderPath/dataset.json"；
+     * 無檔案 → hasProgress=false + PROGRESS_NOT_FOUND。
      */
     public async handleDatasetLoadProgress(message: any) {
         const { folderPath } = message;
@@ -408,37 +498,41 @@ export class DatasetOpsHandler {
             this.manager.panel.webview.postMessage({
                 command: 'datasetLoadProgressResult',
                 success: false,
+                errorCode: 'FOLDER_PATH_REQUIRED',
                 error: '缺少資料夾路徑'
             });
             return;
         }
 
-        const specPath = path.join(folderPath, 'dataset.json');
+        const normalize = (p: string) => p.replace(/\\/g, '/');
+        const directPath = path.join(folderPath, 'dataset.json');
 
         try {
-            if (fs.existsSync(specPath)) {
-                const content = fs.readFileSync(specPath, 'utf-8');
-                console.log(`[Host] Loaded dataset progress: ${specPath}`);
-                this.manager.panel.webview.postMessage({
-                    command: 'datasetLoadProgressResult',
-                    success: true,
-                    hasProgress: true,
-                    spec: JSON.parse(content),
-                    path: specPath.replace(/\\/g, '/')
-                });
-            } else {
+            if (!fs.existsSync(directPath)) {
                 this.manager.panel.webview.postMessage({
                     command: 'datasetLoadProgressResult',
                     success: true,
                     hasProgress: false,
-                    path: specPath.replace(/\\/g, '/')
+                    errorCode: 'PROGRESS_NOT_FOUND',
+                    path: normalize(directPath)
                 });
+                return;
             }
+            const content = fs.readFileSync(directPath, 'utf-8');
+            console.log(`[Host] Loaded dataset progress: ${directPath}`);
+            this.manager.panel.webview.postMessage({
+                command: 'datasetLoadProgressResult',
+                success: true,
+                hasProgress: true,
+                spec: JSON.parse(content),
+                path: normalize(directPath)
+            });
         } catch (e: any) {
             console.error(`[Host] Failed to load dataset progress: ${e}`);
             this.manager.panel.webview.postMessage({
                 command: 'datasetLoadProgressResult',
                 success: false,
+                errorCode: 'JSON_INVALID',
                 error: e.message
             });
         }

@@ -182,6 +182,7 @@
     "MSG_ERASE_FS_CONFIRM": "【警告】：這將強制終止目前的程式並清空 MCU 內的所有使用者檔案（main.py 等），資料將消失且無法復原！\n\n確定要執行深度修復嗎？",
     "MSG_CLOUD_AI_REQUIRES_REMOTE": "雲端 AI 模式需要 Remote SSH 連線。請先連線至您的伺服器，再開啟此開關。",
     "MSG_NO_TRAINING_RESULT": "尚無訓練結果，請先執行訓練。",
+    "MSG_RELOAD_HOME_CONFIRM": "重新載入將回到啟動首頁，目前未儲存的變更將遺失。確定嗎？",
     "MSG_TRAINING_RESULT_TITLE": "訓練結果",
     "MSG_TRAINING_RESULT_PROJECT": "專案名稱",
     "MSG_TRAINING_RESULT_ACCURACY": "驗證準確率",

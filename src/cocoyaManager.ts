@@ -269,6 +269,19 @@ export class CocoyaManager {
                 case 'datasetLoadProgress':
                     await this.datasetOps.handleDatasetLoadProgress(message);
                     break;
+                case 'datasetImportFromFolder':
+                    await this.datasetOps.handleDatasetImportFromFolder(message);
+                    break;
+                case 'getProjectAnchor': {
+                    const projectRoot = this.getProjectRoot() ?? null;
+                    this.panel.webview.postMessage({
+                        command: 'projectAnchorResult',
+                        requestId: message.requestId,
+                        isAnchored: !!this.currentFilePath,
+                        projectRoot
+                    });
+                    break;
+                }
                 case 'datasetUploadArchive':
                     await this.datasetOps.handleDatasetUploadArchive(message);
                     break;

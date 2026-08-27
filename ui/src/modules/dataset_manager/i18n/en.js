@@ -169,6 +169,11 @@
 
     // Save / Load progress
     "DSM_AUTOSAVE_ON": "Auto-save enabled",
+    "DSM_NEED_ANCHOR": "Please create or open a Blockly (.xml) project before using the Dataset Manager.\n(Datasets must live inside the project root under dataset/<dataset name>)",
+    "DSM_IMPORT_COPY_CONFIRM": "Datasets must live inside the project root under dataset/<dataset name>.\n\nCopy the selected folder to:\n%1\n? (existing files will not be overwritten)",
+    "DSM_IMPORT_REJECTED_EXTERNAL": "❌ Cancelled: datasets must live inside the project root under dataset/<dataset name>",
+    "DSM_IMPORT_COPYING": "Copying dataset into project root...",
+    "DSM_IMPORT_COPIED": "✅ Copied %1 files into project root",
     "DSM_AUTOSAVE_ON_TOOLTIP": "Automatically writes to dataset.json after annotating/classifying/adding/deleting; no manual save needed",
     "DSM_SAVE_PROGRESS": "Save Progress",
     "DSM_SAVE_PROGRESS_TOOLTIP": "Save current dataset spec and annotations to dataset.json",

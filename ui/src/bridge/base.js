@@ -230,6 +230,47 @@ export class BaseBridge {
     }
 
     /**
+     * 查詢目前視窗的權威錨定狀態（後端即時裁決，非 capabilities 快照）。
+     * @returns {Promise<{isAnchored:boolean, projectRoot:string|null}>}
+     */
+    getProjectAnchor() {
+        return new Promise((resolve) => {
+            const requestId = 'anchor_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+            const handler = (msg) => {
+                if (msg.command === 'projectAnchorResult' && msg.requestId === requestId) {
+                    this.offMessage(handler);
+                    resolve({ isAnchored: !!msg.isAnchored, projectRoot: msg.projectRoot || null });
+                }
+            };
+            this.onMessage(handler);
+            this.send('getProjectAnchor', { requestId });
+        });
+    }
+
+    /**
+     * 資料集匯入前置檢查（2026-08-26 決策：資料集必須位於專案根 dataset/<專案名>）。
+     * 來源在專案根內且即 canonical → action='use'；
+     * 來源在外 → action='confirm_required'（confirmed=true 時後端複製後掃描，action='copied'）。
+     * @param {string} sourcePath - 使用者選擇的來源資料夾
+     * @param {string} projectName - 目前表單專案名稱
+     * @param {boolean} [confirmed=false] - 使用者已確認複製
+     * @returns {Promise<Object>} datasetImportFromFolderResult payload
+     */
+    prepareDatasetImport(sourcePath, projectName, confirmed = false) {
+        return new Promise((resolve) => {
+            const requestId = 'dsimp_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+            const handler = (msg) => {
+                if (msg.command === 'datasetImportFromFolderResult' && msg.requestId === requestId) {
+                    this.offMessage(handler);
+                    resolve(msg);
+                }
+            };
+            this.onMessage(handler);
+            this.send('datasetImportFromFolder', { requestId, sourcePath, projectName, confirmed });
+        });
+    }
+
+    /**
      * 監聽訓練日誌（用於即時顯示訓練進度）
      * @param {Function} callback - 回調函式，接收日誌訊息
      */

@@ -14,8 +14,11 @@
 ### [規劃完成] Dataset Manager 重構計畫 (2026-08-24)
 - 計畫文件：`log/plan/DatasetManagerRefactor.md`
 - 目標：拆解 ui_layout.js 上帝模組（108KB/60+ 函式）為 core/io/ui 三層；CSS 變數化主題；i18n 補齊；雙橋接集中於 io/bridge.js
-- Phase 0 基線備份 ☐ / Phase 1 core 抽出 ☐ / Phase 2 io 抽出 ☐ / Phase 3 UI 拆解 ☐ / Phase 4 樣式重構 ☐ / Phase 5 文件與知識蒸餾 ☐ / Phase 6 清理總驗證 ☐
+- Phase 2 io 抽出 ☐ / Phase 3 UI 拆解 ☐ / Phase 4 樣式重構 ☐ / Phase 5 文件與知識蒸餾 ☐ / Phase 6 清理總驗證 ☐（Phase 0/1 已完成，見下方 Stage 1 結案）
 - 注意：showStatusMessage 定義位置遷移至 ui/statusMessage.js 後須同步 AGENTS.md
+- Phase 0 基線備份 ✅ / Phase 1 core 抽出 ✅ / Phase 2 io 抽出 ☐ / Phase 3 UI 拆解 ☐ / Phase 4 樣式重構 ☐ / Phase 5 文件與知識蒸餾 ☐ / Phase 6 清理總驗證 ☐
+- **Stage 1（2026-08-26）結案**：交付 `core/{labelMap,stats,state,projectNaming,pathPolicy}.js` + `core/pathPolicy.test.mjs`(11 測試全過)；後端 canonical save/load（VSIX+Tauri）含 errorCode；canonical-only 匯入閘（資料集必須於「專案根/dataset/<資料集名稱>」，外部資料夾提示複製/拒絕中止）；載入 direct canonical 並移除 fallback/AMBIGUOUS 死碼；進入 Dataset Manager 前權威錨定閘；修復自動落盤被快照擋、縮圖 convertFileSrc、Ctrl+R/F5 回首頁、close 誤彈。自動化全綠(node/test/vite/tsc/compile/cargo check/test)。手動 Tauri Dev 實測 PASS(落盤/匯入複製/縮圖/Ctrl+R)。待補：VSIX 對應手動案例、Tauri Release 安裝 smoke、SSH/SFTP 遠端驗證(BLOCKED 主機不通)。
+- 下階段：Phase 2 io 層抽出。
 
 ### [待辦] 引入 tauri-codegen 產生 typed invoke (2026-08-19)
 - [ ] 評估 tauri-codegen / @tauri-apps/types：自動從 #[tauri::command] 簽名生成 TS invoke<cmd>(args)
