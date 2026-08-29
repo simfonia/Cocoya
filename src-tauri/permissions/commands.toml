@@ -39,7 +39,6 @@ commands.allow = [
   "dataset_save_progress",
   "dataset_load_progress",
   "dataset_import_from_folder",
-  "set_cloud_ai_mode",
-  "get_cloud_ai_mode",
+  "open_folder",
   "set_window_focus"
 ]

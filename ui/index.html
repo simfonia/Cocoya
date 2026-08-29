@@ -117,12 +117,6 @@
                                 <img src="src/icons/ai-education.png">
                             </div>
                             <div class="dropdown-content ai-dropdown-content">
-                                <div class="dropdown-item" id="btn-cloud-ai-toggle" title="%{BKY_TLB_AI_REMOTE_TRAINING}">
-                                    <img src="src/icons/cloud-24.png" style="width: 16px; height: 16px;">
-                                    <span style="flex: 1;">%{BKY_TLB_AI_REMOTE_TRAINING}</span>
-                                    <span id="cloud-ai-status" style="color: #999; font-size: 11px;">○</span>
-                                </div>
-                                <div class="dropdown-separator"></div>
                                 <div class="dropdown-item" id="btn-dataset-manager-dropdown" title="%{BKY_TLB_AI_DATASET_MANAGER}">
                                     <img src="src/icons/data-structured.png" style="width: 16px; height: 16px;">
                                     <span>%{BKY_TLB_AI_DATASET_MANAGER}</span>
@@ -135,9 +129,6 @@
                         </div>
 
                         <div class="toolbar-separator" id="ai-dropdown-separator" style="display: none;"></div>
-                    
-                    <!-- 隱藏的 checkbox 用於向後相容 (dataset_manager 模組依賴此元素) -->
-                    <input type="checkbox" id="cloud-ai-toggle" style="display: none;">
                     
                     <div class="toolbar-btn" id="btn-refresh-serial" title="%{BKY_TLB_SERIAL_REFRESH}">
                         <img src="src/icons/usb-bold.png">

@@ -123,12 +123,6 @@ print(json.dumps(results))
         });
     }
 
-    public async handleSetCloudAiMode(enabled: boolean) {
-        this.manager.cloudAiEnabled = enabled;
-        this.manager.context.globalState.update('cloudAiEnabled', enabled);
-        this.manager.panel.webview.postMessage({ command: 'cloudAiModeStatus', enabled });
-    }
-
     public async handleRunCode(message: any) {
         const platform = message.platform || this.manager.currentPlatform;
         const tempDir = path.join(this.manager.context.extensionPath, 'temp_scripts');
@@ -303,6 +297,11 @@ print(json.dumps(results))
     }
 
     public handleStopCode() {
+        // 順帶中斷遠端訓練（若無進行中訓練，sidecar 回「目前沒有」僅忽略）
+        try {
+            this.manager.sidecar.send('stopTraining', {}, () => { /* 靜默 */ });
+        } catch { /* sidecar 未啟動 */ }
+
         // 若有 child process（Pseudoterminal 模式），直接終止
         if (this.manager.currentChildProcess) {
             try {

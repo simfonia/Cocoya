@@ -342,6 +342,382 @@ class DatasetSidecar:
 
                     threading.Thread(target=do_upload, daemon=True).start()
                 
+                elif command == "trainRemote":
+                    # 遠端訓練（RemoteTrainingRefactor D4/S6）：移植 mvp_hand_gesture 04/05/06 已驗證流程
+                    # 流程: SSH 連線 -> 資料同步(smart/always/skip) -> Docker 遠端訓練(只產 .keras+labels) -> SFTP 下載模型
+                    # 記錄訓練工作階段供 stopTraining 中斷用
+                    _pn = str(msg.get("projectName", "training_project"))
+                    _safe = "".join(ch if (ch.isalnum() or ch in "_.-") else "_" for ch in _pn)
+                    self._remote_train = {
+                        "host": msg.get("host"), "port": msg.get("port", 22),
+                        "username": msg.get("username"), "password": msg.get("password"),
+                        "container": "cocoya_train_" + _safe
+                    }
+                    host = msg.get("host")
+                    port = msg.get("port", 22)
+                    username = msg.get("username")
+                    password = msg.get("password")
+                    local_dataset_dir = msg.get("localDatasetDir", "")
+                    project_name = msg.get("projectName", "training_project")
+                    sync_mode = msg.get("syncMode", "smart")
+                    hyperparams = msg.get("hyperparams", {})
+                    output_dir = msg.get("outputDir", "")
+                    docker_image = msg.get("dockerImage", "cocoya-train-classifier")
+
+                    def rt_log(line):
+                        try:
+                            self.send_event("trainingLog", {"message": line})
+                        except Exception:
+                            pass
+                        print("[RemoteTrain] " + str(line), file=sys.stderr)
+
+                    def do_remote_train():
+                        ssh = None
+                        try:
+                            import paramiko
+                        except ImportError:
+                            self.send_response(request_id, {"success": False, "error": "本地電腦缺少 paramiko 庫，請在本地終端機執行 'pip install paramiko'。"})
+                            return
+                        # 先連 SSH 再驗本地資料集（錯誤診斷順序：連線問題優先呈現）
+                        try:
+                            import socket
+                            import zipfile
+                            import tempfile
+
+                            ssh = paramiko.SSHClient()
+                            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                            rt_log("[Remote] 連線中: " + str(username) + "@" + str(host) + ":" + str(port) + " (timeout 15s)")
+                            ssh.connect(hostname=host, port=port, username=username, password=password, timeout=15)
+                            rt_log("[Remote] SSH 連線成功")
+                        except Exception as e:
+                            self.send_response(request_id, {"success": False, "error": "SSH 連線失敗: " + str(e)})
+                            return
+                        if not local_dataset_dir or not os.path.isdir(local_dataset_dir):
+                            self.send_response(request_id, {"success": False, "error": "找不到本地資料集目錄: " + str(local_dataset_dir)})
+                            return
+                        try:
+
+                            def run(cmd):
+                                stdin, stdout, stderr = ssh.exec_command(cmd)
+                                out = stdout.read().decode("utf-8", "replace")
+                                err = stderr.read().decode("utf-8", "replace")
+                                code2 = stdout.channel.recv_exit_status()
+                                return code2, out, err
+
+                            machine_id = socket.gethostname()
+                            remote_base = "~/cocoya_ai/sessions/" + machine_id
+                            remote_dataset_dir = remote_base + "/dataset/" + project_name
+                            remote_output_dir = remote_base + "/models/" + project_name
+                            run('eval mkdir -p "' + remote_dataset_dir + '" "' + remote_output_dir + '"')
+                            # --- 資料同步 ---
+                            if sync_mode != "skip":
+                                local_files = {}
+                                for root, dirs, files in os.walk(local_dataset_dir):
+                                    for fn in files:
+                                        fp = os.path.join(root, fn)
+                                        rel = os.path.relpath(fp, local_dataset_dir).replace(os.sep, "/")
+                                        st = os.stat(fp)
+                                        local_files[rel] = (st.st_size, int(st.st_mtime))
+                                code_ls, out_ls, _ = run('eval find "' + remote_dataset_dir + '" -type f -printf "%P\\t%s\\t%T@\\n" 2>/dev/null')
+                                remote_files = {}
+                                if code_ls == 0:
+                                    for ln in out_ls.splitlines():
+                                        parts = ln.split("\t")
+                                        if len(parts) >= 3:
+                                            try:
+                                                remote_files[parts[0]] = (int(parts[1]), float(parts[2]))
+                                            except ValueError:
+                                                pass
+                                if sync_mode == "always":
+                                    changed = list(local_files.keys())
+                                else:
+                                    changed = []
+                                    for rel, (sz, mt) in local_files.items():
+                                        r = remote_files.get(rel)
+                                        if r is None or r[0] != sz or abs(r[1] - mt) > 2:
+                                            changed.append(rel)
+                                rt_log("[Remote] 同步檢查(sync=" + sync_mode + "): 本地 " + str(len(local_files)) + " 檔，需上傳 " + str(len(changed)) + " 檔")
+                                if changed:
+                                    tmp_fd, tmp_zip = tempfile.mkstemp(suffix=".zip")
+                                    os.close(tmp_fd)
+                                    try:
+                                        with zipfile.ZipFile(tmp_zip, "w", zipfile.ZIP_DEFLATED) as zf:
+                                            for rel in changed:
+                                                zf.write(os.path.join(local_dataset_dir, rel), rel)
+                                        sftp = ssh.open_sftp()
+                                        # SFTP 不展開 ~，需以 realpath 取得遠端絕對路徑
+                                        c_rd, o_rd, _ = run('eval realpath "' + remote_dataset_dir + '"')
+                                        remote_dataset_real = o_rd.strip().splitlines()[-1] if c_rd == 0 and o_rd.strip() else remote_dataset_dir
+                                        remote_zip = remote_dataset_real + "/_cocoya_sync.zip"
+                                        sftp.put(tmp_zip, remote_zip)
+                                        sftp.close()
+                                        ez = remote_zip.replace("'", "'\\''")
+                                        et = remote_dataset_real.replace("'", "'\\''")
+                                        unzip_cmd = (
+                                            "python3 -c '"
+                                            "import zipfile, os; "
+                                            'z = zipfile.ZipFile("' + ez + '", "r"); '
+                                            'z.extractall("' + et + '"); '
+                                            "z.close(); "
+                                            'os.remove("' + ez + '"); '
+                                            'print("OK")'
+                                            "'"
+                                        )
+                                        c3, o3, e3 = run(unzip_cmd)
+                                        if not (c3 == 0 and "OK" in o3):
+                                            raise RuntimeError("遠端解壓失敗: " + (e3 or o3 or "原因未知"))
+                                        rt_log("[Remote] 同步完成")
+                                    finally:
+                                        try:
+                                            os.remove(tmp_zip)
+                                        except Exception:
+                                            pass
+                            else:
+                                rt_log("[Remote] sync=skip: 略過上傳，直接使用遠端現有資料")
+                            # --- 模板 smart 同步（只上傳變更 ++ 自動，D13/D12）---
+                            local_templates_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "resources", "train_templates"))
+                            remote_templates_root = remote_base + "/templates"
+                            run('eval mkdir -p "' + remote_templates_root + '"')
+                            c_treal, o_treal, _ = run('eval realpath "' + remote_templates_root + '"')
+                            remote_templates_real = o_treal.strip().splitlines()[-1] if c_treal == 0 and o_treal.strip() else remote_templates_root
+                            tmpl_local = {}
+                            for troot, tdirs, tfiles in os.walk(local_templates_root):
+                                for fn in tfiles:
+                                    fp = os.path.join(troot, fn)
+                                    rel = os.path.relpath(fp, local_templates_root).replace(os.sep, "/")
+                                    st = os.stat(fp)
+                                    tmpl_local[rel] = (st.st_size, int(st.st_mtime))
+                            code_lt, out_lt, _ = run('eval find "' + remote_templates_real + '" -type f -printf "%P\\t%s\\t%T@\\n" 2>/dev/null')
+                            tmpl_remote = {}
+                            if code_lt == 0:
+                                for ln in out_lt.splitlines():
+                                    parts = ln.split("\t")
+                                    if len(parts) >= 3:
+                                        try:
+                                            tmpl_remote[parts[0]] = (int(parts[1]), float(parts[2]))
+                                        except ValueError:
+                                            pass
+                            tmpl_changed = []
+                            for rel, (sz, mt) in tmpl_local.items():
+                                r = tmpl_remote.get(rel)
+                                if r is None or r[0] != sz or abs(r[1] - mt) > 2:
+                                    tmpl_changed.append(rel)
+                            if not tmpl_local:
+                                # 防誤判：本地掃不到模板 = 路徑錯誤，絕不可當作「已是最新」
+                                raise RuntimeError(
+                                    "本地模板目錄不存在或為空: " + local_templates_root +
+                                    " (遠端現有 " + str(len(tmpl_remote)) + " 檔)，請檢查 sidecar 安裝位置")
+                            rt_log("[Remote] 模板同步檢查: 本地 " + str(len(tmpl_local)) + " 檔，遠端 " + str(len(tmpl_remote)) + " 檔，需上傳 " + str(len(tmpl_changed)) + " 檔")
+                            if tmpl_changed:
+                                rt_log("[Remote] 模板同步: 偵測到 " + str(len(tmpl_changed)) + " 個模板變更，上傳中...")
+                                t_fd, t_zip = tempfile.mkstemp(suffix=".zip")
+                                os.close(t_fd)
+                                try:
+                                    with zipfile.ZipFile(t_zip, "w", zipfile.ZIP_DEFLATED) as zf:
+                                        for rel in tmpl_changed:
+                                            zf.write(os.path.join(local_templates_root, rel), rel)
+                                    sftp_t = ssh.open_sftp()
+                                    tzip_remote = remote_templates_real + "/_cocoya_templates.zip"
+                                    sftp_t.put(t_zip, tzip_remote)
+                                    sftp_t.close()
+                                    tez = tzip_remote.replace("'", "'\\''")
+                                    tgt = remote_templates_real.replace("'", "'\\''")
+                                    unzip_cmd = (
+                                        "python3 -c '"
+                                        "import zipfile, os; "
+                                        'z = zipfile.ZipFile("' + tez + '", "r"); '
+                                        'z.extractall("' + tgt + '"); '
+                                        "z.close(); "
+                                        'os.remove("' + tez + '"); '
+                                        'print("OK")'
+                                        "'"
+                                    )
+                                    c_tz, o_tz, e_tz = run(unzip_cmd)
+                                    if not (c_tz == 0 and "OK" in o_tz):
+                                        raise RuntimeError("遠端模板解壓失敗: " + (e_tz or o_tz or "原因未知"))
+                                    rt_log("[Remote] 模板同步完成 (bind mount /workspace)")
+                                finally:
+                                    try:
+                                        os.remove(t_zip)
+                                    except Exception:
+                                        pass
+                            else:
+                                rt_log("[Remote] 模板已是最新，無需上傳")
+
+                            # --- 遠端 Docker 訓練 (cocoya classifier_train.py v2) ---
+                            task_type = str(hyperparams.get("taskType", "classifier")).lower()
+                            if task_type == "detector":
+                                script_rel = "object_detection/object_detection_train.py"
+                            elif task_type == "line_follower":
+                                script_rel = "line_following/line_following_train.py"
+                            elif task_type == "table":
+                                script_rel = "table/table_train.py"
+                            elif task_type == "feature":
+                                script_rel = "feature/feature_train.py"
+                            elif task_type == "serial":
+                                script_rel = "serial/serial_train.py"
+                            else:
+                                script_rel = "classifier/classifier_train.py"
+                            epochs = hyperparams.get("epochs", 30)
+                            batch_size = hyperparams.get("batchSize", 32)
+                            lr = hyperparams.get("learningRate", 0.001)
+                            user_model_output = str(hyperparams.get("modelOutput", "none"))
+                            # D10/D15 鐵律：TFLite 只在本地轉。遠端只依使用者選擇產 keras。
+                            # 選 none → 遠端只產報告/數據 (--model_output none)；其餘 → 遠端只產 keras (--model_output keras)
+                            remote_model_output = "keras" if user_model_output != "none" else "none"
+                            rt_log("[Remote] 啟動 Docker 訓練容器: " + docker_image + " (task=" + task_type + ", model_output=" + remote_model_output + ", bind=/workspace)")
+                            docker_cmd = (
+                                'docker run --gpus all --rm '
+                                '--entrypoint python3 '
+                                '--name ' + str(self._remote_train.get("container")) + ' '
+                                '-v "$(eval realpath ' + remote_dataset_dir + ')\":/dataset '
+                                '-v "$(eval realpath ' + remote_output_dir + ')\":/output '
+                                '-v "' + remote_templates_real + '":/workspace '
+                                + docker_image + ' /workspace/' + script_rel +
+                                ' --dataset_dir /dataset' +
+                                ' --output_dir /output' +
+                                ' --project_name ' + str(project_name) +
+                                ' --epochs ' + str(epochs) +
+                                ' --batch_size ' + str(batch_size) +
+                                ' --learning_rate ' + str(lr) +
+                                ' --validation_split ' + str(hyperparams.get("validationSplit", 0.2)) +
+                                ' --dropout ' + str(hyperparams.get("dropout", 0.2)) +
+                                ' --augmentation ' + str(hyperparams.get("augmentation", "true")).lower() +
+                                ' --backbone ' + str(hyperparams.get("backbone", "mobilenetv2")) +
+                                ' --optimizer ' + str(hyperparams.get("optimizer", "adam")) +
+                                ' --dnn_layers ' + str(hyperparams.get("dnnLayers", "128,64")) +
+                                ' --fine_tune ' + str(hyperparams.get("fineTune", "false")).lower() +
+                                ' --model_output ' + str(remote_model_output)
+                            )
+                            stdin, stdout, stderr = ssh.exec_command(docker_cmd)
+                            # 對齊本地訓練輸出：decode UTF-8、剝除 ANSI 色碼、把 \r 更新切成行；
+                            # Keras 進度條每 epoch 只留最後一行摘要（含 val_accuracy 的完整行）
+                            import re as _re
+                            _ansi = _re.compile(r"\x1b\[[0-9;]*m")
+                            for raw in stdout:
+                                text = raw.decode("utf-8", "replace") if isinstance(raw, bytes) else raw
+                                text = _ansi.sub("", text)
+                                # 對齊本地：每個 step 各自一行（Keras \r 原地更新 → 切成一行的進度更新）
+                                for part in text.replace("\r", "\n").split("\n"):
+                                    part = part.strip()
+                                    if not part:
+                                        continue
+                                    rt_log(part)
+                            exit_status = stdout.channel.recv_exit_status()
+                            err_output = stderr.read().decode("utf-8", "replace").strip()
+                            if err_output:
+                                rt_log("[stderr] " + err_output)
+                            if exit_status != 0:
+                                raise RuntimeError("遠端訓練失敗 (exit code: " + str(exit_status) + ")")
+
+                            # --- 下載模型 (.keras + labels.txt)；TFLite 一律本地轉（鐵律 D9） ---
+                            code_rp, out_rp, _ = run('eval realpath "' + remote_output_dir + '"')
+                            remote_out_real = out_rp.strip().splitlines()[-1] if out_rp.strip() else remote_output_dir
+                            os.makedirs(output_dir, exist_ok=True)
+                            sftp = ssh.open_sftp()
+                            downloaded = []
+                            for attr in sftp.listdir_attr(remote_out_real):
+                                fn = attr.filename
+                                if fn and not fn.startswith("."):
+                                    local_path = os.path.join(output_dir, fn)
+                                    sftp.get(remote_out_real + "/" + fn, local_path)
+                                    downloaded.append(fn)
+                            sftp.close()
+                            rt_log("[Remote] 已下載: " + ", ".join(downloaded))
+                            if user_model_output != "none":
+                                rt_log("[Remote] 訓練完成！.keras 已下載，TFLite 將於本地依 model_output=" + user_model_output + " 轉換")
+                            self._remote_train = None
+                            # 掃描本地產物路徑（對齊本地 classifier_train 命名），供前端開啟報告/模型
+                            def _pick(pred):
+                                for fn in os.listdir(output_dir):
+                                    if pred(fn):
+                                        return os.path.join(output_dir, fn)
+                                return None
+                            report_path = _pick(lambda f: f.endswith("_training_report.html"))
+                            keras_path = _pick(lambda f: f.endswith(".keras"))
+                            curve_path = _pick(lambda f: f.endswith("_training_curve.png"))
+                            history_path = _pick(lambda f: f.endswith("_training_history.json"))
+
+                            # --- 本地 TFLite 轉換（D10/D15 鐵律：僅本地做；選項1：掃本地 dataset 建 representative） ---
+                            tflite_paths = {}
+                            if user_model_output != "none" and keras_path:
+                                rt_log("[Remote] 於本地依 model_output=" + user_model_output + " 轉換 TFLite...")
+                                try:
+                                    import subprocess, sys
+                                    convert_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_local_convert_tflite.py")
+                                    conv_cmd = [
+                                        sys.executable, convert_script,
+                                        "--keras_path", keras_path,
+                                        "--dataset_dir", local_dataset_dir,
+                                        "--output_dir", output_dir,
+                                        "--project_name", project_name,
+                                        "--model_output", user_model_output
+                                    ]
+                                    p_conv = subprocess.Popen(conv_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                                              universal_newlines=True, encoding="utf-8", errors="replace")
+                                    for cline in p_conv.stdout:
+                                        cline = cline.strip()
+                                        if cline:
+                                            rt_log("[LocalTFLite] " + cline)
+                                    p_conv.wait()
+                                    if p_conv.returncode != 0:
+                                        raise RuntimeError("本地 TFLite 轉換失敗 (exit=" + str(p_conv.returncode) + ")")
+                                    # 重新掃描 tflite 產出
+                                    for fn2 in os.listdir(output_dir):
+                                        if fn2.endswith(".tflite"):
+                                            tflite_paths[fn2] = os.path.join(output_dir, fn2)
+                                    rt_log("[Remote] 本地 TFLite 轉換完成: " + ", ".join(tflite_paths.keys()) if tflite_paths else "[Remote] 本地轉換無 tflite 產出")
+                                except Exception as ce:
+                                    rt_log("[Remote] 本地 TFLite 轉換失敗: " + str(ce))
+
+                            self.send_response(request_id, {
+                                "success": True,
+                                "modelDir": output_dir,
+                                "projectName": project_name,
+                                "downloaded": downloaded,
+                                "modelOutput": user_model_output,
+                                "reportPath": report_path or "",
+                                "kerasPath": keras_path or "",
+                                "curvePath": curve_path or "",
+                                "historyPath": history_path or "",
+                                "tflitePaths": tflite_paths
+                            })
+                        except Exception as e:
+                            rt_log("[Remote] 錯誤: " + str(e))
+                            self._remote_train = None
+                            self.send_response(request_id, {"success": False, "error": str(e)})
+                        finally:
+                            try:
+                                if ssh is not None:
+                                    ssh.close()
+                            except Exception:
+                                pass
+
+                    threading.Thread(target=do_remote_train, daemon=True).start()
+
+                elif command == "stopTraining":
+                    # 中斷遠端訓練：另開 SSH 連線 docker rm -f 容器（--rm 容器被強制移除即終止）
+                    info = getattr(self, "_remote_train", None)
+                    if not info:
+                        self.send_response(request_id, {"success": False, "error": "目前沒有進行中的遠端訓練"})
+                    else:
+                        def do_stop():
+                            try:
+                                import paramiko
+                                ssh2 = paramiko.SSHClient()
+                                ssh2.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                                ssh2.connect(hostname=info["host"], port=info["port"], username=info["username"], password=info["password"], timeout=10)
+                                _, o2, e2 = ssh2.exec_command("docker rm -f " + str(info["container"]) + " 2>&1")
+                                out2 = o2.read().decode("utf-8", "replace").strip()
+                                ssh2.close()
+                                self.send_event("trainingLog", {"message": "[Remote] 已送出中斷指令: " + (out2 or "docker rm -f")})
+                                self.send_response(request_id, {"success": True})
+                            except Exception as e:
+                                self.send_response(request_id, {"success": False, "error": "中斷失敗: " + str(e)})
+                            finally:
+                                self._remote_train = None
+                        threading.Thread(target=do_stop, daemon=True).start()
+
                 elif command == "trainLocal":
                     project_name = msg.get("projectName", "training_project")
                     task_type = msg.get("taskType", "classifier")

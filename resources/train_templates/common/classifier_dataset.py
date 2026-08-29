@@ -53,25 +53,61 @@ def load_image_dataset(dataset_dir, img_size=224, batch_size=32, validation_spli
 
     # 載入資料集
     if validation_split > 0:
-        train_ds = tf.keras.preprocessing.image_dataset_from_directory(
-            dataset_dir,
-            validation_split=validation_split,
-            subset='training',
-            seed=seed,
-            image_size=(img_size, img_size),
-            batch_size=batch_size,
-            label_mode='categorical'
-        )
+        # --- 分層抽樣（stratified split）：每個分類各自按 validation_split 比例切出驗證集 ---
+        # image_dataset_from_directory 的 validation_split 是全域隨機切，類別不平衡時
+        # 驗證集可能某類樣本過少甚至為 0，故改為對每類分別抽樣，保證各類比例一致。
+        import random
+        rng = random.Random(seed)
 
-        val_ds = tf.keras.preprocessing.image_dataset_from_directory(
-            dataset_dir,
-            validation_split=validation_split,
-            subset='validation',
-            seed=seed,
-            image_size=(img_size, img_size),
-            batch_size=batch_size,
-            label_mode='categorical'
-        )
+        exts = ('.jpg', '.jpeg', '.png')
+        train_pairs = []   # (file_path, class_index)
+        val_pairs = []
+        strat_report = []
+        for idx, label in enumerate(labels):
+            cls_dir = os.path.join(dataset_dir, label)
+            files = sorted([f for f in os.listdir(cls_dir)
+                            if f.lower().endswith(exts)])
+            shuffled = files[:]
+            rng.shuffle(shuffled)
+            n = len(shuffled)
+            val_count = int(round(n * validation_split))
+            # 教學場景保護：類別至少 2 張時，驗證集至少 1 張、訓練集至少 1 張
+            if val_count == 0 and n >= 2:
+                val_count = 1
+            if val_count >= n and n >= 2:
+                val_count = n - 1
+            val_files = shuffled[:val_count]
+            train_files = shuffled[val_count:]
+            train_pairs.extend((os.path.join(cls_dir, f), idx) for f in train_files)
+            val_pairs.extend((os.path.join(cls_dir, f), idx) for f in val_files)
+            strat_report.append(f"  {label}: train {len(train_files)} / val {len(val_files)}")
+
+        print("分層抽樣 (stratified split):")
+        for line in strat_report:
+            print(line)
+
+        def _load_pair(path, idx):
+            img = tf.io.read_file(path)
+            img = tf.io.decode_image(img, channels=3, expand_animations=False)
+            img = tf.image.resize(img, [img_size, img_size])
+            label_onehot = tf.one_hot(idx, len(labels))
+            return img, label_onehot
+
+        def _make_dataset(pairs, shuffle):
+            ds = tf.data.Dataset.from_tensor_slices(
+                ( [p for p, _ in pairs], [i for _, i in pairs] ))
+            if shuffle:
+                ds = ds.shuffle(buffer_size=len(pairs), seed=seed,
+                                reshuffle_each_iteration=True)
+            ds = ds.map(_load_pair, num_parallel_calls=AUTOTUNE)
+            return ds.batch(batch_size).prefetch(buffer_size=AUTOTUNE)
+
+        if not train_pairs or not val_pairs:
+            print("錯誤: 分層抽樣後訓練集或驗證集為空，請增加資料量或調低 validation_split")
+            sys.exit(1)
+
+        train_ds = _make_dataset(train_pairs, shuffle=True)
+        val_ds = _make_dataset(val_pairs, shuffle=False)
     else:
         # 不使用驗證集分割：全部作為訓練集
         full_ds = tf.keras.preprocessing.image_dataset_from_directory(

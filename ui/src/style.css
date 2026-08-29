@@ -1251,20 +1251,6 @@ body.cocoya-dark-mode .btn-close {
     gap: 8px;
 }
 
-#cloud-ai-status {
-    font-weight: bold;
-    min-width: 16px;
-    text-align: center;
-}
-
-#cloud-ai-status.enabled {
-    color: #4caf50;
-}
-
-#cloud-ai-status.disabled {
-    color: #999;
-}
-
 /* --- 雲端 AI 模式開關 --- */
 .cloud-ai-wrapper {
     display: flex;

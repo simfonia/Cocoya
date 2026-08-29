@@ -26,6 +26,11 @@
 - [ ] 相依：與 docs/backend_api_manifest.md Parameters 表同步維護 (SSOT -> generate type -> manifest)
 
 ### [待辦] 遠端訓練與 SSH 整合（沿用 VSIX 既有 Python sidecar / paramiko 模式）
+- [x] **D1 (2026-08-28) 模板 smart 同步**：sidecar trainRemote 前自動上傳變更的 `train_templates/`（find+zip+sftp+遠端解壓至 `~/cocoya_ai/sessions/{machine}/templates`）；未變更零上傳
+- [x] **D2 (2026-08-28) docker_cmd 改掛 /workspace + 依 task_type**：`-v templates:/workspace python3 /workspace/{task}/{task}_train.py`，傳完整 hyperparams + `--model_output`（none→只產報告 / keras→產keras）
+- [x] **D3 (2026-08-28) 全參數傳遞 + 本地 TFLite 轉換**：tauri.js/VSIX trainingOps.ts 解析 modelOutput/taskType/backbone 等全參；新增 `_local_convert_tflite.py` 掃本地 dataset 建 representative 依 model_output 轉 int8/f32/all（對齊 classifier_train 命名）
+- [x] **D4 (2026-08-28) 產物路徑回傳**：sidecar 回傳 report/keras/curve/history 絕對路徑；前端開啟報告正確位置
+- [ ] D5 文件同步收尾（parity matrix / manifest / FILE_STRUCTURE / help）
 - [ ] **SSH/Sidecar 上傳流程整合**：實作 `extension.ts` 中 `backend === 'remote'` 的分支（VSIX 已透過 `dataset_sidecar.py` paramiko SFTP 上傳並原位解壓；`checkRemoteEnvironmentResult`/`datasetUploadResult` 已回前端）
 - [ ] **Tauri 版 SSH/雲端訓練藍圖**（規劃細節見備份 todo.md_20260824 之「Tauri 版 SSH/雲端訓練實作藍圖」L560）：
   - 新增 `resources/ssh_sidecar.py` 封裝 paramiko（SSH 連線、指令執行、SFTP 傳輸）

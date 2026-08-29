@@ -45,6 +45,17 @@ Cocoya 是一個針對 Python AI 視覺的教學工具。它透過 Blockly 產�
 - **原子化狀態同步**：前端在執行「儲存並關閉」流程時，必須 `await window.CocoyaBridge.send('setDirty', { isDirty: false })` 確保後端狀態更新後，才呼叫 `close_window`。
 - **備份宣示權**：處理未命名備份時，必須遵循「偵測後立即重新命名為 `.recovering`」的宣示模式，確保同一個備份檔不會被多個視窗同時抓取。
 - **強制鎖定**：後端 `save_file` 指令必須檢查路徑擁有者。若非目前視窗鎖定的路徑，必須回傳錯誤並由前端 Alert 提示使用者「另存新檔」。
+### 訓練集切分鐵律：分層抽樣 (Stratified Split)
+所有**帶類別標籤**的訓練模板，切分訓練/驗證集時**必須使用分層抽樣**（各類別依 `validation_split` 比例各自切分），**禁止**全域隨機切分（`shuffle + take` 或 `image_dataset_from_directory(validation_split=...)` 這類不分類別的切法）。
+
+- **原因**：教學資料集普遍類別不平衡（例：none 32 / paper 124 張），全域隨機切會讓小類別驗證集樣本過少甚至為 0，驗證準確率失真且每次切分結果漂移。
+- **已實作**：`common/classifier_dataset.py`（依資料夾類別）、`common/detector_dataset.py`（依 YOLO class_id）——兩者含教學保護（類別 ≥2 張時驗證/訓練各至少 1 張；切後為空明確報錯）與分層報告輸出（`分層抽樣 (stratified split): <類別>: train N / val M`）。
+- **未來模板開發注意**：
+  - `line_following`（循跡，影像 + line 標註，若有線型/類別欄位）→ 比照 detector 依標註類別分層。
+  - `table` / `feature` / `serial`（表格型資料集，schema 有 label 欄位）→ **依 label 欄位值分層**；回歸型（label 為連續數值）才允許隨機切，但需在報告註明。
+  - 新模板實作時請重用既有分層切分函式，勿重新實作全域隨機切。
+
+
 
 ### 前端狀態訊息慣例 (showStatusMessage)
 Dataset Manager 的狀態/錯誤/結果訊息一律透過集中式函式 `showStatusMessage(message, options)` 顯示於 modal 頂部中央的 `#dataset-manager-message` 面板（**所有模式下皆可見**，含標註模式），取代直接寫入各處 `status.textContent` 或 `#dataset-import-status`。

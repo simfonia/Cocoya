@@ -119,7 +119,6 @@
     "BKY_STARTUP_DIAGNOSE": "Check Python Modules",
     "TLB_DIAGNOSE": "Check Python Package Requirements",
     "TLB_AI_MENU": "AI Features",
-    "TLB_AI_REMOTE_TRAINING": "Remote Training",
     "TLB_AI_DATASET_MANAGER": "Dataset Manager",
     "TLB_AI_TRAINING_RESULT": "Training Results",
     "TLB_NO_PORT": "(No Port)",
@@ -180,7 +179,6 @@
     "MSG_SETUP_STABLE_CONFIRM": "This will write boot.py to MCU to enable Stable Mode.\n\n[Effect]: Windows will become Read-Only for this drive (preventing damage), and Cocoya will upload code via Serial.\n[Escape]: To restore Windows write access later, hold \"GP20 button (Button 1)\" while plugging in the USB cable.\n\nAre you sure you want to continue?",
 
     "MSG_ERASE_FS_CONFIRM": "WARNING: This will force stop the program and ERASE ALL USER FILES (main.py, etc.) on the MCU. This cannot be undone! Continue?",
-    "MSG_CLOUD_AI_REQUIRES_REMOTE": "Cloud AI mode requires a Remote SSH connection. Please connect to your server first.",
     "MSG_NO_TRAINING_RESULT": "No training results yet. Please run training first.",
     "MSG_RELOAD_HOME_CONFIRM": "Reloading will return to the Startup Home; unsaved changes will be lost. Continue?",
     "MSG_TRAINING_RESULT_TITLE": "Training Results",

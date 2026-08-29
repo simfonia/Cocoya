@@ -54,10 +54,18 @@ Blockly.Blocks['py_ai_train_run'] = {
         ]), 'TASK_TYPE')
         .appendField(Blockly.Msg["AI_TRAIN_FIELD_BACKEND"])
         .appendField(new Blockly.FieldDropdown([
-          [Blockly.Msg["AI_BACKEND_AUTO"], "auto"],
           [Blockly.Msg["AI_BACKEND_LOCAL"], "local"],
           [Blockly.Msg["AI_BACKEND_REMOTE"], "remote"]
         ]), 'BACKEND');
+
+    // 資料集同步模式（僅 backend=remote 時生效）
+    this.appendDummyInput()
+        .appendField(Blockly.Msg["AI_TRAIN_FIELD_SYNC_MODE"])
+        .appendField(new Blockly.FieldDropdown([
+          [Blockly.Msg["AI_SYNC_SMART"], "smart"],
+          [Blockly.Msg["AI_SYNC_ALWAYS"], "always"],
+          [Blockly.Msg["AI_SYNC_SKIP"], "skip"]
+        ]), 'SYNC_MODE');
 
     // === 進階設定區（分組顯示）===
     this.appendDummyInput()

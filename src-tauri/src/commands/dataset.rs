@@ -140,6 +140,7 @@ pub async fn sidecar_send(
     state: State<'_, AppState>,
     command: String,
     payload: String,
+    timeout_secs: Option<u64>,
 ) -> Result<String, String> {
     let label = window.label().to_string();
     let request_id = format!("req_{}", std::time::SystemTime::now()
@@ -168,9 +169,9 @@ pub async fn sidecar_send(
             .map_err(|e| format!("Failed to write newline to sidecar stdin: {}", e))?;
     }
 
-    // 4. 透過共享 response map 等待對應的 response（帶 30 秒超時）
+    // 4. 透過共享 response map 等待對應的 response（預設 30 秒超時；長時任務如遠端訓練可由前端指定 timeout_secs）
     let start_time = std::time::Instant::now();
-    let timeout_duration = std::time::Duration::from_secs(30);
+    let timeout_duration = std::time::Duration::from_secs(timeout_secs.unwrap_or(30));
 
     loop {
         let maybe_response = {

@@ -144,6 +144,8 @@ export class BridgeTauri extends BaseBridge {
                     break;
 
                 case 'stopCode':
+                    // 順帶中斷遠端訓練（若無進行中訓練，sidecar 回「目前沒有」僅靜默）
+                    this._handleDatasetCommand('stopTraining', {}, null).catch(() => {});
                     await this.tauriInvoke('stop_python');
                     break;
 
@@ -365,6 +367,84 @@ export class BridgeTauri extends BaseBridge {
                     this._dispatchToFrontend({ command: 'openDatasetManager' });
                     break;
 
+                case 'startRemoteTraining': {
+                    // 遠端訓練（D4）：重用 sidecar trainRemote（同步 -> Docker 遠端訓練 -> 下載 .keras/labels）
+                    // 前端自行解析參數（Tauri 無 host 層 handler），路徑以最新專案錨定為基準
+                    let projectRoot = (this._anchor && this._anchor.projectRoot) || null;
+                    if (!projectRoot) {
+                        try {
+                            // 鐵律：get_project_anchor 回傳需經 _normalizeAnchor（snake/camel 雙保險，AGENTS.md serde 坑）
+                            const anchor = this._normalizeAnchor(await this.tauriInvoke('get_project_anchor'));
+                            projectRoot = (anchor && anchor.projectRoot) || null;
+                            if (anchor) this._anchor = anchor;
+                        } catch (e) { /* 未錨定 */ }
+                    }
+                    const pickRt = (re, d) => { const m = (data.code || '').match(re); return m ? m[1] : d; };
+                    let dsDir = data.datasetDir || '';
+                    if (dsDir && projectRoot && !/^[A-Za-z]:[\\/]/.test(dsDir) && !dsDir.startsWith('/')) {
+                        dsDir = projectRoot.replace(/[\\/]+$/, '') + '/' + dsDir;
+                    }
+                    const projName = (dsDir || '').replace(/[\\/]+$/, '').split(/[\\/]/).pop() || 'training_project';
+                    const taskRt = pickRt(/task_type='([^']+)'/, 'classifier');
+                    const remotePayload = {
+                        host: data.sshConfig?.host,
+                        port: data.sshConfig?.port || 22,
+                        username: data.sshConfig?.username,
+                        password: data.sshConfig?.password,
+                        localDatasetDir: dsDir,
+                        projectName: projName,
+                        syncMode: data.syncMode || 'smart',
+                        hyperparams: {
+                            epochs: parseInt(pickRt(/epochs=(\d+)/, '30'), 10) || 30,
+                            batchSize: parseInt(pickRt(/batch_size=(\d+)/, '32'), 10) || 32,
+                            learningRate: parseFloat(pickRt(/learning_rate=([\d.]+)/, '0.001')) || 0.001,
+                            validationSplit: parseFloat(pickRt(/validation_split=([\d.]+)/, '0.2')) || 0.2,
+                            dropout: parseFloat(pickRt(/dropout=([\d.]+)/, '0.2')) || 0.2,
+                            augmentation: pickRt(/augmentation=(True|False)/, 'False') === 'True' ? 'true' : 'false',
+                            backbone: pickRt(/backbone='([^']+)'/, 'mobilenetv2'),
+                            optimizer: pickRt(/optimizer='([^']+)'/, 'adam'),
+                            dnnLayers: pickRt(/dnn_layers='([^']+)'/, '128,64'),
+                            fineTune: pickRt(/fine_tune=(True|False)/, 'False') === 'True' ? 'true' : 'false',
+                            modelOutput: pickRt(/model_output='([^']+)'/, 'none'),
+                            taskType: taskRt
+                        },
+                        outputDir: (projectRoot ? projectRoot.replace(/[\\/]+$/, '') + '/model/' + projName : 'model/' + projName),
+                        dockerImage: 'cocoya-train-' + (taskRt === 'detector' ? 'detector' : 'classifier')
+                    };
+                    await this._handleDatasetCommand('trainRemote', remotePayload, (response) => {
+                        this._dispatchToFrontend({
+                            command: response.success ? 'trainingComplete' : 'trainingError',
+                            success: !!response.success,
+                            modelDir: response.modelDir,
+                            projectName: response.projectName,
+                            modelOutput: response.modelOutput,
+                            reportPath: response.reportPath,
+                            kerasPath: response.kerasPath,
+                            curvePath: response.curvePath,
+                            historyPath: response.historyPath,
+                            error: response.error
+                        });
+                    }, { timeoutSecs: 3600 });
+                    break;
+                }
+
+                case 'stopRemoteTraining':
+                    // 中斷遠端訓練（sidecar 端 docker rm -f 訓練容器）
+                    await this._handleDatasetCommand('stopTraining', {}, (response) => {
+                        if (!response.success && window.CocoyaUI?.appendTerminal) {
+                            window.CocoyaUI.appendTerminal('[Remote] ' + (response.error || '中斷失敗'), 'err');
+                        }
+                    });
+                    break;
+
+                case 'openFolder':
+                    try {
+                        await this.tauriInvoke('open_folder', { path: data.path || data.folderPath || '' });
+                    } catch (e) {
+                        console.error('[Bridge] openFolder failed:', e);
+                    }
+                    break;
+
                 case 'datasetListCameras':
                     await this._handleDatasetCommand('listCameras', data, (response) => {
                         this._dispatchToFrontend({
@@ -584,16 +664,6 @@ export class BridgeTauri extends BaseBridge {
                             errorCode: codeMatch ? codeMatch[1] : 'IO_ERROR',
                             error: errStr
                         });
-                    }
-                    break;
-
-                case 'setCloudAiMode':
-                    // 對齊 VSIX handleSetCloudAiMode：保存狀態 + 回 cloudAiModeStatus 同步 UI
-                    try {
-                        await this.tauriInvoke('set_cloud_ai_mode', { enabled: !!data.enabled });
-                        this._dispatchToFrontend({ command: 'cloudAiModeStatus', enabled: !!data.enabled });
-                    } catch (e) {
-                        console.error('[Bridge] setCloudAiMode failed:', e);
                     }
                     break;
 
@@ -837,6 +907,15 @@ export class BridgeTauri extends BaseBridge {
                     const parsed = JSON.parse(payload);
                     // 將 sidecar event 轉為前端可理解的格式
                     if (parsed.type === 'event' && parsed.event) {
+                        // D4 遠端訓練日誌：保留原名轉發（base.js onTrainingLog / trainingError 監聽）
+                        // 注意：sidecar send_event 把 message 放在頂層（{type,event,message}），非 data 子物件
+                        if (parsed.event === 'trainingLog') {
+                            this._dispatchToFrontend({
+                                command: 'trainingLog',
+                                message: parsed.message || (parsed.data && parsed.data.message) || ''
+                            });
+                            return;
+                        }
                         const command = 'dataset' + parsed.event.charAt(0).toUpperCase() + parsed.event.slice(1);
                         this._dispatchToFrontend({
                             command,
@@ -927,7 +1006,7 @@ export class BridgeTauri extends BaseBridge {
         }
     }
 
-    async _handleDatasetCommand(sidecarCommand, data, callback) {
+    async _handleDatasetCommand(sidecarCommand, data, callback, opts) {
         try {
             // 1. 確保 sidecar 已啟動（使用輕量 ping 健康檢查 + 狀態快取）
             const pythonPath = localStorage.getItem('pythonPath') || 'python';
@@ -954,11 +1033,12 @@ export class BridgeTauri extends BaseBridge {
                 return;
             }
 
-            // 2. 發送實際指令到 sidecar
+            // 2. 發送實際指令到 sidecar（長時任務如 trainRemote 可指定 timeoutSecs）
             const payload = JSON.stringify(data);
             const raw = await this.tauriInvoke('sidecar_send', {
                 command: sidecarCommand,
-                payload
+                payload,
+                timeoutSecs: (opts && opts.timeoutSecs) || undefined
             });
 
             // 3. 解析回應

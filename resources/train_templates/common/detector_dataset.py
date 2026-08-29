@@ -118,11 +118,53 @@ def load_detector_dataset(dataset_dir, img_size=224, batch_size=32, validation_s
     bboxes = np.array(bboxes, dtype=np.float32)
     class_ids = np.array(class_ids, dtype=np.int32)
 
-    # 建立 tf.data.Dataset
-    dataset = tf.data.Dataset.from_tensor_slices((image_paths, bboxes))
+    # --- 分層抽樣 (stratified split)：依類別各自切出驗證集，確保各類驗證比例一致 ---
+    if validation_split > 0:
+        rng = np.random.RandomState(seed)
+        train_idx, val_idx = [], []
+        for cid in np.unique(class_ids):
+            idx = np.where(class_ids == cid)[0]
+            rng.shuffle(idx)
+            n_val = int(len(idx) * validation_split)
+            # 教學保護：類別樣本 >= 2 時，驗證集與訓練集各至少 1 張
+            if len(idx) >= 2:
+                n_val = max(1, min(n_val, len(idx) - 1))
+            else:
+                n_val = 0  # 單一樣本的類別只能進訓練集
+            val_idx.extend(idx[:n_val])
+            train_idx.extend(idx[n_val:])
 
-    # 打亂順序
-    dataset = dataset.shuffle(buffer_size=len(image_paths), seed=seed, reshuffle_each_iteration=False)
+        # 檢查切分有效性
+        if len(val_idx) == 0:
+            print("錯誤: 分層抽樣後驗證集為空，請增加樣本數或降低 validation_split")
+            sys.exit(1)
+        if len(train_idx) == 0:
+            print("錯誤: 分層抽樣後訓練集為空，請增加樣本數")
+            sys.exit(1)
+
+        # 輸出分層報告（教學可見）
+        print("分層抽樣 (stratified split):")
+        for cid in np.unique(class_ids):
+            label_name = labels[cid] if cid < len(labels) else f'class_{cid}'
+            n_tr = sum(1 for i in train_idx if class_ids[i] == cid)
+            n_va = sum(1 for i in val_idx if class_ids[i] == cid)
+            print(f"  {label_name}: train {n_tr} / val {n_va}")
+
+        train_idx = np.array(train_idx)
+        val_idx = np.array(val_idx)
+        rng.shuffle(train_idx)  # 訓練集打亂
+        rng.shuffle(val_idx)    # 驗證集打亂
+
+        train_paths = [image_paths[i] for i in train_idx]
+        train_bboxes = bboxes[train_idx]
+        val_paths = [image_paths[i] for i in val_idx]
+        val_bboxes = bboxes[val_idx]
+    else:
+        print("  validation_split=0，不使用驗證集")
+        train_paths = list(image_paths)
+        train_bboxes = bboxes
+        val_paths = []
+        val_bboxes = None
 
     # 解碼影像函數
     def load_and_preprocess(path, bbox):
@@ -132,22 +174,15 @@ def load_detector_dataset(dataset_dir, img_size=224, batch_size=32, validation_s
         image = tf.cast(image, tf.float32) / 255.0
         return image, bbox
 
-    dataset = dataset.map(load_and_preprocess, num_parallel_calls=AUTOTUNE)
+    def make_ds(paths, boxes, shuffle):
+        ds = tf.data.Dataset.from_tensor_slices((list(paths), boxes))
+        if shuffle:
+            ds = ds.shuffle(buffer_size=len(paths), seed=seed, reshuffle_each_iteration=True)
+        ds = ds.map(load_and_preprocess, num_parallel_calls=AUTOTUNE)
+        return ds.batch(batch_size).prefetch(AUTOTUNE)
 
-    # 分割訓練/驗證集
-    if validation_split > 0:
-        val_size = max(1, int(len(image_paths) * validation_split))
-        val_ds = dataset.take(val_size)
-        train_ds = dataset.skip(val_size)
-    else:
-        train_ds = dataset
-        val_ds = None
-        print("  validation_split=0，不使用驗證集")
-
-    # 批次與 prefetch
-    train_ds = train_ds.batch(batch_size).prefetch(AUTOTUNE)
-    if val_ds is not None:
-        val_ds = val_ds.batch(batch_size).prefetch(AUTOTUNE)
+    train_ds = make_ds(train_paths, train_bboxes, shuffle=True)
+    val_ds = make_ds(val_paths, val_bboxes, shuffle=False) if val_paths else None
 
     return train_ds, val_ds, labels, class_counts
 

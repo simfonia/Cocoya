@@ -94,6 +94,99 @@ export class TrainingOpsHandler {
     }
 
     /**
+     * 處理遠端訓練請求（RemoteTrainingRefactor D3/D4：backend=remote 執行當下由 host 觸發）
+     * 流程：SSH 精靈(前端) -> sidecar trainRemote（同步 -> Docker 遠端訓練 -> 下載 .keras/labels）
+     */
+    public handleStartRemoteTraining(message: any) {
+        const { code, syncMode, datasetDir, sshConfig } = message;
+
+        // 從產出程式碼解析超參數（積木產生之 train_model(...) 呼叫）
+        const pick = (re: RegExp, dflt: string) => {
+            const m = (code || '').match(re);
+            return m ? m[1] : dflt;
+        };
+        const taskType = pick(/task_type='([^']+)'/, 'classifier');
+        const projectName = path.basename(datasetDir || '') || pick(/--project_name/, 'training_project');
+        const epochs = parseInt(pick(/epochs=(\d+)/, '30'), 10) || 30;
+        const batchSize = parseInt(pick(/batch_size=(\d+)/, '32'), 10) || 32;
+        const learningRate = parseFloat(pick(/learning_rate=([\d.]+)/, '0.001')) || 0.001;
+        const validationSplit = parseFloat(pick(/validation_split=([\d.]+)/, '0.2')) || 0.2;
+        const dropout = parseFloat(pick(/dropout=([\d.]+)/, '0.2')) || 0.2;
+        const augmentation = pick(/augmentation=(True|False)/, 'False') === 'True' ? 'true' : 'false';
+        const backbone = pick(/backbone='([^']+)'/, 'mobilenetv2');
+        const optimizer = pick(/optimizer='([^']+)'/, 'adam');
+        const dnnLayers = pick(/dnn_layers='([^']+)'/, '128,64');
+        const fineTune = pick(/fine_tune=(True|False)/, 'False') === 'True' ? 'true' : 'false';
+        const modelOutput = pick(/model_output='([^']+)'/, 'none');
+
+        // 解析本地資料集目錄（相對路徑以專案目錄為基準）
+        let baseDir = (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)
+            ? vscode.workspace.workspaceFolders[0].uri.fsPath
+            : path.join(this.manager.context.extensionPath, 'temp_scripts');
+        if (this.manager.currentFilePath) {
+            baseDir = path.dirname(this.manager.currentFilePath);
+        }
+        const localDatasetDir = path.isAbsolute(datasetDir) ? datasetDir : path.join(baseDir, datasetDir || '');
+        const outputDir = path.join(baseDir, 'model', projectName);
+
+        if (!sshConfig || !sshConfig.host || !sshConfig.username || !sshConfig.password) {
+            vscode.window.showErrorMessage('缺少 SSH 連線資訊，請重新執行遠端訓練。');
+            this.manager.panel.webview.postMessage({
+                command: 'trainingError',
+                success: false,
+                error: '缺少 SSH 連線資訊'
+            });
+            return;
+        }
+
+        console.log(`[RemoteTraining] dataset=${localDatasetDir} project=${projectName} sync=${syncMode} epochs=${epochs}`);
+        this.manager.sidecar.start();
+        this.manager.sidecar.send('trainRemote', {
+            host: sshConfig.host,
+            port: sshConfig.port || 22,
+            username: sshConfig.username,
+            password: sshConfig.password,
+            localDatasetDir,
+            projectName,
+            syncMode: syncMode || 'smart',
+            hyperparams: {
+                    epochs, batchSize, learningRate,
+                    validationSplit, dropout, augmentation,
+                    backbone, optimizer, dnnLayers, fineTune,
+                    modelOutput, taskType
+                },
+            outputDir,
+            dockerImage: 'cocoya-train-' + (taskType === 'detector' ? 'detector' : 'classifier')
+        }, (resp: any) => {
+            if (resp.success) {
+                vscode.window.showInformationMessage(`遠端訓練完成！模型已下載至: ${resp.modelDir}`);
+                this.manager.panel.webview.postMessage({
+                    command: 'trainingComplete',
+                    success: true,
+                    modelDir: resp.modelDir,
+                    projectName: resp.projectName
+                });
+            } else {
+                vscode.window.showErrorMessage('遠端訓練失敗: ' + (resp.error || '未知錯誤'));
+                this.manager.panel.webview.postMessage({
+                    command: 'trainingError',
+                    success: false,
+                    error: resp.error || '遠端訓練失敗'
+                });
+            }
+        });
+
+        this.manager.sidecar.onEvent = (event: string, data: any) => {
+            if (event === 'trainingLog') {
+                this.manager.panel.webview.postMessage({
+                    command: 'trainingLog',
+                    message: data.message
+                });
+            }
+        };
+    }
+
+    /**
      * 用系統預設瀏覽器開啟 HTML 訓練報告
      */
     public handleOpenTrainingReport(message: any) {

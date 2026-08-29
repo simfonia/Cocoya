@@ -32,20 +32,19 @@ Blockly.Python.forBlock['py_ai_train_run'] = function(block, generator) {
   const fineTune = block.getFieldValue('FINE_TUNE');
   const modelOutput = block.getFieldValue('MODEL_OUTPUT');
 
-  const useRemote = (window.CocoyaUI && window.CocoyaUI.cloudAiEnabled) ? 'True' : 'False';
-
   let backendCode;
-  if (backend === 'auto') {
-    backendCode = "'remote' if " + useRemote + " else 'local'";
-  } else if (backend === 'remote') {
+  if (backend === 'remote') {
     backendCode = "'remote'";
   } else {
     backendCode = "'local'";
   }
+  // 資料集同步模式：smart(一致才傳)/always(全傳)/skip(不上傳)；僅 remote 生效
+  const syncMode = block.getFieldValue('SYNC_MODE') || 'smart';
+  const syncModeCode = "'" + syncMode + "'";
 
   // 注入 train_model 函式定義
   if (!generator.definitions_['train_model_func']) {
-    generator.definitions_['train_model_func'] = 'def train_model(dataset_dir, model_dir, task_type, backend, epochs, batch_size, learning_rate, validation_split, dropout, augmentation, backbone, optimizer, dnn_layers, fine_tune, model_output):\n' +
+    generator.definitions_['train_model_func'] = 'def train_model(dataset_dir, model_dir, task_type, backend, sync_mode, epochs, batch_size, learning_rate, validation_split, dropout, augmentation, backbone, optimizer, dnn_layers, fine_tune, model_output):\n' +
       '    import subprocess\n' +
       '    import sys\n' +
       '    import os\n' +
@@ -140,6 +139,7 @@ Blockly.Python.forBlock['py_ai_train_run'] = function(block, generator) {
     "    model_dir='" + modelDir + "',\n" +
     "    task_type='" + taskType + "',\n" +
     '    backend=' + backendCode + ',\n' +
+    '    sync_mode=' + syncModeCode + ',\n' +
     '    epochs=' + epochs + ',\n' +
     '    batch_size=' + batchSize + ',\n' +
     '    learning_rate=' + learningRate + ',\n' +
