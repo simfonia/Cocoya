@@ -8,6 +8,7 @@ import { calculateStats } from './core/stats.js';
 import { createInitialDatasetState, DatasetStore } from './core/state.js';
 import { sanitizeProjectName } from './core/projectNaming.js';
 import { validateDeletableImagePath } from './core/pathPolicy.js';
+import { datasetBridge } from './io/bridge.js';
 
 const MODAL_ID = 'dataset-manager-modal';
 
@@ -243,20 +244,22 @@ function applyLoadedProgress(spec) {
  * 有進度 → 套回；無進度或失敗 → 維持目前掃描結果，不清空既有成功訊息。
  */
 function loadProgressFromFolder(folderPath) {
-    const handler = (msg) => {
-        if (msg.command === 'datasetLoadProgressResult') {
-            window.CocoyaBridge.offMessage(handler);
-            if (!msg.success) {
-                console.error('[DatasetManager] Load progress failed:', msg.error);
-                return;
-            }
-            if (msg.hasProgress && msg.spec) {
-                applyLoadedProgress(msg.spec);
-            }
+    // Stage 2：改經 io/bridge.js request correlation（timeout 保護，listener 自動清理）
+    const { promise } = datasetBridge.request({
+        command: 'datasetLoadProgress',
+        payload: { folderPath },
+        resultCommand: 'datasetLoadProgressResult',
+        timeoutMs: 15000
+    });
+    promise.then((msg) => {
+        if (!msg.success) {
+            console.error('[DatasetManager] Load progress failed:', msg.error);
+            return;
         }
-    };
-    window.CocoyaBridge.onMessage(handler);
-    window.CocoyaBridge.loadDatasetProgress(folderPath);
+        if (msg.hasProgress && msg.spec) {
+            applyLoadedProgress(msg.spec);
+        }
+    }).catch((e) => console.error('[DatasetManager] Load progress failed:', e.message));
 }
 function renderColumnRow(column = {}) {
     const normalized = DatasetSpec.normalizeColumn(column);
@@ -398,7 +401,7 @@ async function reconcileProjectName(derivedName, sourcePath) {
     // (2) 已載入來源與新來源路徑不同、且推導名稱相同 → basename 碰撞，可能覆寫既有進度
     const prevPath = state.sourceFolderPath;
     if (prevPath && sourcePath && prevPath !== sourcePath && currentName === derivedName) {
-        const ok = await window.CocoyaBridge.confirm(
+        const ok = await datasetBridge.confirm(
             t('SOURCE_COLLISION_CONFIRM',
                 '不同來源資料夾使用了相同名稱「%1」，標註進度將寫入並可能覆寫 dataset/%1/ 的既有進度。\n仍要繼續嗎？',
                 derivedName)
@@ -411,7 +414,7 @@ async function reconcileProjectName(derivedName, sourcePath) {
 
     // (3) 名稱與新來源推導名稱不同 → 顯式確認是否更新（確認=更新；取消=維持現稱並提示風險）
     if (currentName !== derivedName) {
-        const update = await window.CocoyaBridge.confirm(
+        const update = await datasetBridge.confirm(
             t('SOURCE_RENAME_CONFIRM',
                 '來源已變更為「%1」，但目前資料集名稱為「%2」。\n是否自動更新資料集名稱為「%1」？\n\n（若選擇「取消」將維持「%2」，後續標註進度會儲存至 dataset/%2/，可能覆寫既有進度。若要另立新的資料集，建議先自行複製來源資料夾後再匯入。）',
                 derivedName, currentName)
@@ -491,7 +494,7 @@ async function handleDirectoryImport() {
     showStatusMessage(t('STATUS_IMPORTING_FOLDER', '正在選取資料夾...'));
 
     try {
-        const result = await window.CocoyaBridge.pickFolder();
+        const result = await datasetBridge.pickFolder();
         if (!result) {
             showStatusMessage('');
             return;
@@ -513,12 +516,12 @@ async function handleDirectoryImport() {
         // 決策（2026-08-26）：資料集必須位於專案根 dataset/<資料集名稱>。
         // 用詞鐵律：「專案」= xml 積木專案；dataset/ 下子資料夾名稱 = 資料集名稱（表單 projectName 欄位值）。
         // 錨定與 canonical 計算由後端裁決（前端 capabilities 快照可能過期）。
-        let importData = await window.CocoyaBridge.prepareDatasetImport(folderPath, getFormValue('projectName') || safeRootDir, false);
+        let importData = await datasetBridge.prepareDatasetImport(folderPath, getFormValue('projectName') || safeRootDir, false);
         if (importData.error) {
             throw new Error(importData.error);
         }
         if (importData.action === 'confirm_required') {
-            const copyOk = await window.CocoyaBridge.confirm(t('DSM_IMPORT_COPY_CONFIRM',
+            const copyOk = await datasetBridge.confirm(t('DSM_IMPORT_COPY_CONFIRM',
                 '資料集必須位於專案根的 dataset/<資料集名稱> 資料夾內。\n\n要將所選資料夾複製到：\n%1\n嗎？（已存在的檔案不會被覆寫）'
             ).replace('%1', importData.canonicalDir));
             if (!copyOk) {
@@ -526,7 +529,7 @@ async function handleDirectoryImport() {
                 return;
             }
             showStatusMessage(t('DSM_IMPORT_COPYING', '正在複製資料集至專案根...'));
-            importData = await window.CocoyaBridge.prepareDatasetImport(folderPath, getFormValue('projectName') || safeRootDir, true);
+            importData = await datasetBridge.prepareDatasetImport(folderPath, getFormValue('projectName') || safeRootDir, true);
             if (importData.error) {
                 throw new Error(importData.error);
             }
@@ -609,22 +612,24 @@ function writeProgressToDisk() {
         const spec = state.spec.toJSON();
         const projectName = getFormValue('projectName') || (spec.project && spec.project.name) || 'dataset';
 
-        const handler = (msg) => {
-            if (msg.command === 'datasetSaveProgressResult') {
-                window.CocoyaBridge.offMessage(handler);
-                if (!msg.success) {
-                    console.error('[DatasetManager] Auto-save progress failed:',
-                        msg.errorCode ? `[${msg.errorCode}] ` : '', msg.error);
-                } else {
-                    console.info('[DatasetManager] Auto-save OK ->', msg.path);
-                }
-            }
-        };
-        window.CocoyaBridge.onMessage(handler);
+        // Stage 2：改經 io/bridge.js request correlation（timeout 保護，listener 自動清理）
+        const { promise } = datasetBridge.request({
+            command: 'datasetSaveProgress',
+            payload: { projectName, spec },
+            resultCommand: 'datasetSaveProgressResult',
+            timeoutMs: 15000
+        });
         console.debug('[DatasetManager] Auto-save sending:', projectName,
             '| samples:', spec.data_source.samples.length,
             '| type:', spec.project.type);
-        window.CocoyaBridge.saveDatasetProgress(projectName, spec);
+        promise.then((msg) => {
+            if (!msg.success) {
+                console.error('[DatasetManager] Auto-save progress failed:',
+                    msg.errorCode ? `[${msg.errorCode}] ` : '', msg.error);
+            } else {
+                console.info('[DatasetManager] Auto-save OK ->', msg.path);
+            }
+        }).catch((e) => console.error('[DatasetManager] Auto-save progress Error:', e.message));
     } catch (e) {
         console.error('[DatasetManager] Auto-save progress Error:', e);
     }
@@ -638,7 +643,7 @@ function writeProgressToDisk() {
  * @param {boolean} [immediate] true = 立即寫入
  */
 function scheduleAutoSave(immediate = false) {
-    const bridgeCaps = window.CocoyaBridge && window.CocoyaBridge.capabilities;
+    const bridgeCaps = datasetBridge.getCapabilities();
 
     // 錨定裁決交還後端（SSOT）：capabilities.isAnchored 是載入時快照，
     // VSIX 為 manifest 一次性注入、Tauri 為 _anchor 快照，開檔/存檔後都可能過期，
@@ -734,7 +739,7 @@ async function handleExportDataset() {
         if (needsAnnotationCheck && state.images.length > 0) {
             const unannotated = state.images.filter(img => !img.annotations || img.annotations.length === 0).length;
             if (unannotated > 0) {
-                if (!(await window.CocoyaBridge.confirm(t('ANNOTATION_EXPORT_UNANNOTATED_WARNING', '仍有 %1 張圖片未標註，確定要匯出嗎？').replace('%1', unannotated)))) {
+                if (!(await datasetBridge.confirm(t('ANNOTATION_EXPORT_UNANNOTATED_WARNING', '仍有 %1 張圖片未標註，確定要匯出嗎？').replace('%1', unannotated)))) {
                     showStatusMessage('');
                     showExportProgress(false);
                     return;
@@ -747,7 +752,7 @@ async function handleExportDataset() {
             const unclassified = state.images.reduce((sum, img) =>
                 sum + (img.annotations?.filter(a => a.class_id === -1).length || 0), 0);
             if (unclassified > 0) {
-                if (!(await window.CocoyaBridge.confirm(t('ANNOTATION_EXPORT_UNCLASSIFIED_WARNING', '尚有 %1 個未分類標註框，確定要匯出嗎？').replace('%1', unclassified)))) {
+                if (!(await datasetBridge.confirm(t('ANNOTATION_EXPORT_UNCLASSIFIED_WARNING', '尚有 %1 個未分類標註框，確定要匯出嗎？').replace('%1', unclassified)))) {
                     showStatusMessage('');
                     showExportProgress(false);
                     return;
@@ -766,26 +771,29 @@ async function handleExportDataset() {
             throw new Error(t('ERROR_EXPORT_VALIDATE', '資料集規格驗證失敗: %1').replace('%1', result.errors[0]));
         }
 
-        // 3. 透過 Bridge 發送匯出指令
+        // 3. 透過 io/bridge.js 發送匯出指令並等待結果（Stage 2 correlation + timeout）
         console.log('[DatasetManager] Sending datasetExport command to Bridge');
-        window.CocoyaBridge.send('datasetExport', {
-            spec: spec,
-            sourceFolderPath: state.sourceFolderPath // 傳送來源路徑
+        const { promise: exportPromise } = datasetBridge.request({
+            command: 'datasetExport',
+            payload: {
+                spec: spec,
+                sourceFolderPath: state.sourceFolderPath // 傳送來源路徑
+            },
+            resultCommand: 'datasetExportResult',
+            timeoutMs: 120000 // 匯出含 ZIP 打包，給較長 timeout
         });
 
-        // 監聽匯出結果
-        const handler = (msg) => {
-            if (msg.command === 'datasetExportResult') {
-                window.CocoyaBridge.offMessage(handler);
-                showExportProgress(false);
-                if (msg.success) {
-                    showStatusMessage(t('SUCCESS_EXPORT', '✅ 資料集匯出成功'));
-                } else {
-                    showStatusMessage(t('ERROR_EXPORT_FAILED', '❌ 匯出失敗: %1').replace('%1', msg.error));
-                }
+        exportPromise.then((msg) => {
+            showExportProgress(false);
+            if (msg.success) {
+                showStatusMessage(t('SUCCESS_EXPORT', '✅ 資料集匯出成功'));
+            } else {
+                showStatusMessage(t('ERROR_EXPORT_FAILED', '❌ 匯出失敗: %1').replace('%1', msg.error));
             }
-        };
-        window.CocoyaBridge.onMessage(handler);
+        }).catch((e) => {
+            showExportProgress(false);
+            showStatusMessage(t('ERROR_EXPORT_FAILED', '❌ 匯出失敗: %1').replace('%1', e.message));
+        });
 
     } catch (e) {
         console.error('[DatasetManager] Export Error:', e);
@@ -1362,7 +1370,7 @@ function createLabelMapManager(container, statsContainer = null) {
 
 // 新增
     container.querySelector('[data-action="add"]').onclick = async () => {
-        const name = await window.CocoyaBridge.prompt(t('ANNOTATION_NEW_CLASS_PLACEHOLDER', '輸入新類別名稱'));
+        const name = await datasetBridge.prompt(t('ANNOTATION_NEW_CLASS_PLACEHOLDER', '輸入新類別名稱'));
         if (!(name && name.trim())) return;
         const trimmed = name.trim();
         const map = state.spec.toJSON().schema.label_map || {};
@@ -1384,7 +1392,7 @@ function createLabelMapManager(container, statsContainer = null) {
         const id = currentId();
         const entry = entries.find(([, v]) => v === id);
         if (!entry) return;
-        const newName = await window.CocoyaBridge.prompt(t('ANNOTATION_NEW_CLASS_PLACEHOLDER', '輸入新類別名稱'), entry[0]);
+        const newName = await datasetBridge.prompt(t('ANNOTATION_NEW_CLASS_PLACEHOLDER', '輸入新類別名稱'), entry[0]);
         if (newName && newName.trim() && newName.trim() !== entry[0]) {
             const trimmed = newName.trim();
             const map = state.spec.toJSON().schema.label_map || {};
@@ -1409,7 +1417,7 @@ function createLabelMapManager(container, statsContainer = null) {
         const count = (projectType === 'image')
             ? state.images.filter(img => img.label === entry[0]).length
             : state.images.reduce((s, img) => s + (img.annotations?.filter(a => a.class_id === id).length || 0), 0);
-        const confirmed = await window.CocoyaBridge.confirm(
+        const confirmed = await datasetBridge.confirm(
             t('ANNOTATION_DELETE_CLASS_CONFIRM', '確定刪除類別「%1」及其 %2 個標註框嗎？')
                 .replace('%1', entry[0]).replace('%2', count)
         );
@@ -1541,7 +1549,7 @@ async function checkUnannotatedOnExit() {
     if (state.annotationMode.mode === 'classification') return true;
     const unannotated = state.images.filter(img => !img.annotations || img.annotations.length === 0).length;
     if (unannotated > 0) {
-        return await window.CocoyaBridge.confirm(t('ANNOTATION_UNANNOTATED_WARNING', '尚有 %1 張圖片未標註，確定要離開？').replace('%1', unannotated));
+        return await datasetBridge.confirm(t('ANNOTATION_UNANNOTATED_WARNING', '尚有 %1 張圖片未標註，確定要離開？').replace('%1', unannotated));
     }
     return true;
 }
@@ -1786,7 +1794,7 @@ function handleDeleteImage(index) {
             console.error('[DatasetManager] Blocked delete of unsafe image path:', removed.path, pathCheck.code);
             return;
         }
-        window.CocoyaBridge.send('datasetDeleteImage', { filePath: pathCheck.value });
+        datasetBridge.send('datasetDeleteImage', { filePath: pathCheck.value });
     }
 
     // 釋放 blobUrl 避免記憶體洩漏
@@ -1936,7 +1944,7 @@ function bindModalEvents(modal) {
         clearBtn.onclick = async () => {
             // 防呆：有未匯出工作時先確認，避免誤按清空整批資料
             if (hasUnsavedWork()) {
-                const ok = await window.CocoyaBridge.confirm(t('CLEAR_CONFIRM', '確定清除所有資料並重置嗎？'));
+                const ok = await datasetBridge.confirm(t('CLEAR_CONFIRM', '確定清除所有資料並重置嗎？'));
                 if (!ok) return;
             }
 
@@ -2015,15 +2023,18 @@ function bindModalEvents(modal) {
             window.CocoyaUI.ensureSshConfig((sshConfig) => {
                 const diagResult = modal.querySelector('#dataset-cloud-diagnostic-result');
                 if (diagResult) diagResult.innerHTML = t('CLOUD_DIAGNOSING', '正在進行遠端環境診斷...');
-                window.CocoyaBridge.send('checkRemoteEnvironment', sshConfig);
+                datasetBridge.send('checkRemoteEnvironment', sshConfig);
             });
         };
     }
 
 
 
-    // 監聽 Extension 回傳的結果
-    const handleBridgeMessage = (msg) => {
+    // 監聽 Extension 回傳的結果（Stage 2：經 io/bridge.js 訂閱，關閉時可解除）
+    const offBridgeMessage = datasetBridge.subscribeMultiple([
+        'checkRemoteEnvironmentResult',
+        'datasetUploadResult'
+    ], (msg) => {
         const diagResult = modal.querySelector('#dataset-cloud-diagnostic-result');
 
         if (msg.command === 'checkRemoteEnvironmentResult') {
@@ -2048,8 +2059,7 @@ function bindModalEvents(modal) {
             // 遠端重構移除 DM 雲端 ZIP 上傳按鈕後，此結果不再由前端觸發；保留空分支避免未知 command 誤判（見 log/plan/RemoteTrainingRefactor.md D2）
             showStatusMessage(t('ERROR_UPLOAD_RESULT_IGNORED', '🛑 收到無來源的上傳結果，已忽略。'));
         }
-    };
-    window.CocoyaBridge.onMessage(handleBridgeMessage);
+    });
 
     // 輔助函式：根據選取的專案類型動態更新來源模式 (Mode) 的選項
     function updateSourceModeOptions(projectType) {
@@ -2076,7 +2086,7 @@ function bindModalEvents(modal) {
 
             // 防呆：切換類型會清空目前資料，若有未匯出工作需先確認；取消則回滾選項
             if (prevType !== newType && hasUnsavedWork()) {
-                const ok = await window.CocoyaBridge.confirm(t('TYPE_SWITCH_CONFIRM', '切換專案類型將清除目前資料，確定繼續嗎？'));
+                const ok = await datasetBridge.confirm(t('TYPE_SWITCH_CONFIRM', '切換專案類型將清除目前資料，確定繼續嗎？'));
                 if (!ok) {
                     typeSelect.value = prevType;
                     return;
@@ -2328,15 +2338,15 @@ export async function openDatasetManager() {
     // 進入閘（2026-08-26 決策）：開啟 Dataset Manager 前先以後端權威來源檢查錨定；
     // 未錨定一律擋下（capabilities 快照會過期，不作為依據）。
     try {
-        const anchor = await window.CocoyaBridge.getProjectAnchor();
+        const anchor = await datasetBridge.getProjectAnchor();
         if (!anchor || !anchor.isAnchored) {
-            window.CocoyaBridge.alert(t('DSM_NEED_ANCHOR',
+            datasetBridge.alert(t('DSM_NEED_ANCHOR',
                 '請先開新或開啟一個 xml 積木專案後，再使用 Dataset Manager。\n（資料集必須存放於專案根的 dataset/<資料集名稱> 資料夾內）'));
             return state.spec;
         }
     } catch (e) {
         console.error('[DatasetManager] Anchor check failed:', e);
-        window.CocoyaBridge.alert(t('DSM_NEED_ANCHOR',
+        datasetBridge.alert(t('DSM_NEED_ANCHOR',
             '請先開新或開啟一個 xml 積木專案後，再使用 Dataset Manager。\n（資料集必須存放於專案根的 dataset/<資料集名稱> 資料夾內）'));
         return state.spec;
     }
