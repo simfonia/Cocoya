@@ -28,6 +28,7 @@ untitled_backup*.xml
 
 # Python cache
 resources/train_templates/common/__pycache__
+resources/dataset_manager/__pycache__
 
 # Project specific
 backup/

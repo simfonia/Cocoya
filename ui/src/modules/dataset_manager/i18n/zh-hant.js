@@ -119,25 +119,21 @@
     "DSM_STATUS_EXPORTING": "📦 正在準備匯出...",
     "DSM_EXPORT_IN_PROGRESS": "正在打包 ZIP 並產生 dataset.json...",
     "DSM_STATUS_CAPTURETING": "📸 正在採集...",
-    "DSM_STATUS_UPLOADING_ZIP": "📦 正在準備上傳本地 ZIP 檔案...",
-    "DSM_STATUS_UPLOADING": "☁️ 正在上傳資料集... (%1%)",
-    "DSM_STATUS_DECOMPRESSING": "⌛ 正在雲端進行解壓縮，請稍候...",
 
     // 成功訊息
     "DSM_SUCCESS_IMPORT_DATA": "✅ 成功匯入 %1 筆資料",
     "DSM_SUCCESS_IMPORT_IMAGES": "✅ 成功匯入 %1 張影像，共 %2 個標籤",
     "DSM_SUCCESS_EXPORT": "✅ 資料集匯出成功",
     "DSM_SUCCESS_CAPTURE": "✅ 採集成功",
-    "DSM_SUCCESS_UPLOAD": "✅ 資料集已成功上傳並在遠端解壓縮！",
 
     // 錯誤訊息
     "DSM_ERROR_PREFIX": "❌ 錯誤: %1",
     "DSM_ERROR_IMPORT_EMPTY": "檔案內容為空或格式不符",
     "DSM_ERROR_EXPORT_FAILED": "❌ 匯出失敗: %1",
     "DSM_ERROR_CAPTURE_FAILED": "❌ 採集失敗: %1",
-    "DSM_ERROR_UPLOAD_FAILED": "❌ 上傳失敗: %1",
     "DSM_ERROR_READ_FAILED": "❌ 讀取失敗: %1",
     "DSM_ERROR_EXPORT_VALIDATE": "資料集規格驗證失敗: %1",
+    "DSM_ERROR_UPLOAD_RESULT_IGNORED": "🛑 收到無來源的上傳結果，已忽略。",
 
     // 預覽表格
     "DSM_PREVIEW_MORE_SAMPLES": "... (還有 %1 個樣本未顯示於預覽區)",

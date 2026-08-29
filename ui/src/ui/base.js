@@ -147,12 +147,9 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         // --- 初始化佈局 (縮放與收合) ---
         if (this.initLayout) this.initLayout();
         
-        // --- 環境偵測：按鈕顯示控制 ---
         const stopBtn = document.getElementById('btn-stop');
         const closeBtn = document.getElementById('btn-close');
         const terminalToggleBtn = document.getElementById('btn-terminal');
-        const cloudAiContainer = document.getElementById('cloud-ai-container');
-        const cloudAiSeparator = document.getElementById('cloud-ai-separator');
 
         if (window.CocoyaBridge) {
             const caps = window.CocoyaBridge.capabilities;
@@ -169,55 +166,10 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                 aiDropdown.style.display = 'inline-block';
                 if (aiDropdownSeparator) aiDropdownSeparator.style.display = 'block';
             }
-            
-            // 雲端 AI 模式：僅在具備雲端感知能力時顯示
-            if (cloudAiContainer && caps.isRemoteAware) {
-                cloudAiContainer.style.display = 'flex';
-                if (cloudAiSeparator) cloudAiSeparator.style.display = 'block';
-            }
+            // 雲端 AI 全域開關已移除（見 log/plan/RemoteTrainingRefactor.md D1）
         }
 
-        // --- 遠端訓練模式：事件處理 ---
-        const cloudAiToggle = document.getElementById('cloud-ai-toggle');
-        if (cloudAiToggle) {
-            // 僅設定初始顯示，不要在此處進行「連線校準」以免時間差誤刪 localStorage
-            const isRemoteModeEnabled = localStorage.getItem('cocoya_remote_mode_enabled') === 'true';
-            cloudAiToggle.checked = isRemoteModeEnabled;
-
-            cloudAiToggle.onchange = () => {
-                const enabled = cloudAiToggle.checked;
-                if (enabled) {
-                                    if (window.CocoyaUI && window.CocoyaUI.ensureSshConfig) {
-                                        window.CocoyaUI.ensureSshConfig(
-                                            (sshConfig) => {
-                                                localStorage.setItem('cocoya_remote_mode_enabled', 'true');
-                                                window.CocoyaBridge.send('setCloudAiMode', { enabled: true });
-                                                
-                                                // 同步更新資料管理器中的動態顯示
-                                                if (window.CocoyaDataset && window.CocoyaDataset.refreshDynamicPanels) {
-                                                    window.CocoyaDataset.refreshDynamicPanels();
-                                                }
-                                            },
-                                            () => {
-                                                cloudAiToggle.checked = false;
-                                                localStorage.setItem('cocoya_remote_mode_enabled', 'false');
-                                                window.CocoyaBridge.send('setCloudAiMode', { enabled: false });
-                                            }
-                                        );
-                                    } else {
-                                        localStorage.setItem('cocoya_remote_mode_enabled', 'true');
-                                        window.CocoyaBridge.send('setCloudAiMode', { enabled: true });
-                                    }
-                } else {
-                    localStorage.setItem('cocoya_remote_mode_enabled', 'false');
-                    window.CocoyaBridge.send('setCloudAiMode', { enabled: false });
-                    // 同步更新資料管理器中的動態顯示
-                    if (window.CocoyaDataset && window.CocoyaDataset.refreshDynamicPanels) {
-                        window.CocoyaDataset.refreshDynamicPanels();
-                    }
-                }
-            };
-        }
+        // 雲端訓練全域開關已移除（見 log/plan/RemoteTrainingRefactor.md D1）；遠端交由 py_ai_train_run backend=remote 於執行當下觸發 SSH 精靈。
 
         /**
          * 綁定按鈕點擊事件的內部輔助函式
@@ -282,6 +234,50 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                     msg.serialPort = window.CocoyaUI && window.CocoyaUI.getSerialPort ? window.CocoyaUI.getSerialPort() : (document.getElementById('serial-selector')?.getAttribute('data-value') || '') || '';
                     msg.serialUploadOnly = localStorage.getItem('cocoya_serial_upload_only') === 'true';
                     if (self.flashButton) self.flashButton(id, '#e8f5e9'); // 綠色回饋
+
+                    // --- 遠端訓練攔截（RemoteTrainingRefactor D3/D4）：backend='remote' 時改走 SSH 精靈 + host 遠端鏈 ---
+                    const isRemoteTrain = /backend\s*=\s*'remote'/.test(code);
+                    if (isRemoteTrain && msg.platform !== 'MicroPython') {
+                        const syncMatch = code.match(/sync_mode\s*=\s*'(\w+)'/);
+                        const dsMatch = code.match(/dataset_dir\s*=\s*'([^']+)'/);
+                        const syncMode = syncMatch ? syncMatch[1] : 'smart';
+                        const datasetDir = dsMatch ? dsMatch[1] : '';
+                        (async () => {
+                            if (!self.ensureSshConfig) {
+                                postMessageFunc({ command: 'alert', message: 'SSH wizard unavailable' });
+                                return;
+                            }
+                            const sshConfig = await new Promise((resolve) => {
+                                self.ensureSshConfig(resolve, () => resolve(null));
+                            });
+                            if (!sshConfig) {
+                                if (window.CocoyaUI?.appendTerminal) {
+                                    window.CocoyaUI.appendTerminal('--- Remote training cancelled (no SSH config) ---', 'info');
+                                }
+                                return;
+                            }
+                            if (window.CocoyaUI?.appendTerminal) {
+                                window.CocoyaUI.appendTerminal(`--- Remote training: sync=${syncMode}, dataset=${datasetDir} ---`, 'info');
+                            }
+                            // 連線動態提示（D4 UX）：每 0.7s 補一個 '.'，收到第一筆訓練事件即停止
+                            if (self._remoteConnTimer) { clearInterval(self._remoteConnTimer); self._remoteConnTimer = null; }
+                            if (window.CocoyaUI?.appendTerminal) {
+                                window.CocoyaUI.appendTerminal('[Remote] 連線中 ', 'info');
+                                self._remoteConnTimer = setInterval(() => {
+                                    window.CocoyaUI.appendTerminal('.', 'info', true);
+                                }, 700);
+                            }
+                            postMessageFunc({
+                                command: 'startRemoteTraining',
+                                code: code,
+                                syncMode: syncMode,
+                                datasetDir: datasetDir,
+                                sshConfig: sshConfig,
+                                isDirty: self.isDirty
+                            });
+                        })();
+                        return; // 不走本地 runCode
+                    }
                 }
 
                 postMessageFunc(msg);
@@ -636,46 +632,6 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             });
         }
 
-        // --- 遠端訓練切換（AI 下拉選單中的第一個項目）---
-        const cloudAiToggleDropdown = document.getElementById('btn-cloud-ai-toggle');
-        const cloudAiStatus = document.getElementById('cloud-ai-status');
-        if (cloudAiToggleDropdown && cloudAiStatus) {
-            cloudAiToggleDropdown.addEventListener('click', async () => {
-                const currentEnabled = localStorage.getItem('cocoya_remote_mode_enabled') === 'true';
-                const newEnabled = !currentEnabled;
-
-                if (newEnabled) {
-                    // 開啟時需要 SSH 設定
-                    if (self.ensureSshConfig) {
-                        const sshConfig = await new Promise((resolve) => {
-                            self.ensureSshConfig(resolve, () => resolve(null));
-                        });
-                        
-                        if (!sshConfig) {
-                            console.log('[UI] Remote training cancelled (no SSH config)');
-                            return;
-                        }
-                        
-                        localStorage.setItem('cocoya_remote_mode_enabled', 'true');
-                        window.CocoyaBridge.send('setCloudAiMode', { enabled: true });
-                        cloudAiStatus.textContent = '●';
-                        cloudAiStatus.className = 'enabled';
-                    }
-                } else {
-                    // 關閉遠端訓練
-                    localStorage.setItem('cocoya_remote_mode_enabled', 'false');
-                    window.CocoyaBridge.send('setCloudAiMode', { enabled: false });
-                    cloudAiStatus.textContent = '○';
-                    cloudAiStatus.className = 'disabled';
-                }
-            });
-
-            // 初始化狀態
-            const isRemoteEnabled = localStorage.getItem('cocoya_remote_mode_enabled') === 'true';
-            cloudAiStatus.textContent = isRemoteEnabled ? '●' : '○';
-            cloudAiStatus.className = isRemoteEnabled ? 'enabled' : 'disabled';
-        }
-
         // --- 資料集管理按鈕（AI 下拉選單）---
         const datasetManagerBtn = document.getElementById('btn-dataset-manager-dropdown');
         if (datasetManagerBtn) {
@@ -695,6 +651,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                     }
                 } else if (msg.command === 'trainingComplete') {
                     // 訓練完成，開啟 HTML 訓練報告
+                    if (self._remoteConnTimer) { clearInterval(self._remoteConnTimer); self._remoteConnTimer = null; }
                     if (self.showTrainingResultPanel && msg.success) {
                         self.showTrainingResultPanel({
                             projectName: msg.projectName,
@@ -706,6 +663,30 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                             reportPath: msg.reportPath
                         });
                     }
+                    if (window.CocoyaUI?.appendTerminal) {
+                        window.CocoyaUI.appendTerminal('--- Remote training complete: ' + (msg.modelDir || '') + ' ---', 'info');
+                    }
+                } else if (msg.command === 'trainingLog') {
+                    // D4 遠端訓練即時日誌（VSIX postMessage / Tauri sidecar-event 轉發）
+                    // 注意：連線階段的「連線中」回報不算進度，不停止點點計時器；
+                    // 收到連線成功/同步/錯誤等實質進度才停。
+                    if (self._remoteConnTimer && msg.message && /連線成功|同步檢查|錯誤|error/i.test(msg.message)) {
+                        clearInterval(self._remoteConnTimer); self._remoteConnTimer = null;
+                    }
+                    if (window.CocoyaUI?.appendTerminal && msg.message) {
+                        window.CocoyaUI.appendTerminal(msg.message, 'info');
+                    }
+                } else if (msg.command === 'trainingError') {
+                    // D4 遠端訓練失敗（含 SSH 認證失敗）：必須顯示於終端機，避免看似卡住
+                    if (self._remoteConnTimer) { clearInterval(self._remoteConnTimer); self._remoteConnTimer = null; }
+                    if (window.CocoyaUI?.appendTerminal) {
+                        window.CocoyaUI.appendTerminal('[Remote] 錯誤: ' + (msg.error || '未知錯誤'), 'err');
+                    }
+                    // 連線失敗時清除 session SSH 設定，下次執行重新跳出精靈讓使用者修正
+                    if (window.CocoyaUI && /SSH|連線失敗|timed out|Authentication|auth/i.test(msg.error || '')) {
+                        window.CocoyaUI.sshConfig = null;
+                    }
+                    if (window.CocoyaUI?.hideLoadingModal) window.CocoyaUI.hideLoadingModal();
                 }
             });
         }
@@ -764,48 +745,6 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             colorInput.oninput = (e) => {
                 if (self.applyHighlightColor) self.applyHighlightColor(e.target.value);
             };
-        }
-    },
-
-    /**
-     * 更新雲端 AI 切換開關狀態
-     * @param {boolean} enabled 
-     */
-    updateCloudAiToggle: function(enabled) {
-        const toggle = document.getElementById('cloud-ai-toggle');
-        if (toggle) {
-            toggle.checked = enabled;
-            localStorage.setItem('cocoya_cloud_ai_enabled', enabled);
-        }
-    },
-
-    /**
-     * 環境就緒後的雲端模式校準 (由 AppController 觸發)
-     * 注意：舊的 #cloud-ai-toggle 已移至 AI 下拉選單，此函式僅保留向後相容
-     */
-    syncCloudAiToggle: function() {
-        // 舊的 toggle 已刪除，改為檢查 AI 下拉選單中的狀態
-        const cloudAiStatus = document.getElementById('cloud-ai-status');
-        if (!cloudAiStatus || !window.CocoyaBridge) return;
-
-        const isEnabled = localStorage.getItem('cocoya_remote_mode_enabled') === 'true';
-        const hasSshConfig = !!(window.CocoyaUI && window.CocoyaUI.sshConfig);
-
-        // 方案 C：如果設定開啟但實際上沒有 SSH 帳密（例如重啟或刷新），則強制關閉
-        if (isEnabled && !hasSshConfig) {
-            localStorage.setItem('cocoya_remote_mode_enabled', 'false');
-            cloudAiStatus.textContent = '○';
-            cloudAiStatus.className = 'disabled';
-            window.CocoyaBridge.send('setCloudAiMode', { enabled: false });
-        } else if (isEnabled && hasSshConfig) {
-            // 確保後端狀態同步
-            cloudAiStatus.textContent = '●';
-            cloudAiStatus.className = 'enabled';
-            window.CocoyaBridge.send('setCloudAiMode', { enabled: true });
-        } else {
-            // 確保 UI 狀態正確
-            cloudAiStatus.textContent = '○';
-            cloudAiStatus.className = 'disabled';
         }
     },
 

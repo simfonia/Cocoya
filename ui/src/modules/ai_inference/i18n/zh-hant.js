@@ -46,9 +46,14 @@ Blockly.Msg["AI_TASK_LINE_FOLLOWER"] = "循線";
 Blockly.Msg["AI_TASK_TABLE"] = "表格";
 
 // Backend Options
-Blockly.Msg["AI_BACKEND_AUTO"] = "自動 (依【遠端訓練】開關設定)";
 Blockly.Msg["AI_BACKEND_LOCAL"] = "本地";
 Blockly.Msg["AI_BACKEND_REMOTE"] = "遠端";
+
+// 資料集同步模式（僅遠端生效）
+Blockly.Msg["AI_TRAIN_FIELD_SYNC_MODE"] = "資料同步:";
+Blockly.Msg["AI_SYNC_SMART"] = "智慧 (有變更才上傳)";
+Blockly.Msg["AI_SYNC_ALWAYS"] = "每次 (全部上傳)";
+Blockly.Msg["AI_SYNC_SKIP"] = "略過 (使用遠端資料)";
 
 // Inference Blocks
 Blockly.Msg["AI_MODEL_INIT"] = "初始化模型";

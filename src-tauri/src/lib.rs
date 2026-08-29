@@ -18,7 +18,6 @@ pub fn run() {
             current_paths: Arc::new(Mutex::new(HashMap::new())),
             file_locks: Arc::new(Mutex::new(HashMap::new())),
             dirty_states: Arc::new(Mutex::new(HashMap::new())),
-            cloud_ai_enabled: Arc::new(Mutex::new(HashMap::new())),
             sidecar_processes: Arc::new(Mutex::new(HashMap::new())),
             sidecar_responses: Arc::new(Mutex::new(HashMap::new())),
             serial_monitors: Arc::new(Mutex::new(HashMap::new())),
@@ -62,9 +61,8 @@ pub fn run() {
             commands::dataset_save_progress,
             commands::dataset_load_progress,
             commands::dataset_import_from_folder,
-            commands::set_window_focus,
-            commands::set_cloud_ai_mode,
-            commands::get_cloud_ai_mode
+            commands::open_folder,
+            commands::set_window_focus
         ])
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {

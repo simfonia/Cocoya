@@ -46,9 +46,14 @@ Blockly.Msg["AI_TASK_LINE_FOLLOWER"] = "line_follower";
 Blockly.Msg["AI_TASK_TABLE"] = "table";
 
 // Backend Options
-Blockly.Msg["AI_BACKEND_AUTO"] = "auto (follow remote mode)";
 Blockly.Msg["AI_BACKEND_LOCAL"] = "local";
 Blockly.Msg["AI_BACKEND_REMOTE"] = "remote";
+
+// Dataset sync mode (remote only)
+Blockly.Msg["AI_TRAIN_FIELD_SYNC_MODE"] = "Dataset Sync:";
+Blockly.Msg["AI_SYNC_SMART"] = "smart (upload if changed)";
+Blockly.Msg["AI_SYNC_ALWAYS"] = "always (full upload)";
+Blockly.Msg["AI_SYNC_SKIP"] = "skip (use remote data)";
 
 // Inference Blocks
 Blockly.Msg["AI_MODEL_INIT"] = "init model";

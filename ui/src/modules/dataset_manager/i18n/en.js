@@ -119,25 +119,21 @@
     "DSM_STATUS_EXPORTING": "📦 Preparing export...",
     "DSM_EXPORT_IN_PROGRESS": "Building ZIP and generating dataset.json...",
     "DSM_STATUS_CAPTURETING": "📸 Capturing...",
-    "DSM_STATUS_UPLOADING_ZIP": "📦 Preparing to upload local ZIP file...",
-    "DSM_STATUS_UPLOADING": "☁️ Uploading dataset... (%1%)",
-    "DSM_STATUS_DECOMPRESSING": "⌛ Decompressing on cloud, please wait...",
 
     // Success messages
     "DSM_SUCCESS_IMPORT_DATA": "✅ Successfully imported %1 records",
     "DSM_SUCCESS_IMPORT_IMAGES": "✅ Successfully imported %1 images, %2 labels",
     "DSM_SUCCESS_EXPORT": "✅ Dataset exported successfully",
     "DSM_SUCCESS_CAPTURE": "✅ Capture successful",
-    "DSM_SUCCESS_UPLOAD": "✅ Dataset uploaded and decompressed on remote!",
 
     // Error messages
     "DSM_ERROR_PREFIX": "❌ Error: %1",
     "DSM_ERROR_IMPORT_EMPTY": "File is empty or format is invalid",
     "DSM_ERROR_EXPORT_FAILED": "❌ Export failed: %1",
     "DSM_ERROR_CAPTURE_FAILED": "❌ Capture failed: %1",
-    "DSM_ERROR_UPLOAD_FAILED": "❌ Upload failed: %1",
     "DSM_ERROR_READ_FAILED": "❌ Read failed: %1",
     "DSM_ERROR_EXPORT_VALIDATE": "Dataset spec validation failed: %1",
+    "DSM_ERROR_UPLOAD_RESULT_IGNORED": "🛑 Received an upload result with no source; ignored.",
 
     // Preview table
     "DSM_PREVIEW_MORE_SAMPLES": "... (%1 more samples not shown in preview)",

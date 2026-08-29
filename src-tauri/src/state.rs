@@ -36,7 +36,6 @@ pub struct AppState {
     pub current_paths: Arc<Mutex<HashMap<String, PathBuf>>>,
     pub file_locks: Arc<Mutex<HashMap<PathBuf, String>>>, // Path -> Window Label
     pub dirty_states: Arc<Mutex<HashMap<String, bool>>>, // Window Label -> isDirty
-    pub cloud_ai_enabled: Arc<Mutex<HashMap<String, bool>>>, // Window Label -> 雲端 AI（遠端訓練）模式開關
     pub sidecar_processes: Arc<Mutex<HashMap<String, SidecarProcess>>>, // Window Label -> sidecar
     pub sidecar_responses: Arc<Mutex<HashMap<String, String>>>, // requestId -> raw response line
     pub serial_monitors: Arc<Mutex<HashMap<String, SerialMonitorSession>>>, // Window Label -> 啟用中的監控 session

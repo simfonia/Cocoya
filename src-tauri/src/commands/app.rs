@@ -29,23 +29,43 @@ pub fn set_dirty(window: Window, state: State<'_, AppState>, is_dirty: bool) {
     dirty_states.insert(window.label().to_string(), is_dirty);
 }
 
-/// 雲端 AI（遠端訓練）模式開關，依視窗 label 隔離（對齊 VSIX handleSetCloudAiMode 語意）。
-/// 僅保存狀態；SSH/SFTP 實際連線由 sidecar/uploadDataset 流程負責。
-#[tauri::command]
-pub fn set_cloud_ai_mode(window: Window, state: State<'_, AppState>, enabled: bool) {
-    let mut cloud_ai = state.cloud_ai_enabled.lock().unwrap();
-    cloud_ai.insert(window.label().to_string(), enabled);
-}
-
-#[tauri::command]
-pub fn get_cloud_ai_mode(window: Window, state: State<'_, AppState>) -> bool {
-    let cloud_ai = state.cloud_ai_enabled.lock().unwrap();
-    cloud_ai.get(window.label()).copied().unwrap_or(false)
-}
-
+/// 雲端 AI（遠端訓練）全域開關已移除（見 log/plan/RemoteTrainingRefactor.md D1）。
 #[tauri::command]
 pub fn close_window(window: Window) {
     let _ = window.close();
+}
+
+/// 以系統檔案總管開啟本機資料夾（訓練完成後開啟模型目錄等）
+#[tauri::command]
+pub fn open_folder(path: String) -> Result<(), String> {
+    let p = std::path::Path::new(&path);
+    if !p.exists() {
+        return Err(format!("路徑不存在: {}", path));
+    }
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&path)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        Ok(())
+    }
 }
 
 #[tauri::command]
@@ -65,7 +85,6 @@ pub async fn pick_python_path(handle: AppHandle) -> Result<String, String> {
 
 #[tauri::command]
 pub fn open_help(handle: AppHandle, help_id: String) -> Result<(), String> {
-    use std::fs;
     use tauri::Manager;
     
     // 組合檔案路徑: docs/help/{help_id}.html

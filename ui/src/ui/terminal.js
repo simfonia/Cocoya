@@ -77,7 +77,7 @@
      * @param {string} text 文字內容
      * @param {'out'|'err'|'info'|'success'} type 類型 (影響顏色)
      */
-    UI.appendTerminal = function(text, type = 'out') {
+    UI.appendTerminal = function(text, type = 'out', inline = false) {
         const content = document.getElementById('terminalContent');
         if (!content) return;
 
@@ -87,8 +87,11 @@
         }
 
         const lastChild = content.lastElementChild;
-        // 如果最後一行存在，且類型相同，且不以換行符結尾，則先插入換行再附加文字
-        if (lastChild && lastChild.className === `term-${type}` && !lastChild.textContent.endsWith('\n')) {
+        // inline 模式：同一行水平附加（不做換行），需在一般合併規則前判斷
+        if (lastChild && lastChild.className === `term-${type}` && inline && !lastChild.textContent.endsWith('\n')) {
+            lastChild.textContent += text;
+        } else if (lastChild && lastChild.className === `term-${type}` && !lastChild.textContent.endsWith('\n')) {
+            // 如果最後一行存在，且類型相同，且不以換行符結尾，則先插入換行再附加文字
             lastChild.textContent += '\n' + text;
         } else {
             const span = document.createElement('span');

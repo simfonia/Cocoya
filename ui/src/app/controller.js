@@ -30,14 +30,9 @@ class AppController {
                 this.bridge.updateCapabilities(m.capabilities);
             }
 
-            // 同步雲端 AI 狀態
-            if (m.cloudAiEnabled !== undefined && this.ui.updateCloudAiToggle) {
-                this.ui.updateCloudAiToggle(m.cloudAiEnabled);
-            }
+            // 雲端 AI 全域開關已移除（見 log/plan/RemoteTrainingRefactor.md D1）
 
             await this.app.initializeCocoya(m.data, m.mediaUri, m.lang);
-            // 當環境資訊就緒後，執行雲端模式校準
-            if (this.ui.syncCloudAiToggle) this.ui.syncCloudAiToggle();
             // 專案錨定檢查：未錨定則顯示啟動首頁（開新/開啟）
             if (this.app.showStartupHomeIfNeeded) this.app.showStartupHomeIfNeeded();
         });
@@ -53,7 +48,6 @@ class AppController {
         this.handlers.set('updateStatus', (m) => { if (this.ui.setUpdateStatus) this.ui.setUpdateStatus(m.data); });
         this.handlers.set('serialPortsData', (m) => { if (this.ui.updateSerialPorts) this.ui.updateSerialPorts(m.ports); });
         this.handlers.set('environmentStatus', (m) => { if (this.ui.updateEnvironmentStatus) this.ui.updateEnvironmentStatus(m); });
-        this.handlers.set('cloudAiModeStatus', (m) => { if (this.ui.updateCloudAiToggle) this.ui.updateCloudAiToggle(m.enabled); });
     }
 
     /**

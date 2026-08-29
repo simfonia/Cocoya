@@ -10,7 +10,8 @@
         <field name="DROPOUT">0.2</field>
         <field name="AUGMENTATION">TRUE</field>
         <field name="TASK_TYPE">classifier</field>
-        <field name="BACKEND">auto</field>
+        <field name="BACKEND">local</field>
+        <field name="SYNC_MODE">smart</field>
         <field name="BACKBONE">mobilenetv2</field>
         <field name="OPTIMIZER">adam</field>
         <field name="DNN_LAYERS">128,64</field>

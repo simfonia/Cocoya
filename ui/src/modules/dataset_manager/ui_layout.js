@@ -1621,16 +1621,10 @@ export function refreshDynamicPanels() {
     const isImage = projectType === 'image' || projectType === 'object_detection' || projectType === 'line_following';
     const isLive = sourceMode === 'live';
 
-    const isCloudAi = document.getElementById('cloud-ai-toggle')?.checked || false;
-
-    // 控制遠端環境診斷面板與上傳按鈕
+    // 控制遠端環境診斷面板顯示（雲端全域開關已移除，見 log/plan/RemoteTrainingRefactor.md D1；診斷面板暫以 isImage 顯示，S5 將收斂至 SSH 精靈）
     const diagArea = modal.querySelector('#dataset-cloud-diagnostic-area');
-    const cloudUploadBtn = modal.querySelector('#dataset-cloud-upload-btn');
     if (diagArea) {
-        diagArea.style.display = (isCloudAi && isImage) ? 'block' : 'none';
-    }
-    if (cloudUploadBtn) {
-        cloudUploadBtn.style.display = (isCloudAi && isImage && sourceMode === 'file') ? 'block' : 'none';
+        diagArea.style.display = isImage ? 'block' : 'none';
     }
 
     // 1. 更新匯入/採集區域顯示
@@ -2015,67 +2009,6 @@ function bindModalEvents(modal) {
         dirImportBtn.onclick = () => handleDirectoryImport();
     }
 
-    const cloudUploadBtn = modal.querySelector('#dataset-cloud-upload-btn');
-    const cloudZipInput = modal.querySelector('#dataset-cloud-zip-input');
-    if (cloudUploadBtn && cloudZipInput) {
-        cloudUploadBtn.onclick = () => cloudZipInput.click();
-        cloudZipInput.onchange = async (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            window.CocoyaUI.ensureSshConfig(async (sshConfig) => {
-                showStatusMessage(t('STATUS_UPLOADING_ZIP', '📦 正在準備上傳本地 ZIP 檔案...'));
-
-                try {
-                    const chunkSize = 65536; // 64KB 分塊
-                    const totalChunks = Math.ceil(file.size / chunkSize);
-                    const projectName = getFormValue('projectName') || 'dataset';
-                    const fileId = Math.random().toString(36).substring(7);
-
-                    for (let i = 0; i < totalChunks; i++) {
-                        const start = i * chunkSize;
-                        const end = Math.min(start + chunkSize, file.size);
-                        const blob = file.slice(start, end);
-                        
-                        const chunkBase64 = await new Promise((resolve, reject) => {
-                            const reader = new FileReader();
-                            reader.onload = () => {
-                                const bytes = new Uint8Array(reader.result);
-                                let binary = '';
-                                for (let j = 0; j < bytes.length; j++) {
-                                    binary += String.fromCharCode(bytes[j]);
-                                }
-                                resolve(btoa(binary));
-                            };
-                            reader.onerror = reject;
-                            reader.readAsArrayBuffer(blob);
-                        });
-
-                        const progress = Math.round(((i + 1) / totalChunks) * 100);
-                        showStatusMessage(t('STATUS_UPLOADING', '☁️ 正在上傳資料集... (%1%)').replace('%1', progress));
-
-                        // 發送分塊訊息，合併 SSH 帳密資訊
-                        window.CocoyaBridge.send('datasetUploadArchive', Object.assign({
-                            fileId: fileId,
-                            chunkIndex: i,
-                            totalChunks: totalChunks,
-                            zipDataChunk: chunkBase64,
-                            projectName: projectName,
-                            isLast: (i === totalChunks - 1)
-                        }, sshConfig));
-
-                        // 稍微延遲避免阻塞 Webview UI
-                        if (i % 5 === 0) await new Promise(resolve => setTimeout(resolve, 50));
-                    }
-
-                    showStatusMessage(t('STATUS_DECOMPRESSING', '⌛ 正在雲端進行解壓縮，請稍候...'));
-                } catch (err) {
-                    showStatusMessage(t('ERROR_READ_FAILED', '❌ 讀取失敗: %1').replace('%1', err.message));
-                }
-            });
-        };
-    }
-
     const cloudDiagnoseBtn = modal.querySelector('#dataset-cloud-diagnose-btn');
     if (cloudDiagnoseBtn) {
         cloudDiagnoseBtn.onclick = () => {
@@ -2112,12 +2045,8 @@ function bindModalEvents(modal) {
                 }
             }
         } else if (msg.command === 'datasetUploadResult') {
-            if (msg.success) {
-                showStatusMessage(t('SUCCESS_UPLOAD', '✅ 資料集已成功上傳並在遠端解壓縮！'));
-                if (cloudZipInput) cloudZipInput.value = '';
-            } else {
-                showStatusMessage(t('ERROR_UPLOAD_FAILED', '❌ 上傳失敗: %1').replace('%1', msg.error));
-            }
+            // 遠端重構移除 DM 雲端 ZIP 上傳按鈕後，此結果不再由前端觸發；保留空分支避免未知 command 誤判（見 log/plan/RemoteTrainingRefactor.md D2）
+            showStatusMessage(t('ERROR_UPLOAD_RESULT_IGNORED', '🛑 收到無來源的上傳結果，已忽略。'));
         }
     };
     window.CocoyaBridge.onMessage(handleBridgeMessage);
@@ -2313,8 +2242,6 @@ function createModal() {
 
                     <div id="dataset-import-area-image" class="dataset-import-area" style="display: none;">
                         <button type="button" id="dataset-dir-import-btn" class="dataset-secondary-btn" style="width: 100%">${t('SELECT_IMAGE_FOLDER', '選擇影像資料夾')}</button>
-                        <button type="button" id="dataset-cloud-upload-btn" class="dataset-secondary-btn" style="width: 100%; margin-top: 8px; background: #9c27b0; color: white; border: none; display: none;">${t('UPLOAD_ZIP', '☁️ 上傳本地資料集 (ZIP)')}</button>
-                        <input type="file" id="dataset-cloud-zip-input" accept=".zip" style="display: none;">
                     </div>
                 </section>
 

@@ -34,7 +34,6 @@ export class CocoyaManager {
     public context: vscode.ExtensionContext;
     public lastDirtyState: boolean = false;
     public sidecar: DatasetSidecarManager;
-    public cloudAiEnabled: boolean = false;
     public remoteWorkspaceRoot: string | undefined;
     public uploadBuffers: Map<string, Buffer[]> = new Map();
     public currentChildProcess: any = null; // Pseudoterminal 模式的 child process（供 stopCode 終止）
@@ -72,7 +71,6 @@ export class CocoyaManager {
             }
         };
 
-        this.cloudAiEnabled = this.context.globalState.get<boolean>('cloudAiEnabled', false);
         this.setupMessageListener();
         this.scheduleUpdateCheck();
 
@@ -242,9 +240,6 @@ export class CocoyaManager {
                 case 'rejectRecovery':
                     this.fileOps.handleRejectRecovery();
                     break;
-                case 'setCloudAiMode':
-                    await this.envOps.handleSetCloudAiMode(message.enabled);
-                    break;
                 case 'datasetListCameras':
                     this.datasetOps.handleDatasetListCameras(message);
                     break;
@@ -293,6 +288,9 @@ export class CocoyaManager {
                     break;
                 case 'checkRemoteEnvironment':
                     await this.envOps.handleCheckRemoteEnvironment(message);
+                    break;
+                case 'startRemoteTraining':
+                    await this.trainingOps.handleStartRemoteTraining(message);
                     break;
                 case 'pickFolder':
                     await this.datasetOps.handlePickFolder(message);
@@ -373,8 +371,7 @@ export class CocoyaManager {
             data: manifest,
             mediaUri,
             lang: lang,
-            capabilities: capabilities,
-            cloudAiEnabled: this.cloudAiEnabled
+            capabilities: capabilities
         });
 
         const tempBPath = path.join(this.context.extensionPath, 'temp_scripts', 'untitled_backup.xml');
