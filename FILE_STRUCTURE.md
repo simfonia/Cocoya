@@ -126,11 +126,14 @@ C:\Workspace\cocoya\
 │   │   │       │   ├── pathPolicy.test.mjs # path contract Node 測試（node --test 執行，不打包）
 │   │   │       │   ├── stats.js # 影像、bbox、line 統計純計算
 │   │   │       │   └── state.js # DatasetStore 與初始狀態（逐步接入中）
+│   │   │       ├── io/
+│   │   │       │   ├── bridge.js # [Stage 2] Dataset Manager 唯一 Bridge Port（request correlation、timeout、cancel、subscribe/unsubscribe、dispose；雙平台單一通道）
+│   │   │       │   └── bridge.test.mjs # Bridge Port fake transport Node 測試（node --test 執行）
 │   │   │       ├── dataset_manager.css # Dataset Manager Modal、縮圖牆與標註畫布樣式 (含 3 欄標註模式、.dataset-name-warning 名稱衝突警示)
 │   │   │       ├── i18n.js # [NEW] 共享 i18n t() 函式庫 (支援佔位符替換)
 │   │   │       ├── index.js # 靜態 ESM 入口與 window.CocoyaDataset API 掛載
 │   │   │       ├── spec.js  # DatasetSpec 類別、Schema 偵測、強健型 CSV 解析與驗證邏輯 (i18n 化)
-│   │   │       ├── sampler.js # [NEW] 攝影機採集核心、連拍邏輯與 Python 擷取備援方案
+│   │   │       ├── sampler.js # [Stage 2 重構] 攝影機採集核心、連拍邏輯（通訊改經 io/bridge.js：request correlation + timeout + dispose）
 │   │   │       ├── ui_layout.js # Modal UI、動態面板、標註視圖與標籤管理 (3 欄標註模式、鍵盤快捷鍵、自動儲存、儲存/載入進度、名稱對齊/衝突警示 setNameWarning、統一標籤管理器 createLabelMapManager、統計同步 updateStatsFromImages、nextLabelId)
 │   │   │       ├── ui_components.js # 動態視圖組件 (影像網格、字典序標籤統計、標註縮圖欄、getLabelColor FNV-1a+黃金角色相，含 XSS 防護)
 │   │   │       ├── ui_canvas.js # 標註互動畫布 (物件偵測拉框與自駕循線畫線，支援座標限幅防護、bbox 高亮與雙模互動)
