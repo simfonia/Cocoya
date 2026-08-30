@@ -124,3 +124,23 @@
 
 *本清單於 2026-08-24 精簡重整（原始完整版備份於 backup/todo.md_20260824_231017.bak）*
 - **Stage 4 Gate 收斂盤點（2026-08-30）**：§7.4 Gate 逐項盤點完成——項 1/3/5 自動化 PASS（80/80、index.js/sampler.js/ui_canvas.js 零修改）；項 2/4 部分達成（UI4-1~UI4-5 實機集中測待執行、Object URL revoke 無自動化測試）；項 6 簽核 PENDING。§7.2 步驟 6 之 sampler/canvas lifecycle 判定：sampler.js 已於 Stage 2 controller 化（dispose/correlation/revoke）、UICanvas init 已注入 annotation controller，邊界清楚、不需第八切片；選配可補 sampler Object URL revoke 單元測試。剩餘：手動測試集中執行 → Gate 簽核。
+
+## AI Agent Handoff（Stage 5 切片 1：CSS 色彩盤點）
+
+- 日期：2026-08-30
+- Agent：Cline
+- 階段：Stage 5 切片 1（§8.2 步驟 1：列出現有色彩/尺寸/focus/error/disabled selector）
+- 狀態：READY_FOR_REVIEW（純盤點，零程式碼/視覺變更）
+- HEAD：`7705536`（Stage 4 已 commit；本切片僅新增 log/plan/DatasetManagerStyleTokens.md + 日誌）
+- 產出：`log/plan/DatasetManagerStyleTokens.md`——207 處色彩/99 唯一值/var()=0/dark 覆寫 128 行的總量盤點；品牌粉/中性灰/暗表面/成功綠/錯誤紅/警示橘/資訊藍/遮罩八組語意分組；focus/error/warning 狀態 selector 位置（disabled 無 selector，需補 token）；`--dsm-*` token 對照表提案；VSIX 靜態載入與 theme_manager cssVars 層級相容性風險（關鍵：light 預設須掛 :root/body 而非 dialog，否則主題換膚失效）
+- 修改檔案：log/plan/DatasetManagerStyleTokens.md（新）、log/work/2026-08-30.md、log/todo.md、parity matrix
+- 測試命令與結果：N/A（無程式碼變更）；盤點數據以 Select-String 統計（207 處、99 唯一、var()=0、dark selector 128 行）
+- 下一個 agent 第一動作：Stage 5 切片 2（§8.2 步驟 2）——依盤點文件 §4 對照表，以 `:root`/body 定義 `--dsm-*` light 預設值，逐批把高頻色彩（#FE2F89 19 處、灰階文字/邊框）改為 var() 參照；每批後 node --test + vite build + light/dark/candy 三主題目視對照
+- 禁止重做或修改的事項：§8.2 步驟 2 鐵律——token 化不改視覺值；不得動 ESLint config/Vite classic warnings；不得將 BLOCKED 標 PASS
+- 需要產品決策的問題：① alpha 變體收斂幅度（brand 7 種 → 1-2 種？）② disabled 態目前無樣式，是否補定義 ③ 尺寸 token（間距/圓角）是否納入本 Stage 或僅做色彩
+- 交接者：Cline
+
+## 下次啟動方向 (Next Steps)
+
+- Stage 5 切片 2：token 定義 + 高頻色彩 var() 化（依 DatasetManagerStyleTokens.md §4/§6）；決策點見 Handoff。
+- **Stage 5 切片 2（2026-08-30）**：token 定義（:root：--dsm-brand/soft/strong + disabled 三 token）+ 品牌粉 19 處 var() 化 + alpha 7 處收斂（soft .15/strong .3，使用者裁示）+ dialog disabled 規則。事故：regex 誤替換 :root 致循環參照已修正。自動化全綠（80/80、build PASS）。三主題目視待實機。下一切片：灰階 token 化 + dark 區塊收斂（切片 3）。

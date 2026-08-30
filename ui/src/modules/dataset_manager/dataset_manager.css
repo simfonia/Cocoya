@@ -1,3 +1,21 @@
+/*
+ * Dataset Manager 樣式 Token（Stage 5 切片 2，§8.2 步驟 2）
+ * - light 預設值定義於 :root（不得掛 .dataset-manager-dialog——自訂屬性以最近定義者為準，
+ *   掛 dialog 會覆蓋 body 層級的 theme_manager cssVars，導致 candy/dark 換膚失效）
+ * - 主題覆寫：theme_manager cssVars（body inline style）> :root 預設
+ * - 鐵律：token 化不改視覺值；本切片僅品牌粉 + disabled；灰階待切片 3 與 dark 區塊收斂
+ */
+:root {
+    /* 品牌 */
+    --dsm-brand: #FE2F89;
+    --dsm-brand-soft: rgba(254, 47, 137, 0.15);   /* focus ring / 淡陰影（原 0.12/0.15/0.25 收斂）*/
+    --dsm-brand-strong: rgba(254, 47, 137, 0.3);  /* 強調陰影 / warning pulse（原 0.25/0.28/0.3/0.4 收斂）*/
+    /* disabled（決策 2026-08-30：補定義）*/
+    --dsm-disabled-bg: #f0f0f0;
+    --dsm-disabled-text: #aaaaaa;
+    --dsm-disabled-border: #e0e0e0;
+}
+
 .dataset-manager-overlay {
     position: fixed;
     inset: 0;
@@ -9,6 +27,18 @@
     padding: 24px;
     box-sizing: border-box;
 }
+
+/* disabled 態（token 首次定義，先前僅依賴原生樣式）*/
+.dataset-manager-dialog button:disabled,
+.dataset-manager-dialog input:disabled,
+.dataset-manager-dialog select:disabled,
+.dataset-manager-dialog textarea:disabled {
+    background: var(--dsm-disabled-bg);
+    color: var(--dsm-disabled-text);
+    border-color: var(--dsm-disabled-border);
+    cursor: not-allowed;
+}
+
 
 .dataset-manager-dialog {
     width: min(1040px, 100%);
@@ -43,7 +73,7 @@
 .dataset-manager-header h2 {
     margin: 0;
     font-size: 17px;
-    color: #FE2F89;
+    color: var(--dsm-brand);
     letter-spacing: 0;
 }
 
@@ -144,8 +174,8 @@ body.vscode-high-contrast .dataset-panel-divider {
 .dataset-source-panel textarea:focus,
 .dataset-column-row input:focus,
 .dataset-column-row select:focus {
-    border-color: #FE2F89;
-    box-shadow: 0 0 0 2px rgba(254, 47, 137, 0.12);
+    border-color: var(--dsm-brand);
+    box-shadow: 0 0 0 2px var(--dsm-brand-soft);
 }
 
 body.vscode-dark .dataset-source-panel input:focus,
@@ -158,8 +188,8 @@ body.vscode-high-contrast .dataset-source-panel select:focus,
 body.vscode-high-contrast .dataset-source-panel textarea:focus,
 body.vscode-high-contrast .dataset-column-row input:focus,
 body.vscode-high-contrast .dataset-column-row select:focus {
-    border-color: #FE2F89;
-    box-shadow: 0 0 0 2px rgba(254, 47, 137, 0.25);
+    border-color: var(--dsm-brand);
+    box-shadow: 0 0 0 2px var(--dsm-brand-strong);
 }
 
 .dataset-column-head,
@@ -196,13 +226,13 @@ body.vscode-high-contrast .dataset-column-row select:focus {
 
 .dataset-icon-btn:hover {
     background: #fce4ec;
-    color: #FE2F89;
+    color: var(--dsm-brand);
 }
 
 body.vscode-dark .dataset-icon-btn:hover,
 body.vscode-high-contrast .dataset-icon-btn:hover {
     background: #4a2a35;
-    color: #FE2F89;
+    color: var(--dsm-brand);
 }
 
 .dataset-small-btn,
@@ -219,8 +249,8 @@ body.vscode-high-contrast .dataset-icon-btn:hover {
 
 .dataset-small-btn:hover,
 .dataset-secondary-btn:hover {
-    border-color: #FE2F89;
-    color: #FE2F89;
+    border-color: var(--dsm-brand);
+    color: var(--dsm-brand);
     background: #fff7fb;
 }
 
@@ -228,8 +258,8 @@ body.vscode-dark .dataset-small-btn:hover,
 body.vscode-dark .dataset-secondary-btn:hover,
 body.vscode-high-contrast .dataset-small-btn:hover,
 body.vscode-high-contrast .dataset-secondary-btn:hover {
-    border-color: #FE2F89;
-    color: #FE2F89;
+    border-color: var(--dsm-brand);
+    color: var(--dsm-brand);
     background: #4a2a35;
 }
 
@@ -403,14 +433,14 @@ body.vscode-high-contrast .dataset-image-item {
 }
 
 .dataset-image-item:hover {
-    border-color: #FE2F89;
-    box-shadow: 0 4px 12px rgba(254, 47, 137, 0.15);
+    border-color: var(--dsm-brand);
+    box-shadow: 0 4px 12px var(--dsm-brand-soft);
 }
 
 body.vscode-dark .dataset-image-item:hover,
 body.vscode-high-contrast .dataset-image-item:hover {
-    border-color: #FE2F89;
-    box-shadow: 0 4px 12px rgba(254, 47, 137, 0.3);
+    border-color: var(--dsm-brand);
+    box-shadow: 0 4px 12px var(--dsm-brand-strong);
 }
 
 /* 列表縮圖牆的「已標註」綠勾（與標註縮圖欄一致；放左上角避免與右上刪除鈕重疊） */
@@ -545,15 +575,15 @@ body.vscode-high-contrast .dataset-manager-message {
 
 /* 資料集名稱衝突/需改名時的醒目提示（直到使用者編輯為止） */
 .dataset-name-warning {
-    border-color: #FE2F89 !important;
+    border-color: var(--dsm-brand) !important;
     background: #fff0f5 !important;
-    box-shadow: 0 0 0 2px rgba(254, 47, 137, 0.28) !important;
+    box-shadow: 0 0 0 2px var(--dsm-brand-strong) !important;
     animation: dataset-name-warning-pulse 1.4s ease-in-out infinite;
 }
 
 @keyframes dataset-name-warning-pulse {
-    0%, 100% { box-shadow: 0 0 0 2px rgba(254, 47, 137, 0.28); }
-    50% { box-shadow: 0 0 0 4px rgba(254, 47, 137, 0.4); }
+    0%, 100% { box-shadow: 0 0 0 2px var(--dsm-brand-strong); }
+    50% { box-shadow: 0 0 0 4px var(--dsm-brand-strong); }
 }
 
 body.vscode-dark .dataset-name-warning,
@@ -568,7 +598,7 @@ body.vscode-high-contrast .dataset-name-warning {
     flex: 1 1 auto;
     text-align: right;
     font-size: 11px;
-    color: #FE2F89;
+    color: var(--dsm-brand);
     min-height: 15px;
     margin-right: 8px;
 }
@@ -643,7 +673,7 @@ body.vscode-high-contrast .dataset-image-thumb {
 }
 
 .dataset-image-label {
-    background: #FE2F89;
+    background: var(--dsm-brand);
     color: white;
     padding: 1px 4px;
     border-radius: 2px;
@@ -754,12 +784,12 @@ body.vscode-high-contrast .dataset-annotation-item {
 }
 
 .dataset-annotation-item button:hover {
-    color: #FE2F89;
+    color: var(--dsm-brand);
 }
 
 body.vscode-dark .dataset-annotation-item button:hover,
 body.vscode-high-contrast .dataset-annotation-item button:hover {
-    color: #FE2F89;
+    color: var(--dsm-brand);
 }
 
 /* Fix Alignment and Height */
@@ -976,7 +1006,7 @@ body.vscode-high-contrast .dataset-sampler-controls {
 }
 
 .dataset-primary-btn {
-    background: #FE2F89;
+    background: var(--dsm-brand);
     color: white;
     border: none;
     border-radius: 4px;
@@ -1118,7 +1148,7 @@ body.vscode-high-contrast .dataset-annotation-thumbnails {
 }
 
 .dataset-annotation-thumb-item:hover {
-    border-color: #FE2F89;
+    border-color: var(--dsm-brand);
 }
 
 .dataset-annotation-thumb {
@@ -1206,7 +1236,7 @@ body.vscode-high-contrast .dataset-annotation-toolbar {
 }
 
 .dataset-annotation-progress {
-    color: #FE2F89;
+    color: var(--dsm-brand);
     font-weight: bold;
 }
 
