@@ -129,6 +129,13 @@ C:\Workspace\cocoya\
 │   │   │       ├── io/
 │   │   │       │   ├── bridge.js # [Stage 2] Dataset Manager 唯一 Bridge Port（request correlation、timeout、cancel、subscribe/unsubscribe、dispose；雙平台單一通道）
 │   │   │       │   └── bridge.test.mjs # Bridge Port fake transport Node 測試（node --test 執行）
+│   │   │       ├── application/
+│   │   │       │   ├── progressUseCases.js # [Stage 3] 進度存讀與自動落盤 use-case（load/save/autosave/cancelAutoSave；注入 UI 依賴，通訊經 io/bridge.js）
+│   │   │       │   ├── importUseCases.js # [Stage 3] 資料匯入 use-case（parseDataFileRows 純轉換 + importDataFile/importDirectory 編排；canonical 匯入閘語意不變）
+│   │   │       │   ├── importUseCases.test.mjs # parseDataFileRows Node 測試（node --test 執行）
+│   │   │       │   ├── exportUseCases.js # [Stage 3] 匯出 use-case（未標註/未分類確認 + Spec 驗證 + datasetExport correlation 編排）
+│   │   │       │   ├── annotationMutations.js # [Stage 3] 標註/分類 mutation 純函式（計數、class_id 過濾、label→unlabeled、刪除索引解析）
+│   │   │       │   └── annotationMutations.test.mjs # annotationMutations Node 測試（node --test 執行）
 │   │   │       ├── dataset_manager.css # Dataset Manager Modal、縮圖牆與標註畫布樣式 (含 3 欄標註模式、.dataset-name-warning 名稱衝突警示)
 │   │   │       ├── i18n.js # [NEW] 共享 i18n t() 函式庫 (支援佔位符替換)
 │   │   │       ├── index.js # 靜態 ESM 入口與 window.CocoyaDataset API 掛載

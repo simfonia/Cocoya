@@ -9,6 +9,14 @@ import { createInitialDatasetState, DatasetStore } from './core/state.js';
 import { sanitizeProjectName } from './core/projectNaming.js';
 import { validateDeletableImagePath } from './core/pathPolicy.js';
 import { datasetBridge } from './io/bridge.js';
+import { createProgressUseCases } from './application/progressUseCases.js';
+import { createImportUseCases } from './application/importUseCases.js';
+import { createExportUseCases } from './application/exportUseCases.js';
+import {
+    countAnnotated, countUnclassifiedBoxes, countBoxesWithClassId, countImagesWithLabel,
+    removeAnnotationsByClassId, reassignLabelsToUnlabeled,
+    resolveDeleteIndex, setAnnotationClassId, removeAnnotationAt
+} from './application/annotationMutations.js';
 
 const MODAL_ID = 'dataset-manager-modal';
 
@@ -244,22 +252,23 @@ function applyLoadedProgress(spec) {
  * 有進度 → 套回；無進度或失敗 → 維持目前掃描結果，不清空既有成功訊息。
  */
 function loadProgressFromFolder(folderPath) {
-    // Stage 2：改經 io/bridge.js request correlation（timeout 保護，listener 自動清理）
-    const { promise } = datasetBridge.request({
-        command: 'datasetLoadProgress',
-        payload: { folderPath },
-        resultCommand: 'datasetLoadProgressResult',
-        timeoutMs: 15000
-    });
-    promise.then((msg) => {
-        if (!msg.success) {
-            console.error('[DatasetManager] Load progress failed:', msg.error);
-            return;
-        }
-        if (msg.hasProgress && msg.spec) {
-            applyLoadedProgress(msg.spec);
-        }
-    }).catch((e) => console.error('[DatasetManager] Load progress failed:', e.message));
+    // Stage 3：use-case 委派（application/progressUseCases.js）
+    getProgressUC().loadProgressFromFolder(folderPath);
+}
+
+/** Stage 3：進度存讀 use-case（延遲初始化，注入 UI 依賴） */
+let progressUC = null;
+function getProgressUC() {
+    if (!progressUC) {
+        progressUC = createProgressUseCases({
+            state,
+            syncSpecFromUI,
+            getFormValue,
+            hasData,
+            applyLoadedProgress
+        });
+    }
+    return progressUC;
 }
 function renderColumnRow(column = {}) {
     const normalized = DatasetSpec.normalizeColumn(column);
@@ -440,152 +449,32 @@ async function reconcileProjectName(derivedName, sourcePath) {
     return true;
 }
 
+// Stage 3 切片 2：匯入流程移至 application/importUseCases.js，此處保留同名委派 wrapper
 async function handleFileImport(file) {
-    if (!file) return;
-    showStatusMessage(t('STATUS_LOADING', '載入中: %1...').replace('%1', file.name));
-
-    try {
-        const text = await file.text();
-        let rows = [];
-        if (file.name.endsWith('.csv')) {
-            rows = DatasetSpec.parseCSV(text);
-        } else if (file.name.endsWith('.json')) {
-            rows = JSON.parse(text);
-            if (!Array.isArray(rows)) {
-                rows = rows.data || rows.samples || [rows];
-                if (!Array.isArray(rows)) rows = [rows];
-            }
-        }
-
-        if (!rows || rows.length === 0) {
-            throw new Error(t('ERROR_IMPORT_EMPTY', '檔案內容為空或格式不符'));
-        }
-
-        const rawFileName = file.name.split('.')[0];
-        const safeFileName = sanitizeName(rawFileName) || rawFileName;
-
-        // 名稱/來源對齊決策（方案 A）：首次自動帶入；來源變更時顯式確認；同名來源碰撞防寫
-        const proceed = await reconcileProjectName(safeFileName, null);
-        if (!proceed) {
-            showStatusMessage(t('IMPORT_CANCELLED', '已取消匯入'));
-            return;
-        }
-
-        // 更新 State
-        state.tableRows = rows;
-        state.images = []; 
-        
-        const detectedSchema = DatasetSpec.detectSchema(rows);
-        state.spec.updateSchema(detectedSchema);
-        
-        refreshDynamicPanels(); 
-        showStatusMessage(t('SUCCESS_IMPORT_DATA', '✅ 成功匯入 %1 筆資料').replace('%1', rows.length));
-
-        const fileInput = document.getElementById('dataset-file-input');
-        if (fileInput) fileInput.value = '';
-
-    } catch (e) {
-        console.error('[DatasetManager] Import Error:', e);
-        showStatusMessage(t('ERROR_PREFIX', '❌ 錯誤: %1').replace('%1', e.message));
-    }
+    getImportUC().importDataFile(file);
 }
 
 async function handleDirectoryImport() {
-    showStatusMessage(t('STATUS_IMPORTING_FOLDER', '正在選取資料夾...'));
+    getImportUC().importDirectory();
+}
 
-    try {
-        const result = await datasetBridge.pickFolder();
-        if (!result) {
-            showStatusMessage('');
-            return;
-        }
-
-        const { path: folderPath, images, labelCounts, labelMap } = result;
-
-        // 取得最上層資料夾名稱
-        const rawRootDir = folderPath.split(/[\\/]/).pop() || 'dataset';
-        const safeRootDir = sanitizeName(rawRootDir) || rawRootDir;
-        // 名稱/來源對齊決策（方案 A）：首次自動帶入；來源變更時顯式確認；同名來源碰撞防寫
-        const proceed = await reconcileProjectName(safeRootDir, folderPath);
-        if (!proceed) {
-            // 使用者取消（basename 與已載入來源相同、可能覆寫既有進度）：中止匯入
-            showStatusMessage(t('IMPORT_CANCELLED', '已取消匯入'));
-            return;
-        }
-
-        // 決策（2026-08-26）：資料集必須位於專案根 dataset/<資料集名稱>。
-        // 用詞鐵律：「專案」= xml 積木專案；dataset/ 下子資料夾名稱 = 資料集名稱（表單 projectName 欄位值）。
-        // 錨定與 canonical 計算由後端裁決（前端 capabilities 快照可能過期）。
-        let importData = await datasetBridge.prepareDatasetImport(folderPath, getFormValue('projectName') || safeRootDir, false);
-        if (importData.error) {
-            throw new Error(importData.error);
-        }
-        if (importData.action === 'confirm_required') {
-            const copyOk = await datasetBridge.confirm(t('DSM_IMPORT_COPY_CONFIRM',
-                '資料集必須位於專案根的 dataset/<資料集名稱> 資料夾內。\n\n要將所選資料夾複製到：\n%1\n嗎？（已存在的檔案不會被覆寫）'
-            ).replace('%1', importData.canonicalDir));
-            if (!copyOk) {
-                showStatusMessage(t('DSM_IMPORT_REJECTED_EXTERNAL', '❌ 已取消：資料集必須位於專案根的 dataset/<資料集名稱> 資料夾內'));
-                return;
-            }
-            showStatusMessage(t('DSM_IMPORT_COPYING', '正在複製資料集至專案根...'));
-            importData = await datasetBridge.prepareDatasetImport(folderPath, getFormValue('projectName') || safeRootDir, true);
-            if (importData.error) {
-                throw new Error(importData.error);
-            }
-        }
-        if (!importData.path) {
-            throw new Error('Import target path missing');
-        }
-        const targetFolderPath = importData.path;
-        const importImages = importData.images || [];
-        const importLabelCounts = importData.labelCounts || {};
-        const importLabelMap = importData.labelMap || {};
-        if (importData.action === 'copied') {
-            showStatusMessage(t('DSM_IMPORT_COPIED', '✅ 已複製 %1 個檔案至專案根').replace('%1', String(importData.copiedFiles ?? 0)));
-        }
-
-        // 初始化每張圖的 annotations 為獨立陣列（後端回傳的 images 沒有 annotations 欄位）
-        state.images = importImages.map(img => ({ ...img, annotations: img.annotations || [] }));
-        state.tableRows = []; 
-        state.sourceFolderPath = targetFolderPath; // 儲存來源路徑以便匯出時同步（決策後一律為專案根 canonical 目錄）
-        
-        // 更新 Spec 資訊
-        state.spec.updateSchema({
-            columns: [
-                { name: 'image_path', type: 'string', role: 'feature' },
-                { name: 'label', type: 'string', role: 'label' }
-            ],
-            features: ['image_path'],
-            label: 'label',
-            label_map: importLabelMap
+/** Stage 3：匯入 use-case（延遲初始化，注入 UI 依賴） */
+let importUC = null;
+function getImportUC() {
+    if (!importUC) {
+        importUC = createImportUseCases({
+            state,
+            getFormValue,
+            sanitizeName,
+            reconcileProjectName,
+            showStatusMessage,
+            refreshDynamicPanels,
+            refreshPreview,
+            loadProgressFromFolder,
+            t
         });
-        
-        // 更新統計
-        const currentJson = state.spec.toJSON();
-        state.spec = new DatasetSpec({
-            project: currentJson.project,
-            data_source: currentJson.data_source,
-            schema: currentJson.schema,
-            stats: {
-                sample_count: importImages.length,
-                label_counts: importLabelCounts,
-                last_updated: currentJson.stats.last_updated
-            }
-        });
-
-        showStatusMessage(t('SUCCESS_IMPORT_IMAGES', '✅ 成功匯入 %1 張影像，共 %2 個標籤').replace('%1', importImages.length).replace('%2', Object.keys(importLabelCounts).length));
-        
-        refreshDynamicPanels();
-        refreshPreview();
-
-        // 等級一存讀（載入）：檢查該資料夾是否含 dataset.json，若有則依 image_path 套回標註
-        loadProgressFromFolder(targetFolderPath);
-
-    } catch (e) {
-        console.error('[DatasetManager] Dir Import Error:', e);
-        showStatusMessage(t('ERROR_PREFIX', '❌ 錯誤: %1').replace('%1', e.message));
     }
+    return importUC;
 }
 
 /**
@@ -593,8 +482,6 @@ async function handleDirectoryImport() {
  * 在標註/分類/新增/刪除/類別增刪改名等任何資料異動後，將 spec（含 samples[].annotations）
  * 自動寫入「專案根/dataset/<專案>/dataset.json」。時間防抖為主、切圖/退出/關閉立即 flush。
  */
-let autoSaveTimer = null;
-
 /**
  * 是否有需要持久化的資料（僅在資料存在時才寫入，避免空 spec 落盤）
  */
@@ -602,73 +489,15 @@ function hasData() {
     return (state.images && state.images.length > 0) || (state.tableRows && state.tableRows.length > 0);
 }
 
-/**
- * 執行一次落盤：同步最新資料 → toJSON → Bridge.saveDatasetProgress。
- * 低噪音：成功不打擾；僅失敗時 console 記錄（未錨定/失敗不造成錯誤訊息騷擾學生）。
- */
+// Stage 3：writeProgressToDisk / scheduleAutoSave 移至 application/progressUseCases.js，此處僅保留同名委派 wrapper（呼叫點零改動）
 function writeProgressToDisk() {
-    try {
-        syncSpecFromUI(true);
-        const spec = state.spec.toJSON();
-        const projectName = getFormValue('projectName') || (spec.project && spec.project.name) || 'dataset';
-
-        // Stage 2：改經 io/bridge.js request correlation（timeout 保護，listener 自動清理）
-        const { promise } = datasetBridge.request({
-            command: 'datasetSaveProgress',
-            payload: { projectName, spec },
-            resultCommand: 'datasetSaveProgressResult',
-            timeoutMs: 15000
-        });
-        console.debug('[DatasetManager] Auto-save sending:', projectName,
-            '| samples:', spec.data_source.samples.length,
-            '| type:', spec.project.type);
-        promise.then((msg) => {
-            if (!msg.success) {
-                console.error('[DatasetManager] Auto-save progress failed:',
-                    msg.errorCode ? `[${msg.errorCode}] ` : '', msg.error);
-            } else {
-                console.info('[DatasetManager] Auto-save OK ->', msg.path);
-            }
-        }).catch((e) => console.error('[DatasetManager] Auto-save progress Error:', e.message));
-    } catch (e) {
-        console.error('[DatasetManager] Auto-save progress Error:', e);
-    }
+    getProgressUC().writeProgressToDisk();
 }
 
-/**
- * 排程自動落盤（時間防抖，預設 800ms）。
- * 說明：標註/分類/新增等常發生在「停在同張圖」上（與切換影像無關），
- * 因此為主觸發點採用時間防抖；切圖/退出/關閉可用 immediate=true 立即 flush 作為保險。
- * 錨定與否由後端裁決（未錨定回 PROJECT_ROOT_REQUIRED）；無資料 → 靜默略過。
- * @param {boolean} [immediate] true = 立即寫入
- */
 function scheduleAutoSave(immediate = false) {
-    const bridgeCaps = datasetBridge.getCapabilities();
-
-    // 錨定裁決交還後端（SSOT）：capabilities.isAnchored 是載入時快照，
-    // VSIX 為 manifest 一次性注入、Tauri 為 _anchor 快照，開檔/存檔後都可能過期，
-    // 曾導致物件偵測標註自動落盤被靜默擋下（2026-08-26 使用者實測 root cause）。
-    // 後端未錨定時會回 PROJECT_ROOT_REQUIRED 並由 handler 記錄，此處不再硬擋。
-    if (bridgeCaps && !bridgeCaps.isAnchored) {
-        console.debug('[DatasetManager] Auto-save: capabilities snapshot says not anchored; delegating to backend anchor check');
-    }
-    if (!hasData()) {
-        console.debug('[DatasetManager] Auto-save skipped: no data');
-        return;
-    }
-
-    if (immediate) {
-        if (autoSaveTimer) { clearTimeout(autoSaveTimer); autoSaveTimer = null; }
-        writeProgressToDisk();
-        return;
-    }
-
-    if (autoSaveTimer) clearTimeout(autoSaveTimer);
-    autoSaveTimer = setTimeout(() => {
-        autoSaveTimer = null;
-        writeProgressToDisk();
-    }, 800);
+    getProgressUC().scheduleAutoSave(immediate);
 }
+
 
 let statusMessageTimer = null;
 
@@ -726,80 +555,25 @@ function setAnnotationHeaderActions(hidden) {
     });
 }
 
+// Stage 3 切片 3：匯出流程移至 application/exportUseCases.js，此處保留同名委派 wrapper
 async function handleExportDataset() {
-    console.log('[DatasetManager] handleExportDataset triggered');
-    showStatusMessage(t('STATUS_EXPORTING', '📦 正在準備匯出...'));
-    showExportProgress(true);
+    getExportUC().exportDataset();
+}
 
-    try {
-        // 0. 檢查是否有未標註圖片（僅物件偵測/循線需要 bbox/line）
-        const projectType = getFormValue('projectType');
-        const isImage = projectType === 'image' || projectType === 'object_detection' || projectType === 'line_following';
-        const needsAnnotationCheck = projectType === 'object_detection' || projectType === 'line_following';
-        if (needsAnnotationCheck && state.images.length > 0) {
-            const unannotated = state.images.filter(img => !img.annotations || img.annotations.length === 0).length;
-            if (unannotated > 0) {
-                if (!(await datasetBridge.confirm(t('ANNOTATION_EXPORT_UNANNOTATED_WARNING', '仍有 %1 張圖片未標註，確定要匯出嗎？').replace('%1', unannotated)))) {
-                    showStatusMessage('');
-                    showExportProgress(false);
-                    return;
-                }
-            }
-        }
-
-        // 檢查是否有未分類標註框 (class_id === -1)（僅物件偵測）
-        if (projectType === 'object_detection' && state.images.length > 0) {
-            const unclassified = state.images.reduce((sum, img) =>
-                sum + (img.annotations?.filter(a => a.class_id === -1).length || 0), 0);
-            if (unclassified > 0) {
-                if (!(await datasetBridge.confirm(t('ANNOTATION_EXPORT_UNCLASSIFIED_WARNING', '尚有 %1 個未分類標註框，確定要匯出嗎？').replace('%1', unclassified)))) {
-                    showStatusMessage('');
-                    showExportProgress(false);
-                    return;
-                }
-            }
-        }
-
-        // 1. 同步最新資料
-        syncSpecFromUI(true);
-        const spec = state.spec.toJSON();
-        console.log('[DatasetManager] Spec synced for export:', spec.project.name);
-
-        // 2. 驗證 Spec
-        const result = state.spec.validate();
-        if (!result.ok) {
-            throw new Error(t('ERROR_EXPORT_VALIDATE', '資料集規格驗證失敗: %1').replace('%1', result.errors[0]));
-        }
-
-        // 3. 透過 io/bridge.js 發送匯出指令並等待結果（Stage 2 correlation + timeout）
-        console.log('[DatasetManager] Sending datasetExport command to Bridge');
-        const { promise: exportPromise } = datasetBridge.request({
-            command: 'datasetExport',
-            payload: {
-                spec: spec,
-                sourceFolderPath: state.sourceFolderPath // 傳送來源路徑
-            },
-            resultCommand: 'datasetExportResult',
-            timeoutMs: 120000 // 匯出含 ZIP 打包，給較長 timeout
+/** Stage 3：匯出 use-case（延遲初始化，注入 UI 依賴） */
+let exportUC = null;
+function getExportUC() {
+    if (!exportUC) {
+        exportUC = createExportUseCases({
+            state,
+            getFormValue,
+            syncSpecFromUI,
+            showStatusMessage,
+            showExportProgress,
+            t
         });
-
-        exportPromise.then((msg) => {
-            showExportProgress(false);
-            if (msg.success) {
-                showStatusMessage(t('SUCCESS_EXPORT', '✅ 資料集匯出成功'));
-            } else {
-                showStatusMessage(t('ERROR_EXPORT_FAILED', '❌ 匯出失敗: %1').replace('%1', msg.error));
-            }
-        }).catch((e) => {
-            showExportProgress(false);
-            showStatusMessage(t('ERROR_EXPORT_FAILED', '❌ 匯出失敗: %1').replace('%1', e.message));
-        });
-
-    } catch (e) {
-        console.error('[DatasetManager] Export Error:', e);
-        showExportProgress(false);
-        showStatusMessage(t('ERROR_PREFIX', '❌ 錯誤: %1').replace('%1', e.message));
     }
+    return exportUC;
 }
 
 /**
@@ -1124,7 +898,7 @@ function updateAnnotationProgress() {
     const progressEl = document.getElementById('annotation-progress');
     if (!progressEl) return;
 
-    const annotatedCount = state.images.filter(img => img.annotations && img.annotations.length > 0).length;
+    const annotatedCount = countAnnotated(state.images);
     const total = state.images.length;
     progressEl.textContent = t('ANNOTATION_PROGRESS', '進度: %1/%2 張').replace('%1', annotatedCount).replace('%2', total);
 }
@@ -1196,14 +970,10 @@ function bindCanvasKeyboardEvents() {
  */
 function deleteSelectedAnnotation() {
     const anns = UICanvas.state.annotations || [];
-    if (anns.length === 0) return;
+    const index = resolveDeleteIndex(anns, UICanvas.state.selectedAnnotationIndex);
+    if (index < 0) return;
 
-    let index = UICanvas.state.selectedAnnotationIndex;
-    if (index < 0 || index >= anns.length) {
-        index = anns.length - 1;
-    }
-
-    anns.splice(index, 1);
+    removeAnnotationAt(anns, index);
     UICanvas.state.selectedAnnotationIndex = -1;
     if (UICanvas.state.onUpdate) UICanvas.state.onUpdate(anns);
     UICanvas.render();
@@ -1415,8 +1185,8 @@ function createLabelMapManager(container, statsContainer = null) {
         const entry = entries.find(([, v]) => v === id);
         if (!entry) return;
         const count = (projectType === 'image')
-            ? state.images.filter(img => img.label === entry[0]).length
-            : state.images.reduce((s, img) => s + (img.annotations?.filter(a => a.class_id === id).length || 0), 0);
+            ? countImagesWithLabel(state.images, entry[0])
+            : countBoxesWithClassId(state.images, id);
         const confirmed = await datasetBridge.confirm(
             t('ANNOTATION_DELETE_CLASS_CONFIRM', '確定刪除類別「%1」及其 %2 個標註框嗎？')
                 .replace('%1', entry[0]).replace('%2', count)
@@ -1426,9 +1196,9 @@ function createLabelMapManager(container, statsContainer = null) {
             delete map[entry[0]];
             if (projectType === 'image') {
                 // 分類：把使用該 label 的影像改為 unlabeled，避免載入時又被回填進 label_map
-                state.images.forEach(img => { if (img.label === entry[0]) img.label = 'unlabeled'; });
+                reassignLabelsToUnlabeled(state.images, entry[0]);
             } else {
-                state.images.forEach(img => { if (img.annotations) img.annotations = img.annotations.filter(a => a.class_id !== id); });
+                removeAnnotationsByClassId(state.images, id);
                 if (UICanvas.state.annotations) {
                     UICanvas.state.annotations = UICanvas.state.annotations.filter(a => a.class_id !== id);
                     UICanvas.state.selectedAnnotationIndex = -1;
@@ -1533,7 +1303,7 @@ function renderAnnotationListUI(anns) {
     list.querySelectorAll('.dataset-annotation-item-class').forEach(select => {
         select.onchange = () => {
             const idx = parseInt(select.dataset.index);
-            anns[idx].class_id = parseInt(select.value, 10);
+            setAnnotationClassId(anns, idx, parseInt(select.value, 10));
             if (UICanvas.state.onUpdate) UICanvas.state.onUpdate(anns);
             UICanvas.render();
         };
@@ -2382,6 +2152,10 @@ export async function closeDatasetManager() {
         clearTimeout(state.annotationMode.saveTimer);
         state.annotationMode.saveTimer = null;
     }
+
+    // Stage 3：取消排程中的 autosave timer 與 sampler 訂閱（dispose 安全，防銷毀後回呼）
+    getProgressUC().cancelAutoSave();
+    Sampler.dispose();
 
     if (modal) modal.style.display = 'none';
     return state.spec;
