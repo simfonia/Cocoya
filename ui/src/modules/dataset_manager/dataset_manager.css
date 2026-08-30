@@ -10,6 +10,13 @@
     --dsm-brand: #FE2F89;
     --dsm-brand-soft: rgba(254, 47, 137, 0.15);   /* focus ring / 淡陰影（原 0.12/0.15/0.25 收斂）*/
     --dsm-brand-strong: rgba(254, 47, 137, 0.3);  /* 強調陰影 / warning pulse（原 0.25/0.28/0.3/0.4 收斂）*/
+    /* 文字（light）*/
+    --dsm-text: #333333;
+    --dsm-text-secondary: #555555;
+    --dsm-text-muted: #999999;
+    /* 邊框（light）*/
+    --dsm-border-light: #dddddd;
+    --dsm-border-strong: #cccccc;
     /* disabled（決策 2026-08-30：補定義）*/
     --dsm-disabled-bg: #f0f0f0;
     --dsm-disabled-text: #aaaaaa;
@@ -44,8 +51,8 @@
     width: min(1040px, 100%);
     max-height: min(760px, 92vh);
     background: #ffffff;
-    color: #333333;
-    border: 1px solid #dddddd;
+    color: var(--dsm-text);
+    border: 1px solid var(--dsm-border-light);
     border-radius: 8px;
     box-shadow: 0 18px 48px rgba(0, 0, 0, 0.28);
     display: flex;
@@ -59,12 +66,12 @@
     align-items: center;
     justify-content: space-between;
     background: #f6f6f6;
-    border-bottom: 1px solid #dddddd;
+    border-bottom: 1px solid var(--dsm-border-light);
     padding: 14px 18px;
 }
 
 .dataset-manager-footer {
-    border-top: 1px solid #dddddd;
+    border-top: 1px solid var(--dsm-border-light);
     border-bottom: none;
     justify-content: flex-end;
     gap: 10px;
@@ -103,7 +110,7 @@
 .dataset-panel h3 {
     margin: 0 0 12px;
     font-size: 13px;
-    color: #555555;
+    color: var(--dsm-text-secondary);
     letter-spacing: 0;
 }
 
@@ -139,10 +146,10 @@
     width: 100%;
     min-height: 30px;
     box-sizing: border-box;
-    border: 1px solid #cccccc;
+    border: 1px solid var(--dsm-border-strong);
     border-radius: 4px;
     background: #ffffff;
-    color: #333333;
+    color: var(--dsm-text);
     padding: 5px 7px;
     font: inherit;
     font-size: 12px;
@@ -237,10 +244,10 @@ body.vscode-high-contrast .dataset-icon-btn:hover {
 
 .dataset-small-btn,
 .dataset-secondary-btn {
-    border: 1px solid #cccccc;
+    border: 1px solid var(--dsm-border-strong);
     border-radius: 4px;
     background: #f7f7f7;
-    color: #333333;
+    color: var(--dsm-text);
     cursor: pointer;
     font-size: 12px;
     min-height: 30px;
@@ -264,7 +271,7 @@ body.vscode-high-contrast .dataset-secondary-btn:hover {
 }
 
 .dataset-validation {
-    border: 1px solid #dddddd;
+    border: 1px solid var(--dsm-border-light);
     border-radius: 6px;
     padding: 10px;
     font-size: 12px;
@@ -321,7 +328,7 @@ body.vscode-high-contrast .dataset-validation .dataset-warnings {
     border: 1px solid #e1e1e1;
     border-radius: 6px;
     background: #fafafa;
-    color: #333333;
+    color: var(--dsm-text);
     font-family: Consolas, Monaco, "Courier New", monospace;
     font-size: 11px;
     line-height: 1.45;
@@ -717,7 +724,7 @@ body.vscode-high-contrast .dataset-label-color {
 .dataset-empty-state {
     padding: 40px 20px;
     text-align: center;
-    color: #999;
+    color: var(--dsm-text-muted);
     font-style: italic;
     font-size: 13px;
 }
@@ -778,7 +785,7 @@ body.vscode-high-contrast .dataset-annotation-item {
 .dataset-annotation-item button {
     background: none;
     border: none;
-    color: #999;
+    color: var(--dsm-text-muted);
     cursor: pointer;
     font-size: 14px;
 }
@@ -851,13 +858,13 @@ body.vscode-high-contrast .dataset-label-head {
     top: 0;
     background: #f0f0f0;
     padding: 6px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--dsm-border-light);
     text-align: left;
     z-index: 1;
 }
 .dataset-preview-table td {
     padding: 6px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--dsm-border-light);
     white-space: nowrap;
 }
 body.vscode-dark .dataset-preview-table th,
@@ -1241,7 +1248,7 @@ body.vscode-high-contrast .dataset-annotation-toolbar {
 }
 
 .dataset-annotation-shortcuts-hint {
-    color: #999;
+    color: var(--dsm-text-muted);
     font-size: 10px;
 }
 
@@ -1293,7 +1300,7 @@ body.vscode-high-contrast .dataset-annotation-controls {
 .dataset-annotation-section-title {
     font-size: 11px;
     font-weight: bold;
-    color: #555;
+    color: var(--dsm-text-secondary);
     margin-bottom: 6px;
 }
 
@@ -1314,10 +1321,10 @@ body.vscode-high-contrast .dataset-annotation-section-title {
     max-width: 20ch;
     font-size: 11px;
     padding: 4px 6px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--dsm-border-strong);
     border-radius: 3px;
     background: #fff;
-    color: #333;
+    color: var(--dsm-text);
 }
 
 body.vscode-dark .dataset-annotation-class-select,
@@ -1348,10 +1355,10 @@ body.vscode-high-contrast .dataset-annotation-item.selected {
 .dataset-annotation-item .dataset-annotation-item-class {
     font-size: 10px;
     padding: 1px 4px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--dsm-border-strong);
     border-radius: 3px;
     background: #fff;
-    color: #333;
+    color: var(--dsm-text);
     margin: 0 4px;
     min-width: 10ch;
     max-width: 10ch;
