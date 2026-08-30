@@ -13,10 +13,16 @@ import { createProgressUseCases } from './application/progressUseCases.js';
 import { createImportUseCases } from './application/importUseCases.js';
 import { createExportUseCases } from './application/exportUseCases.js';
 import {
-    countAnnotated, countUnclassifiedBoxes, countBoxesWithClassId, countImagesWithLabel,
-    removeAnnotationsByClassId, reassignLabelsToUnlabeled,
-    resolveDeleteIndex, setAnnotationClassId, removeAnnotationAt
+    countUnclassifiedBoxes, countBoxesWithClassId, countImagesWithLabel,
+    removeAnnotationsByClassId, reassignLabelsToUnlabeled
 } from './application/annotationMutations.js';
+import { createStatusMessageUI } from './ui/statusMessage.js';
+import { buildModalTemplate } from './ui/modal.js';
+import { createFormPresenter } from './ui/form.js';
+import { createGridScrollManager } from './ui/thumbnails.js';
+import { createClassificationController } from './ui/classification.js';
+import { createAnnotationController } from './ui/annotation.js';
+import { createPanelsPresenter } from './ui/panels.js';
 
 const MODAL_ID = 'dataset-manager-modal';
 
@@ -33,6 +39,57 @@ const datasetStore = new DatasetStore(createInitialDatasetState(
     DatasetSpec.createDefault({ name: 'dataset', type: 'table', mode: 'file' })
 ));
 const state = datasetStore.getState();
+
+// Stage 4 切片 1：集中式狀態訊息呈現邏輯移至 ui/statusMessage.js
+// （計時器重置/dispose 語意不變；此 const 供模組內各函式與 use-case 注入使用）
+const statusMessagePresenter = createStatusMessageUI();
+const showStatusMessage = statusMessagePresenter.showStatusMessage;
+
+// Stage 4 切片 5：分類校正模式狀態機移至 ui/classification.js（依賴注入；下方函式宣告已提升，可安全參照）
+const classificationController = createClassificationController({
+    state, t, escapeHtml,
+    getModal: () => getModal(),
+    UIComponents,
+    saveGridScroll: () => saveGridScroll(),
+    exitAnnotationMode: () => exitAnnotationMode(),
+    navigateToImage: (index) => navigateToImage(index),
+    setAnnotationHeaderActions: (hide) => setAnnotationHeaderActions(hide),
+    handleExportDataset: () => handleExportDataset(),
+    updateStatsFromImages: () => updateStatsFromImages(),
+    updateThumbnailHighlight: () => updateThumbnailHighlight(),
+    refreshPreview: () => refreshPreview(),
+    createLabelMapManager: (container, statsContainer) => createLabelMapManager(container, statsContainer)
+});
+
+// Stage 4 切片 6：bbox/line 標註模式編排移至 ui/annotation.js（依賴注入；下方函式宣告已提升，可安全參照）
+const annotationController = createAnnotationController({
+    state, t, escapeHtml,
+    getModal: () => getModal(),
+    UICanvas,
+    UIComponents,
+    getFormValue: (name) => getFormValue(name),
+    saveGridScroll: () => saveGridScroll(),
+    exitAnnotationMode: () => exitAnnotationMode(),
+    navigateToImage: (index) => navigateToImage(index),
+    setAnnotationHeaderActions: (hide) => setAnnotationHeaderActions(hide),
+    handleExportDataset: () => handleExportDataset(),
+    updateStatsFromImages: () => updateStatsFromImages(),
+    updateThumbnailHighlight: () => updateThumbnailHighlight(),
+    refreshPreview: () => refreshPreview(),
+    createLabelMapManager: (container, statsContainer) => createLabelMapManager(container, statsContainer)
+});
+
+// Stage 4 切片 7：欄位列/驗證/表格預覽等面板呈現移至 ui/panels.js（依賴注入；下方函式宣告已提升，可安全參照）
+const panelsPresenter = createPanelsPresenter({
+    state,
+    t,
+    escapeHtml: (value) => escapeHtml(value),
+    optionList: (values, selected) => optionList(values, selected),
+    getModal: () => getModal(),
+    refreshPreview: () => refreshPreview(),
+    DatasetSpec,
+    DatasetSpecConstants
+});
 
 /**
  * 判斷 Dataset Manager 是否有「未匯出」的工作（樣本/欄位/標籤/來源資料夾），供防呆確認使用。
@@ -78,23 +135,16 @@ function getModal() {
     return document.getElementById(MODAL_ID);
 }
 
+const formPresenter = createFormPresenter({ getModalRoot: getModal });
+
 function getFormValue(name) {
-    const modal = getModal();
-    const field = modal?.querySelector(`[name="${name}"]`);
-    return field ? field.value : '';
+    return formPresenter.getFormValue(name);
 }
 
 function getColumnsFromUI() {
-    const modal = getModal();
-    if (!modal) return [];
-
-    const rows = Array.from(modal.querySelectorAll('.dataset-column-row'));
-    return rows.map((row) => ({
-        name: row.querySelector('[data-field="name"]')?.value.trim() || '',
-        type: row.querySelector('[data-field="type"]')?.value || 'string',
-        role: row.querySelector('[data-field="role"]')?.value || 'feature'
-    })).filter((column) => column.name);
+    return formPresenter.getColumnsFromUI();
 }
+
 
 function buildLabelMap(columns) {
     const current = state.spec.toJSON().schema.label_map || {};
@@ -271,34 +321,11 @@ function getProgressUC() {
     return progressUC;
 }
 function renderColumnRow(column = {}) {
-    const normalized = DatasetSpec.normalizeColumn(column);
-    return `
-        <div class="dataset-column-row">
-            <input data-field="name" value="${escapeHtml(normalized.name)}" placeholder="${t('COLUMN_NAME_PLACEHOLDER', '欄位名稱')}">
-            <select data-field="type">
-                ${optionList(DatasetSpecConstants.COLUMN_TYPES, normalized.type)}
-            </select>
-            <select data-field="role">
-                ${optionList(DatasetSpecConstants.COLUMN_ROLES, normalized.role)}
-            </select>
-            <button type="button" class="dataset-icon-btn dataset-remove-column" title="${t('REMOVE_COLUMN', '移除欄位')}">×</button>
-        </div>
-    `;
+    return panelsPresenter.renderColumnRow(column);
 }
 
 function renderValidation(result) {
-    const errors = result.errors.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
-    const warnings = result.warnings.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
-    const statusClass = result.ok ? 'ok' : 'error';
-    const statusText = result.ok ? t('SPEC_OK', 'Spec 可用') : t('SPEC_NEED_FIX', '需要修正');
-
-    return `
-        <div class="dataset-validation ${statusClass}">
-            <strong>${statusText}</strong>
-            ${errors ? `<ul>${errors}</ul>` : ''}
-            ${warnings ? `<ul class="dataset-warnings">${warnings}</ul>` : ''}
-        </div>
-    `;
+    return panelsPresenter.renderValidation(result);
 }
 
 let refreshTimeout = null;
@@ -338,38 +365,15 @@ export function refreshPreview() {
 }
 
 function addColumn(column) {
-    const modal = getModal();
-    const list = modal?.querySelector('#dataset-column-list');
-    if (!list) return;
-    list.insertAdjacentHTML('beforeend', renderColumnRow(column));
-    refreshPreview();
+    return panelsPresenter.addColumn(column);
 }
 
 function renderAllColumns() {
-    const modal = getModal();
-    const list = modal?.querySelector('#dataset-column-list');
-    if (!list) return;
-    
-    const spec = state.spec.toJSON();
-    list.innerHTML = spec.schema.columns.map(c => renderColumnRow(c)).join('');
-    refreshPreview();
+    return panelsPresenter.renderAllColumns();
 }
 
 function renderPreviewTable(container, rows) {
-    if (!container || !rows || !rows.length) return;
-
-    const samples = rows.slice(0, 10); // 顯示前 10 筆
-    const headers = Object.keys(samples[0]);
-    
-    let html = `<div style="padding: 10px;"><table class="dataset-preview-table">`;
-    html += `<thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead>`;
-    html += `<tbody>`;
-    samples.forEach(row => {
-        html += `<tr>${headers.map(h => `<td>${escapeHtml(row[h])}</td>`).join('')}</tr>`;
-    });
-    html += `</tbody></table></div>`;
-    
-    container.innerHTML = html;
+    return panelsPresenter.renderPreviewTable(container, rows);
 }
 
 function sanitizeName(text) {
@@ -499,41 +503,6 @@ function scheduleAutoSave(immediate = false) {
 }
 
 
-let statusMessageTimer = null;
-
-const STATUS_MESSAGE_DURATION = 8000; // 集中式訊息預設顯示時間（毫秒）
-
-/**
- * 顯示集中式狀態訊息（modal 頂部中央，所有模式皆可見），預設 8 秒後自動清除。
- * 顯示前會重置計時器，避免多個訊息交錯時被舊計時器提前清除。
- * @param {string} message 欲顯示的訊息文字；空字串/undefined 立即隱藏。
- * @param {object} [options]
- * @param {number} [options.duration=8000] 顯示毫秒數（0 = 不自動清除）。
- */
-function showStatusMessage(message, options = {}) {
-    const el = document.getElementById('dataset-manager-message');
-    if (!el) return;
-    if (statusMessageTimer) {
-        clearTimeout(statusMessageTimer);
-        statusMessageTimer = null;
-    }
-    if (!message) {
-        el.style.display = 'none';
-        el.textContent = '';
-        return;
-    }
-    el.textContent = message;
-    el.style.display = 'flex';
-    const duration = options.duration === undefined ? STATUS_MESSAGE_DURATION : options.duration;
-    if (duration > 0) {
-        statusMessageTimer = setTimeout(() => {
-            el.style.display = 'none';
-            el.textContent = '';
-            statusMessageTimer = null;
-        }, duration);
-    }
-}
-
 /**
  * 顯示/隱藏「匯出進行中」的不確定進度條（置於 modal 頂部，兩種模式皆可見）。
  */
@@ -576,136 +545,34 @@ function getExportUC() {
     return exportUC;
 }
 
-/**
- * 保存目前縮圖網格的捲動位置
- */
+// Stage 4 切片 4：縮圖 scroll save/restore 集中管理移至 ui/thumbnails.js，此處保留同名委派 wrapper
+const gridScrollManager = createGridScrollManager({
+    state,
+    getContainer: () => getModal()?.querySelector('#dataset-image-preview') || null,
+    hasImages: () => state.images.length > 0
+});
+
 function saveGridScroll() {
-    const modal = getModal();
-    const imagePreview = modal?.querySelector('#dataset-image-preview');
-    const grid = imagePreview?.querySelector('.dataset-image-grid');
-    state._savedGridScrollTop = grid ? grid.scrollTop : 0;
+    gridScrollManager.saveGridScroll();
 }
 
-/**
- * 恢復縮圖網格的捲動位置（在 renderImageGrid 之後呼叫）
- */
 function restoreGridScroll() {
-    const modal = getModal();
-    const imagePreview = modal?.querySelector('#dataset-image-preview');
-    if (!imagePreview) return;
-
-    // 決定 scrollTop 值：先取 state._savedGridScrollTop（從標註模式返回），
-    // 若無則嘗試現有 grid 的 scrollTop（刪除照片時保留），最後為 0
-    const oldGrid = imagePreview.querySelector('.dataset-image-grid');
-    const savedScrollTop = (state._savedGridScrollTop > 0) ? state._savedGridScrollTop : (oldGrid ? oldGrid.scrollTop : 0);
-    // 使用過後清空，避免下次 refreshDynamicPanels 誤用
-    state._savedGridScrollTop = 0;
-
-    const newGrid = imagePreview.querySelector('.dataset-image-grid');
-    if (newGrid && state.images.length > 0 && savedScrollTop > 0) {
-        newGrid.scrollTop = savedScrollTop;
-    }
+    gridScrollManager.restoreGridScroll();
 }
 
+
 /**
- * 進入影像分類標籤校正模式（image 類型專用）
- * 中央大圖預覽 + 右側分類標籤重新指派，不使用 UICanvas 拉框
+ * 進入影像分類標籤校正模式（image 類型專用）— 委派至 ui/classification.js
  */
 function enterClassificationReviewMode(image, index) {
-    const modal = getModal();
-    const previewContent = modal?.querySelector('#dataset-preview-content');
-    const previewHeader = modal?.querySelector('.dataset-preview-panel .dataset-panel-title div');
-    if (!previewContent || !previewHeader) return;
-
-    // 進入前保存縮圖網格捲動位置
-    saveGridScroll();
-
-    // 設定標註模式狀態（沿用統一狀態機）
-    state.annotationMode.isActive = true;
-    state.annotationMode.currentIndex = index;
-    state.annotationMode.mode = 'classification';
-
-    // 更新副標題
-    const subtitle = modal.querySelector('#dataset-manager-subtitle');
-    if (subtitle) subtitle.textContent = t('CLASSIFY_MODE_TITLE', '影像分類標籤校正');
-
-    // 讓 overlay 撐滿
-    modal.classList.add('dataset-annotation-fullscreen');
-
-    // 為 body 添加標註模式 class，切換為全寬布局
-    const body = modal.querySelector('.dataset-manager-body');
-    if (body) {
-        state.annotationMode.originalBodyClass = body.className;
-        body.classList.add('dataset-annotation-mode');
-    }
-
-    // 隱藏 source/schema 面板
-    const sourcePanel = modal.querySelector('.dataset-source-panel');
-    const schemaPanel = modal.querySelector('.dataset-schema-panel');
-    if (sourcePanel) sourcePanel.style.display = 'none';
-    if (schemaPanel) schemaPanel.style.display = 'none';
-
-    // 防禦性移除並重建返回按鈕
-    const existingBackBtn = modal.querySelector('#dataset-annotation-back');
-    if (existingBackBtn) existingBackBtn.remove();
-    previewHeader.insertAdjacentHTML('afterbegin', `
-        <button type="button" id="dataset-annotation-back" class="dataset-small-btn" style="background: #FE2F89; color: white; border: none; margin-right: 8px;">${t('BACK_TO_LIST', '← 返回列表')}</button>
-    `);
-    modal.querySelector('#dataset-annotation-back').onclick = exitAnnotationMode;
-
-    // 渲染 3 欄布局（中央不初始化畫布）
-    previewContent.innerHTML = `
-        <div class="dataset-annotation-layout">
-            <div class="dataset-annotation-thumbnails" id="annotation-thumbnails"></div>
-            <div class="dataset-annotation-main">
-                <div class="dataset-annotation-toolbar">
-                    <span class="dataset-annotation-progress" id="annotation-progress"></span>
-                    <span class="dataset-annotation-shortcuts-hint">${t('CLASSIFY_SHORTCUTS_HINT', '↑/↓ 切換圖片 · Esc 退出')}</span>
-                    <span class="dataset-annotation-export-status" id="annotation-export-status"></span>
-                    <button type="button" id="annotation-export-btn" class="dataset-small-btn">${t('EXPORT', '匯出資料集')}</button>
-                </div>
-                <div class="dataset-annotation-image-container" id="annotation-image-container">
-                    <div id="annotation-classify-container" tabindex="0" style="position: relative; display: inline-block; outline: none;">
-                        <img src="${image.blobUrl}" id="annotation-classify-img" style="max-width: 100%; max-height: 100%; display: block; object-fit: contain;">
-                    </div>
-                </div>
-            </div>
-            <div class="dataset-annotation-controls" id="annotation-controls"></div>
-        </div>
-    `;
-
-    // 渲染縮圖欄（分類模式顯示標籤徽章）
-    const thumbnails = document.getElementById('annotation-thumbnails');
-    UIComponents.renderAnnotationThumbnails(thumbnails, state.images, index, {
-        mode: 'classification',
-        onThumbnailClick: (newIndex) => navigateToImage(newIndex)
-    });
-
-    // 載入目前圖片
-    loadClassificationImage(index);
-
-    // 標註模式：隱藏預覽 header 的驗證/匯出，改用標註工具列的匯出（含即時狀態回饋）
-    setAnnotationHeaderActions(true);
-    const exportBtn = document.getElementById('annotation-export-btn');
-    if (exportBtn) exportBtn.onclick = handleExportDataset;
+    return classificationController.enterClassificationReviewMode(image, index);
 }
 
 /**
- * 載入指定索引的圖片並更新分類校正 UI（image 類型專用）
+ * 載入指定索引的圖片並更新分類校正 UI（image 類型專用）— 委派至 ui/classification.js
  */
 function loadClassificationImage(index) {
-    const image = state.images[index];
-    if (!image) return;
-
-    state.annotationMode.currentIndex = index;
-
-    const img = document.getElementById('annotation-classify-img');
-    if (img) img.src = image.blobUrl;
-
-    renderClassificationControls();
-    updateClassifyProgress();
-    updateThumbnailHighlight();
-    bindClassificationKeyboardEvents();
+    return classificationController.loadClassificationImage(index);
 }
 
 function enterAnnotationMode(image, index) {
@@ -713,161 +580,21 @@ function enterAnnotationMode(image, index) {
     if (getFormValue('projectType') === 'image') {
         return enterClassificationReviewMode(image, index);
     }
-
-    const modal = getModal();
-    const previewContent = modal?.querySelector('#dataset-preview-content');
-    const previewHeader = modal?.querySelector('.dataset-preview-panel .dataset-panel-title div');
-    if (!previewContent || !previewHeader) return;
-
-    // 進入標註前，先保存目前縮圖網格的捲動位置
-    saveGridScroll();
-
-    // 設定標註模式狀態
-    state.annotationMode.isActive = true;
-    state.annotationMode.currentIndex = index;
-
-    // 更新副標題為「物件偵測標註」
-    const subtitle = modal.querySelector('#dataset-manager-subtitle');
-    if (subtitle) subtitle.textContent = t('ANNOTATION_MODE_TITLE', '物件偵測標註');
-
-    // 讓 overlay 撐滿，使高度鏈可解析（縮圖欄才能捲動）
-    modal.classList.add('dataset-annotation-fullscreen');
-
-    // 為 body 添加標註模式 class，切換為全寬單欄布局
-    const body = modal.querySelector('.dataset-manager-body');
-    if (body) {
-        state.annotationMode.originalBodyClass = body.className;
-        body.classList.add('dataset-annotation-mode');
-    }
-
-    // 隱藏 source/schema 面板
-    const sourcePanel = modal.querySelector('.dataset-source-panel');
-    const schemaPanel = modal.querySelector('.dataset-schema-panel');
-    if (sourcePanel) sourcePanel.style.display = 'none';
-    if (schemaPanel) schemaPanel.style.display = 'none';
-
-    // 移除舊的返回按鈕（若存在）
-    const existingBackBtn = modal.querySelector('#dataset-annotation-back');
-    if (existingBackBtn) {
-        existingBackBtn.remove();
-    }
-
-    // 在預覽面板標題加入返回按鈕
-    previewHeader.insertAdjacentHTML('afterbegin', `
-        <button type="button" id="dataset-annotation-back" class="dataset-small-btn" style="background: #FE2F89; color: white; border: none; margin-right: 8px;">${t('BACK_TO_LIST', '← 返回列表')}</button>
-    `);
-    modal.querySelector('#dataset-annotation-back').onclick = exitAnnotationMode;
-
-    // 渲染 3 欄布局
-    previewContent.innerHTML = `
-        <div class="dataset-annotation-layout">
-            <div class="dataset-annotation-thumbnails" id="annotation-thumbnails"></div>
-            <div class="dataset-annotation-main">
-                <div class="dataset-annotation-toolbar">
-                    <span class="dataset-annotation-progress" id="annotation-progress"></span>
-                    <span class="dataset-annotation-shortcuts-hint">${t('ANNOTATION_SHORTCUTS_HINT', '↑/↓ 切換圖片 · Delete 刪除標註 · Esc 退出')}</span>
-                    <span class="dataset-annotation-export-status" id="annotation-export-status"></span>
-                    <button type="button" id="annotation-export-btn" class="dataset-small-btn">${t('EXPORT', '匯出資料集')}</button>
-                </div>
-                <div class="dataset-annotation-image-container" id="annotation-image-container">
-                    <div id="annotation-container" style="position: relative; display: inline-block;">
-                        <img src="${image.blobUrl}" id="annotation-target-img" style="max-width: 100%; max-height: 100%; display: block; object-fit: contain;">
-                    </div>
-                </div>
-            </div>
-            <div class="dataset-annotation-controls" id="annotation-controls"></div>
-        </div>
-    `;
-
-    // 渲染縮圖欄
-    const thumbnails = document.getElementById('annotation-thumbnails');
-    UIComponents.renderAnnotationThumbnails(thumbnails, state.images, index, {
-        onThumbnailClick: (newIndex) => navigateToImage(newIndex)
-    });
-
-    // 渲染右側控制欄
-    renderAnnotationControls();
-
-    // 載入目前圖片
-    loadAnnotationImage(index);
-
-    // 標註模式：隱藏預覽 header 的驗證/匯出，改用標註工具列的匯出（含即時狀態回饋）
-    setAnnotationHeaderActions(true);
-    const exportBtn = document.getElementById('annotation-export-btn');
-    if (exportBtn) exportBtn.onclick = handleExportDataset;
+    return annotationController.enterAnnotationMode(image, index);
 }
 
 /**
- * 將目前畫布上的標註寫回 state.images 並清除 debounce timer
+ * 將目前畫布上的標註寫回 state.images 並清除 debounce timer — 委派至 ui/annotation.js
  */
 function saveCurrentAnnotations() {
-    const idx = state.annotationMode.currentIndex;
-    if (idx < 0 || idx >= state.images.length) return;
-    // 拷貝陣列，避免多張圖片共用同一個陣列參考
-    state.images[idx].annotations = (UICanvas.state.annotations || []).slice();
-
-    // 清除 debounce timer
-    if (state.annotationMode.saveTimer) {
-        clearTimeout(state.annotationMode.saveTimer);
-        state.annotationMode.saveTimer = null;
-    }
-
-    // 以目前標註重算 label_counts（返回列表/切圖時，中間統計才正確）
-    updateStatsFromImages();
+    return annotationController.saveCurrentAnnotations();
 }
 
 /**
- * 載入指定索引的圖片並初始化畫布
+ * 載入指定索引的圖片並初始化畫布 — 委派至 ui/annotation.js
  */
 function loadAnnotationImage(index) {
-    const image = state.images[index];
-    if (!image) return;
-
-    state.annotationMode.currentIndex = index;
-
-    const projectType = getFormValue('projectType');
-    const container = document.getElementById('annotation-container');
-    const img = document.getElementById('annotation-target-img');
-    if (!container || !img) return;
-
-    // 更新圖片來源
-    img.src = image.blobUrl;
-
-    // 同步初始化畫布（不依賴 onload，避免 src 相同時 onload 不觸發導致 UI 空白）
-    const mode = projectType === 'line_following' ? 'line' : 'bbox';
-    const labelMap = state.spec.toJSON().schema.label_map || {};
-    UICanvas.init(container, img, image.annotations || [], {
-        mode: mode,
-        labelMap: labelMap,
-        onUpdate: (anns) => {
-            image.annotations = anns;
-            renderAnnotationListUI(anns);
-            // Debounce refreshPreview（並以目前標註重算統計）
-            clearTimeout(state.annotationMode.saveTimer);
-            state.annotationMode.saveTimer = setTimeout(() => {
-                updateStatsFromImages();
-                refreshPreview();
-            }, 300);
-        }
-    });
-
-    // 物件偵測模式：與「類別管理」下拉同步（#annotation-class-manager 內的 .dataset-label-manager-select）
-    const classSelect = document.querySelector('#annotation-class-manager .dataset-label-manager-select');
-    if (classSelect) {
-        classSelect.onchange = () => {
-            UICanvas.state.currentClassId = parseInt(classSelect.value, 10) || 0;
-        };
-        // 初始化 currentClassId
-        UICanvas.state.currentClassId = parseInt(classSelect.value, 10) || 0;
-    }
-
-    renderAnnotationListUI(image.annotations || []);
-    updateAnnotationProgress();
-    updateThumbnailHighlight();
-    bindCanvasKeyboardEvents();
-    // 聚焦畫布以接收鍵盤事件
-    const canvas = container.querySelector('canvas.dataset-annotation-canvas');
-    if (canvas) canvas.focus();
+    return annotationController.loadAnnotationImage(index);
 }
 
 /**
@@ -892,15 +619,10 @@ function navigateToImage(newIndex) {
 }
 
 /**
- * 更新頂部進度計數器
+ * 更新頂部進度計數器 — 委派至 ui/annotation.js
  */
 function updateAnnotationProgress() {
-    const progressEl = document.getElementById('annotation-progress');
-    if (!progressEl) return;
-
-    const annotatedCount = countAnnotated(state.images);
-    const total = state.images.length;
-    progressEl.textContent = t('ANNOTATION_PROGRESS', '進度: %1/%2 張').replace('%1', annotatedCount).replace('%2', total);
+    return annotationController.updateAnnotationProgress();
 }
 
 /**
@@ -928,156 +650,46 @@ function updateThumbnailHighlight() {
 }
 
 /**
- * 綁定畫布鍵盤事件（↑/↓ 切換、Delete 刪除、Esc 退出）
+ * 綁定畫布鍵盤事件（↑/↓ 切換、Delete 刪除、Esc 退出）— 委派至 ui/annotation.js
  */
 function bindCanvasKeyboardEvents() {
-    const container = document.getElementById('annotation-container');
-    if (!container) return;
-
-    const canvas = container.querySelector('canvas.dataset-annotation-canvas');
-    if (!canvas) return;
-
-    // 設定 tabindex 以便接收鍵盤事件
-    canvas.tabIndex = 0;
-
-    // 移除舊的鍵盤 handler
-    if (UICanvas.state.handlers.keydown) {
-        canvas.removeEventListener('keydown', UICanvas.state.handlers.keydown);
-    }
-
-    UICanvas.state.handlers.keydown = (e) => {
-        if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            navigateToImage(state.annotationMode.currentIndex - 1);
-        } else if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            navigateToImage(state.annotationMode.currentIndex + 1);
-        } else if (e.key === 'Delete' || e.key === 'Backspace') {
-            e.preventDefault();
-            deleteSelectedAnnotation();
-        } else if (e.key === 'Escape') {
-            e.preventDefault();
-            e.stopPropagation(); // 阻止冒泡到 modal 的全域 Esc 關閉
-            exitAnnotationMode();
-        }
-    };
-
-    canvas.addEventListener('keydown', UICanvas.state.handlers.keydown);
+    return annotationController.bindCanvasKeyboardEvents();
 }
 
 /**
- * 刪除目前高亮的標註（若無高亮則刪除最後一個）
+ * 刪除目前高亮的標註（若無高亮則刪除最後一個）— 委派至 ui/annotation.js
  */
 function deleteSelectedAnnotation() {
-    const anns = UICanvas.state.annotations || [];
-    const index = resolveDeleteIndex(anns, UICanvas.state.selectedAnnotationIndex);
-    if (index < 0) return;
-
-    removeAnnotationAt(anns, index);
-    UICanvas.state.selectedAnnotationIndex = -1;
-    if (UICanvas.state.onUpdate) UICanvas.state.onUpdate(anns);
-    UICanvas.render();
-    renderAnnotationListUI(anns);
+    return annotationController.deleteSelectedAnnotation();
 }
 
 /**
  * 渲染分類標籤校正模式的右側控制欄（目前分類下拉選單 + 新增類別）
- * image 類型專用，不涉及 bbox 標註
+ * image 類型專用，不涉及 bbox 標註 — 委派至 ui/classification.js
  */
 function renderClassificationControls() {
-    const controls = document.getElementById('annotation-controls');
-    if (!controls) return;
-
-    const image = state.images[state.annotationMode.currentIndex];
-    if (!image) return;
-    const labelMap = state.spec.toJSON().schema.label_map || {};
-    const labelEntries = Object.entries(labelMap).sort((a, b) => a[0].localeCompare(b[0]));
-
-    controls.innerHTML = `
-        <div class="dataset-annotation-class-section">
-            <div class="dataset-annotation-section-title">${t('CLASSIFY_CURRENT_LABEL', '目前分類')}</div>
-            <div class="dataset-annotation-class-row">
-                <select id="annotation-classify-select">
-                    ${labelEntries.length > 0
-                        ? labelEntries.map(([name, id]) =>
-                            `<option value="${id}" ${name === (image.label || '') ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('')
-                        : '<option value="" disabled selected>' + t('NO_LABELS', '尚未偵測到標籤') + '</option>'}
-                </select>
-            </div>
-            <div class="dataset-annotation-info">${t('CLASSIFY_IMAGE_INFO', '檔案: %1').replace('%1', escapeHtml(image.path || image.name || ''))}</div>
-            <div class="dataset-annotation-section-title">${t('ANNOTATION_CLASS', '類別管理')}</div>
-            <div id="annotation-classify-manager"></div>
-        </div>
-    `;
-
-    const select = document.getElementById('annotation-classify-select');
-    if (select) {
-        select.onchange = () => {
-            const id = parseInt(select.value, 10);
-            const name = labelEntries.find(([, value]) => value === id)?.[0] || '';
-            if (name && name !== image.label) {
-                image.label = name;
-                // label_counts / label_map 一致化（依 state.images 重算統計）
-                updateStatsFromImages();
-                renderClassificationControls();
-                updateThumbnailHighlight();
-                refreshPreview(); // debounce 內含 syncSpecFromUI(true)，把 label 寫回 samples
-            }
-        };
-    }
-
-    // 標籤管理（新增/改名/刪除，與物件偵測/檢視模式共用）
-    createLabelMapManager(document.getElementById('annotation-classify-manager'));
+    return classificationController.renderClassificationControls();
 }
 
 /**
- * 更新分類校正模式頂部進度（image 類型顯示樣本位置）
+ * 更新分類校正模式頂部進度（image 類型顯示樣本位置）— 委派至 ui/classification.js
  */
 function updateClassifyProgress() {
-    const progressEl = document.getElementById('annotation-progress');
-    if (!progressEl) return;
-    progressEl.textContent = t('CLASSIFY_PROGRESS', '樣本: %1 / %2 張')
-        .replace('%1', state.annotationMode.currentIndex + 1)
-        .replace('%2', state.images.length);
+    return classificationController.updateClassifyProgress();
 }
 
-let classificationKeyHandler = null; // 分類模式的鍵盤事件 handler（用於清理）
-
 /**
- * 綁定分類校正模式鍵盤事件（↑/↓ 切換圖片、Esc 退出，無 Delete）
+ * 綁定分類校正模式鍵盤事件（↑/↓ 切換圖片、Esc 退出，無 Delete）— 委派至 ui/classification.js
  */
 function bindClassificationKeyboardEvents() {
-    const container = document.getElementById('annotation-classify-container');
-    if (!container) return;
-
-    unbindClassificationKeyboardEvents();
-    container.tabIndex = 0;
-    classificationKeyHandler = (e) => {
-        if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            navigateToImage(state.annotationMode.currentIndex - 1);
-        } else if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            navigateToImage(state.annotationMode.currentIndex + 1);
-        } else if (e.key === 'Escape') {
-            e.preventDefault();
-            e.stopPropagation(); // 阻止冒泡到 modal 的全域 Esc 關閉
-            exitAnnotationMode();
-        }
-    };
-    container.addEventListener('keydown', classificationKeyHandler);
-    container.focus();
+    return classificationController.bindClassificationKeyboardEvents();
 }
 
 /**
- * 清理分類校正模式的鍵盤事件
+ * 清理分類校正模式的鍵盤事件 — 委派至 ui/classification.js
  */
 function unbindClassificationKeyboardEvents() {
-    const container = document.getElementById('annotation-classify-container');
-    if (container && classificationKeyHandler) {
-        container.removeEventListener('keydown', classificationKeyHandler);
-    }
-    classificationKeyHandler = null;
+    return classificationController.unbindClassificationKeyboardEvents();
 }
 
 /**
@@ -1213,101 +825,18 @@ function createLabelMapManager(container, statsContainer = null) {
     };
 }
 
+/**
+ * 渲染右側控制欄（類別選擇器 + 標註列表）— 委派至 ui/annotation.js
+ */
 function renderAnnotationControls() {
-    const controls = document.getElementById('annotation-controls');
-    if (!controls) return;
-
-    const projectType = getFormValue('projectType');
-    const labelMap = state.spec.toJSON().schema.label_map || {};
-    const labelEntries = Object.entries(labelMap);
-
-    // 類別選擇器（僅物件偵測模式顯示；標籤管理由共用 createLabelMapManager 處理）
-    let classSelectorHtml = '';
-    if (projectType === 'object_detection') {
-        classSelectorHtml = `
-            <div class="dataset-annotation-class-section">
-                <div class="dataset-annotation-section-title">${t('ANNOTATION_CLASS', '類別')}</div>
-                <div id="annotation-class-manager"></div>
-            </div>
-        `;
-    }
-
-    controls.innerHTML = `
-        ${classSelectorHtml}
-        <div class="dataset-annotation-list-section">
-            <div class="dataset-annotation-section-title">${t('ANNOTATION_LIST', '標註列表')}</div>
-            <div id="annotation-list-ui" class="dataset-annotation-list"></div>
-        </div>
-    `;
-
-    // 類別管理（標註模式，共用 createLabelMapManager，與檢視/分類一致）
-    if (projectType === 'object_detection') {
-        createLabelMapManager(document.getElementById('annotation-class-manager'));
-    }
-
-    // 重新渲染標註列表（controls.innerHTML 重置會清空 #annotation-list-ui，需恢復）
-    const currentIdx = state.annotationMode.currentIndex;
-    if (currentIdx >= 0 && state.images[currentIdx]) {
-        renderAnnotationListUI(state.images[currentIdx].annotations || []);
-    }
+    return annotationController.renderAnnotationControls();
 }
 
+/**
+ * 渲染標註列表 UI（含 class 更正下拉與高亮）— 委派至 ui/annotation.js
+ */
 function renderAnnotationListUI(anns) {
-    const list = document.getElementById('annotation-list-ui');
-    if (!list) return;
-    const labelMap = state.spec.toJSON().schema.label_map || {};
-    const labelEntries = Object.entries(labelMap);
-
-    list.innerHTML = anns.map((ann, i) => {
-        if (ann.line) {
-            const coords = ann.line.map(v => v.toFixed(2)).join(',');
-            return `
-                <div class="dataset-annotation-item" data-index="${i}">
-                    <span>#${i+1} ${t('ANNOTATION_LINE', '線段')}: [${coords}]</span>
-                    <button onclick="window.CocoyaDataset.removeAnnotation(${i})">×</button>
-                </div>
-            `;
-        } else if (ann.bbox) {
-            const options = labelEntries.length > 0
-                ? labelEntries.map(([name, id]) =>
-                    `<option value="${id}" ${id === ann.class_id ? 'selected' : ''}>${escapeHtml(name)}</option>`
-                ).join('')
-                : '<option value="-1">Unclassified</option>';
-            return `
-                <div class="dataset-annotation-item" data-index="${i}">
-                    <span>#${i+1}</span>
-                    <select class="dataset-annotation-item-class" data-index="${i}">
-                        ${options}
-                    </select>
-                    <span>[${ann.bbox.map(v => v.toFixed(2)).join(',')}]</span>
-                    <button onclick="window.CocoyaDataset.removeAnnotation(${i})">×</button>
-                </div>
-            `;
-        }
-        return '';
-    }).join('') || '<p style="color: #999;">' + t('ANNOTATION_EMPTY', '尚未有標註') + '</p>';
-
-    // 綁定點擊高亮事件
-    list.querySelectorAll('.dataset-annotation-item').forEach(item => {
-        item.onclick = (e) => {
-            if (e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT') return;
-            const index = parseInt(item.dataset.index);
-            UICanvas.setSelectedAnnotation(index);
-            // 高亮列表項目
-            list.querySelectorAll('.dataset-annotation-item').forEach(el => el.classList.remove('selected'));
-            item.classList.add('selected');
-        };
-    });
-
-    // 綁定類別下拉選單變更事件（即時更正標錯類別）
-    list.querySelectorAll('.dataset-annotation-item-class').forEach(select => {
-        select.onchange = () => {
-            const idx = parseInt(select.dataset.index);
-            setAnnotationClassId(anns, idx, parseInt(select.value, 10));
-            if (UICanvas.state.onUpdate) UICanvas.state.onUpdate(anns);
-            UICanvas.render();
-        };
-    });
+    return annotationController.renderAnnotationListUI(anns);
 }
 
 /**
@@ -1830,6 +1359,8 @@ function bindModalEvents(modal) {
             showStatusMessage(t('ERROR_UPLOAD_RESULT_IGNORED', '🛑 收到無來源的上傳結果，已忽略。'));
         }
     });
+    // Stage 4 切片 2：將訂閱解除函式掛到 modal 上，供卸載/重建（refreshI18n）時解除，避免重複 listener 累積
+    modal._offBridgeMessage = offBridgeMessage;
 
     // 輔助函式：根據選取的專案類型動態更新來源模式 (Mode) 的選項
     function updateSourceModeOptions(projectType) {
@@ -1954,113 +1485,13 @@ function createModal() {
     const modal = document.createElement('div');
     modal.id = MODAL_ID;
     modal.className = 'dataset-manager-overlay';
-    modal.innerHTML = `
-        <section class="dataset-manager-dialog" role="dialog" aria-modal="true" aria-labelledby="dataset-manager-title">
-            <header class="dataset-manager-header">
-                <div>
-                    <h2 id="dataset-manager-title">${t('TITLE', 'Dataset Manager')}</h2>
-                    <span id="dataset-manager-subtitle">${t('SUBTITLE', 'Dataset Spec')}</span>
-                </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <button type="button" id="dataset-manager-clear" class="dataset-secondary-btn" style="padding: 4px 8px; font-size: 11px; margin: 0; line-height: 1.2; display: flex; align-items: center; justify-content: center;" title="${t('CLEAR_DATA_TOOLTIP', '清空所有暫存資料記錄並重置')}">${t('CLEAR_DATA', '清除資料')}</button>
-                    <button type="button" id="dataset-manager-close" class="dataset-icon-btn" title="${t('CLOSE', '關閉')}">×</button>
-                </div>
-            </header>
-
-            <div id="dataset-export-progress" class="dataset-export-progress" style="display: none;">
-                <div class="dataset-export-progress-bar"></div>
-                <span class="dataset-export-progress-label">${t('EXPORT_IN_PROGRESS', '正在打包 ZIP 並產生 dataset.json...')}</span>
-            </div>
-
-            <div id="dataset-manager-message" class="dataset-manager-message" style="display: none;"></div>
-
-            <div class="dataset-manager-body">
-                <section class="dataset-panel dataset-source-panel">
-                    <h3>${t('SOURCE', '資料來源')}</h3>
-                    
-                    <label>
-                        <span>${t('PROJECT_TYPE', '專案類型')}</span>
-                        <select name="projectType">${optionList(DatasetSpecConstants.PROJECT_TYPES, 'table')}</select>
-                    </label>
-                    <label>
-                        <span>${t('SOURCE_MODE', '來源模式')}</span>
-                        <select name="sourceMode">${optionList(TYPE_TO_MODES_MAP['table'], 'file')}</select>
-                    </label>
-
-                    <div class="dataset-panel-divider"></div>
-
-                    <label>
-                        <span>${t('PROJECT_NAME', '資料集名稱')}</span>
-                        <input name="projectName" value="dataset" placeholder="${t('PROJECT_NAME_PLACEHOLDER', '僅限英數與下劃線')}">
-                        <span style="font-size: 10px; color: #999; margin-top: 2px; display: block;">${t('PROJECT_NAME_HINT', '* 僅限英文、數字與下劃線 (用於雲端路徑)')}</span>
-                    </label>
-                    
-                    <label>
-                        <span>${t('DESCRIPTION', '描述')}</span>
-                        <textarea name="description" rows="3" placeholder="${t('DESCRIPTION_PLACEHOLDER', '專案詳細描述...')}"></textarea>
-                    </label>
-
-                    <div id="dataset-cloud-diagnostic-area" style="display: none; margin-top: 12px; padding: 10px; background: #fdf6fb; border: 1px solid #e1bee7; border-radius: 6px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <span style="font-size: 12px; font-weight: bold; color: #9c27b0;">${t('CLOUD_REMOTE_ENV', '☁️ 遠端環境')}</span>
-                            <div style="display: flex; gap: 4px;">
-                                <button type="button" id="dataset-cloud-diagnose-btn" class="dataset-small-btn" style="margin: 0; background: #9c27b0; color: white; border: none; padding: 2px 6px;">${t('CLOUD_DIAGNOSE', '執行診斷')}</button>
-                            </div>
-                        </div>
-                        <div id="dataset-cloud-diagnostic-result" style="font-size: 11px; color: #555; line-height: 1.4;">
-                            ${t('CLOUD_DIAGNOSE_HINT', '請點擊「執行診斷」檢查 GPU 與 Docker 環境。')}
-                        </div>
-                    </div>
-
-                    <!-- 匯入按鈕移至左欄最下方：使用者可先在上方依序完成設定，最後再選擇來源 -->
-                    <div class="dataset-panel-divider"></div>
-
-                    <div id="dataset-import-area-table" class="dataset-import-area">
-                        <button type="button" id="dataset-import-btn" class="dataset-secondary-btn" style="width: 100%">${t('SELECT_CSV', '選擇 CSV / JSON 檔案')}</button>
-                        <input type="file" id="dataset-file-input" accept=".csv,.json" style="display: none;">
-                    </div>
-
-                    <div id="dataset-import-area-image" class="dataset-import-area" style="display: none;">
-                        <button type="button" id="dataset-dir-import-btn" class="dataset-secondary-btn" style="width: 100%">${t('SELECT_IMAGE_FOLDER', '選擇影像資料夾')}</button>
-                    </div>
-                </section>
-
-                <section class="dataset-panel dataset-schema-panel">
-                    <div class="dataset-panel-title">
-                        <h3 id="dataset-structure-title">${t('STRUCTURE_TITLE', '欄位與標籤')}</h3>
-                        <div id="dataset-schema-actions">
-                            <button type="button" id="dataset-add-column" class="dataset-small-btn">${t('ADD_FEATURE', '新增 Feature')}</button>
-                            <button type="button" id="dataset-add-label" class="dataset-small-btn">${t('ADD_LABEL', '新增 Label')}</button>
-                        </div>
-                    </div>
-                    <div id="dataset-structure-content">
-                        <div class="dataset-column-head">
-                            <span>${t('COLUMN_NAME', '名稱')}</span>
-                            <span>${t('COLUMN_TYPE', '型別')}</span>
-                            <span>${t('COLUMN_ROLE', '角色')}</span>
-                            <span></span>
-                        </div>
-                        <div id="dataset-column-list" class="dataset-column-list"></div>
-                    </div>
-                </section>
-
-                <section class="dataset-panel dataset-preview-panel">
-                    <div class="dataset-panel-title">
-                        <h3>${t('PREVIEW_TITLE', '預覽與標註')}</h3>
-                        <div>
-                            <button type="button" id="dataset-manager-validate" class="dataset-small-btn">${t('VALIDATE', '驗證')}</button>
-                            <span class="dataset-autosave-indicator" title="${t('AUTOSAVE_ON_TOOLTIP', '標註/分類/新增/刪除後自動寫入 dataset.json')}">🛡 ${t('AUTOSAVE_ON', '自動儲存已開啟')}</span>
-                            <button type="button" id="dataset-manager-export" class="dataset-small-btn" style="background: #FE2F89; color: white; border: none;">${t('EXPORT', '匯出資料集')}</button>
-                        </div>
-                    </div>
-                    <div id="dataset-validation"></div>
-                    <div id="dataset-preview-content">
-                        <pre id="dataset-json-preview"></pre>
-                    </div>
-                </section>
-            </div>
-        </section>
-    `;
+    // Stage 4 切片 2：modal 模板移至 ui/modal.js（buildModalTemplate 純函式）
+    modal.innerHTML = buildModalTemplate({
+        t,
+        optionList,
+        projectTypes: DatasetSpecConstants.PROJECT_TYPES,
+        sourceModes: TYPE_TO_MODES_MAP['table']
+    });
 
     document.body.appendChild(modal);
     bindModalEvents(modal);
@@ -2088,6 +1519,8 @@ export function refreshI18n() {
     const existingModal = getModal();
     if (existingModal) {
         const shouldReopen = state.isOpen && existingModal.style.display === 'flex';
+        // Stage 4 切片 2：卸載前解除該 modal 的 bridge 訂閱，避免重新載入語系累積重複 listener
+        existingModal._offBridgeMessage?.();
         existingModal.remove();
         const newModal = initDatasetManagerUI();
         if (shouldReopen && newModal) {
@@ -2156,6 +1589,11 @@ export async function closeDatasetManager() {
     // Stage 3：取消排程中的 autosave timer 與 sampler 訂閱（dispose 安全，防銷毀後回呼）
     getProgressUC().cancelAutoSave();
     Sampler.dispose();
+    // Stage 4 切片 1：取消進行中的狀態訊息計時器，防止 DOM 銷毀後殘留回呼
+    statusMessagePresenter.dispose();
+    // Stage 4 切片 5：解除分類校正模式的鍵盤 listener
+    classificationController.dispose();
+    annotationController.dispose();
 
     if (modal) modal.style.display = 'none';
     return state.spec;
