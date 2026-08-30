@@ -60,7 +60,7 @@ Cocoya 是一個針對 Python AI 視覺的教學工具。它透過 Blockly 產�
 ### 前端狀態訊息慣例 (showStatusMessage)
 Dataset Manager 的狀態/錯誤/結果訊息一律透過集中式函式 `showStatusMessage(message, options)` 顯示於 modal 頂部中央的 `#dataset-manager-message` 面板（**所有模式下皆可見**，含標註模式），取代直接寫入各處 `status.textContent` 或 `#dataset-import-status`。
 
-- **定義位置**：`ui/src/modules/dataset_manager/ui_layout.js`（模組級 function 宣告；因 hoisting 可於檔案任何位置之函式內呼叫）。
+- **定義位置**：`ui/src/modules/dataset_manager/ui/statusMessage.js`（`createStatusMessageUI()` 回傳 `{ showStatusMessage, dispose }`；`ui_layout.js` 於模組頂部初始化並以 `showStatusMessage` 常數暴露，供模組內各函式與 use-case 注入使用）。
 - **行為**：
   - 顯示於 `#dataset-manager-message`（header 下方中央，flex 置中顯示）。
   - **預設 8 秒後自動清除**；可用 `{ duration }` 覆寫（`0` = 不自動清除）。

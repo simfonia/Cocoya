@@ -31,6 +31,16 @@
 | U3-3 | 匯入一致性：CSV 欄位/label、影像巢狀資料夾統計、同 project name 換來源、取消名稱確認不清空資料 | VSIX+Tauri | 待測 |
 | U3-4 | 刪除安全邊界：合法刪除、`..`/絕對路徑/不存在檔案被拒、重掃描+載入 progress 無殘留 | VSIX+Tauri | 待測 |
 
+## 來源：Stage 4（UI4，隨切片補入）
+
+| ID | 案例 | 平台 | 狀態 |
+|---|---|---|---|
+| UI4-4 | Status message：成功/進行中/錯誤訊息、訊息交錯時新 timer 取代舊、annotation/classification/sampler 各模式皆可見、自動清除後再觸發空訊息即時隱藏 | VSIX+Tauri | 自動化部分 PASS（statusMessage.test.mjs 7/7）；實機待測 |
+| UI4-1 | Modal lifecycle：連續開/關 5 次、每按鈕點一次、無重複 command/status、locale 重建 | VSIX+Tauri | 自動化部分 PASS（modal.test.mjs 5/5 + offBridgeMessage 掛載/卸載）；實機待測 |
+| UI4-2 | Annotation state machine（分類校正側已驗）：classification 進入/退出/↑↓切換/Esc、label 改派後統計與縮圖同步、與 bbox 模式互不污染；bbox 側：進入/退出/↑↓切換/Delete 刪除/Esc、切圖 debounce 落盤、重複進入不累積鍵盤 handler | VSIX+Tauri | 自動化部分 PASS（classification.test.mjs 7/7 + annotation.test.mjs 7/7：狀態機/鍵盤/controls/早退/debounce）；實機待測 |
+| UI4-3 | Scroll 與縮圖（≥50 張、scroll restore） | VSIX+Tauri | 自動化部分 PASS（thumbnails.test.mjs 8/8 含 round-trip）；實機待測 |
+| UI4-5 | Camera lifecycle（Object URL / listener 清理） | VSIX+Tauri | 待 Stage 4 panels/sampler lifecycle 切片後登錄 |
+
 ## 既有 BLOCKED（非延後，等環境）
 
 - Tauri Release 安裝版 smoke（resource/permission/sidecar）

@@ -136,6 +136,21 @@ C:\Workspace\cocoya\
 │   │   │       │   ├── exportUseCases.js # [Stage 3] 匯出 use-case（未標註/未分類確認 + Spec 驗證 + datasetExport correlation 編排）
 │   │   │       │   ├── annotationMutations.js # [Stage 3] 標註/分類 mutation 純函式（計數、class_id 過濾、label→unlabeled、刪除索引解析）
 │   │   │       │   └── annotationMutations.test.mjs # annotationMutations Node 測試（node --test 執行）
+│   │   │       ├── ui/
+│   │   │       │   ├── form.js # [Stage 4 切片 3] 表單讀取 Presenter（createFormPresenter({getModalRoot})→{getFormValue,getColumnsFromUI,dispose}；唯讀、modal root 可注入）
+│   │   │       │   ├── form.test.mjs # form presenter Node 測試（node --test 執行）
+│   │   │       │   ├── thumbnails.js # [Stage 4 切片 4] 縮圖網格 scroll save/restore 集中管理（createGridScrollManager({state,getContainer,hasImages})；沿用 state._savedGridScrollTop、契約不變）
+│   │   │       │   ├── thumbnails.test.mjs # grid scroll manager Node 測試（node --test 執行）
+│   │   │       │   ├── classification.js # [Stage 4 切片 5] 分類校正模式狀態機 controller（createClassificationController；enter/load/renderControls/updateProgress/鍵盤 bind-unbind/dispose；依賴全注入、沿用 state.annotationMode）
+│   │   │       │   ├── classification.test.mjs # classification controller Node 測試（node --test 執行）
+│   │   │       │   ├── annotation.js # [Stage 4 切片 6] bbox/line 標註模式編排 controller（createAnnotationController；enter/load(UICanvas.init+debounce 落盤)/renderControls/renderListUI/progress/畫布鍵盤/delete/saveCurrentAnnotations/dispose；mutation 純函式 import application/annotationMutations.js；分流與 exit 留協調層）
+│   │   │       │   ├── annotation.test.mjs # annotation controller Node 測試（node --test 執行）
+│   │   │       │   ├── panels.js # [Stage 4 切片 7] 面板呈現 Presenter（createPanelsPresenter；renderColumnRow/renderValidation/renderPreviewTable/addColumn/renderAllColumns/dispose；唯呈現層、refreshDynamicPanels 留協調層）
+│   │   │       │   ├── panels.test.mjs # panels presenter Node 測試（node --test 執行）
+│   │   │       │   ├── modal.js # [Stage 4 切片 2] Modal 模板純函式 buildModalTemplate（注入 t/optionList/projectTypes/sourceModes；無 DOM 副作用）
+│   │   │       │   ├── modal.test.mjs # buildModalTemplate Node 測試（node --test 執行）
+│   │   │       │   ├── statusMessage.js # [Stage 4 切片 1] 集中式狀態訊息 Presenter（createStatusMessageUI→{showStatusMessage,dispose}；計時器重置/dispose 語意自 ui_layout 抽出，契約不變）
+│   │   │       │   └── statusMessage.test.mjs # statusMessage 行為契約 Node 測試（node --test 執行）
 │   │   │       ├── dataset_manager.css # Dataset Manager Modal、縮圖牆與標註畫布樣式 (含 3 欄標註模式、.dataset-name-warning 名稱衝突警示)
 │   │   │       ├── i18n.js # [NEW] 共享 i18n t() 函式庫 (支援佔位符替換)
 │   │   │       ├── index.js # 靜態 ESM 入口與 window.CocoyaDataset API 掛載
