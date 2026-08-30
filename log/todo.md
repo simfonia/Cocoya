@@ -145,3 +145,4 @@
 - Stage 5 切片 2：token 定義 + 高頻色彩 var() 化（依 DatasetManagerStyleTokens.md §4/§6）；決策點見 Handoff。
 - **Stage 5 切片 2（2026-08-30）**：token 定義（:root：--dsm-brand/soft/strong + disabled 三 token）+ 品牌粉 19 處 var() 化 + alpha 7 處收斂（soft .15/strong .3，使用者裁示）+ dialog disabled 規則。事故：regex 誤替換 :root 致循環參照已修正。自動化全綠（80/80、build PASS）。三主題目視待實機。下一切片：灰階 token 化 + dark 區塊收斂（切片 3）。
 - **Stage 5 切片 3（2026-08-30）**：灰階 token 化——`:root` 補 5 個 text/border token（精確等值）+ light 側 21 處 var() 化；dark 區塊留切片 4。事故：substring Replace 誤傷 dark 區塊 border-color（7 處），以區間掃描器偵測還原。自動化全綠（80/80、build PASS）。下一切片：dark/HC token 覆寫收斂（切片 4）。
+- **Stage 5 切片 4（2026-08-30）**：dark/HC token 覆寫——`body.vscode-dark/high-contrast` 定義 text/border 五 token dark 值（等值），dark 區塊 24 處 var() 化；語意色與 surface 背景保留。自動化全綠（80/80、build PASS）。下一切片：candy/dark 主題 cssVars 補 `--dsm-*`（切片 5，解決 candy 換膚 DM 無變化）。
