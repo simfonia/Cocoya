@@ -23,6 +23,17 @@
     --dsm-disabled-border: #e0e0e0;
 }
 
+/* dark / high-contrast token 覆寫（Stage 5 切片 4）：值與既有 dark 區塊原值等值 */
+body.vscode-dark,
+body.vscode-high-contrast {
+    --dsm-text: #e0e0e0;
+    --dsm-text-secondary: #aaaaaa;
+    --dsm-text-muted: #888888;
+    --dsm-border-light: #404040;
+    --dsm-border-strong: #555555;
+}
+
+
 .dataset-manager-overlay {
     position: fixed;
     inset: 0;
@@ -354,8 +365,8 @@ body.vscode-high-contrast .dataset-validation .dataset-warnings {
 body.vscode-dark .dataset-manager-dialog,
 body.vscode-high-contrast .dataset-manager-dialog {
     background: #252526;
-    color: #e0e0e0;
-    border-color: #404040;
+    color: var(--dsm-text);
+    border-color: var(--dsm-border-light);
 }
 
 body.vscode-dark .dataset-manager-header,
@@ -363,13 +374,13 @@ body.vscode-dark .dataset-manager-footer,
 body.vscode-high-contrast .dataset-manager-header,
 body.vscode-high-contrast .dataset-manager-footer {
     background: #2d2d2d;
-    border-color: #404040;
+    border-color: var(--dsm-border-light);
 }
 
 body.vscode-dark .dataset-panel,
 body.vscode-high-contrast .dataset-panel {
     background: #2d2d2d;
-    border-color: #404040;
+    border-color: var(--dsm-border-light);
 }
 
 body.vscode-dark .dataset-panel h3,
@@ -380,7 +391,7 @@ body.vscode-high-contrast .dataset-panel h3,
 body.vscode-high-contrast .dataset-source-panel label span,
 body.vscode-high-contrast .dataset-column-head,
 body.vscode-high-contrast .dataset-manager-header span {
-    color: #aaaaaa;
+    color: var(--dsm-text-secondary);
 }
 
 body.vscode-dark .dataset-source-panel input,
@@ -394,8 +405,8 @@ body.vscode-high-contrast .dataset-source-panel textarea,
 body.vscode-high-contrast .dataset-column-row input,
 body.vscode-high-contrast .dataset-column-row select {
     background: #1e1e1e;
-    border-color: #555555;
-    color: #e0e0e0;
+    border-color: var(--dsm-border-strong);
+    color: var(--dsm-text);
 }
 
 body.vscode-dark .dataset-small-btn,
@@ -403,14 +414,14 @@ body.vscode-dark .dataset-secondary-btn,
 body.vscode-high-contrast .dataset-small-btn,
 body.vscode-high-contrast .dataset-secondary-btn {
     background: #3c3c3c;
-    border-color: #555555;
-    color: #e0e0e0;
+    border-color: var(--dsm-border-strong);
+    color: var(--dsm-text);
 }
 
 body.vscode-dark #dataset-json-preview,
 body.vscode-high-contrast #dataset-json-preview {
     background: #1e1e1e;
-    border-color: #404040;
+    border-color: var(--dsm-border-light);
     color: #d4d4d4;
 }
 
@@ -731,7 +742,7 @@ body.vscode-high-contrast .dataset-label-color {
 
 body.vscode-dark .dataset-empty-state,
 body.vscode-high-contrast .dataset-empty-state {
-    color: #888;
+    color: var(--dsm-text-muted);
 }
 
 /* Annotation Mode */
@@ -812,7 +823,7 @@ body.vscode-high-contrast .dataset-annotation-item button:hover {
 
 body.vscode-dark .dataset-label-head,
 body.vscode-high-contrast .dataset-label-head {
-    color: #aaaaaa;
+    color: var(--dsm-text-secondary);
 }
 
 /* 小螢幕優化：讓 Modal 撐滿 */
@@ -870,11 +881,11 @@ body.vscode-high-contrast .dataset-label-head {
 body.vscode-dark .dataset-preview-table th,
 body.vscode-high-contrast .dataset-preview-table th {
     background: #333;
-    border-color: #555;
+    border-color: var(--dsm-border-strong);
 }
 body.vscode-dark .dataset-preview-table td,
 body.vscode-high-contrast .dataset-preview-table td {
-    border-color: #555;
+    border-color: var(--dsm-border-strong);
 }
 
 /* Phase 5: Sampler Styles */
@@ -1085,7 +1096,7 @@ body.vscode-high-contrast #dataset-sampler-view {
 
 body.vscode-dark .dataset-manager-body.dataset-annotation-mode .dataset-panel-title,
 body.vscode-high-contrast .dataset-manager-body.dataset-annotation-mode .dataset-panel-title {
-    border-bottom-color: #404040;
+    border-bottom-color: var(--dsm-border-light);
     background: #2d2d2d;
 }
 
@@ -1125,7 +1136,7 @@ body.vscode-high-contrast .dataset-manager-body.dataset-annotation-mode .dataset
 
 body.vscode-dark .dataset-annotation-thumbnails,
 body.vscode-high-contrast .dataset-annotation-thumbnails {
-    border-right-color: #404040;
+    border-right-color: var(--dsm-border-light);
     background: #2d2d2d;
 }
 
@@ -1238,7 +1249,7 @@ body.vscode-high-contrast .dataset-annotation-info {
 
 body.vscode-dark .dataset-annotation-toolbar,
 body.vscode-high-contrast .dataset-annotation-toolbar {
-    border-bottom-color: #404040;
+    border-bottom-color: var(--dsm-border-light);
     background: #2d2d2d;
 }
 
@@ -1254,7 +1265,7 @@ body.vscode-high-contrast .dataset-annotation-toolbar {
 
 body.vscode-dark .dataset-annotation-shortcuts-hint,
 body.vscode-high-contrast .dataset-annotation-shortcuts-hint {
-    color: #888;
+    color: var(--dsm-text-muted);
 }
 
 .dataset-annotation-image-container {
@@ -1293,7 +1304,7 @@ body.vscode-high-contrast .dataset-annotation-shortcuts-hint {
 
 body.vscode-dark .dataset-annotation-controls,
 body.vscode-high-contrast .dataset-annotation-controls {
-    border-left-color: #404040;
+    border-left-color: var(--dsm-border-light);
     background: #333333;
 }
 
@@ -1306,7 +1317,7 @@ body.vscode-high-contrast .dataset-annotation-controls {
 
 body.vscode-dark .dataset-annotation-section-title,
 body.vscode-high-contrast .dataset-annotation-section-title {
-    color: #aaa;
+    color: var(--dsm-text-secondary);
 }
 
 .dataset-annotation-class-row {
@@ -1330,8 +1341,8 @@ body.vscode-high-contrast .dataset-annotation-section-title {
 body.vscode-dark .dataset-annotation-class-select,
 body.vscode-high-contrast .dataset-annotation-class-select {
     background: #1e1e1e;
-    border-color: #555;
-    color: #e0e0e0;
+    border-color: var(--dsm-border-strong);
+    color: var(--dsm-text);
 }
 
 .dataset-annotation-list {
@@ -1371,8 +1382,8 @@ body.vscode-high-contrast .dataset-annotation-item.selected {
 body.vscode-dark .dataset-annotation-item .dataset-annotation-item-class,
 body.vscode-high-contrast .dataset-annotation-item .dataset-annotation-item-class {
     background: #1e1e1e;
-    border-color: #555;
-    color: #e0e0e0;
+    border-color: var(--dsm-border-strong);
+    color: var(--dsm-text);
 }
 
 /* 響應式：小螢幕時縮小側欄 */
