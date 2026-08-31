@@ -168,31 +168,31 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         };
 
         dialog.innerHTML = `
-            <div class="dataset-manager-dialog" style="max-width: 400px; padding: 20px; background: white; border-radius: 8px; border: 1px solid #ddd; box-shadow: 0 4px 15px rgba(0,0,0,0.15);">
-                <header class="dataset-manager-header" style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
-                    <h3 style="margin: 0; font-size: 14px; color: #9c27b0;">☁️ 連線至雲端訓練伺服器</h3>
+            <div class="dataset-manager-dialog" style="max-width: 400px; padding: 20px; background: var(--dsm-surface, white); border-radius: 8px; border: 1px solid var(--dsm-border-light, #ddd); box-shadow: 0 4px 15px rgba(0,0,0,0.15); color: var(--dsm-text, #333);">
+                <header class="dataset-manager-header" style="margin-bottom: 15px; border-bottom: 1px solid var(--dsm-border-light, #eee); padding-bottom: 10px;">
+                    <h3 style="margin: 0; font-size: 14px; color: var(--dsm-brand, #9c27b0);">☁️ 連線至雲端訓練伺服器</h3>
                 </header>
                 <div style="display: flex; flex-direction: column; gap: 10px;">
-                    <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px;">
+                    <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--dsm-text, #333);">
                         <span>主機 IP / Host</span>
-                        <input type="text" id="ssh-host" value="${escapeHtml(defaultHost)}" placeholder="例如 192.168.3.8" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px;">
+                        <input type="text" id="ssh-host" value="${escapeHtml(defaultHost)}" placeholder="例如 192.168.3.8" style="padding: 6px; border: 1px solid var(--dsm-border-strong, #ccc); border-radius: 4px; background: var(--dsm-input-bg, white); color: var(--dsm-text, #333);">
                     </label>
-                    <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px;">
+                    <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--dsm-text, #333);">
                         <span>連接埠 / Port</span>
-                        <input type="number" id="ssh-port" value="${escapeHtml(defaultPort)}" placeholder="預設 22" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px;">
+                        <input type="number" id="ssh-port" value="${escapeHtml(defaultPort)}" placeholder="預設 22" style="padding: 6px; border: 1px solid var(--dsm-border-strong, #ccc); border-radius: 4px; background: var(--dsm-input-bg, white); color: var(--dsm-text, #333);">
                     </label>
-                    <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px;">
+                    <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--dsm-text, #333);">
                         <span>使用者名稱 / Username</span>
-                        <input type="text" id="ssh-user" value="${escapeHtml(defaultUser)}" placeholder="例如 user" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px;">
+                        <input type="text" id="ssh-user" value="${escapeHtml(defaultUser)}" placeholder="例如 user" style="padding: 6px; border: 1px solid var(--dsm-border-strong, #ccc); border-radius: 4px; background: var(--dsm-input-bg, white); color: var(--dsm-text, #333);">
                     </label>
-                    <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px;">
+                    <label style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--dsm-text, #333);">
                         <span>密碼 / Password</span>
-                        <input type="password" id="ssh-pass" placeholder="輸入密碼" style="padding: 6px; border: 1px solid #ccc; border-radius: 4px;">
+                        <input type="password" id="ssh-pass" placeholder="輸入密碼" style="padding: 6px; border: 1px solid var(--dsm-border-strong, #ccc); border-radius: 4px; background: var(--dsm-input-bg, white); color: var(--dsm-text, #333);">
                     </label>
                 </div>
-                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; border-top: 1px solid #eee; padding-top: 12px;">
+                <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; border-top: 1px solid var(--dsm-border-light, #eee); padding-top: 12px;">
                     <button type="button" id="ssh-dialog-cancel" class="dataset-secondary-btn" style="margin: 0; padding: 6px 12px;">取消</button>
-                    <button type="button" id="ssh-dialog-confirm" class="dataset-small-btn" style="background: #9c27b0; color: white; border: none; margin: 0; padding: 6px 16px; font-weight: bold;">連線</button>
+                    <button type="button" id="ssh-dialog-confirm" class="dataset-small-btn" style="background: var(--dsm-brand, #9c27b0); color: white; border: none; margin: 0; padding: 6px 16px; font-weight: bold;">連線</button>
                 </div>
             </div>
         `;

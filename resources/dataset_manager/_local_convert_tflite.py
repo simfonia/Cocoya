@@ -40,13 +40,22 @@ def build_representative_dataset(dataset_dir, img_size=224, batch_size=1):
     return ds
 
 
-def convert_tflite(keras_path, dataset_dir, output_dir, project_name, model_output):
+def convert_tflite(keras_path, dataset_dir, output_dir, project_name, model_output, need_rep=None):
     import tensorflow as tf
+
+    # need_rep：只有 int8 量化需要 representative dataset（統計 activation min/max）；
+    # f32/keras 轉換只需模型本身，不必重掃樣本。預設依 model_output 自動判斷。
+    if need_rep is None:
+        need_rep = model_output in ('int8', 'int8+f32', 'all')
 
     print(f"載入 Keras 模型: {keras_path}")
     model = tf.keras.models.load_model(keras_path)
 
-    rep_ds = build_representative_dataset(dataset_dir)
+    rep_ds = build_representative_dataset(dataset_dir) if need_rep else None
+    if need_rep:
+        print("int8 量化：掃描本地 dataset 建 representative（樣本越多越久，請耐心等待）")
+    else:
+        print(f"model_output={model_output}：不需 representative dataset，跳過樣本掃描")
 
     def make_rep_gen():
         def gen():

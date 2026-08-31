@@ -64,18 +64,6 @@ export function buildModalTemplate({ t, optionList, projectTypes, sourceModes })
                         <textarea name="description" rows="3" placeholder="${t('DESCRIPTION_PLACEHOLDER', '專案詳細描述...')}"></textarea>
                     </label>
 
-                    <div id="dataset-cloud-diagnostic-area" style="display: none; margin-top: 12px; padding: 10px; background: #fdf6fb; border: 1px solid #e1bee7; border-radius: 6px;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                            <span style="font-size: 12px; font-weight: bold; color: #9c27b0;">${t('CLOUD_REMOTE_ENV', '☁️ 遠端環境')}</span>
-                            <div style="display: flex; gap: 4px;">
-                                <button type="button" id="dataset-cloud-diagnose-btn" class="dataset-small-btn" style="margin: 0; background: #9c27b0; color: white; border: none; padding: 2px 6px;">${t('CLOUD_DIAGNOSE', '執行診斷')}</button>
-                            </div>
-                        </div>
-                        <div id="dataset-cloud-diagnostic-result" style="font-size: 11px; color: #555; line-height: 1.4;">
-                            ${t('CLOUD_DIAGNOSE_HINT', '請點擊「執行診斷」檢查 GPU 與 Docker 環境。')}
-                        </div>
-                    </div>
-
                     <!-- 匯入按鈕移至左欄最下方：使用者可先在上方依序完成設定，最後再選擇來源 -->
                     <div class="dataset-panel-divider"></div>
 

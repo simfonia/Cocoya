@@ -96,23 +96,6 @@
     "DSM_COLOR": "顏色",
     "DSM_DELETE_IMAGE": "刪除照片",
 
-    // 雲端診斷
-    "DSM_CLOUD_REMOTE_ENV": "☁️ 遠端環境",
-    "DSM_CLOUD_DIAGNOSE": "執行診斷",
-    "DSM_CLOUD_DIAGNOSE_HINT": "請點擊「執行診斷」檢查 GPU 與 Docker 環境。",
-    "DSM_CLOUD_DIAGNOSING": "正在進行遠端環境診斷...",
-    "DSM_CLOUD_GPU": "GPU",
-    "DSM_CLOUD_DOCKER": "Docker",
-    "DSM_CLOUD_GPU_PASSTHROUGH": "GPU Passthrough",
-    "DSM_CLOUD_AVAILABLE": "可用",
-    "DSM_CLOUD_NONE": "無",
-    "DSM_CLOUD_NORMAL": "正常",
-    "DSM_CLOUD_NOT_RUNNING": "未啟動",
-    "DSM_CLOUD_SUPPORTED": "支援 (--gpus)",
-    "DSM_CLOUD_NOT_SUPPORTED": "不支援",
-    "DSM_CLOUD_DIAGNOSE_WARN": "⚠️ 診斷警告:",
-    "DSM_CLOUD_DIAGNOSE_FAILED": "❌ 診斷失敗",
-
     // 狀態訊息
     "DSM_STATUS_LOADING": "載入中: %1...",
     "DSM_STATUS_IMPORTING_FOLDER": "正在選取資料夾...",

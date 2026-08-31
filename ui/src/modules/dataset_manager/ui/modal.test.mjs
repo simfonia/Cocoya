@@ -29,8 +29,6 @@ const REQUIRED_IDS = [
     'dataset-manager-close',
     'dataset-export-progress',
     'dataset-manager-message',
-    'dataset-cloud-diagnose-btn',
-    'dataset-cloud-diagnostic-result',
     'dataset-import-btn',
     'dataset-file-input',
     'dataset-dir-import-btn',
