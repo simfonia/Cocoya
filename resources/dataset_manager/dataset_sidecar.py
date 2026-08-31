@@ -3,6 +3,9 @@ import json
 import time
 import os
 import threading
+import importlib
+import tempfile
+import tempfile
 import warnings
 
 # 抑制 CryptographyDeprecationWarning 與一般 DeprecationWarning 雜訊
@@ -443,7 +446,7 @@ class DatasetSidecar:
                                     try:
                                         with zipfile.ZipFile(tmp_zip, "w", zipfile.ZIP_DEFLATED) as zf:
                                             for rel in changed:
-                                                zf.write(os.path.join(local_dataset_dir, rel), rel)
+                                                zf.write(os.path.join(local_dataset_dir, rel.replace("/", os.sep)), rel)
                                         sftp = ssh.open_sftp()
                                         # SFTP 不展開 ~，需以 realpath 取得遠端絕對路徑
                                         c_rd, o_rd, _ = run('eval realpath "' + remote_dataset_dir + '"')
@@ -475,7 +478,11 @@ class DatasetSidecar:
                             else:
                                 rt_log("[Remote] sync=skip: 略過上傳，直接使用遠端現有資料")
                             # --- 模板 smart 同步（只上傳變更 ++ 自動，D13/D12）---
+                            # 根因修正：Rust canonicalize 啟動 sidecar 時 __file__ 可能帶 \\?\ 前綴，
+                            # \\?\ 模式下 Windows 不正規化分隔符，混合斜線路徑會炸 WinError 123 → 剝掉前綴
                             local_templates_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "resources", "train_templates"))
+                            if local_templates_root.startswith("\\\\?\\"):
+                                local_templates_root = local_templates_root[4:]
                             remote_templates_root = remote_base + "/templates"
                             run('eval mkdir -p "' + remote_templates_root + '"')
                             c_treal, o_treal, _ = run('eval realpath "' + remote_templates_root + '"')
@@ -515,7 +522,7 @@ class DatasetSidecar:
                                 try:
                                     with zipfile.ZipFile(t_zip, "w", zipfile.ZIP_DEFLATED) as zf:
                                         for rel in tmpl_changed:
-                                            zf.write(os.path.join(local_templates_root, rel), rel)
+                                            zf.write(os.path.join(local_templates_root, rel.replace("/", os.sep)), rel)
                                     sftp_t = ssh.open_sftp()
                                     tzip_remote = remote_templates_real + "/_cocoya_templates.zip"
                                     sftp_t.put(t_zip, tzip_remote)
@@ -565,6 +572,8 @@ class DatasetSidecar:
                             # D10/D15 鐵律：TFLite 只在本地轉。遠端只依使用者選擇產 keras。
                             # 選 none → 遠端只產報告/數據 (--model_output none)；其餘 → 遠端只產 keras (--model_output keras)
                             remote_model_output = "keras" if user_model_output != "none" else "none"
+                            # 訓練前清空遠端 output 目錄：同專案前次訓練的殘留會污染下載清單與掃描
+                            run('eval rm -rf "' + remote_output_dir + '" && mkdir -p "' + remote_output_dir + '"')
                             rt_log("[Remote] 啟動 Docker 訓練容器: " + docker_image + " (task=" + task_type + ", model_output=" + remote_model_output + ", bind=/workspace)")
                             docker_cmd = (
                                 'docker run --gpus all --rm '
@@ -618,10 +627,17 @@ class DatasetSidecar:
                             downloaded = []
                             for attr in sftp.listdir_attr(remote_out_real):
                                 fn = attr.filename
-                                if fn and not fn.startswith("."):
-                                    local_path = os.path.join(output_dir, fn)
-                                    sftp.get(remote_out_real + "/" + fn, local_path)
-                                    downloaded.append(fn)
+                                # 只下載當前專案的產物 + labels.txt；跳過殘留的舊專案檔
+                                # （遠端 output 目錄共用且不清空，舊 keras 會被誤下載）
+                                if not fn or fn.startswith("."):
+                                    continue
+                                if user_model_output == "none" and fn.endswith(".keras"):
+                                    continue
+                                if not (fn.startswith(project_name) or fn == "labels.txt"):
+                                    continue
+                                local_path = os.path.join(output_dir, fn)
+                                sftp.get(remote_out_real + "/" + fn, local_path)
+                                downloaded.append(fn)
                             sftp.close()
                             rt_log("[Remote] 已下載: " + ", ".join(downloaded))
                             if user_model_output != "none":
@@ -634,7 +650,8 @@ class DatasetSidecar:
                                         return os.path.join(output_dir, fn)
                                 return None
                             report_path = _pick(lambda f: f.endswith("_training_report.html"))
-                            keras_path = _pick(lambda f: f.endswith(".keras"))
+                            # 選 none 時不掃 keras：避免本地殘留的舊 keras 被誤報為本次產物
+                            keras_path = _pick(lambda f: f.endswith(".keras")) if user_model_output != "none" else None
                             curve_path = _pick(lambda f: f.endswith("_training_curve.png"))
                             history_path = _pick(lambda f: f.endswith("_training_history.json"))
 
@@ -643,8 +660,25 @@ class DatasetSidecar:
                             if user_model_output != "none" and keras_path:
                                 rt_log("[Remote] 於本地依 model_output=" + user_model_output + " 轉換 TFLite...")
                                 try:
-                                    import subprocess, sys
+                                    import subprocess, sys, threading, time as _time
                                     convert_script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_local_convert_tflite.py")
+                                    if not os.path.isfile(convert_script):
+                                        raise RuntimeError("轉換腳本不存在: " + convert_script)
+                                    rt_log("[LocalTFLite] 本機 python: " + sys.executable)
+                                    if importlib.util.find_spec("tensorflow") is None:
+                                        raise RuntimeError("本機 python 未安裝 tensorflow，無法轉換 TFLite。請 pip install tensorflow (python=" + sys.executable + ")")
+                                    # 子進程 + 乾淨環境：sidecar 承載自 Tauri 的環境雜訊會讓 TF import 卡死
+                                    # （進程內 import 亦會因 Windows DLL loader lock 於工作執行緒卡死），
+                                    # 故只繼承 python 必要的系統變數（本地訓練子進程即為乾淨環境，可正常轉換）
+                                    _clean_keys = ("SystemRoot", "TEMP", "TMP", "PATH", "PATHEXT", "USERPROFILE",
+                                                   "APPDATA", "LOCALAPPDATA", "PROGRAMFILES", "PROGRAMDATA",
+                                                   "NUMBER_OF_PROCESSORS", "COMPUTERNAME", "USERNAME",
+                                                   "HOMEDRIVE", "HOMEPATH", "WINDIR", "SYSTEMDRIVE")
+                                    conv_env = {k: os.environ[k] for k in _clean_keys if k in os.environ}
+                                    conv_env["PYTHONUNBUFFERED"] = "1"
+                                    conv_env["PYTHONIOENCODING"] = "utf-8"
+                                    conv_env["TF_DETERMINISTIC_OPS"] = "1"
+                                    conv_env["TF_CUDNN_DETERMINISTIC"] = "1"
                                     conv_cmd = [
                                         sys.executable, convert_script,
                                         "--keras_path", keras_path,
@@ -653,9 +687,27 @@ class DatasetSidecar:
                                         "--project_name", project_name,
                                         "--model_output", user_model_output
                                     ]
+                                    CREATE_NO_WINDOW = 0x08000000
                                     p_conv = subprocess.Popen(conv_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                                              universal_newlines=True, encoding="utf-8", errors="replace")
+                                                              stdin=subprocess.DEVNULL,
+                                                              universal_newlines=True, encoding="utf-8", errors="replace",
+                                                              env=conv_env, creationflags=CREATE_NO_WINDOW)
+                                    rt_log("[LocalTFLite] 轉換進程已啟動 (pid=" + str(p_conv.pid) + ", 乾淨環境)，import tensorflow 約數十秒，int8 量化掃樣本需數分鐘...")
+                                    got_output = [False]
+                                    def _watchdog():
+                                        _time.sleep(60)
+                                        if not got_output[0]:
+                                            try:
+                                                dump = os.path.join(tempfile.gettempdir(), "cocoya_sidecar_env_dump.txt")
+                                                with open(dump, "w", encoding="utf-8") as f:
+                                                    for k2 in sorted(os.environ):
+                                                        f.write(k2 + "=" + str(os.environ[k2])[:300] + "\n")
+                                                rt_log("[LocalTFLite] 警告: 子進程 60 秒無任何輸出（疑遭環境攔截），sidecar 環境變數已傾印: " + dump)
+                                            except Exception:
+                                                pass
+                                    threading.Thread(target=_watchdog, daemon=True).start()
                                     for cline in p_conv.stdout:
+                                        got_output[0] = True
                                         cline = cline.strip()
                                         if cline:
                                             rt_log("[LocalTFLite] " + cline)

@@ -96,23 +96,6 @@
     "DSM_COLOR": "Color",
     "DSM_DELETE_IMAGE": "Delete photo",
 
-    // Cloud diagnostics
-    "DSM_CLOUD_REMOTE_ENV": "☁️ Remote Environment",
-    "DSM_CLOUD_DIAGNOSE": "Run Diagnostics",
-    "DSM_CLOUD_DIAGNOSE_HINT": "Click \"Run Diagnostics\" to check GPU and Docker environment.",
-    "DSM_CLOUD_DIAGNOSING": "Running remote environment diagnostics...",
-    "DSM_CLOUD_GPU": "GPU",
-    "DSM_CLOUD_DOCKER": "Docker",
-    "DSM_CLOUD_GPU_PASSTHROUGH": "GPU Passthrough",
-    "DSM_CLOUD_AVAILABLE": "Available",
-    "DSM_CLOUD_NONE": "None",
-    "DSM_CLOUD_NORMAL": "Normal",
-    "DSM_CLOUD_NOT_RUNNING": "Not running",
-    "DSM_CLOUD_SUPPORTED": "Supported (--gpus)",
-    "DSM_CLOUD_NOT_SUPPORTED": "Not supported",
-    "DSM_CLOUD_DIAGNOSE_WARN": "⚠️ Diagnostic warnings:",
-    "DSM_CLOUD_DIAGNOSE_FAILED": "❌ Diagnostics failed",
-
     // Status messages
     "DSM_STATUS_LOADING": "Loading: %1...",
     "DSM_STATUS_IMPORTING_FOLDER": "Selecting folder...",

@@ -1173,8 +1173,8 @@ export class BridgeTauri extends BaseBridge {
                         z-index: 9999;
                     }
                     .cocoya-prompt-dialog {
-                        background: #ffffff;
-                        border: 1px solid #cccccc;
+                        background: var(--dsm-surface, #ffffff);
+                        border: 1px solid var(--dsm-border-strong, #cccccc);
                         border-radius: 8px;
                         padding: 20px;
                         min-width: 300px;
@@ -1184,22 +1184,24 @@ export class BridgeTauri extends BaseBridge {
                     .cocoya-prompt-message {
                         margin-bottom: 12px;
                         font-size: 13px;
-                        color: #333333;
+                        color: var(--dsm-text, #333333);
                         word-wrap: break-word;
                     }
                     .cocoya-prompt-input {
                         width: 100%;
                         padding: 8px 10px;
-                        border: 1px solid #cccccc;
+                        border: 1px solid var(--dsm-border-strong, #cccccc);
                         border-radius: 4px;
                         font-size: 13px;
                         margin-bottom: 16px;
                         box-sizing: border-box;
                         outline: none;
+                        background: var(--dsm-input-bg, #ffffff);
+                        color: var(--dsm-text, #333333);
                     }
                     .cocoya-prompt-input:focus {
-                        border-color: #FE2F89;
-                        box-shadow: 0 0 0 2px rgba(254, 47, 137, 0.12);
+                        border-color: var(--dsm-brand, #FE2F89);
+                        box-shadow: 0 0 0 2px var(--dsm-brand-soft, rgba(254, 47, 137, 0.12));
                     }
                     .cocoya-prompt-buttons {
                         display: flex;
@@ -1208,21 +1210,21 @@ export class BridgeTauri extends BaseBridge {
                     }
                     .cocoya-prompt-btn {
                         padding: 6px 16px;
-                        border: 1px solid #cccccc;
+                        border: 1px solid var(--dsm-border-strong, #cccccc);
                         border-radius: 4px;
-                        background: #f7f7f7;
-                        color: #333333;
+                        background: var(--dsm-btn-bg, #f7f7f7);
+                        color: var(--dsm-text, #333333);
                         cursor: pointer;
                         font-size: 12px;
                         min-height: 30px;
                     }
                     .cocoya-prompt-btn:hover {
-                        border-color: #FE2F89;
-                        color: #FE2F89;
-                        background: #fff7fb;
+                        border-color: var(--dsm-brand, #FE2F89);
+                        color: var(--dsm-brand, #FE2F89);
+                        background: var(--dsm-btn-hover-bg, #fff7fb);
                     }
                     .cocoya-prompt-ok {
-                        background: #FE2F89;
+                        background: var(--dsm-brand, #FE2F89);
                         color: white;
                         border: none;
                     }

@@ -51,7 +51,35 @@
             '--code-header-bg': '#FFEFF7',
             '--code-border': '#FFD0E8',
             '--text-primary': '#6A4A8C',
-            '--text-secondary': '#B08AC0'
+            '--text-secondary': '#B08AC0',
+            /* Dataset Manager tokens（Stage 5 切片 5：使用 candy 既有色彩）*/
+            '--dsm-brand': '#FE2F89',
+            '--dsm-brand-soft': 'rgba(254, 47, 137, 0.15)',
+            '--dsm-brand-strong': 'rgba(254, 47, 137, 0.3)',
+            '--dsm-text': '#8A4A6A',
+            '--dsm-text-secondary': '#B08AC0',
+            '--dsm-text-muted': '#B08AC0',
+            '--dsm-border-light': '#FFD0E8',
+            '--dsm-border-strong': '#FFC0E0',
+            '--dsm-surface': '#FFF8F0',
+            '--dsm-surface-alt': '#FFEFF7',
+            '--dsm-input-bg': '#FFFFFF',
+            '--dsm-btn-bg': '#FFEFF7',
+            '--dsm-btn-hover-bg': '#FFE3F0',
+            '--dsm-code-bg': '#FFFDF7',
+            '--dsm-message-bg': '#FFE9F3',
+            '--dsm-message-border': '#FFC0E0',
+            '--dsm-message-text': '#8A4A6A',
+            '--dsm-disabled-bg': '#FFEFF7',
+            '--dsm-disabled-text': '#B08AC0',
+            '--dsm-disabled-border': '#FFD0E8',
+            '--dsm-list-item-bg': '#FFE3F0',
+            '--dsm-success-bg': '#FFEFF7',
+            '--dsm-success-border': '#FFC0E0',
+            '--dsm-success-text': '#8A4A6A',
+            '--dsm-success-accent': '#FE2F89',
+            '--dsm-error-bg': '#FFF0F0',
+            '--dsm-warning-bg': '#FFE8F0'
         }
     });
 })();

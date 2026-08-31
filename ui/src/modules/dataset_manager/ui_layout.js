@@ -928,12 +928,6 @@ export function refreshDynamicPanels() {
     const isImage = projectType === 'image' || projectType === 'object_detection' || projectType === 'line_following';
     const isLive = sourceMode === 'live';
 
-    // 控制遠端環境診斷面板顯示（雲端全域開關已移除，見 log/plan/RemoteTrainingRefactor.md D1；診斷面板暫以 isImage 顯示，S5 將收斂至 SSH 精靈）
-    const diagArea = modal.querySelector('#dataset-cloud-diagnostic-area');
-    if (diagArea) {
-        diagArea.style.display = isImage ? 'block' : 'none';
-    }
-
     // 1. 更新匯入/採集區域顯示
     modal.querySelector('#dataset-import-area-table').style.display = (isImage || isLive) ? 'none' : 'block';
     modal.querySelector('#dataset-import-area-image').style.display = (isImage && !isLive) ? 'block' : 'none';
@@ -1316,51 +1310,8 @@ function bindModalEvents(modal) {
         dirImportBtn.onclick = () => handleDirectoryImport();
     }
 
-    const cloudDiagnoseBtn = modal.querySelector('#dataset-cloud-diagnose-btn');
-    if (cloudDiagnoseBtn) {
-        cloudDiagnoseBtn.onclick = () => {
-            window.CocoyaUI.ensureSshConfig((sshConfig) => {
-                const diagResult = modal.querySelector('#dataset-cloud-diagnostic-result');
-                if (diagResult) diagResult.innerHTML = t('CLOUD_DIAGNOSING', '正在進行遠端環境診斷...');
-                datasetBridge.send('checkRemoteEnvironment', sshConfig);
-            });
-        };
-    }
-
-
-
-    // 監聽 Extension 回傳的結果（Stage 2：經 io/bridge.js 訂閱，關閉時可解除）
-    const offBridgeMessage = datasetBridge.subscribeMultiple([
-        'checkRemoteEnvironmentResult',
-        'datasetUploadResult'
-    ], (msg) => {
-        const diagResult = modal.querySelector('#dataset-cloud-diagnostic-result');
-
-        if (msg.command === 'checkRemoteEnvironmentResult') {
-            if (diagResult) {
-                if (msg.success) {
-                    const statusData = msg.status;
-                    let html = `<div style="margin-top: 4px;">`;
-                    html += `<strong>GPU</strong>: ${statusData.cudaAvailable ? `<span style="color:#4CAF50;">${t('CLOUD_AVAILABLE', '可用')}</span> (${statusData.gpuName})` : `<span style="color:#F44336;">${t('CLOUD_NONE', '無')}</span>`}<br>`;
-                    html += `<strong>Docker</strong>: ${statusData.dockerRunning ? `<span style="color:#4CAF50;">${t('CLOUD_NORMAL', '正常')}</span>` : `<span style="color:#F44336;">${t('CLOUD_NOT_RUNNING', '未啟動')}</span>`}<br>`;
-                    html += `<strong>GPU Passthrough</strong>: ${statusData.gpuPassthrough ? `<span style="color:#4CAF50;">${t('CLOUD_SUPPORTED', '支援 (--gpus)')}</span>` : `<span style="color:#F44336;">${t('CLOUD_NOT_SUPPORTED', '不支援')}</span>`}`;
-                    
-                    if (statusData.errors && statusData.errors.length > 0) {
-                        html += `<div style="color: #FF9800; margin-top: 4px; font-size: 10px;">${t('CLOUD_DIAGNOSE_WARN', '⚠️ 診斷警告:')}<br>- ${statusData.errors.join('<br>- ')}</div>`;
-                    }
-                    html += `</div>`;
-                    diagResult.innerHTML = html;
-                } else {
-                    diagResult.innerHTML = `<span style="color: #F44336;">${t('CLOUD_DIAGNOSE_FAILED', '❌ 診斷失敗')}: ${msg.error}</span>`;
-                }
-            }
-        } else if (msg.command === 'datasetUploadResult') {
-            // 遠端重構移除 DM 雲端 ZIP 上傳按鈕後，此結果不再由前端觸發；保留空分支避免未知 command 誤判（見 log/plan/RemoteTrainingRefactor.md D2）
-            showStatusMessage(t('ERROR_UPLOAD_RESULT_IGNORED', '🛑 收到無來源的上傳結果，已忽略。'));
-        }
-    });
-    // Stage 4 切片 2：將訂閱解除函式掛到 modal 上，供卸載/重建（refreshI18n）時解除，避免重複 listener 累積
-    modal._offBridgeMessage = offBridgeMessage;
+    // 遠端環境診斷面板已移除（遠端訓練收斂至積木執行時的 SSH 精靈，見 log/plan/DatasetManagerDarkThemeFinish.md 四；
+    // 後端 checkRemoteEnvironment / trainRemote command 保留，訓練端 sidecar 仍在使用）
 
     // 輔助函式：根據選取的專案類型動態更新來源模式 (Mode) 的選項
     function updateSourceModeOptions(projectType) {
@@ -1519,8 +1470,6 @@ export function refreshI18n() {
     const existingModal = getModal();
     if (existingModal) {
         const shouldReopen = state.isOpen && existingModal.style.display === 'flex';
-        // Stage 4 切片 2：卸載前解除該 modal 的 bridge 訂閱，避免重新載入語系累積重複 listener
-        existingModal._offBridgeMessage?.();
         existingModal.remove();
         const newModal = initDatasetManagerUI();
         if (shouldReopen && newModal) {
