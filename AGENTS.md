@@ -160,6 +160,17 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
 - **前端渲染**：`ui/src/ui/hardware.js` 的 `updateEnvironmentStatus` 直接使用後端傳來的 `modules` 陣列
 - **修改規範**：只需修改 `config/python_modules.json`，三個檔案自動同步（但 Rust 端需手動更新內嵌常數後重新編譯）
 
+### Dataset Manager 訊息責任定義 (Message Responsibility, 2026-09-01 Stage 6)
+四層各自的訊息/錯誤責任邊界（SSOT；重構計畫 §8.1 落成）：
+- **UI（webview, `ui/src/modules/dataset_manager/`）**：
+  - 通訊一律經 `io/bridge.js`（唯一 Bridge Port），禁止 direct `window.CocoyaBridge`。
+  - 負責：使用者可見文案（i18n `t()`）、確認/警告對話框、狀態訊息呈現（`ui/statusMessage.js`）。
+  - 錯誤呈現規則：後端回傳 `errorCode`（或 `CODE: message` 前綴）→ 前端由 i18n key 或 fallback 翻譯為人類可讀文案；**禁止在 core/application 層 hard-code 中文**（`spec.js` 直用 `t()` 為 transitional boundary，不得新增同類耦合）。
+- **VSIX Host（`src/handlers/datasetOps.ts`）**：message dispatch → sidecar/橋接；canonical path 權威判定與檔案操作；回傳結構化資料/errorCode，**不做 i18n、不回傳 UI 文案**。
+- **Tauri（Rust commands）**：command 回傳一律 serde camelCase；視窗專屬事件用 `emit_to`；路徑 confinement（examples 唯讀、canonical dataset 閘）由後端權威執行。
+- **Sidecar（`resources/dataset_manager/dataset_sidecar.py`）**：影像掃描、相機、匯出打包；stdout JSON 單一回應；永不直接與 UI 對話（經 Host/Rust 轉發）。
+- **鐵律**：錯誤「碼」在後端定義（如 `PROGRESS_NOT_FOUND`、`PROJECT_NAME_INVALID`），人類可讀文案由前端 i18n（`DSM_*`）負責；後端禁止輸出展示用文案。
+
 ## 重要路徑
 - **模組路徑**：`ui/src/modules/` (雙模共用內建模組 SSOT)。
 - **模組快取路徑**：`globalStorage/modules/` 為 VS Code Extension 執行期快取位置，不是 repo 內固定目錄。
