@@ -57,35 +57,50 @@ function getLocaleCandidates(locale) {
 /**
  * 動態載入 Dataset Manager i18n 語系檔
  * 依目前應用語系設定載入對應的 i18n 腳本，並支援回退
+ *
+ * Race 防護（2026-09-01，T5-2）：以 promise 記錄每個 URL 的載入狀態。
+ * 舊實作只檢查 <script> 是否存在於 DOM——若同一 URL 的 script 仍在載入中
+ * （前一次 refreshLocale 剛 append），第二次呼叫會立即 resolve，
+ * 導致 refreshI18n() 在新語系鍵值就緒前就重建 UI（顯示舊語系）。
  */
+const localeScriptPromises = new Map();
+
+function injectLocaleScript(scriptUrl) {
+    const href = scriptUrl.href;
+    if (localeScriptPromises.has(href)) {
+        return localeScriptPromises.get(href);
+    }
+
+    const promise = new Promise((resolve) => {
+        const existingScript = document.querySelector(`script[src="${href}"]`);
+        if (existingScript) {
+            resolve(true);
+            return;
+        }
+
+        const script = document.createElement('script');
+        script.src = href;
+        script.onload = () => resolve(true);
+        script.onerror = () => {
+            localeScriptPromises.delete(href);
+            resolve(false);
+        };
+        document.head.appendChild(script);
+    });
+
+    localeScriptPromises.set(href, promise);
+    return promise;
+}
+
 async function loadI18n() {
     const locale = getPreferredLocale();
     const candidates = getLocaleCandidates(locale);
 
-    return new Promise((resolve) => {
-        const tryLoad = (index) => {
-            if (index >= candidates.length) {
-                resolve();
-                return;
-            }
-
-            const candidate = candidates[index];
-            const scriptUrl = new URL(`./i18n/${candidate}.js`, import.meta.url);
-            const existingScript = document.querySelector(`script[src="${scriptUrl.href}"]`);
-            if (existingScript) {
-                resolve();
-                return;
-            }
-
-            const script = document.createElement('script');
-            script.src = scriptUrl.href;
-            script.onload = () => resolve();
-            script.onerror = () => tryLoad(index + 1);
-            document.head.appendChild(script);
-        };
-
-        tryLoad(0);
-    });
+    for (const candidate of candidates) {
+        const scriptUrl = new URL(`./i18n/${candidate}.js`, import.meta.url);
+        const loaded = await injectLocaleScript(scriptUrl);
+        if (loaded) return;
+    }
 }
 
 function createSpec(options = {}) {
