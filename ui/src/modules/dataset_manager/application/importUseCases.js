@@ -131,14 +131,14 @@ export function createImportUseCases(deps) {
                 throw new Error(importData.error);
             }
             if (importData.action === 'confirm_required') {
-                const copyOk = await datasetBridge.confirm(t('DSM_IMPORT_COPY_CONFIRM',
+                const copyOk = await datasetBridge.confirm(t('IMPORT_COPY_CONFIRM',
                     '資料集必須位於專案根的 dataset/<資料集名稱> 資料夾內。\n\n要將所選資料夾複製到：\n%1\n嗎？（已存在的檔案不會被覆寫）'
                 ).replace('%1', importData.canonicalDir));
                 if (!copyOk) {
-                    showStatusMessage(t('DSM_IMPORT_REJECTED_EXTERNAL', '❌ 已取消：資料集必須位於專案根的 dataset/<資料集名稱> 資料夾內'));
+                    showStatusMessage(t('IMPORT_REJECTED_EXTERNAL', '❌ 已取消：資料集必須位於專案根的 dataset/<資料集名稱> 資料夾內'));
                     return;
                 }
-                showStatusMessage(t('DSM_IMPORT_COPYING', '正在複製資料集至專案根...'));
+                showStatusMessage(t('IMPORT_COPYING', '正在複製資料集至專案根...'));
                 importData = await datasetBridge.prepareDatasetImport(folderPath, getFormValue('projectName') || safeRootDir, true);
                 if (importData.error) {
                     throw new Error(importData.error);
@@ -152,7 +152,7 @@ export function createImportUseCases(deps) {
             const importLabelCounts = importData.labelCounts || {};
             const importLabelMap = importData.labelMap || {};
             if (importData.action === 'copied') {
-                showStatusMessage(t('DSM_IMPORT_COPIED', '✅ 已複製 %1 個檔案至專案根').replace('%1', String(importData.copiedFiles ?? 0)));
+                showStatusMessage(t('IMPORT_COPIED', '✅ 已複製 %1 個檔案至專案根').replace('%1', String(importData.copiedFiles ?? 0)));
             }
 
             // 初始化每張圖的 annotations 為獨立陣列（後端回傳的 images 沒有 annotations 欄位）
