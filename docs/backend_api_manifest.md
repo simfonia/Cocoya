@@ -92,7 +92,7 @@ Notation: `key?` = Optional. **Rule: changing a Rust signature -> immediately up
 | mcu | set_window_focus    | focused: bool | {focused} | Result<(), String> |
 | file | get_manifest       | -- | {} | Result<serde_json::Value, String> |
 | file | get_module_toolbox  | path: String | {path} | Result<String, String> |
-| file | get_project_anchor  | -- | {} | ProjectAnchor |
+| file | get_project_anchor  | -- | {} | ProjectAnchor（serde camelCase：`isAnchored` / `projectRoot`；呼叫端勿以 snake_case 讀欄位） |
 | file | open_file          | -- | {} | Result<OpenFileResult, String> |
 | file | open_examples      | -- | {} | Result<OpenFileResult, String> |
 | file | save_file          | xml, save_as: bool, force_examples: Option<bool> | {xml, saveAs, forceExamples?} | Result<String, String> |
@@ -104,7 +104,6 @@ Notation: `key?` = Optional. **Rule: changing a Rust signature -> immediately up
 | file | pick_folder        | -- | {} | Result<PickFolderResult, String> |
 | file | dataset_save_progress | folder_path, project_name, spec_json: String | {folderPath, projectName, specJson} | Result<String, String>（Err 以 `CODE: message` 前綴回傳：`PROJECT_NAME_INVALID` / `IO_ERROR`） |
 | file | dataset_load_progress  | folder_path: String | {folderPath} | Result<DatasetProgressResult, String>；DatasetProgressResult 含 hasProgress, spec?, path, errorCode?（無檔案時 `PROGRESS_NOT_FOUND`）。2026-08-26 精簡：folderPath 必為 canonical 目錄，direct 讀取，fallback 掃描已移除 |
-| file | get_project_anchor | -- | {} | Result<ProjectAnchor, String>（既有指令，camelCase） |
 | （bridge message）| getProjectAnchor | requestId: String | {requestId} | 無 Rust 指令；VSIX 由 cocoyaManager 以 currentFilePath 回覆、Tauri 由 tauri.js invoke get_project_anchor 後回覆 `projectAnchorResult { isAnchored, projectRoot }`。供 Dataset Manager 進入閘使用 |
 | file | dataset_import_from_folder | source_path, project_name: String, confirmed: bool | {sourcePath, projectName, confirmed} | Result<DatasetImportResult, String>；DatasetImportResult 含 action（`use`/`confirm_required`/`copied`）, path?, canonicalDir, copiedFiles?, images, labelCounts, labelMap。決策契約：資料集必須位於 `<專案根>/dataset/<資料集名稱>`（project_name 參數 = 資料集名稱）；來源在外且 confirmed=true 時遞迴複製（不覆寫已存在檔案）後掃描 canonical |
 | dataset | dataset_upload_chunk | file_id, chunk_index, total_chunks, zip_data_chunk, project_name, is_last | {fileId, chunkIndex, totalChunks, zipDataChunk, projectName, isLast} | Result<Option<String>, String> |

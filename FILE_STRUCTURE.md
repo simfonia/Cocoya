@@ -69,7 +69,8 @@ C:\Workspace\cocoya\
 │   └── mappings/          # 長期結構化知識庫（對照表）
 │       ├── cocoya_ssh_sftp_api.html # SSH/SFTP API 使用對照表
 │       ├── Framework_API_Index.html # Framework API 索引 (含 findLocatableBlock)
-│       ├── DatasetManager.html      # Dataset Manager API 對照表
+│       ├── DatasetManager.html      # Dataset Manager API 對照表（公開 API/UI 模式分流/路徑政策；遠端節已標記前端移除後端保留）
+│       ├── DatasetManager_DevGuide.html # [NEW Stage 6] Dataset Manager 開發手冊 SOP（新增資料集類型/i18n key/--dsm-* token 三處同步/bridge adapter/錯誤碼契約/測試）
 │       ├── Tauri_Sidecar_API.html   # Tauri Sidecar API 使用對照表
 │       └── Renderer_API.html        # UI Renderer API (syncSelection, findLocatableBlock)
 │       └── ThemeManager.html        # [NEW] 主題管理模組對照表（API/主題定義格式/reloadWebview 鏈/新增主題 SOP）

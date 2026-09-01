@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>Dataset Manager Dev Guide</title>
+<style>
+body { font-family: "Segoe UI", sans-serif; margin: 2rem; line-height: 1.6; }
+h2 { border-bottom: 2px solid #FE2F89; padding-bottom: 4px; }
+code, pre { background: #f4f4f4; padding: 1px 5px; border-radius: 3px; font-family: Consolas, monospace; }
+pre { padding: 10px; overflow-x: auto; }
+table { border-collapse: collapse; }
+td, th { border: 1px solid #ccc; padding: 4px 8px; }
+</style>
+</head>
+<body>
+<h1>Dataset Manager 開發手冊 (Dev Guide)</h1>
+<p>建立：2026-09-01（Stage 6 切片 2，對應重構計畫「文件責任矩陣」）。責任：開發 SOP——新增資料集類型、i18n key、theme token、adapter 與測試流程。契約細節見 <code>backend_api_manifest.md</code>、公開 API 見 <code>DatasetManager.html</code>、雙平台 parity 見 <code>DatasetManagerParityMatrix.md</code>。</p>
+
+<h2>1. 新增資料集類型 (project type) SOP</h2>
+<ol>
+<li><code>spec.js</code>：擴充 <code>projectType</code> 清單與 <code>validate()</code> 分支（回傳 <code>{ ok, errors, warnings }</code> 結構化結果，禁止回傳文案）。</li>
+<li><code>ui/modal.js</code> 的 <code>projectTypes</code> 選單常數（經 <code>buildModalTemplate</code> 注入）。</li>
+<li><code>ui_layout.js</code> 縮圖點擊分流（<code>state.annotationMode.mode</code>）與匯出前未標註/未分類檢查（application/exportUseCases.js）。</li>
+<li>訓練模板（<code>resources/dataset_manager/train_templates/</code>）與 sidecar 支援；訓練集切分<strong>必須分層抽樣</strong>（AGENTS.md 鐵律）。</li>
+<li>i18n：<code>VALIDATE_*</code> 文案 zh-hant/en 同步補 key。</li>
+</ol>
+
+<h2>2. i18n key SOP</h2>
+<ul>
+<li>文案鍵一律 <code>DSM_*</code>，呼叫 <code>t('KEY', fallback, ...args)</code>（i18n.js 會自動加前綴；<strong>嚴禁</strong>寫 <code>t('DSM_X')</code> 造成雙重前綴）。</li>
+<li>新增 key 必須同時補 <code>i18n/zh-hant.js</code> 與 <code>en.js</code>，跑 <code>node temp_scripts/i18n_parity_scan.cjs</code> 驗證兩語系集合一致。</li>
+<li>佔位符 <code>%1 %2</code> 由 <code>t()</code> 全域 replace。</li>
+<li>刪 key 前須以 parity scan + Select-String 確認無使用處；刻意保留須在呼叫端留註解（例：<code>CLOSE_UNSAVED_CONFIRM</code>）。</li>
+</ul>
+
+<h2>3. 主題 token SOP</h2>
+<ul>
+<li>顏色一律用 <code>--dsm-*</code> token（定義於 <code>dataset_manager.css</code> 的 <code>:root</code>，<strong>不得掛 dialog</strong>——theme_manager cssVars 掛 body 層級）。</li>
+<li>新 token 須同步三件事：CSS <code>:root</code> 預設值、<code>body.vscode-dark/high-contrast</code> 覆寫、三主題 <code>theme_manager/themes/cocoya_{light,dark,candy}.js</code> 的 cssVars（theme_manager 不清舊 cssVars，light 也要定義以免殘留）。</li>
+<li>深色值目前雙來源（vscode-dark 覆寫 vs cocoya_dark cssVars）為已知債，見 todo。</li>
+</ul>
+
+<h2>4. Bridge adapter / 測試 SOP</h2>
+<ul>
+<li>通訊只寫在 <code>io/bridge.js</code>：新增 command 走 <code>datasetBridge.request({ command, payload, resultCommand, timeoutMs })</code>；事件訂閱走 subscribe/unsubscribe + dispose。</li>
+<li>後端回傳鍵名 serde camelCase（例：<code>isAnchored</code>、<code>projectRoot</code>）；新增 Rust → JS 型別須實機驗證欄位名。</li>
+<li>錯誤碼契約：<code>PROGRESS_NOT_FOUND</code>、<code>PROJECT_NAME_INVALID</code>、<code>IO_ERROR</code>（save 另有 <code>CODE: message</code> 前綴）。</li>
+<li>測試：Node 測試放 <code>*.test.mjs</code>（<code>node --test</code>，不打包）；每層檔案位置見 FILE_STRUCTURE.md。</li>
+</ul>
+</body>
+</html>
