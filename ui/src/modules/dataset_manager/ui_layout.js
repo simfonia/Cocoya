@@ -1062,7 +1062,7 @@ export function refreshDynamicPanels() {
 }
 
 async function handleSamplerSnapshot() {
-    showStatusMessage(t('STATUS_CAPTURETTING', '📸 正在採集...'));
+    showStatusMessage(t('STATUS_CAPTURETING', '📸 正在採集...'));
     
     try {
         const projectName = getFormValue('projectName') || 'dataset';
@@ -1492,13 +1492,13 @@ export async function openDatasetManager() {
     try {
         const anchor = await datasetBridge.getProjectAnchor();
         if (!anchor || !anchor.isAnchored) {
-            datasetBridge.alert(t('DSM_NEED_ANCHOR',
+            datasetBridge.alert(t('NEED_ANCHOR',
                 '請先開新或開啟一個 xml 積木專案後，再使用 Dataset Manager。\n（資料集必須存放於專案根的 dataset/<資料集名稱> 資料夾內）'));
             return state.spec;
         }
     } catch (e) {
         console.error('[DatasetManager] Anchor check failed:', e);
-        datasetBridge.alert(t('DSM_NEED_ANCHOR',
+        datasetBridge.alert(t('NEED_ANCHOR',
             '請先開新或開啟一個 xml 積木專案後，再使用 Dataset Manager。\n（資料集必須存放於專案根的 dataset/<資料集名稱> 資料夾內）'));
         return state.spec;
     }
