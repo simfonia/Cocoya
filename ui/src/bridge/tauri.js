@@ -1110,10 +1110,10 @@ export class BridgeTauri extends BaseBridge {
     }
 
     async _handleNativeDialogs(command, data) {
-        const { ask, message } = await import('@tauri-apps/plugin-dialog');
-        
+        // 2026-09-01：改用自訂 token 化對話框（原 OS 原生 ask/message 無法隨深色主題換膚，
+        // DM 清除資料等確認框在深色下白底；與 prompt 同一套 .cocoya-prompt-* 樣式）
         if (command === 'alert') {
-            await message(data.message, { title: 'Cocoya', kind: 'info' });
+            await this._showAlertDialog(data.message);
             this._dispatchToFrontend({ 
                 command: 'promptResponse', 
                 requestId: data.requestId, 
@@ -1122,7 +1122,7 @@ export class BridgeTauri extends BaseBridge {
         } else if (command === 'confirm') {
             const okLabel = (window.Blockly && (Blockly.Msg['MSG_OK'] || Blockly.Msg['MSG_SAVE'])) || 'OK';
             const cancelLabel = (window.Blockly && Blockly.Msg['MSG_CANCEL']) || 'Cancel';
-            const ok = await ask(data.message, { title: 'Cocoya', kind: 'warning', okLabel, cancelLabel });
+            const ok = await this._showConfirmDialog(data.message, { okLabel, cancelLabel });
             this._dispatchToFrontend({ 
                 command: 'promptResponse', 
                 requestId: data.requestId, 
@@ -1157,12 +1157,135 @@ export class BridgeTauri extends BaseBridge {
                     </div>
                 </div>
             `;
+            this._ensureDialogStyles();
             
-            // 加入樣式
-            if (!document.getElementById('cocoya-prompt-styles')) {
-                const styles = document.createElement('style');
-                styles.id = 'cocoya-prompt-styles';
-                styles.textContent = `
+            document.body.appendChild(dialog);
+            
+            const input = dialog.querySelector('.cocoya-prompt-input');
+            const okBtn = dialog.querySelector('.cocoya-prompt-ok');
+            const cancelBtn = dialog.querySelector('.cocoya-prompt-cancel');
+            
+            // 自動聚焦並選中文字
+            input.focus();
+            input.select();
+            
+            // 處理 Enter 鍵
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    dialog.remove();
+                    resolve(input.value);
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    dialog.remove();
+                    resolve(null);
+                }
+            });
+            
+            // 處理按鈕點擊
+            okBtn.onclick = () => {
+                dialog.remove();
+                resolve(input.value);
+            };
+            
+            cancelBtn.onclick = () => {
+                dialog.remove();
+                resolve(null);
+            };
+            
+            // 點擊背景關閉
+            dialog.addEventListener('click', (e) => {
+                if (e.target === dialog) {
+                    dialog.remove();
+                    resolve(null);
+                }
+            });
+        });
+    }
+
+    /**
+     * 自訂 confirm 對話框（token 化，隨深色主題換膚；取代原生 ask()）
+     * @returns {Promise<boolean>} OK=true，Cancel/Escape/背景點擊=false
+     */
+    async _showConfirmDialog(message, { okLabel, cancelLabel } = {}) {
+        return new Promise((resolve) => {
+            const dialog = document.createElement('div');
+            dialog.className = 'cocoya-prompt-dialog-overlay';
+            dialog.innerHTML = `
+                <div class="cocoya-prompt-dialog">
+                    <div class="cocoya-prompt-message">${this._escapeHtml(message)}</div>
+                    <div class="cocoya-prompt-buttons">
+                        <button class="cocoya-prompt-btn cocoya-prompt-cancel">${this._escapeHtml(cancelLabel || 'Cancel')}</button>
+                        <button class="cocoya-prompt-btn cocoya-prompt-ok">${this._escapeHtml(okLabel || 'OK')}</button>
+                    </div>
+                </div>
+            `;
+            this._ensureDialogStyles();
+            document.body.appendChild(dialog);
+
+            const settle = (value) => {
+                document.removeEventListener('keydown', onKey, true);
+                dialog.remove();
+                resolve(value);
+            };
+            const okBtn = dialog.querySelector('.cocoya-prompt-ok');
+            const cancelBtn = dialog.querySelector('.cocoya-prompt-cancel');
+            const onKey = (e) => {
+                if (e.key === 'Enter') { e.preventDefault(); settle(true); }
+                else if (e.key === 'Escape') { e.preventDefault(); settle(false); }
+            };
+
+            okBtn.onclick = () => settle(true);
+            cancelBtn.onclick = () => settle(false);
+            dialog.addEventListener('click', (e) => { if (e.target === dialog) settle(false); });
+            document.addEventListener('keydown', onKey, true);
+            okBtn.focus();
+        });
+    }
+
+    /**
+     * 自訂 alert 對話框（token 化；取代原生 message()）
+     */
+    async _showAlertDialog(message) {
+        return new Promise((resolve) => {
+            const dialog = document.createElement('div');
+            dialog.className = 'cocoya-prompt-dialog-overlay';
+            dialog.innerHTML = `
+                <div class="cocoya-prompt-dialog">
+                    <div class="cocoya-prompt-message">${this._escapeHtml(message)}</div>
+                    <div class="cocoya-prompt-buttons">
+                        <button class="cocoya-prompt-btn cocoya-prompt-ok">${window.Blockly?.Msg['MSG_OK'] || 'OK'}</button>
+                    </div>
+                </div>
+            `;
+            this._ensureDialogStyles();
+            document.body.appendChild(dialog);
+
+            const settle = () => {
+                document.removeEventListener('keydown', onKey, true);
+                dialog.remove();
+                resolve();
+            };
+            const okBtn = dialog.querySelector('.cocoya-prompt-ok');
+            const onKey = (e) => {
+                if (e.key === 'Enter' || e.key === 'Escape') { e.preventDefault(); settle(); }
+            };
+
+            okBtn.onclick = settle;
+            dialog.addEventListener('click', (e) => { if (e.target === dialog) settle(); });
+            document.addEventListener('keydown', onKey, true);
+            okBtn.focus();
+        });
+    }
+
+    /**
+     * 注入 .cocoya-prompt-* 共用樣式（token 化，幂等）
+     */
+    _ensureDialogStyles() {
+        if (document.getElementById('cocoya-prompt-styles')) return;
+        const styles = document.createElement('style');
+        styles.id = 'cocoya-prompt-styles';
+        styles.textContent = `
                     .cocoya-prompt-dialog-overlay {
                         position: fixed;
                         inset: 0;
@@ -1254,53 +1377,9 @@ export class BridgeTauri extends BaseBridge {
                         color: #e0e0e0;
                     }
                 `;
-                document.head.appendChild(styles);
-            }
-            
-            document.body.appendChild(dialog);
-            
-            const input = dialog.querySelector('.cocoya-prompt-input');
-            const okBtn = dialog.querySelector('.cocoya-prompt-ok');
-            const cancelBtn = dialog.querySelector('.cocoya-prompt-cancel');
-            
-            // 自動聚焦並選中文字
-            input.focus();
-            input.select();
-            
-            // 處理 Enter 鍵
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    dialog.remove();
-                    resolve(input.value);
-                } else if (e.key === 'Escape') {
-                    e.preventDefault();
-                    dialog.remove();
-                    resolve(null);
-                }
-            });
-            
-            // 處理按鈕點擊
-            okBtn.onclick = () => {
-                dialog.remove();
-                resolve(input.value);
-            };
-            
-            cancelBtn.onclick = () => {
-                dialog.remove();
-                resolve(null);
-            };
-            
-            // 點擊背景關閉
-            dialog.addEventListener('click', (e) => {
-                if (e.target === dialog) {
-                    dialog.remove();
-                    resolve(null);
-                }
-            });
-        });
+        document.head.appendChild(styles);
     }
-    
+
     /**
      * HTML 轉義函數
      */
