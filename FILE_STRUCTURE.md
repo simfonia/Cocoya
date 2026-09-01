@@ -153,15 +153,15 @@ C:\Workspace\cocoya\
 │   │   │       │   └── statusMessage.test.mjs # statusMessage 行為契約 Node 測試（node --test 執行）
 │   │   │       ├── dataset_manager.css # Dataset Manager Modal、縮圖牆與標註畫布樣式 (含 3 欄標註模式、.dataset-name-warning 名稱衝突警示)
 │   │   │       ├── i18n.js # [NEW] 共享 i18n t() 函式庫 (支援佔位符替換)
-│   │   │       ├── index.js # 靜態 ESM 入口與 window.CocoyaDataset API 掛載
+│   │   │       ├── index.js # 靜態 ESM 入口與 window.CocoyaDataset API 掛載（loadI18n 以 in-flight promise 防 locale race，Stage 5 收尾）
 │   │   │       ├── spec.js  # DatasetSpec 類別、Schema 偵測、強健型 CSV 解析與驗證邏輯 (i18n 化)
 │   │   │       ├── sampler.js # [Stage 2 重構] 攝影機採集核心、連拍邏輯（通訊改經 io/bridge.js：request correlation + timeout + dispose）
-│   │   │       ├── ui_layout.js # Modal UI、動態面板、標註視圖與標籤管理 (3 欄標註模式、鍵盤快捷鍵、自動儲存、儲存/載入進度、名稱對齊/衝突警示 setNameWarning、統一標籤管理器 createLabelMapManager、統計同步 updateStatsFromImages、nextLabelId)
+│   │   │       ├── ui_layout.js # 協調層（Stage 4）：modal 生命週期、面板編排 refreshDynamicPanels、模式進入/退出分流；同名委派 wrapper 呼叫 core/application/ui/* presenter（呼叫點零改動），死 wrapper 已於 Stage 6 清理
 │   │   │       ├── ui_components.js # 動態視圖組件 (影像網格、字典序標籤統計、標註縮圖欄、getLabelColor FNV-1a+黃金角色相，含 XSS 防護)
 │   │   │       ├── ui_canvas.js # 標註互動畫布 (物件偵測拉框與自駕循線畫線，支援座標限幅防護、bbox 高亮與雙模互動)
 │   │   │       └── i18n/      # 語系檔目錄
-│   │   │           ├── zh-hant.js # 繁體中文 i18n 鍵值 (VALIDATE_* 驗證、ANNOTATION_* 標註、SAVE_PROGRESS_* 存讀進度、SOURCE_* 來源對齊)
-│   │   │           └── en.js      # 英文 i18n 鍵值 (VALIDATE_* 驗證、ANNOTATION_* 標註、SAVE_PROGRESS_* 存讀進度、SOURCE_* 來源對齊)
+│   │   │           ├── zh-hant.js # 繁體中文 i18n 鍵值 (VALIDATE_* 驗證、ANNOTATION_* 標註、NEED_ANCHOR/IMPORT_* 匯入閘、SOURCE_* 來源對齊；118 key 與 en 完全 parity)
+│   │   │           └── en.js      # 英文 i18n 鍵值 (同 zh-hant 118 key 全對齊)
 │   │   ├── main.js        # Legacy Entry Point
 │   │   ├── ui_manager.js  # Legacy Entry Point
 │   │   ├── utils.js       # [REFACTORED] 入口與命名空間初始化
