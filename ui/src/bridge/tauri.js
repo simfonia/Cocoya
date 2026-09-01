@@ -988,9 +988,8 @@ export class BridgeTauri extends BaseBridge {
                     await this.tauriInvoke('close_window');
                 }
             } else {
-                // Fallback for simple alert
-                const { ask } = await import('@tauri-apps/plugin-dialog');
-                const ok = await ask(confirmMsg, { title: 'Cocoya', kind: 'warning' });
+                // Fallback for simple alert（2026-09-01：改 token 化；「確定」即關閉視窗）
+                const ok = await this._showConfirmDialog(confirmMsg);
                 if (ok) {
                     // 這裡簡化處理，如果不支援 showSaveConfirm 則僅問是否要關閉 (可能遺失未存檔)
                     await app.setDirty(false);
@@ -1428,18 +1427,11 @@ export class BridgeTauri extends BaseBridge {
 
     async _handleExamplesSaveDialog(xml) {
         try {
-            const { ask, message } = await import('@tauri-apps/plugin-dialog');
-            const okLabel = window.Blockly?.Msg['MSG_SAVE'] || '覆蓋範例';
+            const okLabel = window.Blockly?.Msg['MSG_SAVE'] || Blockly?.Msg['BKY_SAVE'] || '覆蓋範例';
             const cancelLabel = window.Blockly?.Msg['MSG_CANCEL'] || '另存新檔';
-            const overwrite = await ask(
-                '此為 Cocoya 內建範例目錄，是否要覆蓋原始範例？',
-                { 
-                    title: 'Cocoya', 
-                    kind: 'warning', 
-                    okLabel, 
-                    cancelLabel 
-                }
-            );
+            const message = window.Blockly?.Msg['BKY_EXAMPLES_OVERWRITE_CONFIRM']
+                || '此為 Cocoya 內建範例目錄，是否要覆蓋原始範例？';
+            const overwrite = await this._showConfirmDialog(message, { okLabel, cancelLabel });
             
             if (overwrite) {
                 // 覆蓋範例：直接呼叫 save_file 並標註強制覆蓋 examples 目錄
