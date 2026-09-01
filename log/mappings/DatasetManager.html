@@ -57,10 +57,13 @@
             <tr><th>API</th><th>用途</th><th>狀態</th></tr>
         </thead>
         <tbody>
-            <tr><td><code>open() / close()</code></td><td>開啟或關閉管理器 Modal。</td><td><span class="status-tag status-stable">Stable</span></td></tr>
+            <tr><td><code>open() / close() / toggle()</code></td><td>開啟、關閉或切換管理器 Modal（open 前先經後端權威錨定閘）。</td><td><span class="status-tag status-stable">Stable</span></td></tr>
             <tr><td><code>getCurrentSpec()</code></td><td>獲取目前的 Spec 實體 (已同步 UI 狀態)。</td><td><span class="status-tag status-stable">Stable</span></td></tr>
             <tr><td><code>removeAnnotation(idx)</code></td><td>在標註模式下移除特定索引的方框。</td><td><span class="status-tag">Phase 4</span></td></tr>
             <tr><td><code>refreshDynamicPanels() / refreshPreview()</code></td><td>主動刷新資料管理器的動態面板與 Spec 預覽。</td><td><span class="status-tag status-stable">Stable</span></td></tr>
+            <tr><td><code>createSpec(options) / detectSchema(rows) / validateSpec(input)</code></td><td>DatasetSpec 工廠與驗證入口（委派 spec.js）。</td><td><span class="status-tag status-stable">Stable</span></td></tr>
+            <tr><td><code>refreshI18n()</code></td><td>語系切換後重建 UI（async；loadI18n in-flight promise 防 race，2026-09-01）。</td><td><span class="status-tag status-stable">Stable</span></td></tr>
+            <tr><td><code>init() / version / DatasetSpec / constants</code></td><td>模組初始化（先載 i18n）、版本號與 DatasetSpec 類別/常數轉出口。</td><td><span class="status-tag status-stable">Stable</span></td></tr>
         </tbody>
     </table>
 
@@ -78,7 +81,8 @@
     <p>相關函式（ui_layout.js）：<code>enterClassificationReviewMode()</code>、<code>loadClassificationImage()</code>、<code>renderClassificationControls()</code>、<code>updateClassifyProgress()</code>。未標註檢查（<code>checkUnannotatedOnExit</code> / 匯出前）僅對 bbox/line 模式生效。狀態機：<code>state.annotationMode.mode</code> = null | 'bbox' | 'line' | 'classification'。</p>
 
     <h2>3. 遠端對接與雲端 AI 傳輸 (Cloud Sync APIs)</h2>
-    <p>本模組於「雲端 AI 模式」開啟且連線至遠端主機時，提供以下 Host/Webview 傳輸指令：</p>
+    <p><strong>狀態更新（2026-09-01，Stage 5 切片 5c / RemoteTrainingRefactor D2）</strong>：Dataset Manager 前端的遠端環境面板與雲端 ZIP 上傳按鈕已移除，以下指令在 DM 前端已無觸發點；<strong>後端（VSIX datasetOps / Tauri checkRemoteEnvironment、trainRemote）保留</strong>，由訓練主線使用。本節保留為歷史契約紀錄。</p>
+    <p>本模組於「雲端 AI 模式」開啟且連線至遠端主機時，原提供以下 Host/Webview 傳輸指令：</p>
     <table class="api-table">
         <thead>
             <tr><th>指令 (Command)</th><th>傳輸方向</th><th>用途與資料結構</th></tr>
@@ -128,9 +132,10 @@
                 <li><strong>防禦性清除與重置</strong>：為防止重複渲染「← 返回列表」按鈕，在 <code>enterAnnotationMode</code> 時會防禦性移除已存在的按鈕。同時點擊「清除資料」按鈕時會主動執行 <code>exitAnnotationMode()</code> 卸載畫布事件監聽並移除返回按鈕，確保狀態乾淨重置。</li>
             </ul>
         </li>
-        <li><strong>Importer (importer.js)</strong>:
+        <li><strong>Importer (application/importUseCases.js)</strong>:
             <ul>
                 <li>使用 <code>webkitdirectory</code> 繞過路徑存取限制，並以父目錄名作為自動標籤來源。</li>
+                <li>canonical 匯入閘（Stage 1）：資料集必須位於專案根 <code>dataset/<資料集名稱></code>，外部資料夾經 <code>IMPORT_COPY_CONFIRM</code> 詢問後複製入內。</li>
             </ul>
         </li>
     </ul>

@@ -320,9 +320,6 @@ function getProgressUC() {
     }
     return progressUC;
 }
-function renderColumnRow(column = {}) {
-    return panelsPresenter.renderColumnRow(column);
-}
 
 function renderValidation(result) {
     return panelsPresenter.renderValidation(result);
@@ -650,39 +647,11 @@ function updateThumbnailHighlight() {
 }
 
 /**
- * 綁定畫布鍵盤事件（↑/↓ 切換、Delete 刪除、Esc 退出）— 委派至 ui/annotation.js
- */
-function bindCanvasKeyboardEvents() {
-    return annotationController.bindCanvasKeyboardEvents();
-}
-
-/**
- * 刪除目前高亮的標註（若無高亮則刪除最後一個）— 委派至 ui/annotation.js
- */
-function deleteSelectedAnnotation() {
-    return annotationController.deleteSelectedAnnotation();
-}
-
-/**
  * 渲染分類標籤校正模式的右側控制欄（目前分類下拉選單 + 新增類別）
  * image 類型專用，不涉及 bbox 標註 — 委派至 ui/classification.js
  */
 function renderClassificationControls() {
     return classificationController.renderClassificationControls();
-}
-
-/**
- * 更新分類校正模式頂部進度（image 類型顯示樣本位置）— 委派至 ui/classification.js
- */
-function updateClassifyProgress() {
-    return classificationController.updateClassifyProgress();
-}
-
-/**
- * 綁定分類校正模式鍵盤事件（↑/↓ 切換圖片、Esc 退出，無 Delete）— 委派至 ui/classification.js
- */
-function bindClassificationKeyboardEvents() {
-    return classificationController.bindClassificationKeyboardEvents();
 }
 
 /**
