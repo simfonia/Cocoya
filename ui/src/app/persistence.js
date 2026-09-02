@@ -28,6 +28,55 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
     },
 
     /**
+     * 主題切換 reload 前的 workspace 快照鍵。
+     * location.reload() / host 重建 HTML 會銷毀 JS 記憶體（dirty 的未存修改只存在記憶體），
+     * 若 dirty 就 reload 會造成資料遺失（lifecycle 的 Ctrl+R/F5 已攔截，唯主題切換漏網）。
+     * 使用 sessionStorage（同 origin 的 reload/重建後仍在），載入還原後即 consume。
+     */
+    SNAPSHOT_KEY: 'cocoya_reload_snapshot',
+
+    /** 快照目前 workspace（含 dirty 內容）供 reload 後還原；失敗時清掉殘留 */
+    snapshotWorkspaceForReload: function() {
+        if (!this.workspace) return;
+        try {
+            const dom = Blockly.Xml.workspaceToDom(this.workspace);
+            dom.setAttribute('platform', this.currentPlatform || 'PC');
+            const xml = Blockly.Xml.domToPrettyText(dom);
+            // 從標題取目前檔名（可能含 dirty 的 * 旗標，剝除）
+            const rawTitle = (typeof document !== 'undefined' && document.title) || '';
+            const filename = rawTitle.replace(/\s*\*+/g, '').trim();
+            sessionStorage.setItem(this.SNAPSHOT_KEY, JSON.stringify({
+                xml,
+                filename,
+                platform: this.currentPlatform || 'PC',
+                isReadOnly: this.isReadOnly
+            }));
+        } catch (e) {
+            try { sessionStorage.removeItem(this.SNAPSHOT_KEY); } catch (_) {}
+        }
+    },
+
+    /** 清除殘留快照（discard / clean 換主題時，避免誤還原上次殘留） */
+    clearReloadSnapshot: function() {
+        try { sessionStorage.removeItem(this.SNAPSHOT_KEY); } catch (e) {}
+    },
+
+    /** 取出並刪除快照（僅一次）；無快照或缺 xml 回 null */
+    consumeReloadSnapshot: function() {
+        try {
+            const raw = sessionStorage.getItem(this.SNAPSHOT_KEY);
+            if (!raw) return null;
+            sessionStorage.removeItem(this.SNAPSHOT_KEY);
+            const snap = JSON.parse(raw);
+            if (!snap || typeof snap.xml !== 'string' || !snap.xml.trim()) return null;
+            return snap;
+        } catch (e) {
+            try { sessionStorage.removeItem(this.SNAPSHOT_KEY); } catch (_) {}
+            return null;
+        }
+    },
+
+    /**
      * 觸發自動備份 (Debounced)
      */
     triggerAutoBackup: function() {
