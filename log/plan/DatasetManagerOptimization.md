@@ -1,3 +1,5 @@
+> **STATUS: SUPERSEDED（2026-09-01, Stage 6）** — 本計畫的項目（Importer 清理、scroll、標籤清理、i18n、主題 token）已於 `log/plan/DatasetManagerRefactor.md` 重構中收斂並實作；現行架構/契約以該計畫及其施工指引、`log/mappings/DatasetManager.html` 為準。
+
 # Dataset Manager 優化計畫
 
 ## 背景

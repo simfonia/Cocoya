@@ -1,3 +1,5 @@
+> **STATUS: SUPERSEDED（2026-09-01, Stage 6）** — 本計畫的進度存讀、canonical 路徑、防呆確認框已於重構中實作（見 `log/plan/DatasetManagerRefactor.md` Stage 1/2 與 `docs/backend_api_manifest.md` dataset 指令）；現行契約以後者為準。
+
 # Dataset Manager 進度儲存與防呆計畫（Guardrails + 等級一存讀 + live savePath 接回）
 
 ## 背景與動機
