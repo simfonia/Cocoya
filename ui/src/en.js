@@ -3,6 +3,7 @@
   Object.assign(Blockly.Msg, {
     // Basic UI
     "BKY_HELP_HINT": "Right click for help",
+    "BKY_EXAMPLES_READ_ONLY": "Opening the built-in example was cancelled. Built-in examples are read-only; please reopen and choose \"Copy & Open\" to copy the example to your user workspace.",
     "BKY_SAVE_SUCCESS": "Saved successfully!",
     "BKY_NEW_VARIABLE_HINT": "Enter variable name(s), comma separated.\nNote: Name cannot start with a number or contain special characters except underscores.",
 

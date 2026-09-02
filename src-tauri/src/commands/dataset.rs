@@ -60,13 +60,20 @@ pub async fn start_sidecar(
     }
 
     // 3. 啟動進程
-    let mut child = Command::new(&python_path)
-        .arg("-u")
+    // Windows: 隱藏 console 視窗（Tauri 為 GUI subsystem，若不設會在遠端訓練時跳出 python 黑視窗）
+    let mut cmd = Command::new(&python_path);
+    cmd.arg("-u")
         .arg(&script_path)
         .current_dir(&sidecar_dir)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
+        .stderr(Stdio::piped());
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+    }
+    let mut child = cmd
         .spawn()
         .map_err(|e| format!("Failed to start sidecar: {}", e))?;
 
@@ -273,13 +280,20 @@ pub async fn export_dataset(
             return Err(format!("Sidecar script not found: {}", script_path.display()));
         }
 
-        let mut child = Command::new(&python_path)
-            .arg("-u")
+        // Windows: 隱藏 console 視窗（同 start_sidecar，避免彈出 python 黑視窗）
+        let mut cmd = Command::new(&python_path);
+        cmd.arg("-u")
             .arg(&script_path)
             .current_dir(&sidecar_dir)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
+            .stderr(Stdio::piped());
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+        }
+        let mut child = cmd
             .spawn()
             .map_err(|e| format!("Failed to start sidecar: {}", e))?;
 

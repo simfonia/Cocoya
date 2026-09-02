@@ -3,6 +3,7 @@
   Object.assign(Blockly.Msg, {
     // 基礎 UI
     "BKY_HELP_HINT": "右鍵點擊查看說明",
+    "BKY_EXAMPLES_READ_ONLY": "已取消開啟內建範例。內建範例為唯讀，請重新開啟並選擇「複製並開啟」，系統會將範例複製到使用者工作區。",
     "BKY_SAVE_SUCCESS": "儲存成功！",
     "BKY_NEW_VARIABLE_HINT": "請輸入變數名稱（可使用逗號分隔建立多個）。\n注意：名稱不可由數字開頭，且不可包含底線以外的特殊符號。",
     "BKY_NEW_VARIABLE": "建立變數...",

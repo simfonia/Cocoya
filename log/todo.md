@@ -163,3 +163,11 @@
 - **下一切片：Stage 6 Gate 簽核**——D6-2/B0-1 公開 API 實機對照（console `Object.keys(window.CocoyaDataset).sort()`）+ Stage 6 Gate（§9.3 六項）審核者（使用者）簽核 → Stage 7 總驗證（compile/lint/cargo check+test/tauri build + E2E 矩陣 §10）。
 - **Stage 6 收尾切片（2026-09-01，已 commit b93f3f1）**：DATASET_MANAGER_PLAN.md、DatasetManagerOptimization.md、DatasetManagerProgressAndGuardrails.md 標記 SUPERSEDED（保留原文）；system_spec.html 原無 DM 章節，增補〈24. Dataset Manager 模組規範〉（三層架構/雙平台/安全不變量，指向 mapping）。Stage 6 Gate 六項：①-③⑤已完成，④靜態通過（D6-2/B0-1 實機待測）、⑥審核者簽核待使用者。
 - **Stage 6 切片 1（2026-09-01，D6-3 靜態清理 + D6-1/D6-2 文件核對）**：①掃描證據——direct Bridge 僅 io/bridge.js（合法）、全域 emit=0、legacy DOM id=0、未使用 export=0；②ui_layout.js 刪 5 個零呼叫未 export 死 wrapper（renderColumnRow/bindCanvasKeyboardEvents/deleteSelectedAnnotation/updateClassifyProgress/bindClassificationKeyboardEvents）+3 孤兒註解；③annotation/classification 共用 7 面板 id 為互斥模式合法設計（記錄保留原因）；④DatasetManager.html 公開 API 表補齊 7 項、遠端節標記前端已移除、Importer 更正為 importUseCases；⑤FILE_STRUCTURE i18n/index/ui_layout 描述更新。node --test 80/80、build PASS。事故：worklog 重排腳本誤刪 Stage 5 收尾區段，已自 git 還原零損失。
+
+### [2026-09-02] Tauri Release 訓練範例三案修復（cp950 亂碼 / 模板路徑 / examples 唯讀）
+- [x] A 編碼：PYTHONIOENCODING/PYTHONUTF8 注入 + 模板 reconfigure + open encoding='utf-8'
+- [x] B 模板路徑權威化：env COCOYA_TRAIN_TEMPLATES 注入 + train_model() 候選 0
+- [x] C 範例唯讀保護（Release 確認後複製到 Documents\Cocoya\Projects；Dev 直接開啟）+ EXAMPLES_READ_ONLY 前端 i18n
+- [x] 自動化驗證全綠（cargo check / tsc / node --check / vite build / py_compile）
+- [ ] 實機驗證：Release 開 examples/test/02_PC_train.xml 全流程（複製→錨定→訓練→報告）；Dev 模式直開範例回歸
+- [ ] （妥協債）native 確認框文案 hard-code 於 Rust，未來改前端自訂對話框以 i18n
