@@ -904,11 +904,5 @@ class DatasetSidecar:
 if __name__ == "__main__":
     # 確保輸出不被快取
     sys.stdout.reconfigure(encoding='utf-8')
-    # 2026-09-01：Release 模式 sidecar CWD 在 Program Files，相對路徑（如訓練的 model/）寫入會失敗。
-    # 以 COCOYA_PROJECT_ROOT 環境變數切到專案根目錄，確保相對路徑正確解析。
-    project_root = os.environ.get("COCOYA_PROJECT_ROOT")
-    if project_root and os.path.isdir(project_root):
-        os.chdir(project_root)
-        print(f"[Sidecar] CWD -> {project_root}", file=sys.stderr)
     sidecar = DatasetSidecar()
     sidecar.run()

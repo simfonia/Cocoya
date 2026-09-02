@@ -187,24 +187,11 @@ pub async fn start_training(
         .join("dataset_manager")
         .join("dataset_sidecar.py");
     
-    // 2026-09-01：Release 模式 sidecar CWD 在 Program Files，相對路徑寫入失敗。
-    // 以 COCOYA_PROJECT_ROOT 環境變數讓 sidecar chdir 到專案根目錄。
-    let project_root = {
-        let paths = state.current_paths.lock().unwrap();
-        paths.get(window.label()).and_then(|p| p.parent().map(|x| x.to_string_lossy().to_string()))
-    };
-
     let mut cmd = Command::new("python");
     cmd.arg(&sidecar_path)
        .stdin(Stdio::piped())
        .stdout(Stdio::piped())
-       .stderr(Stdio::piped())
-       .env("PYTHONIOENCODING", "utf-8") // 2026-09-01：修正正體中文 Windows (cp950) 終端機中文亂碼
-       .env("PYTHONUNBUFFERED", "1");
-
-    if let Some(root) = &project_root {
-        cmd.env("COCOYA_PROJECT_ROOT", root);
-    }
+       .stderr(Stdio::piped());
     
     #[cfg(target_os = "windows")]
     {
