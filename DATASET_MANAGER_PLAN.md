@@ -1,3 +1,5 @@
+> **STATUS: SUPERSEDED（2026-09-01, Stage 6）** — 本計畫為歷史藍圖；現行實作依循 `log/plan/DatasetManagerRefactor.md`（三層 core/io/ui 架構）、`log/plan/DatasetManagerRefactorImplementationGuide.md`（分階段施工）與 `log/mappings/DatasetManager_DevGuide.html`（開發 SOP）。部分 API/契約已演進，請以 `docs/backend_api_manifest.md` 與 `log/mappings/DatasetManager.html` 為準。
+
 # 資料集管理器 (Dataset Manager) 開發與交接計畫
 
 ## 1. 專案背景與目標

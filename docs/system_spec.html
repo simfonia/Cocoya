@@ -673,8 +673,21 @@ print(json.dumps(results))</code></pre>
         <p>所有關於「視窗即將關閉」或「備份偵測」的事件，必須使用 <code>emit_to(label, ...)</code> 定向發送。嚴禁使用全域廣播，以確保多視窗環境下，使用者操作的交互提示不會發生跨視窗干擾。</p>
     </section>
 
+    <h2>24. Dataset Manager 模組規範（2026-09-01, Stage 6）</h2>
+    <p>Dataset Manager（<code>ui/src/modules/dataset_manager/</code>）採 <strong>core / io / ui 三層架構</strong>去耦：</p>
+    <ul>
+        <li><strong>core/</strong>：純資料規則（DatasetSpec、label map、路徑政策、統計），零 DOM/Bridge 依賴，單元可測。</li>
+        <li><strong>io/bridge.js</strong>：唯一 Bridge Port，集中所有 <code>window.CocoyaBridge</code> 通訊；VSIX/Tauri 雙平台單一通道。</li>
+        <li><strong>ui/</strong>：呈現層（modal/form/panels/annotation/classification/thumbnails/statusMessage），只訂閱不互呼。</li>
+    </ul>
+    <p><strong>資料模型與儲存</strong>：Dataset Spec 契約 JSON（訓練器格式）保存於專案根的 <code>dataset/&lt;資料集名稱&gt;/dataset.json</code>（canonical 路徑）；外部來源資料夾需複製入內方可匯入（<code>IMPORT_COPY_CONFIRM</code>）。進度自動落盤（autosave）。</p>
+    <p><strong>雙平台原則</strong>：命令簽名、回傳語意（含 serde camelCase）、錯誤碼（如 <code>PROGRESS_NOT_FOUND</code>/<code>PROJECT_NAME_INVALID</code>）兩端一致；人類可讀文案由前端 i18n（<code>DSM_*</code>）負責，後端禁止輸出展示文案。</p>
+    <p><strong>安全不變量</strong>：examples 目錄唯讀保護；canonical dataset 路徑 confinement 由後端權威執行；多視窗事件用 <code>emit_to</code> 定向發送。</p>
+    <p>詳細契約見 <code>docs/backend_api_manifest.md</code>（command）、<code>log/mappings/DatasetManager.html</code>（公開 API）、<code>log/mappings/DatasetManager_DevGuide.html</code>（開發 SOP）、<code>log/mappings/DatasetManagerParityMatrix.md</code>（雙平台 parity）。</p>
+    </section>
+
     <footer>
-        <p>© 2026 simfonia - Cocoya 專案組。文件更新日期：2026-05-06 (v5.1)</p>
+        <p>© 2026 simfonia - Cocoya 專案組。文件更新日期：2026-05-06 (v5.1)；2026-09-01 增補〈24. Dataset Manager 模組規範〉</p>
     </footer>
 </main>
 
