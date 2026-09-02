@@ -59,15 +59,29 @@ pub async fn start_sidecar(
         return Err(format!("Sidecar script not found: {}", script_path.display()));
     }
 
+    // 2b. 取得專案根目錄（Release 模式 sidecar CWD 會在 Program Files，
+    //     導致訓練等相對路徑寫入失敗；以環境變數讓 sidecar chdir 到專案根）
+    let project_root = {
+        let paths = state.current_paths.lock().unwrap();
+        paths.get(window.label()).and_then(|p| p.parent().map(|x| x.to_string_lossy().to_string()))
+    };
+
     // 3. 啟動進程
-    let mut child = Command::new(&python_path)
-        .arg("-u")
+    let mut cmd = Command::new(&python_path);
+    cmd.arg("-u")
         .arg(&script_path)
         .current_dir(&sidecar_dir)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .spawn()
+        .env("PYTHONIOENCODING", "utf-8") // 2026-09-01：修正正體中文 Windows (cp950) 終端機中文亂碼
+        .env("PYTHONUNBUFFERED", "1");
+
+    if let Some(root) = &project_root {
+        cmd.env("COCOYA_PROJECT_ROOT", root);
+    }
+
+    let mut child = cmd.spawn()
         .map_err(|e| format!("Failed to start sidecar: {}", e))?;
 
     let stdin = child.stdin.take().ok_or_else(|| "Failed to open sidecar stdin".to_string())?;
