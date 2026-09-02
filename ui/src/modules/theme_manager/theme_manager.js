@@ -61,8 +61,30 @@
             return m;
         },
 
-        /** 儲存模式偏好並重載 webview（方案 B：積木色於註冊前由 Msg 決定，需重載才一致） */
-        setMode: function(mode) {
+        /**
+         * 儲存模式偏好並重載 webview（方案 B：積木色於註冊前由 Msg 決定，需重載才一致）。
+         * 2026-09-01：dirty 保護——reload 會銷毀 JS 記憶體（未存修改只在記憶體），
+         * 若 dirty 就 reload 會造成資料遺失（lifecycle 已攔 Ctrl+R/F5，唯主題切換漏網）。
+         * 故 dirty 時先三選：保留（快照後 reload 還原）/ 捨棄 / 取消；乾淨則直接換。
+         * @returns {Promise<void>}
+         */
+        setMode: async function(mode) {
+            var app = window.CocoyaApp;
+            var isDirty = !!(app && app.isDirty);
+
+            if (isDirty) {
+                var choice = await this._showReloadChoice();
+                if (choice === 'cancel' || choice === null) return; // 取消：不切主題、不改偏好
+                if (choice === 'keep') {
+                    if (app && app.snapshotWorkspaceForReload) app.snapshotWorkspaceForReload();
+                } else { // discard：明示捨棄未存修改
+                    if (app && app.clearReloadSnapshot) app.clearReloadSnapshot();
+                }
+            } else if (app && app.clearReloadSnapshot) {
+                // 乾淨直接換；清掉可能殘留的快照，避免誤還原上次內容
+                app.clearReloadSnapshot();
+            }
+
             try { localStorage.setItem(MODE_KEY, mode); } catch (e) { }
             console.log('[ThemeManager] setMode ->', mode);
             // VSIX 的 webview 沒有真實文件 URL，location.reload() 會白屏 → 交由 host 重建 HTML
@@ -76,6 +98,74 @@
             } else {
                 location.reload();
             }
+        },
+
+        /** dirty 換主題的三選對話框：keep=保留並換 / discard=捨棄並換 / cancel=取消 */
+        _showReloadChoice: function() {
+            var self = this;
+            return new Promise(function(resolve) {
+                var isZh = !!(window.CocoyaApp && typeof window.CocoyaApp.currentLang === 'string' &&
+                    window.CocoyaApp.currentLang.toLowerCase().indexOf('zh') === 0);
+                var texts = isZh
+                    ? { msg: '目前專案有未儲存的變更。切換主題將重新載入頁面。\n要保留目前內容並繼續編輯嗎？', keep: '保留並換主題', discard: '捨棄並換主題', cancel: '取消' }
+                    : { msg: 'You have unsaved changes. Switching theme will reload the page.\nKeep the current content and continue?', keep: 'Keep & Switch', discard: 'Discard & Switch', cancel: 'Cancel' };
+
+                var overlay = document.createElement('div');
+                overlay.className = 'cocoya-theme-switch-overlay';
+                overlay.innerHTML =
+                    '<div class="cocoya-theme-switch-dialog">' +
+                        '<div class="cocoya-theme-switch-msg">' + self._escapeHtml(texts.msg) + '</div>' +
+                        '<div class="cocoya-theme-switch-buttons">' +
+                            '<button data-v="keep" class="cocoya-theme-btn cocoya-theme-keep">' + self._escapeHtml(texts.keep) + '</button>' +
+                            '<button data-v="discard" class="cocoya-theme-btn cocoya-theme-discard">' + self._escapeHtml(texts.discard) + '</button>' +
+                            '<button data-v="cancel" class="cocoya-theme-btn cocoya-theme-cancel">' + self._escapeHtml(texts.cancel) + '</button>' +
+                        '</div>' +
+                    '</div>';
+                self._ensureSwitchStyles();
+                document.body.appendChild(overlay);
+
+                function settle(value) {
+                    document.removeEventListener('keydown', onKey, true);
+                    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                    resolve(value);
+                }
+                function onKey(e) {
+                    if (e.key === 'Escape') { e.preventDefault(); settle('cancel'); }
+                }
+
+                var btns = overlay.querySelectorAll('.cocoya-theme-btn');
+                for (var i = 0; i < btns.length; i++) {
+                    (function(btn) {
+                        btn.onclick = function() { settle(btn.getAttribute('data-v')); };
+                    })(btns[i]);
+                }
+                document.addEventListener('keydown', onKey, true);
+                var keep = overlay.querySelector('.cocoya-theme-keep');
+                if (keep) keep.focus();
+            });
+        },
+
+        /** 注入三選對話框樣式（token 化，跨平台自足） */
+        _ensureSwitchStyles: function() {
+            if (document.getElementById('cocoya-theme-switch-styles')) return;
+            var styles = document.createElement('style');
+            styles.id = 'cocoya-theme-switch-styles';
+            styles.textContent = '' +
+                '.cocoya-theme-switch-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10001;}' +
+                '.cocoya-theme-switch-dialog{background:var(--dsm-surface,#ffffff);border:1px solid var(--dsm-border-strong,#cccccc);border-radius:8px;padding:20px;min-width:320px;max-width:480px;box-shadow:0 4px 20px rgba(0,0,0,0.3);color:var(--dsm-text,#333333);}' +
+                '.cocoya-theme-switch-msg{margin-bottom:16px;font-size:13px;white-space:pre-wrap;word-break:break-word;}' +
+                '.cocoya-theme-switch-buttons{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;}' +
+                '.cocoya-theme-btn{padding:6px 14px;border:1px solid var(--dsm-border-strong,#cccccc);border-radius:4px;background:var(--dsm-btn-bg,#f7f7f7);color:var(--dsm-text,#333333);cursor:pointer;font-size:12px;min-height:30px;}' +
+                '.cocoya-theme-keep{background:var(--dsm-brand,#FE2F89);color:#ffffff;border:none;}' +
+                'body.vscode-dark .cocoya-theme-switch-dialog,body.vscode-high-contrast .cocoya-theme-switch-dialog{background:#252526;border-color:#404040;color:#e0e0e0;}' +
+                'body.vscode-dark .cocoya-theme-btn,body.vscode-high-contrast .cocoya-theme-btn{background:#3c3c3c;border-color:#555555;color:#e0e0e0;}';
+            document.head.appendChild(styles);
+        },
+
+        _escapeHtml: function(text) {
+            var div = document.createElement('div');
+            div.textContent = text == null ? '' : String(text);
+            return div.innerHTML;
         },
 
         /**

@@ -178,15 +178,24 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
                 }, true);
             }
 
-            if (this.workspace.getTopBlocks(false).length === 0) {
+            const restoredSnapshot = this._restoreReloadSnapshot();
+            if (!restoredSnapshot && this.workspace.getTopBlocks(false).length === 0) {
                 this.createDefaultBlocks();
             }
             
             setTimeout(() => {
                 this.setupWorkspaceListeners();
                 this.isInitializing = false;
-                this.isDirty = false;
-                this.setDirty(false);
+                // 主題切換 reload 時快照還原 dirty（2026-09-01）：還原內容即維持髒，可繼續存回原檔；
+                // 否則視為全新乾淨工作區（原本行為）。
+                if (restoredSnapshot) {
+                    this.isDirty = true;
+                    if (window.CocoyaUI) window.CocoyaUI.setDirty(true);
+                    this.setDirty(true);
+                } else {
+                    this.isDirty = false;
+                    this.setDirty(false);
+                }
                 if (this.applyAutoTheme) this.applyAutoTheme();
                 this.triggerCodeUpdate();
             }, 800); 
@@ -288,6 +297,38 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             console.error('[App] Failed to create default blocks:', e); 
         } finally {
             Blockly.Events.enable();
+        }
+    },
+
+    /**
+     * 於 initializeCocoya 建立 workspace 後還原主題切換的 reload 快照（2026-09-01）。
+     * consume 一次：載入快照 xml、回復唯讀與檔名；回傳是否成功還原（true 表示非全新工作區）。
+     * 快照由 persistence.snapshotWorkspaceForReload 產生（sessionStorage）。
+     */
+    _restoreReloadSnapshot: function() {
+        if (!window.CocoyaApp || typeof window.CocoyaApp.consumeReloadSnapshot !== 'function' || !this.workspace) return false;
+        const snap = window.CocoyaApp.consumeReloadSnapshot();
+        if (!snap) return false;
+
+        try {
+            Blockly.Events.disable();
+            try {
+                this.workspace.clear();
+                const dom = Blockly.utils.xml.textToDom(snap.xml);
+                Blockly.Xml.domToWorkspace(dom, this.workspace);
+            } finally {
+                Blockly.Events.enable();
+            }
+            this.isReadOnly = !!snap.isReadOnly;
+            if (snap.platform && this.currentPlatform && snap.platform !== this.currentPlatform) {
+                console.warn('[App] reload snapshot platform mismatch, keep current:',
+                    this.currentPlatform, 'snapshot=', snap.platform);
+            }
+            if (window.CocoyaUI) window.CocoyaUI.updateFileStatus(snap.filename || '');
+            return true;
+        } catch (e) {
+            console.error('[App] reload snapshot restore failed:', e);
+            return false;
         }
     }
 });
