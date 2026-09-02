@@ -325,6 +325,11 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
                     this.currentPlatform, 'snapshot=', snap.platform);
             }
             if (window.CocoyaUI) window.CocoyaUI.updateFileStatus(snap.filename || '');
+            // 快照還原在 Blockly.Events.disable() 下進行（clear+domToWorkspace），minimap 靠事件 mirror 同步、
+            // 期間不發事件 → minimap 空白。還原完成後強制重建 minimap 內容。
+            if (window.CocoyaApp && typeof window.CocoyaApp.refreshMinimap === 'function') {
+                window.CocoyaApp.refreshMinimap();
+            }
             return true;
         } catch (e) {
             console.error('[App] reload snapshot restore failed:', e);
