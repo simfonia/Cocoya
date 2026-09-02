@@ -86,7 +86,7 @@ def save_labels(labels, output_path):
         labels: 標籤列表
         output_path: 輸出路徑
     """
-    with open(output_path, 'w') as f:
+    with open(output_path, 'w', encoding='utf-8') as f:
         for label in labels:
             f.write(f"{label}\n")
     print(f"Labels 已儲存: {output_path}")

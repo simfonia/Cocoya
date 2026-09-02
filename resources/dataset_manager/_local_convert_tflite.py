@@ -40,6 +40,39 @@ def build_representative_dataset(dataset_dir, img_size=224, batch_size=1):
     return ds
 
 
+def _load_model_compat(keras_path):
+    """載入 keras 模型，容錯遠端（較新版 TF）產出模型帶有的 renorm 等 BatchNormalization 參數。
+
+    遠端 Docker 以較新版 TF 訓練，產出的 .keras 內 BatchNormalization config 含
+    renorm / renorm_clipping / renorm_momentum；本地 TF 較舊不支援 → load_model 拋
+    "Unrecognized keyword arguments"。透過自訂寬容層在 __init__ 剝除這些參數。
+    """
+    import tensorflow as tf
+
+    class _CompatBatchNorm(tf.keras.layers.BatchNormalization):
+        def __init__(self, **kwargs):
+            # 剝除本地 TF 不支援的 renorm 系列參數
+            kwargs.pop('renorm', None)
+            kwargs.pop('renorm_clipping', None)
+            kwargs.pop('renorm_momentum', None)
+            super().__init__(**kwargs)
+
+    _CUSTOM = {'BatchNormalization': _CompatBatchNorm}
+
+    try:
+        return tf.keras.models.load_model(keras_path)
+    except Exception:
+        # 初次失敗（報告 renorm 等）時以寬容 layer 重載
+        try:
+            return tf.keras.models.load_model(
+                keras_path, custom_objects=_CUSTOM)
+        except Exception:
+            # 某些 Keras 2.x 載入 .keras 不認 custom_objects；改用 save_format='h5' 慣例無法直接套，
+            # 最後再以 compile=False 嘗試（僅需轉換，不需編譯器）
+            return tf.keras.models.load_model(
+                keras_path, custom_objects=_CUSTOM, compile=False)
+
+
 def convert_tflite(keras_path, dataset_dir, output_dir, project_name, model_output, need_rep=None):
     import tensorflow as tf
 
@@ -49,7 +82,7 @@ def convert_tflite(keras_path, dataset_dir, output_dir, project_name, model_outp
         need_rep = model_output in ('int8', 'int8+f32', 'all')
 
     print(f"載入 Keras 模型: {keras_path}")
-    model = tf.keras.models.load_model(keras_path)
+    model = _load_model_compat(keras_path)
 
     rep_ds = build_representative_dataset(dataset_dir) if need_rep else None
     if need_rep:

@@ -88,6 +88,17 @@ Dataset Manager 的狀態/錯誤/結果訊息一律透過集中式函式 `showSt
 - **路徑處理**: 
     - 專案內檔案與資料集路徑一律使用正斜線 `/` 作為統一分隔符號，在傳入後端平台前由通訊橋樑進行環境適配，避免 Windows 與 Unix-like 系統路徑斜線衝突。
 
+### Python 子進程編碼鐵律 (UTF-8 I/O, 2026-09-02 蒸餾)
+Cocoya 混合架構（VSIX + Tauri）兩端都會以 Python 子進程執行訓練/轉換/部署腳本。Windows 下子進程輸出若為 UTF-8、而父端以 locale(cp950) 解讀，會造成 `UnicodeDecodeError` 或終端機亂碼。**所有子進程 I/O 一律強制 UTF-8，雙平台根本解決，不依賴環境變數/locale。**
+
+- **產生器產出的 Python 碼（`ai_inference_generators.js` 等 `train_model()`）**：`subprocess.Popen(..., text=True, encoding="utf-8", errors="replace")`——**必帶** `encoding="utf-8"`（父端解碼固定 UTF-8）。
+- **Tauri/VISX Host 啟動 Python**：
+  - Rust `run_python` / `start_training` / sidecar：`Command.env("PYTHONIOENCODING","utf-8").env("PYTHONUTF8","1")`。
+  - VSIX `envOps.ts handleRunCode` spawn：`env: { ...process.env, PYTHONIOENCODING:'utf-8', PYTHONUTF8:'1', ... }`。
+- **Python sidecar（`dataset_sidecar.py`）內部子進程**：所有 `Popen`/`check_call` 帶 `encoding="utf-8", errors="replace"`（trainLocal Popen、TFLite 轉換 Popen、pip 安裝）——先前 trainLocal Popen 漏帶曾致 cp950 亂碼。
+- **被執行的模板/腳本本身**：`classifier_train.py`/`detector_train.py` 開頭 `sys.stdout/stderr.reconfigure(encoding='utf-8', errors='replace')`；檔案寫入 `open(..., encoding='utf-8')`。
+- **檢查項目**：新增任何啟動 Python 子進程或產生器注入子進程碼時，務必 4 者全帶：(1) 產生器 Popen `encoding`、(2) Host env `PYTHONIOENCODING/PYTHONUTF8`、(3) sidecar 內部 Popen `encoding`、(4) 腳本 `reconfigure`/`open encoding`。漏帶會重現 cp950 亂碼。
+
 ### 轉義字元與換行處理規範
 當處理 Blockly 產生器 (.js) 與產出的 Python/MicroPython 代碼時，必須严格遵守以下規範：
 1. **產生器 JS 中的字串與換行**：

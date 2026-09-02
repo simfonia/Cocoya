@@ -67,9 +67,11 @@ Blockly.Python.forBlock['py_ai_train_run'] = function(block, generator) {
       '        return False\n' +
       '    \n' +
       '    # 呼叫訓練腳本\n' +
-      '    # 使用多候選路徑搜尋，相容 VSIX 與 Tauri 開發/生產模式\n' +
+      '    # 候選 0（權威）：Tauri 後端注入的 COCOYA_TRAIN_TEMPLATES 環境變數\n' +
+      '    # （release 從安裝資源目錄解析，dev 從專案根解析），其餘候選為 VSIX/dev fallback\n' +
       '    script_path = None\n' +
       '    candidates = [\n' +
+      '        os.path.join(os.environ.get("COCOYA_TRAIN_TEMPLATES", ""), task_type, script_name),\n' +
       '        os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "..", "resources", "train_templates", task_type, script_name)),\n' +
       '        os.path.abspath(os.path.join(os.path.dirname(sys.argv[0]), "..", "..", "resources", "train_templates", task_type, script_name)),\n' +
       '        os.path.abspath(os.path.join(os.getcwd(), "resources", "train_templates", task_type, script_name)),\n' +
@@ -116,7 +118,9 @@ Blockly.Python.forBlock['py_ai_train_run'] = function(block, generator) {
       '    print("\\n開始訓練，請稍候...\\n")\n' +
       '    \n' +
       '    # 使用 Popen 即時顯示輸出\n' +
-      '    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, universal_newlines=True)\n' +
+      '    # 編碼鐵律：固定以 UTF-8 解碼子進程輸出（子進程 classifier_train.py 亦 reconfigure utf-8），\n' +
+      '    # 避免 Windows locale(cp950) 與 UTF-8 輸出不一致造成 UnicodeDecodeError\n' +
+      '    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1, universal_newlines=True, encoding="utf-8", errors="replace")\n' +
       '    \n' +
       '    # 即時讀取並顯示輸出\n' +
       '    for line in process.stdout:\n' +

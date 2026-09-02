@@ -9,6 +9,11 @@ import os
 import sys
 import json
 
+# === 輸出編碼修復：Windows 管線下預設 cp950，強制 UTF-8 避免終端機亂碼 ===
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 # === 確定性運算控制（確保 VSIX 與 Tauri 環境訓練結果一致）===
 # 必須在 import tensorflow 之前設定環境變數
 os.environ['TF_DETERMINISTIC_OPS'] = '1'
@@ -29,7 +34,12 @@ tf.random.set_seed(42)
 np.random.seed(42)
 
 # 匯入共同模組
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+# 修復：Rust 傳入的路徑可能帶 \\?\ 前綴（BaseDirectory::Resource canonicalize），
+# 且 '..' 未正規化會使 import common 失敗 → 先 abspath + 剝前綴 + normpath
+_script_dir = os.path.abspath(os.path.dirname(__file__))
+if _script_dir.startswith('\\\\?\\'):
+    _script_dir = _script_dir[4:]
+sys.path.insert(0, os.path.normpath(os.path.join(_script_dir, '..')))
 from common.detector_dataset import load_detector_dataset, create_detector_augmentation, prepare_detector_dataset
 from common.detector_model import build_detector_model
 from common.training_loop import get_optimizer
@@ -201,7 +211,7 @@ def save_detector_history(history, output_path, project_name, epochs,
         }
     }
 
-    with open(output_path, 'w') as f:
+    with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(history_data, f, indent=2)
     print(f"訓練歷史已儲存: {output_path}")
 

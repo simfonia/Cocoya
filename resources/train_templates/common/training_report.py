@@ -41,7 +41,7 @@ def save_training_history(history, output_path, project_name, epochs,
         }
     }
 
-    with open(output_path, 'w') as f:
+    with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(history_data, f, indent=2)
     print(f"訓練歷史已儲存: {output_path}")
 

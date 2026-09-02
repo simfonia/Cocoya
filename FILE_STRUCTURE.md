@@ -111,7 +111,7 @@ C:\Workspace\cocoya\
 │   │   │   │       ├── cocoya_light.js # 淺色主題 (Blockly Classic + 淺色 cssVars)
 │   │   │   │       └── cocoya_dark.js  # 深色主題 (Blockly Theme componentStyles + 深色 cssVars, hideGrid)
 │   │   │   ├── ai_inference/ # AI 訓練與推論積木模組
-│   │   │   │   └── ai_inference_generators.js # 訓練/推論積木 Python 產生器（含多候選路徑搜尋）
+│   │   │   │   └── ai_inference_generators.js # 訓練/推論積木 Python 產生器（多候選路徑搜尋，候選 0 讀 COCOYA_TRAIN_TEMPLATES env）
 │   │   │   ├── ai_pose/            # AI 姿勢偵測積木模組 (MediaPipe Pose)
 │   │   │   │   ├── ai_pose_blocks.js      # 積木定義 (含 py_ai_pose_calc_angle [NEW])
 │   │   │   │   ├── ai_pose_generators.js  # Python 產生器 (含 cocoya_calc_angle_3pts [NEW])
@@ -195,8 +195,8 @@ C:\Workspace\cocoya\
 │       ├── utils.rs       # [NEW] 路徑與資源解析工具
 │       └── commands/      # [NEW] 分類指令處理器
 │           ├── mod.rs       # 指令集匯出
-│           ├── python.rs    # Python 執行與環境診斷
-│           ├── file.rs      # 檔案讀寫、備份與鎖定 (+ dataset_save_progress/dataset_load_progress 進度存讀 [NEW])
+│           ├── python.rs    # Python 執行與環境診斷（注入 UTF-8 編碼與 COCOYA_TRAIN_TEMPLATES 環境變數）
+│           ├── file.rs      # 檔案讀寫、備份與鎖定 (+ dataset_save_progress/dataset_load_progress 進度存讀 [NEW] + 內建範例唯讀保護：Release 開啟時確認後複製範例專案到 Documents\Cocoya\Projects)
 │           ├── mcu.rs       # 硬體通訊、韌體與序列埠
 │           ├── app.rs       # 視窗控制與系統資訊
 │           ├── dataset.rs   # [NEW] Sidecar 通訊 (start/send/stop)

@@ -40,6 +40,7 @@ const PYTHON_MODULES_JSON: &str = r#"[{"id":"serial","name":"pyserial","descript
 #[tauri::command]
 pub async fn run_python(
     window: Window,
+    handle: tauri::AppHandle,
     state: State<'_, AppState>,
     code: String,
     python_path: String,
@@ -75,7 +76,25 @@ pub async fn run_python(
         }
     };
 
+    // 唯讀工作目錄防護：避免腳本相對路徑輸出（如 model/、dataset/）落到
+    // Program Files 等唯讀位置而產生 PermissionError 深 traceback
+    let probe_path = work_dir.join(".cocoya_write_probe");
+    let work_dir_writable = fs::write(&probe_path, b"ok").is_ok();
+    let _ = fs::remove_file(&probe_path);
+    if !work_dir_writable {
+        let _ = window.emit_to(&window.label().to_string(), "python-error", format!(
+            "錯誤: 專案工作目錄不可寫（{}）。\n內建範例為唯讀，請重新開啟範例並選擇「複製並開啟」，或先另存專案到可寫位置（如 文件\\Cocoya\\Projects）再執行。",
+            work_dir.display()
+        ));
+        return Ok(());
+    }
+
     let mut cmd = Command::new(&python_path);
+    // 編碼修復：Windows pipe 下 Python 預設輸出 cp950，Rust 端以 UTF-8 解讀會亂碼
+    cmd.env("PYTHONIOENCODING", "utf-8")
+       .env("PYTHONUTF8", "1");
+    // 訓練模板路徑權威注入（release 從 Resource 解析，dev 從專案根），供產生碼 train_model() 使用
+    cmd.env("COCOYA_TRAIN_TEMPLATES", crate::utils::get_train_templates_path(&handle));
     cmd.arg("-u") // Unbuffered mode
         .arg(&script_path)
         .current_dir(&work_dir)
@@ -173,6 +192,7 @@ pub async fn stop_python(window: Window, state: State<'_, AppState>) -> Result<(
 #[tauri::command]
 pub async fn start_training(
     window: Window,
+    handle: tauri::AppHandle,
     state: State<'_, AppState>,
     project_name: String,
     task_type: String,
@@ -188,6 +208,10 @@ pub async fn start_training(
         .join("dataset_sidecar.py");
     
     let mut cmd = Command::new("python");
+    // 編碼修復：同 run_python，強制 UTF-8 IO，避免 cp950 亂碼
+    cmd.env("PYTHONIOENCODING", "utf-8")
+       .env("PYTHONUTF8", "1")
+       .env("COCOYA_TRAIN_TEMPLATES", crate::utils::get_train_templates_path(&handle));
     cmd.arg(&sidecar_path)
        .stdin(Stdio::piped())
        .stdout(Stdio::piped())

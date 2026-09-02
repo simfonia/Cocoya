@@ -219,9 +219,18 @@ print(json.dumps(results))
                 writeEmitter.fire(`# 執行中: ${runCmd}\r\n`);
 
                 // 啟動 Python 進程
+                // 編碼修復：Windows pipe 下 Python 預設輸出 cp950，以 UTF-8 解讀會亂碼（對齊 Tauri run_python）
+                // 模板路徑：注入 COCOYA_TRAIN_TEMPLATES（extensionPath/resources/train_templates），供 train_model() 候選 0 使用
+                const trainTemplatesDir = path.join(this.manager.context.extensionPath, 'resources', 'train_templates');
                 const child = spawn(pythonPath, ['-u', tempFilePath], {
                     cwd: projectDir,
-                    stdio: ['ignore', 'pipe', 'pipe']
+                    stdio: ['ignore', 'pipe', 'pipe'],
+                    env: {
+                        ...process.env,
+                        PYTHONIOENCODING: 'utf-8',
+                        PYTHONUTF8: '1',
+                        COCOYA_TRAIN_TEMPLATES: trainTemplatesDir
+                    }
                 });
 
                 // 即時串流 stdout 到終端機 + 解析 RESULT 行

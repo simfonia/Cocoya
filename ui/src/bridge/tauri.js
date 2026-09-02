@@ -223,7 +223,10 @@ export class BridgeTauri extends BaseBridge {
                             this._dispatchToFrontend({ command: 'recoveryData', xml: res.backup_xml });
                         }
                     } catch (e) {
-                        if (e !== 'Canceled') console.error('[Bridge] Open failed:', e);
+                        if (e === 'EXAMPLES_READ_ONLY') {
+                            this.alert(window.Blockly?.Msg['BKY_EXAMPLES_READ_ONLY'] ||
+                                '已取消開啟內建範例。內建範例為唯讀，請重新開啟並選擇「複製並開啟」。');
+                        } else if (e !== 'Canceled') console.error('[Bridge] Open failed:', e);
                     }
                     break;
 
@@ -358,7 +361,10 @@ export class BridgeTauri extends BaseBridge {
                             platform: res.platform 
                         });
                     } catch (e) {
-                        if (e !== 'Canceled') console.error('[Bridge] Open examples failed:', e);
+                        if (e === 'EXAMPLES_READ_ONLY') {
+                            this.alert(window.Blockly?.Msg['BKY_EXAMPLES_READ_ONLY'] ||
+                                '已取消開啟內建範例。內建範例為唯讀，請重新開啟並選擇「複製並開啟」。');
+                        } else if (e !== 'Canceled') console.error('[Bridge] Open examples failed:', e);
                     }
                     break;
 
@@ -817,7 +823,7 @@ export class BridgeTauri extends BaseBridge {
                         const pythonPath = localStorage.getItem('pythonPath') || 'python';
                         if (window.CocoyaUI) {
                             window.CocoyaUI.toggleTerminal(true);
-                            window.CocoyaUI.appendTerminal(`--- Installing module: ${data.module} ---`, 'info');
+                            window.CocoyaUI.appendTerminal(`--- Installing module: ${data.moduleDisplay || data.module} ---`, 'info');
                         }
                         this.tauriInvoke('run_python', { 
                             code: `import subprocess; import sys; subprocess.run(["${pythonPath}", "-m", "pip", "install", "${data.module}", "--user"])`,

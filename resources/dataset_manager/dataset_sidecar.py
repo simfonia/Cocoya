@@ -20,6 +20,14 @@ except ImportError:
 
 from camera_service import CameraService
 
+# Windows: 隱藏子進程 console（Tauri 為 GUI subsystem，避免 python pip 安裝彈出黑視窗）
+if os.name == 'nt':
+    _HIDE = 0x08000000
+    _POPEN = dict(creationflags=_HIDE)
+else:
+    _HIDE = 0
+    _POPEN = dict()
+
 # 嘗試自動安裝 paramiko 連線庫，確保開箱即用
 try:
     import paramiko
@@ -27,7 +35,7 @@ except ImportError:
     import subprocess
     print("[Sidecar Log] paramiko not found, attempting to install via pip...", file=sys.stderr)
     try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "paramiko"])
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "paramiko"], **_POPEN)
         print("[Sidecar Log] paramiko successfully installed!", file=sys.stderr)
     except Exception as inst_err:
         print(f"[Sidecar Log] Failed to auto-install paramiko: {str(inst_err)}", file=sys.stderr)
@@ -816,7 +824,10 @@ class DatasetSidecar:
                                 stderr=subprocess.PIPE,
                                 text=True,
                                 bufsize=1,
-                                universal_newlines=True
+                                universal_newlines=True,
+                                encoding="utf-8",
+                                errors="replace",
+                                **_POPEN
                             )
                             
                             # 解析訓練結果
