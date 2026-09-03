@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>2026-09-03 工作日誌</title>
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; }
+        h2 { color: #2980b9; margin-top: 30px; }
+        h3 { color: #16a085; }        .section { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .done { color: #27ae60; }
+        .pending { color: #e67e22; }        code { background: #ecf0f1; padding: 2px 6px; border-radius: 3px; }
+        pre { background: #2c3e50; color: #ecf0f1; padding: 15px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>📋 2026-09-03 工作日誌</h1>
+
+    <h2>任務摘要</h2>
+    <div class="section">
+        <h3>[設計] Lego SPIKE Prime 模組開發計畫</h3>
+        <ul>
+            <li>完成設計文件 <code>log/plan/SpikeModuleDesign.md</code></li>
+            <li>決定使用 Pybricks 韌體（API 直覺、適合初學者）</li>
+            <li>規劃 Toolbox 使用 Blockly 巢狀 category 多層分類</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h3>[重構] deploy_mcu.py 模組化</h3>
+        <ul>
+            <li>建立 <code>resources/deploy/</code> 套件結構</li>
+            <li>工廠模式：<code>get_deployer(board_type)</code> 統一入口</li>
+            <li>向後相容：<code>deploy_mcu.py</code> 保留為 CLI 薄包裝</li>
+        </ul>
+    </div>
+
+    <h2>技術深挖 (Technical Deep Dive)</h2>
+
+    <h3>1. Pybricks vs 原廠韌體選型</h3>
+    <p>比較後選擇 Pybricks 的原因：</p>
+    <ul>
+        <li>Pybricks 提供高層次 API（<code>motor.run()</code>, <code>sensor.color()</code>），適合初學者</li>
+        <li>原廠 MicroPython API 較底層，需手動處理許多細節</li>
+        <li>Pybricks 支援多 Hub（SPIKE、Technic、BOOST、City、Robot Inventor）</li>
+        <li>Blockly 積木可直接映射到 Pybricks API</li>
+    </ul>
+
+    <h3>2. deploy_mcu.py 重構決策</h3>
+    <p>原始 deploy_mcu.py 僅 268 行，但 Pybricks 上傳協定與 MicroPython Raw REPL 不同：</p>
+    <ul>
+        <li>MicroPython：Ctrl-C 中斷 → Ctrl-A 進入 Raw REPL → 送出程式碼 → Ctrl-D 執行</li>
+        <li>Pybricks：Ctrl-C 中斷 → 直接送出程式碼 → 換行觸發執行</li>
+    </ul>
+    <p>若將兩者塞在同一個檔案，會增加條件分支複雜度。因此採用工廠模式分離。</p>
+
+    <h3>3. Toolbox 多層分類設計</h3>
+    <p>Blockly 原生支援巢狀 <code>&lt;category&gt;</code> 元素，可實現可收合的樹狀結構：</p>
+    <pre>&lt;category name="Lego SPIKE" colour="#FF6680"&gt;
+    &lt;category name="馬達控制" colour="#FF6680"&gt;
+        &lt;block type="spike_motor_run"&gt;&lt;/block&gt;
+    &lt;/category&gt;
+    &lt;category name="感測器" colour="#FF6680"&gt;
+        &lt;category name="顏色感測器" colour="#FF6680"&gt;
+            &lt;block type="spike_color_detect"&gt;&lt;/block&gt;
+        &lt;/category&gt;
+    &lt;/category&gt;
+&lt;/category&gt;</pre>
+
+    <h2>異動檔案清單</h2>
+    <table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%;">
+        <tr style="background: #3498db; color: white;"><th>檔案</th><th>異動類型</th><th>說明</th></tr>
+        <tr><td><code>log/plan/SpikeModuleDesign.md</code></td><td>新增</td><td>SPIKE 模組完整開發計畫</td></tr>
+        <tr><td><code>log/todo.md</code></td><td>更新</td><td>加入 SPIKE 開發任務</td></tr>
+        <tr><td><code>resources/deploy/__init__.py</code></td><td>新增</td><td>工廠函式與 Deployer 登錄表</td></tr>
+        <tr><td><code>resources/deploy/base.py</code></td><td>新增</td><td>BaseDeployer 基底 + Monitor + detect_board</td></tr>
+        <tr><td><code>resources/deploy/micropython.py</code></td><td>新增</td><td>MicroPython Raw REPL 部署器</td></tr>
+        <tr><td><code>resources/deploy/pybricks.py</code></td><td>新增</td><td>Pybricks SPIKE 部署器</td></tr>
+        <tr><td><code>resources/deploy_mcu.py</code></td><td>重構</td><td>改寫為 CLI 薄包裝（向後相容）</td></tr>
+        <tr><td><code>FILE_STRUCTURE.md</code></td><td>更新</td><td>反映 deploy/ 套件結構</td></tr>
+    </table>
+
+    <h2>驗證結果</h2>
+    <ul>
+        <li>✅ Python 匯入測試通過：<code>from resources.deploy import get_deployer</code></li>
+        <li>✅ CLI  Help 輸出正常：<code>deploy_mcu.py --help</code></li>
+        <li>✅ 向後相容：原有 CLI 參數完全保留</li>
+    </ul>
+
+    <h2>下次啟動方向 (Next Steps)</h2>
+    <ol>
+        <li>SPIKE Phase 1 實作：Hub + 馬達基礎控制積木</li>
+        <li>更新 serialOps.ts / mcu.rs 的 VID/PID 偵測（Pybricks hub）</li>
+        <li>新增 spike 模組的 core_manifest.json 註冊</li>
+        <li>建立 spike_blocks.js / spike_generators.js / toolbox.xml</li>
+    </ol>
+</body>
+</html>

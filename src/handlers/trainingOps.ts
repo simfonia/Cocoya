@@ -3,6 +3,49 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 /**
+ * 訓練/雲端訓練的 VS Code 終端機（方案 A）
+ * 將 sidecar 的 trainingLog 逐行導向原生 Pseudoterminal，而非 webview 自訂 terminal。
+ * 仿照 envOps.ts runCode 既有成功 pattern：writeEmitter、\n→\r\n、不 fire closeEmitter 保持開啟。
+ */
+export class TrainingTerminal {
+    private static instance: { terminal: vscode.Terminal; write: (s: string) => void } | null = null;
+
+    static get(): { terminal: vscode.Terminal; write: (s: string) => void } {
+        if (TrainingTerminal.instance) {
+            return TrainingTerminal.instance;
+        }
+        const writeEmitter = new vscode.EventEmitter<string>();
+        const closeEmitter = new vscode.EventEmitter<void>();
+        const pty: vscode.Pseudoterminal = {
+            onDidWrite: writeEmitter.event,
+            onDidClose: closeEmitter.event,
+            open: () => {
+                writeEmitter.fire('Cocoya 訓練終端機\r\n');
+            },
+            close: () => {
+                // 不 fire closeEmitter：讓終端機保持開啟供回顧歷史
+            }
+        };
+        const terminal = vscode.window.createTerminal({ name: 'Cocoya Training', pty });
+        terminal.show();
+        TrainingTerminal.instance = { terminal, write: (s) => writeEmitter.fire(s.replace(/\n/g, '\r\n')) };
+        return TrainingTerminal.instance;
+    }
+
+    static dispose() {
+        if (TrainingTerminal.instance) {
+            TrainingTerminal.instance.terminal.dispose();
+            TrainingTerminal.instance = null;
+        }
+    }
+
+    static writeLine(s: string) {
+        const inst = TrainingTerminal.get();
+        inst.write(s + '\n');
+    }
+}
+
+/**
  * 訓練相關操作 Handler
  */
 export class TrainingOpsHandler {
@@ -76,10 +119,8 @@ export class TrainingOpsHandler {
 
             this.manager.sidecar.onEvent = (event: string, data: any) => {
                 if (event === 'trainingLog') {
-                    this.manager.panel.webview.postMessage({
-                        command: 'trainingLog',
-                        message: data.message
-                    });
+                    // 方案 A：導向 VS Code 原生終端機，而非 webview 自訂 terminal
+                    TrainingTerminal.writeLine(data.message || '');
                 }
             };
 
@@ -178,10 +219,8 @@ export class TrainingOpsHandler {
 
         this.manager.sidecar.onEvent = (event: string, data: any) => {
             if (event === 'trainingLog') {
-                this.manager.panel.webview.postMessage({
-                    command: 'trainingLog',
-                    message: data.message
-                });
+                // 方案 A：雲端訓練日誌導向 VS Code 原生終端機，而非 webview 自訂 terminal
+                TrainingTerminal.writeLine(data.message || '');
             }
         };
     }

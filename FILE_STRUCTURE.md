@@ -54,6 +54,8 @@ C:\Workspace\cocoya\
 │   │   ├── BboxAnnotationUIImprovement.md # BBox 標註 UI 改善
 │   │   ├── DatasetManagerOptimization.md # Dataset Manager 優化
 │   │   ├── ObjectDetectorTrain.md # 物件偵測訓練計畫
+│   │   ├── openTrainingReport.md # 開啟訓練報告計畫
+│   │   └── SpikeModuleDesign.md  # [NEW] Lego SPIKE Prime 模組開發計畫
 │   │   └── openTrainingReport.md # 開啟訓練報告計畫
 │   ├── work/              # 每日工作紀錄
 │   │   ├── 2026-05-03.md  # UI/UX 響應式佈局與收合面板實作
@@ -207,6 +209,13 @@ C:\Workspace\cocoya\
 │   │       └── XIAO_ESP32_S3/    # 內含 .bin, .uf2, 及 project_config.json
 │   │           ├── Sense_microPython/  # 具備相機支援的 MicroPython
 │   │           └── Sense_Factory/      # 原廠出廠 C++ 韌體 (支援多段燒錄)
+│   ├── deploy_mcu.py      # [REFACTORED] CLI 入口（向後相容薄包裝，委派 deploy/ 套件）
+│   ├── deploy/            # [NEW] 部署器模組化套件（工廠模式）
+│   │   ├── __init__.py    #   工廠函式 get_deployer() 與登錄表
+│   │   ├── base.py        #   BaseDeployer 基底類別 + 序列埠監控 + detect_board()
+│   │   ├── micropython.py #   MicroPython Raw REPL 部署器
+│   │   └── pybricks.py    #   Pybricks SPIKE 部署器（新增）
+│   └── extension_icon.png # 插件圖示
 │   ├── deploy_mcu.py      # [OPTIMIZED] 具備硬體感知與分塊寫入的部署工具
 │   └── extension_icon.png # 插件圖示
 │       ├── dataset_sidecar.py   # Sidecar 主進程與指令解析
@@ -222,6 +231,13 @@ C:\Workspace\cocoya\
 │   ├── 06_download_from_dgx.py # 下載模型
 │   ├── 07_inference_with_dgx_model.py # DGX 模型推論
 │   ├── 08_picar_receiver.py # πCar 接收端 (MicroPython)
+│   ├── deploy_mcu.py      # [REFACTORED] CLI 入口（向後相容薄包裝，委派 deploy/ 套件）
+│   ├── deploy/            # [NEW] 部署器模組化套件（工廠模式）
+│   │   ├── __init__.py    #   工廠函式 get_deployer() 與登錄表
+│   │   ├── base.py        #   BaseDeployer 基底類別 + 序列埠監控 + detect_board()
+│   │   ├── micropython.py #   MicroPython Raw REPL 部署器
+│   │   └── pybricks.py    #   Pybricks SPIKE 部署器（新增）
+│   ├── extension_icon.png # 插件圖示
 │   ├── 09_full_pipeline.py  # 完整流程整合
 │   ├── 訓練過程記錄.txt      # 訓練結果紀錄
 │   └── model/               # 本機模型輸出目錄

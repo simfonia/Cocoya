@@ -164,6 +164,21 @@
 - **Stage 6 收尾切片（2026-09-01，已 commit b93f3f1）**：DATASET_MANAGER_PLAN.md、DatasetManagerOptimization.md、DatasetManagerProgressAndGuardrails.md 標記 SUPERSEDED（保留原文）；system_spec.html 原無 DM 章節，增補〈24. Dataset Manager 模組規範〉（三層架構/雙平台/安全不變量，指向 mapping）。Stage 6 Gate 六項：①-③⑤已完成，④靜態通過（D6-2/B0-1 實機待測）、⑥審核者簽核待使用者。
 - **Stage 6 切片 1（2026-09-01，D6-3 靜態清理 + D6-1/D6-2 文件核對）**：①掃描證據——direct Bridge 僅 io/bridge.js（合法）、全域 emit=0、legacy DOM id=0、未使用 export=0；②ui_layout.js 刪 5 個零呼叫未 export 死 wrapper（renderColumnRow/bindCanvasKeyboardEvents/deleteSelectedAnnotation/updateClassifyProgress/bindClassificationKeyboardEvents）+3 孤兒註解；③annotation/classification 共用 7 面板 id 為互斥模式合法設計（記錄保留原因）；④DatasetManager.html 公開 API 表補齊 7 項、遠端節標記前端已移除、Importer 更正為 importUseCases；⑤FILE_STRUCTURE i18n/index/ui_layout 描述更新。node --test 80/80、build PASS。事故：worklog 重排腳本誤刪 Stage 5 收尾區段，已自 git 還原零損失。
 
+### [2026-09-03] Lego SPIKE Prime 模組開發計畫
+- 計畫文件：`log/plan/SpikeModuleDesign.md`
+- 目標：新增 `spike` 積木模組，支援 Lego SPIKE Prime 機器人（Pybricks 韌體）
+- **Phase 0 基礎設施**：
+  - [ ] 重構 `deploy_mcu.py` 為模組化結構（deploy/ 套件：base.py / micropython.py / pybricks.py）
+  - [ ] 新增 `deploy/pybricks.py` 上傳支援
+  - [ ] 更新 serialOps.ts / mcu.rs 的 VID/PID 偵測（Pybricks hub）
+- **Phase 1 Hub + 馬達基礎控制**：
+  - [ ] spike_init_hub / spike_motor_init / spike_motor_run / spike_motor_stop / spike_motor_angle
+  - [ ] Toolbox + i18n + Help
+- **Phase 2 感測器積木**：顏色 / 距離 / 力道
+- **Phase 3 Hub 內建設備**：螢幕 / 按鈕 / 喇叭 / IMU
+- **Phase 4 進階功能**：彩色積木、完整範例檔
+- 備註：使用 Pybricks 第三方韌體（API 直覺、適合初學者）；Toolbox 使用 Blockly 巢狀 category 實現多層分類
+
 ### [2026-09-02] Tauri Release 訓練範例三案修復（cp950 亂碼 / 模板路徑 / examples 唯讀）
 - [x] A 編碼：PYTHONIOENCODING/PYTHONUTF8 注入 + 模板 reconfigure + open encoding='utf-8'
 - [x] B 模板路徑權威化：env COCOYA_TRAIN_TEMPLATES 注入 + train_model() 候選 0
