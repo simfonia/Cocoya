@@ -77,16 +77,11 @@
                                       <shadow type="py_math_number" id="u+zj]di=/RiZjwLVWt%Z">
                                         <field name="NUM">0</field>
                                       </shadow>
-                                      <block type="py_types_get_item" id="MD=75bhYtoM+W9mkLvX+">
-                                        <value name="OBJ">
+                                      <block type="py_ai_get_confidence" id="MD=75bhYtoM+W9mkLvX+">
+                                        <value name="RESULT">
                                           <block type="py_variables_get" id="GrMhf}hRjJP!FB*QZ1ti">
                                             <field name="VAR" id="d{642QY1EqHl#`PF*{Y,">result</field>
                                           </block>
-                                        </value>
-                                        <value name="INDEX">
-                                          <shadow type="py_math_number" id="emrDSe(dS+5(TXx1{n+[">
-                                            <field name="NUM">1</field>
-                                          </shadow>
                                         </value>
                                       </block>
                                     </value>
@@ -100,16 +95,11 @@
                                 <statement name="DO0">
                                   <block type="py_io_serial_write" id=")_KTI-zsE33#tdL,?Gda">
                                     <value name="DATA">
-                                      <block type="py_types_get_item" id="XkJ]F?4x^|aB[a3i78|s">
-                                        <value name="OBJ">
+                                      <block type="py_ai_get_label" id="XkJ]F?4x^|aB[a3i78|s">
+                                        <value name="RESULT">
                                           <block type="py_variables_get" id=".*](^r^/rl%@7VGvL(`v">
                                             <field name="VAR" id="d{642QY1EqHl#`PF*{Y,">result</field>
                                           </block>
-                                        </value>
-                                        <value name="INDEX">
-                                          <shadow type="math_number" id="7izX((~66mI|#T.N}njT">
-                                            <field name="NUM">0</field>
-                                          </shadow>
                                         </value>
                                       </block>
                                     </value>
@@ -119,16 +109,11 @@
                                           <shadow type="py_text" id="k_:j%F`u]4o(f-,%]DB%">
                                             <field name="TEXT">Hello Cocoya!</field>
                                           </shadow>
-                                          <block type="py_types_get_item" id="4Lg2(J1}2LPK6M$,3clr">
-                                            <value name="OBJ">
+                                          <block type="py_ai_get_label" id="4Lg2(J1}2LPK6M$,3clr">
+                                            <value name="RESULT">
                                               <block type="py_variables_get" id="C{6x{W;a`t!rY?MG8p}(">
                                                 <field name="VAR" id="d{642QY1EqHl#`PF*{Y,">result</field>
                                               </block>
-                                            </value>
-                                            <value name="INDEX">
-                                              <shadow type="math_number" id="MOi|70/0,@=ktlO.=+NI">
-                                                <field name="NUM">0</field>
-                                              </shadow>
                                             </value>
                                           </block>
                                         </value>

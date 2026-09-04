@@ -35,7 +35,7 @@ fn strip_ansi_codes(input: &str) -> String {
 
 // SSOT: Python 套件檢查清單（從 config/python_modules.json 同步）
 // 當修改 config/python_modules.json 時，必須同步更新此常數
-const PYTHON_MODULES_JSON: &str = r#"[{"id":"serial","name":"pyserial","description":"MCU 通訊"},{"id":"esptool","name":"esptool (Firmware)","description":"ESP32 韌體燒錄"},{"id":"cv2","name":"opencv-python","description":"OpenCV - 影像處理"},{"id":"mediapipe","name":"mediapipe","description":"MediaPipe - 姿態/人臉/手勢偵測"},{"id":"PIL","name":"Pillow (Image)","description":"Pillow - 影像處理"},{"id":"tensorflow","name":"tensorflow","description":"深度學習框架"},{"id":"numpy","name":"numpy","description":"數值計算"},{"id":"sklearn","name":"scikit-learn","description":"機器學習工具（class_weight）"},{"id":"matplotlib","name":"matplotlib","description":"訓練報告視覺化"},{"id":"paramiko","name":"paramiko (SSH)","description":"SSH/SFTP 連線（遠端訓練）"}]"#;
+const PYTHON_MODULES_JSON: &str = r#"[{"id":"serial","name":"pyserial","description":"MCU 通訊"},{"id":"esptool","name":"esptool (Firmware)","description":"ESP32 韌體燒錄","pipPackage":"esptool==4.7.0"},{"id":"cv2","name":"opencv-python","description":"OpenCV - 影像處理"},{"id":"mediapipe","name":"mediapipe","description":"MediaPipe - 姿態/人臉/手勢偵測"},{"id":"PIL","name":"Pillow (Image)","description":"Pillow - 影像處理"},{"id":"tensorflow","name":"tensorflow","description":"深度學習框架"},{"id":"numpy","name":"numpy","description":"數值計算"},{"id":"sklearn","name":"scikit-learn","description":"機器學習工具（class_weight）"},{"id":"matplotlib","name":"matplotlib","description":"訓練報告視覺化"},{"id":"paramiko","name":"paramiko (SSH)","description":"SSH/SFTP 連線（遠端訓練）"}]"#;
 
 #[tauri::command]
 pub async fn run_python(

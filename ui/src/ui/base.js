@@ -649,6 +649,10 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                     if (window.CocoyaDataset && window.CocoyaDataset.open) {
                         window.CocoyaDataset.open();
                     }
+                } else if (msg.command === 'trainingConnected') {
+                    // VSIX 方案 A：trainingLog 導向 VS Code 終端機，host 收到第一筆訓練事件時送此一次性信號，
+                    // 讓「[Remote] 連線中…」點點計時器提前停止（原本要等到 trainingComplete）。
+                    if (self._remoteConnTimer) { clearInterval(self._remoteConnTimer); self._remoteConnTimer = null; }
                 } else if (msg.command === 'trainingComplete') {
                     // 訓練完成，開啟 HTML 訓練報告
                     if (self._remoteConnTimer) { clearInterval(self._remoteConnTimer); self._remoteConnTimer = null; }
@@ -664,7 +668,12 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                         });
                     }
                     if (window.CocoyaUI?.appendTerminal) {
-                        window.CocoyaUI.appendTerminal('--- Remote training complete: ' + (msg.modelDir || '') + ' ---', 'info');
+                        // remote 標記由遠端訓練鏈（VSIX trainingOps / Tauri trainRemote）帶入；
+                        // 本地訓練（envOps RESULT / trainLocal）無此標記，勿誤標 Remote。
+                        const key = msg.remote ? 'MSG_TRAINING_COMPLETE_REMOTE' : 'MSG_TRAINING_COMPLETE_LOCAL';
+                        const fallback = msg.remote ? '--- Remote training complete: %1 ---' : '--- Training complete: %1 ---';
+                        const text = ((Blockly.Msg && Blockly.Msg[key]) || fallback).replace('%1', msg.modelDir || '');
+                        window.CocoyaUI.appendTerminal(text, 'info');
                     }
                 } else if (msg.command === 'trainingLog') {
                     // D4 遠端訓練即時日誌（VSIX postMessage / Tauri sidecar-event 轉發）

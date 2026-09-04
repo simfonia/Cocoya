@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { hostMsg } from '../hostI18n';
 
 /**
  * 訓練/雲端訓練的 VS Code 終端機（方案 A）
@@ -40,9 +41,28 @@ export class TrainingTerminal {
     }
 
     static writeLine(s: string) {
-        const inst = TrainingTerminal.get();
-        inst.write(s + '\n');
+        try {
+            const inst = TrainingTerminal.get();
+            inst.write(s + '\n');
+        } catch (e: any) {
+            // 防禦：Pseudoterminal 建立或寫入失敗不得靜默（先前例外會被 sidecarManager 的 try/catch 吞掉，
+            // 造成「訓練成功但 VS Code 終端機零訊息」）。fallback 寫入輸出頻道供診斷。
+            const msg = `[TrainingTerminal] write failed: ${e?.message || e}`;
+            console.error(msg);
+            TrainingTerminal.fallback().appendLine(msg);
+            TrainingTerminal.fallback().appendLine(s);
+        }
     }
+
+    /** 錯誤 fallback 輸出頻道（延遲建立） */
+    static fallback(): vscode.OutputChannel {
+        if (!TrainingTerminal._fallbackChannel) {
+            TrainingTerminal._fallbackChannel = vscode.window.createOutputChannel('Cocoya Training (fallback)');
+        }
+        return TrainingTerminal._fallbackChannel;
+    }
+
+    private static _fallbackChannel: vscode.OutputChannel | null = null;
 }
 
 /**
@@ -94,7 +114,7 @@ export class TrainingOpsHandler {
                     console.log(`[Training]   reportPath: ${resp.reportPath}`);
                     console.log(`[Training]   curvePath: ${resp.curvePath}`);
                     
-                    vscode.window.showInformationMessage(`訓練完成！模型已儲存至: ${resp.modelDir}`);
+                    vscode.window.showInformationMessage(hostMsg('localComplete', resp.modelDir));
                     this.manager.panel.webview.postMessage({
                         command: 'trainingComplete',
                         success: true,
@@ -108,11 +128,11 @@ export class TrainingOpsHandler {
                     });
                 } else {
                     console.error(`[Training] Training failed:`, resp.error);
-                    vscode.window.showErrorMessage('訓練失敗: ' + (resp.error || '未知錯誤'));
+                    vscode.window.showErrorMessage(hostMsg('localFailed', resp.error || 'Unknown error'));
                     this.manager.panel.webview.postMessage({
                         command: 'trainingError',
                         success: false,
-                        error: resp.error || '訓練失敗'
+                        error: resp.error || hostMsg('localFailedErr')
                     });
                 }
             });
@@ -125,11 +145,11 @@ export class TrainingOpsHandler {
             };
 
         } else if (backend === 'dgx' || backend === 'remote') {
-            vscode.window.showWarningMessage('遠端訓練功能開發中，請使用本地訓練模式。');
+            vscode.window.showWarningMessage(hostMsg('remoteNotAvailable'));
             this.manager.panel.webview.postMessage({
                 command: 'trainingError',
                 success: false,
-                error: '遠端訓練功能尚未開放'
+                error: hostMsg('remoteNotAvailableErr')
             });
         }
     }
@@ -171,11 +191,11 @@ export class TrainingOpsHandler {
         const outputDir = path.join(baseDir, 'model', projectName);
 
         if (!sshConfig || !sshConfig.host || !sshConfig.username || !sshConfig.password) {
-            vscode.window.showErrorMessage('缺少 SSH 連線資訊，請重新執行遠端訓練。');
+            vscode.window.showErrorMessage(hostMsg('missingSsh'));
             this.manager.panel.webview.postMessage({
                 command: 'trainingError',
                 success: false,
-                error: '缺少 SSH 連線資訊'
+                error: hostMsg('missingSshErr')
             });
             return;
         }
@@ -200,15 +220,26 @@ export class TrainingOpsHandler {
             dockerImage: 'cocoya-train-' + (taskType === 'detector' ? 'detector' : 'classifier')
         }, (resp: any) => {
             if (resp.success) {
-                vscode.window.showInformationMessage(`遠端訓練完成！模型已下載至: ${resp.modelDir}`);
+                vscode.window.showInformationMessage(hostMsg('remoteComplete', resp.modelDir));
+                TrainingTerminal.writeLine(hostMsg('remoteCompleteMarker'));
+                // 轉發完整產物路徑（sidecar send_response 已掃描），webview 靠 reportPath 開訓練報告
                 this.manager.panel.webview.postMessage({
                     command: 'trainingComplete',
                     success: true,
+                    remote: true,
                     modelDir: resp.modelDir,
-                    projectName: resp.projectName
+                    projectName: resp.projectName,
+                    downloaded: resp.downloaded,
+                    modelOutput: resp.modelOutput,
+                    reportPath: resp.reportPath,
+                    kerasPath: resp.kerasPath,
+                    curvePath: resp.curvePath,
+                    historyPath: resp.historyPath,
+                    tflitePaths: resp.tflitePaths
                 });
             } else {
-                vscode.window.showErrorMessage('遠端訓練失敗: ' + (resp.error || '未知錯誤'));
+                vscode.window.showErrorMessage(hostMsg('remoteFailed', resp.error || 'Unknown error'));
+                TrainingTerminal.writeLine(hostMsg('remoteFailedMarker', resp.error || 'Unknown error'));
                 this.manager.panel.webview.postMessage({
                     command: 'trainingError',
                     success: false,
@@ -217,10 +248,17 @@ export class TrainingOpsHandler {
             }
         });
 
+        // 方案 A：trainingLog 導向 VS Code 原生終端機，而非 webview 自訂 terminal。
+        // 第一筆 trainingLog 額外送一次性 trainingConnected 信號給 webview，讓「連線中…」點點計時器提前停止
+        //（trainingComplete 才停會讓點點跑完整場訓練，2026-09-03 使用者回報）。
+        let connectedSignalSent = false;
         this.manager.sidecar.onEvent = (event: string, data: any) => {
             if (event === 'trainingLog') {
-                // 方案 A：雲端訓練日誌導向 VS Code 原生終端機，而非 webview 自訂 terminal
                 TrainingTerminal.writeLine(data.message || '');
+                if (!connectedSignalSent) {
+                    connectedSignalSent = true;
+                    this.manager.panel.webview.postMessage({ command: 'trainingConnected' });
+                }
             }
         };
     }
@@ -231,7 +269,7 @@ export class TrainingOpsHandler {
     public handleOpenTrainingReport(message: any) {
         const reportPath = message.path;
         if (!reportPath) {
-            vscode.window.showErrorMessage('找不到訓練報告檔案: 路徑為空');
+            vscode.window.showErrorMessage(hostMsg('reportNotFoundEmpty'));
             return;
         }
 
@@ -247,7 +285,7 @@ export class TrainingOpsHandler {
         }
 
         if (!fs.existsSync(resolvedPath)) {
-            vscode.window.showErrorMessage('找不到訓練報告檔案: ' + resolvedPath);
+            vscode.window.showErrorMessage(hostMsg('reportNotFound', resolvedPath));
             return;
         }
         
@@ -264,13 +302,13 @@ export class TrainingOpsHandler {
         vscode.env.openExternal(vscode.Uri.file(resolvedPath)).then((success: boolean) => {
             if (!success) {
                 console.error(`[TrainingReport] openExternal returned false`);
-                vscode.window.showErrorMessage(`開啟失敗，請手動開啟檔案：\n${resolvedPath}`);
+                vscode.window.showErrorMessage(hostMsg('openFailed', resolvedPath));
             } else {
                 console.log(`[TrainingReport] Successfully opened in browser`);
             }
         }, (err: any) => {
             console.error(`[TrainingReport] openExternal failed:`, err);
-            vscode.window.showErrorMessage(`開啟失敗，請手動開啟檔案：\n${resolvedPath}\n\n錯誤：${err.message || '未知錯誤'}`);
+            vscode.window.showErrorMessage(hostMsg('openFailedWithErr', resolvedPath, err.message || 'Unknown error'));
         });
     }
     
@@ -278,18 +316,7 @@ export class TrainingOpsHandler {
      * 顯示中文路徑錯誤提示
      */
     private showChinesePathError(reportPath: string) {
-        const errorMsg = `開啟訓練報告失敗！
-
-原因：路徑或檔名包含中文，導致無法直接開啟。
-
-解決方案：
-1. 將專案資料夾移到英文路徑，例如：
-   C:/Workspace/training/
-   
-2. 自行開啟：
-   ${reportPath}
-
-3. 建議：專案資料夾中的路徑及檔名都以英文命名。`;
+        const errorMsg = hostMsg('chinesePathError', reportPath);
         
         vscode.window.showErrorMessage(errorMsg, { modal: true });
     }
@@ -314,7 +341,7 @@ export class TrainingOpsHandler {
         console.log(`[TrainingReport] Searching in modelDir: ${modelDir}`);
         
         if (!fs.existsSync(modelDir)) {
-            const msg = `尚無訓練結果，請先執行訓練。\n(搜尋路徑: ${modelDir})`;
+            const msg = hostMsg('noTrainingResults', modelDir);
             vscode.window.showInformationMessage(msg);
             console.log(`[TrainingReport] modelDir does not exist: ${modelDir}`);
             return;
@@ -339,7 +366,7 @@ export class TrainingOpsHandler {
         console.log(`[TrainingReport] Found ${reportFiles.length} report(s):`, reportFiles);
 
         if (reportFiles.length === 0) {
-            const msg = `尚無訓練結果，請先執行訓練。\n(搜尋路徑: ${modelDir})`;
+            const msg = hostMsg('noTrainingResults', modelDir);
             vscode.window.showInformationMessage(msg);
             console.log(`[TrainingReport] No reports found in: ${modelDir}`);
             return;
@@ -366,7 +393,7 @@ export class TrainingOpsHandler {
             });
 
             const selected = await vscode.window.showQuickPick(items, {
-                placeHolder: `找到 ${reportFiles.length} 個訓練報告，請選擇要開啟的項目：`
+                placeHolder: hostMsg('reportPickerPlaceholder', String(reportFiles.length))
             });
 
             if (selected) {

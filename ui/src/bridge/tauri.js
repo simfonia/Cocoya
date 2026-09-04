@@ -421,6 +421,7 @@ export class BridgeTauri extends BaseBridge {
                         this._dispatchToFrontend({
                             command: response.success ? 'trainingComplete' : 'trainingError',
                             success: !!response.success,
+                            remote: true,
                             modelDir: response.modelDir,
                             projectName: response.projectName,
                             modelOutput: response.modelOutput,
@@ -826,7 +827,7 @@ export class BridgeTauri extends BaseBridge {
                             window.CocoyaUI.appendTerminal(`--- Installing module: ${data.moduleDisplay || data.module} ---`, 'info');
                         }
                         this.tauriInvoke('run_python', { 
-                            code: `import subprocess; import sys; subprocess.run(["${pythonPath}", "-m", "pip", "install", "${data.module}", "--user"])`,
+                            code: `import subprocess; import sys; subprocess.run(["${pythonPath}", "-m", "pip", "install", "${data.pipPackage || data.module}", "--user", "--no-warn-script-location"])`,
                             pythonPath: pythonPath 
                         });
                     } catch (e) {

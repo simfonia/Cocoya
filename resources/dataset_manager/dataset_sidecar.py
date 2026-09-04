@@ -582,12 +582,17 @@ class DatasetSidecar:
                             remote_model_output = "keras" if user_model_output != "none" else "none"
                             # 訓練前清空遠端 output 目錄：同專案前次訓練的殘留會污染下載清單與掃描
                             run('eval rm -rf "' + remote_output_dir + '" && mkdir -p "' + remote_output_dir + '"')
+                            # Keras 預訓練權重快取：掛載遠端固定目錄到容器 /root/.keras/models，
+                            # 首次下載的 imagenet 權重（mobilenet 等）之後永久重用，避免每個容器都重抓
+                            remote_keras_cache = '~/cocoya_ai/keras_cache/models'
+                            run('eval mkdir -p "' + remote_keras_cache + '"')
                             rt_log("[Remote] 啟動 Docker 訓練容器: " + docker_image + " (task=" + task_type + ", model_output=" + remote_model_output + ", bind=/workspace)")
                             docker_cmd = (
                                 'docker run --gpus all --rm '
                                 '--entrypoint python3 '
                                 '--name ' + str(self._remote_train.get("container")) + ' '
                                 '-v "$(eval realpath ' + remote_dataset_dir + ')\":/dataset '
+                                '-v "$(eval realpath ' + remote_keras_cache + ')\":/root/.keras/models '
                                 '-v "$(eval realpath ' + remote_output_dir + ')\":/output '
                                 '-v "' + remote_templates_real + '":/workspace '
                                 + docker_image + ' /workspace/' + script_rel +

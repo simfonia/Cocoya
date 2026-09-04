@@ -179,8 +179,9 @@ C:\Workspace\cocoya\
 │   ├── extension.ts       # 進入點：activate/deactivate + webview 內容組裝
 │   ├── cocoyaManager.ts   # CocoyaManager 主類別 + 訊息分發
 │   ├── sidecarManager.ts  # DatasetSidecarManager：Python 進程生命週期
+│   ├── hostI18n.ts        # Host 端雙語訊息 SSOT（hostMsg：vscode.env.language 推導 zh-hant/en，訓練/資料集/Sidecar 訊息共用）
 │   └── handlers/          # 業務邏輯處理器
-│       ├── trainingOps.ts   # 訓練：startTraining, openTrainingReport, openLatestTrainingReport
+│       ├── trainingOps.ts   # 訓練：startTraining, openTrainingReport, openLatestTrainingReport (+ TrainingTerminal：訓練日誌導向 VS Code Pseudoterminal「Cocoya Training」)
 │       ├── fileOps.ts       # 檔案：new/open/save/saveAs/backup/recovery
 │       ├── firmwareOps.ts   # 韌體：resetFirmware, eraseFilesystem, setupStableMode
 │       ├── datasetOps.ts    # 資料集：capture/export/upload/scan/pickFolder + SaveProgress/LoadProgress 存讀 [NEW]
@@ -267,7 +268,8 @@ C:\Workspace\cocoya\
 │   │           ├── Dockerfile.train # Docker 映像定義
 │   │           ├── train_classifier.py # 訓練腳本
 │   │           └── requirements.txt # Python 套件需求
-│   ├── dataset_sidecar.py   # Sidecar 主進程與指令解析
+│   ├── dataset_sidecar.py   # Sidecar 主進程與指令解析（含遠端訓練 docker_cmd、keras_cache 權重快取掛載）
+│   ├── _local_convert_tflite.py # 遠端 keras 本地轉 TFLite（_sanitize_keras_config 剝除跨版本 Keras 3 不相容層參數）
 │   ├── camera_service.py    # OpenCV 攝影機預覽與擷取服務
 │   ├── dataset_io.py        # 資料集檔案存取與打包工具
 │   └── media_pipe_service.py # AI 特徵提取服務 (MediaPipe)

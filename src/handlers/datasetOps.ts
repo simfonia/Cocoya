@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
+import { hostMsg } from '../hostI18n';
 
 /**
  * 資料集操作 Handler（拍照、掃描、匯出、上傳等）
@@ -28,7 +29,7 @@ export class DatasetOpsHandler {
                 canSelectFiles: false,
                 canSelectMany: false,
                 defaultUri: defaultUri,
-                title: '選取資料集資料夾'
+                title: hostMsg('pickFolderTitle')
             });
 
             if (uris && uris[0]) {
@@ -52,11 +53,11 @@ export class DatasetOpsHandler {
                     command: 'folderSelected',
                     requestId: requestId,
                     fieldName: fieldName,
-                    error: '使用者取消選擇'
+                    error: hostMsg('userCancelledPick')
                 });
             }
         } catch (e: any) {
-            vscode.window.showErrorMessage('選擇資料夾失敗: ' + e.message);
+            vscode.window.showErrorMessage(hostMsg('folderPickFailed', e.message));
             this.manager.panel.webview.postMessage({
                 command: 'folderSelected',
                 requestId: requestId,
@@ -214,7 +215,7 @@ export class DatasetOpsHandler {
             const options: vscode.SaveDialogOptions = {
                 defaultUri: vscode.Uri.file(path.join(os.homedir(), `${projectName}.zip`)),
                 filters: { 'ZIP Archive': ['zip'] },
-                title: '匯出資料集'
+                title: hostMsg('exportSaveTitle')
             };
 
             const fileUri = await vscode.window.showSaveDialog(options);
@@ -228,16 +229,16 @@ export class DatasetOpsHandler {
                 outputZip: outputZip
             }, (resp: any) => {
                 if (resp.success) {
-                    vscode.window.showInformationMessage(`資料集匯出成功: ${resp.path}`);
+                    vscode.window.showInformationMessage(hostMsg('exportSuccess', resp.path));
                     this.manager.panel.webview.postMessage({ command: 'datasetExportResult', success: true, path: resp.path });
                 } else {
-                    vscode.window.showErrorMessage(`資料集匯出失敗: ${resp.error}`);
+                    vscode.window.showErrorMessage(hostMsg('exportFailed', resp.error));
                     this.manager.panel.webview.postMessage({ command: 'datasetExportResult', success: false, error: resp.error });
                 }
             });
 
         } catch (e: any) {
-            vscode.window.showErrorMessage(`匯出程序錯誤: ${e.message}`);
+            vscode.window.showErrorMessage(hostMsg('exportError', e.message));
             this.manager.panel.webview.postMessage({ command: 'datasetExportResult', success: false, error: e.message });
         }
     }
@@ -291,7 +292,7 @@ export class DatasetOpsHandler {
 
         vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
-            title: '正在準備上傳資料集至雲端伺服器...',
+            title: hostMsg('uploadingTitle'),
             cancellable: false
         }, async (progress) => {
             try {
@@ -311,10 +312,10 @@ export class DatasetOpsHandler {
                     localZipPath: localZipPath.replace(/\\/g, '/')
                 }, (resp: any) => {
                     if (resp.success) {
-                        vscode.window.showInformationMessage('資料集 ' + projectName + ' 已成功上傳至雲端伺服器！');
+                        vscode.window.showInformationMessage(hostMsg('uploadSuccess', projectName));
                         this.manager.panel.webview.postMessage({ command: 'datasetUploadResult', success: true });
                     } else {
-                        vscode.window.showErrorMessage('上傳失敗: ' + (resp.error || '原因未知'));
+                        vscode.window.showErrorMessage(hostMsg('uploadFailed', resp.error || hostMsg('unknownCause')));
                         this.manager.panel.webview.postMessage({
                             command: 'datasetUploadResult',
                             success: false,
@@ -324,7 +325,7 @@ export class DatasetOpsHandler {
                 });
 
             } catch (e: any) {
-                vscode.window.showErrorMessage('資料集上傳錯誤: ' + e.message);
+                vscode.window.showErrorMessage(hostMsg('uploadError', e.message));
                 this.manager.panel.webview.postMessage({ command: 'datasetUploadResult', success: false, error: e.message });
             }
         });

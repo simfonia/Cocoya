@@ -189,6 +189,8 @@
     "MSG_TRAINING_RESULT_MODEL_DIR": "Model Directory",
     "MSG_OPEN_MODEL_FOLDER": "Open Model Folder",
     "MSG_TRAINING_RESULT_CLOSE": "Close",
+    "MSG_TRAINING_COMPLETE_LOCAL": "--- Training complete: %1 ---",
+    "MSG_TRAINING_COMPLETE_REMOTE": "--- Remote training complete: %1 ---",
     
     // Syntax (Basic)
     "PY_DEF": "def",

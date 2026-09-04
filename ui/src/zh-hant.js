@@ -189,6 +189,8 @@
     "MSG_TRAINING_RESULT_MODEL_DIR": "模型目錄",
     "MSG_OPEN_MODEL_FOLDER": "開啟模型目錄",
     "MSG_TRAINING_RESULT_CLOSE": "關閉",
+    "MSG_TRAINING_COMPLETE_LOCAL": "--- 本地訓練完成: %1 ---",
+    "MSG_TRAINING_COMPLETE_REMOTE": "--- 遠端訓練完成: %1 ---",
 
     // Python 核心關鍵字
     "PY_DEF": "def",

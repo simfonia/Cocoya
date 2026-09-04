@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<title>Keras Serialization Compat — .keras 跨版本相容載入 API</title>
+<style>
+  body { font-family: "Microsoft JhengHei", sans-serif; margin: 2rem; line-height: 1.6; }
+  h1 { border-bottom: 2px solid #4a7; padding-bottom: .3rem; }
+  h2 { color: #369; margin-top: 2rem; }
+  code { background: #f4f4f4; padding: .1rem .35rem; border-radius: 3px; }
+  pre { background: #f8f8f8; border: 1px solid #ddd; padding: .8rem; overflow-x: auto; border-radius: 4px; }
+  table { border-collapse: collapse; margin: 1rem 0; }
+  th, td { border: 1px solid #ccc; padding: .4rem .7rem; text-align: left; }
+  th { background: #eef; }
+  .warn { background: #fff3cd; border-left: 4px solid #e0a800; padding: .6rem 1rem; }
+</style>
+</head>
+<body>
+<h1>Keras Serialization Compat（.keras 跨版本相容載入）</h1>
+<p><b>位置</b>：<code>resources/dataset_manager/_local_convert_tflite.py</code>（Tauri / VSIX 雙模共用，隨 <code>bundle.resources</code> 打包進 Release）
+｜<b>首版</b>：2026-09-04｜<b>狀態</b>：實機驗證通過（學生機 Release msi 遠端訓練 → 本地 TFLite 轉換成功）</p>
+
+<h2>解決的問題</h2>
+<p>遠端 Docker 訓練容器與本地 Python 環境的 TF/Keras 版本不一致，遠端產出的 <code>.keras</code> 內層 config 含本地 Keras 不認得的參數 → <code>load_model</code> 拋 <code>Unrecognized keyword arguments</code>，本地 TFLite 轉換失敗。</p>
+<div class="warn"><b>鐵律（2026-09-04 定案）</b>：Keras 3 的 <code>custom_objects</code> 只對「未註冊/自訂類別」生效，<b>無法覆寫內建類別</b>（module: keras.layers）的反序列化行為；<code>compile=False</code> 也不影響 config 解析。跨版本相容問題必須走 <b>config 預處理</b>（本模組做法）或對齊兩端 TF 版本。</div>
+
+<h2>API</h2>
+<h3>_sanitize_keras_config(keras_path) → str | None</h3>
+<ul>
+  <li>把 <code>.keras</code>（實為 zip：metadata.json / config.json / model.weights.h5）解開，對 <code>config.json</code> 遞迴剝除 <code>_STRIP_KEYS</code> 黑名單鍵後重打包成暫存檔。</li>
+  <li>權重與其他 entry 原樣複製，對 <code>tf.keras.models.load_model</code> 完全透明。</li>
+  <li>回傳暫存 .keras 路徑；無 config.json 或處理失敗回傳 None。</li>
+</ul>
+<h3>_load_model_compat(keras_path) → Model</h3>
+<p>四層 fallback：① 直接載入 → ② <code>_sanitize_keras_config</code> 預處理後重載（成功後清暫存）→ ③ <code>custom_objects={'BatchNormalization': _CompatBatchNorm}</code> → ④ 加 <code>compile=False</code>。②失敗時會自動從例外訊息 regex 解析並印出「下一個不相容層/參數 → 加入 _STRIP_KEYS」提示。</p>
+
+<h2>_STRIP_KEYS 維護指引</h2>
+<table>
+  <tr><th>鍵</th><th>所屬層</th><th>剝除安全性</th></tr>
+  <tr><td>renorm / renorm_clipping / renorm_momentum</td><td>BatchNormalization</td><td>renorm=False 即預設語義，等價</td></tr>
+  <tr><td>synchronized</td><td>BatchNormalization</td><td>False 等價</td></tr>
+  <tr><td>quantization_config</td><td>Dense 等（Keras 3 新參數）</td><td>None（未量化）等價</td></tr>
+  <tr><td>lora_rank / lora_name / lora_scale</td><td>Dense 等（Keras 3 LoRA）</td><td>None 等價</td></tr>
+</table>
+<p><b>再冒新鍵的處理流程</b>：跑遠端訓練 → 看 <code>[LocalTFLite]</code> 失敗訊息（已自動印出層名與參數）→ 把鍵名加入 <code>_STRIP_KEYS</code> → 重 build msi。若迭代超過兩輪仍有新鍵（兩端 Keras 差距過大），改走 SavedModel 方案：遠端 <code>model.save(path, save_format='tf')</code>、本地 <code>tf.lite.TFLiteConverter.from_saved_model()</code>（版本中立，跳過反序列化）。</p>
+
+<h2>量化鐵律：representative dataset 前處理必須與訓練一致（2026-09-04）</h2>
+<div class="warn"><b>int8 精度崩壞根因</b>：<code>_local_convert_tflite.py</code> 的 <code>build_representative_dataset</code> 曾直接餵 0~255 原始像素（缺訓練端 <code>Rescaling(1./255)</code>），converter 把 input scale 估錯 255 倍 → int8 輸出近乎隨機，且<b>轉換流程不會報錯</b>。f32 模型不吃 quantization 參數所以正常——症狀「int8 差、f32 正常」即此類問題。</div>
+<ul>
+  <li>規則：representative 的所有前處理（Rescaling / preprocess_input / resize）必須與訓練 pipeline <b>逐項一致</b>。</li>
+  <li>驗證方式：同一批影像餵 int8 與 f32 比對 argmax 一致率（應 &gt;95%）與 confidence 差（&lt;0.1）；只看「檔案有產出」不夠。</li>
+  <li>實測修復後（2026-09-04）：一致率 96.7%（58/60）、int8 準確率 81.7% vs f32 85.0%（正常損耗）。</li>
+</ul>
+
+<h2>配套：遠端預訓練權重快取</h2>
+<p><code>resources/dataset_manager/dataset_sidecar.py</code> 的 <code>docker_cmd</code> 掛載 <code>-v "$(eval realpath ~/cocoya_ai/keras_cache/models)":/root/.keras/models</code>（訓練前 <code>mkdir -p</code> 幂等建立）。</p>
+<ul>
+  <li>快取位於<b>遠端主機</b>，容器 <code>--rm</code> 不清除，永久保存。</li>
+  <li>同一遠端主機所有學生機共用；開課前建議 SSH 手動暖機一次（全班同秒首跑有並發寫檔風險）。</li>
+</ul>
+
+<h2>驗證方式（回歸測試）</h2>
+<pre>
+# 1. 語法
+python -m py_compile resources/dataset_manager/_local_convert_tflite.py
+
+# 2. 合成測試（建 fake.keras 含黑名單鍵，驗證剝除後 weights.h5 與其他 entry 保留）
+#    見 log/work/2026-09-04.md 第一/二輪驗證紀錄
+
+# 3. 實機
+# Release msi → 學生機遠端訓練 → 終端機應出現 [LocalTFLite] TFLite 已儲存: ...
+</pre>
+</body>
+</html>

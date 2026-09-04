@@ -187,7 +187,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             const btnTxt = Blockly.Msg['DIAG_INSTALL_BTN'] || 'Install';
             
             // 使用 Bridge 發送安裝指令（傳入 pip 套件名稱 = id，而非顯示名 name）
-            const installBtnHtml = !installed ? `<button class="btn-install" onclick="window.CocoyaBridge.send('installModule', {module: '${mod.id}', moduleDisplay: '${mod.name}'})">${btnTxt}</button>` : '';
+            const installBtnHtml = !installed ? `<button class="btn-install" onclick="window.CocoyaBridge.send('installModule', {module: '${mod.id}', moduleDisplay: '${mod.name}', pipPackage: '${mod.pipPackage || mod.id}'})">${btnTxt}</button>` : '';
             
             li.innerHTML = `
                 <span style="font-size: 14px;">${mod.name}</span>
