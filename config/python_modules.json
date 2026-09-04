@@ -8,7 +8,8 @@
     {
       "id": "esptool",
       "name": "esptool (Firmware)",
-      "description": "ESP32 韌體燒錄"
+      "description": "ESP32 韌體燒錄",
+      "pipPackage": "esptool==4.7.0"
     },
     {
       "id": "cv2",

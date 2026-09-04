@@ -77,13 +77,13 @@ print(json.dumps(results))
         });
     }
 
-    public async handleInstallModule(moduleName: string) {
+    public async handleInstallModule(moduleName: string, pipPackage?: string) {
         let pythonPath = (this.manager.context.globalState as any).get('pythonPath', 'python') as string;
         let terminal = vscode.window.terminals.find(t => t.name === 'Cocoya Environment');
         if (!terminal) terminal = vscode.window.createTerminal('Cocoya Environment');
         
         terminal.show();
-        terminal.sendText(`& "${pythonPath}" -m pip install ${moduleName} --user`);
+        terminal.sendText(`& "${pythonPath}" -m pip install ${pipPackage || moduleName} --user --no-warn-script-location`);
         
         setTimeout(() => this.handleCheckEnvironment(), 5000);
     }

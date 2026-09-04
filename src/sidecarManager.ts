@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { ChildProcess, spawn } from 'child_process';
+import { hostMsg } from './hostI18n';
 
 /**
  * Dataset Manager Sidecar 進程管理器
@@ -45,7 +46,7 @@ export class DatasetSidecarManager {
                 this.outputChannel.appendLine(`[Sidecar Manager]   1. Python path: ${this.pythonPath}`);
                 this.outputChannel.appendLine(`[Sidecar Manager]   2. Script path: ${scriptPath}`);
                 this.outputChannel.appendLine(`[Sidecar Manager]   3. Working dir: ${workingDir}`);
-                vscode.window.showErrorMessage(`無法啟動 Dataset Manager：Python 執行檔或腳本遺失。請在設定中確認 Python 路徑。`);
+                vscode.window.showErrorMessage(hostMsg('sidecarStartFailed'));
             });
 
             this.process.on('close', (code) => {
@@ -74,9 +75,25 @@ export class DatasetSidecarManager {
                             const cb = this.callbacks.get(msg.requestId);
                             if (cb) cb(msg);
                             this.callbacks.delete(msg.requestId);
-                        } 
-                        else if (msg.type === 'event' && msg.event && this.onEvent) {
-                            this.onEvent(msg.event, msg);
+                        }
+                        else if (msg.type === 'response') {
+                            // 診斷：response 到了但沒有對應 callback（requestId 不配對）——過去會無聲丟失，
+                            // 造成訓練完成但前端/通知完全無反應
+                            const unMatched = `[Sidecar Manager] response without callback (requestId=${msg.requestId}, success=${msg.success})`;
+                            this.outputChannel.appendLine(unMatched);
+                            console.warn(unMatched);
+                        }
+                        else if (msg.type === 'event' && msg.event) {
+                            if (this.onEvent) {
+                                try {
+                                    this.onEvent(msg.event, msg);
+                                } catch (e: any) {
+                                    // 防禦：handler 例外不得靜默吞掉（先前會造成訓練日誌無聲消失）
+                                    const errMsg = `[Sidecar Manager] onEvent handler error (${msg.event}): ${e?.message || e}`;
+                                    this.outputChannel.appendLine(errMsg);
+                                    console.error(errMsg);
+                                }
+                            }
                         }
                     } catch (e) {
                         console.log('[Sidecar Log]', trimmed);

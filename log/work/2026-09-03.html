@@ -93,6 +93,75 @@
         <li>更新 serialOps.ts / mcu.rs 的 VID/PID 偵測（Pybricks hub）</li>
         <li>新增 spike 模組的 core_manifest.json 註冊</li>
         <li>建立 spike_blocks.js / spike_generators.js / toolbox.xml</li>
+
+    <div class="section">
+        <h3>[除錯] VSIX 遠端/本地訓練終端機訊息（2026-09-03 第二輪）</h3>
+        <ul>
+            <li>症狀：遠端訓練時 VS Code「Cocoya Training」終端機零訊息；webview「[Remote] 連線中…」點點跑到訓練完成才停；本地訓練竟顯示「--- Remote training complete ---」。</li>
+            <li>根因①（點點）：VSIX 方案 A 不再轉發 trainingLog，webview 點點計時器只剩 trainingComplete 才停（2026-09-02 worklog 既有限制）。</li>
+            <li>根因②（誤標 Remote）：webview base.js 對所有 trainingComplete 一律印「Remote training complete」；本地訓練（envOps RESULT / trainLocal）也走同 command。</li>
+            <li>根因③（終端機零訊息，防禦性修復）：sidecarManager stdout 迴圈的 try/catch 把 onEvent 內例外（含 TrainingTerminal Pseudoterminal 建立/寫入失敗）靜默吞掉，錯誤無聲。管線靜態檢查正確（send_event message 在頂層、sidecarManager 傳整 msg），故加診斷防禦：例外改寫入「Cocoya Sidecar」outputChannel；TrainingTerminal.writeLine 失敗 fallback 寫「Cocoya Training (fallback)」輸出頻道。</li>
+        </ul>
+    </div>
+
+    <h2>異動檔案清單（除錯追加）</h2>
+    <table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%;">
+        <tr style="background: #3498db; color: white;"><th>檔案</th><th>異動</th></tr>
+        <tr><td><code>src/sidecarManager.ts</code></td><td>onEvent 呼叫改獨立 try/catch，例外寫 outputChannel + console.error（不再靜默）</td></tr>
+        <tr><td><code>src/handlers/trainingOps.ts</code></td><td>TrainingTerminal.writeLine 包 try/catch + fallback OutputChannel；遠端 trainingComplete 補 <code>remote: true</code>；onEvent 第一筆 trainingLog 額外 postMessage 一次性 <code>trainingConnected</code></td></tr>
+
+    <div class="section">
+        <h3>[除錯] 遠端訓練完成後無報告/無結束標記（第三輪）</h3>
+        <ul>
+            <li>症狀：VS Code 終端機最後一行停在「[Remote] 已下載: ...」，無 prompt、無訓練報告。本地訓練正常。</li>
+            <li>根因①（報告不彈）：VSIX 遠端 trainingComplete 只轉發 modelDir/projectName，漏掉 sidecar 已掃描回傳的 reportPath/curvePath/historyPath/kerasPath/tflitePaths → webview showTrainingResultPanel 拿不到 reportPath（Tauri 端有轉發，VSIX 漏）。已補齊完整欄位轉發。</li>
+            <li>根因②（無 prompt）：Cocoya Training 為 Pseudoterminal（非真 shell），本來就不會出現「C:\...&gt;」提示字元——改在訓練完成/失敗時寫入明確結束標記行「=== 遠端訓練完成/失敗 ===」。</li>
+            <li>診斷加固：sidecarManager 對「response 到達但無配對 callback」輸出警告至 Cocoya Sidecar 頻道（過去此情況會無聲丟失，導致完成無反應）。</li>
+        </ul>
+    </div>
+
+    <h2>驗證（第三輪）</h2>
+    <ul>
+        <li>✅ npx tsc --noEmit + npm run compile PASS</li>
+<div class="section">
+        <h3>[i18n] 訓練完成訊息雙語化（第四輪）</h3>
+        <ul>
+            <li>webview 端：新增 Blockly.Msg key <code>MSG_TRAINING_COMPLETE_LOCAL</code> / <code>MSG_TRAINING_COMPLETE_REMOTE</code>（zh-hant.js 與 en.js 各一），base.js 以 <code>Blockly.Msg[key] || fallback</code> 套用並 %1 帶入 modelDir。</li>
+            <li>Host 端（trainingOps.ts）：新增 HOST_MSGS + hostMsg()（依 vscode.env.language 推導 zh-hant/en，對齊 envOps/firmwareOps 既有 pattern）；套用於遠端完成/失敗通知、終端機結束標記行、缺 SSH 錯誤訊息。</li>
+            <li>驗證：tsc + compile + node --check ×3 + vite build 全綠。</li>
+        </ul>
+    </div>
+</body>
+        <li>☐ 實機：遠端訓練完成 → VS Code 終端機出現「=== 遠端訓練完成 ===」、VS Code 通知、webview 訓練報告面板彈出</li>
+    </ul>
+</body>
+        <tr><td><code>ui/src/bridge/tauri.js</code></td><td>Tauri trainRemote 的 trainingComplete 補 <code>remote: true</code></td></tr>
+        <tr><td><code>ui/src/ui/base.js</code></td><td>新增 <code>trainingConnected</code> 分支（清 _remoteConnTimer）；trainingComplete 文案依 <code>msg.remote</code> 分流 Remote / Training complete</td></tr>
+    </table>
+
+    <h2>驗證（除錯追加）</h2>
+    <ul>
+        <li>✅ npx tsc --noEmit PASS / npm run compile PASS / node --check (base.js, tauri.js) PASS / vite build PASS (516ms)</li>
+
+    <div class="section">
+        <h3>[i18n] Host 端訊息全量雙語化（第五輪）</h3>
+        <ul>
+            <li>新增 SSOT 共用模組 <code>src/hostI18n.ts</code>：<code>HOST_MSGS</code>（zh-hant/en）+ <code>hostMsg(key, arg1?, arg2?)</code>（依 <code>vscode.env.language</code> 推導，en fallback）；trainingOps 原地抽離改 import。</li>
+            <li>trainingOps.ts：本地訓練完成/失敗、遠端未開放警告、報告找不到/開啟失敗/中文路徑 modal/報告 picker placeholder 全部走 hostMsg。</li>
+            <li>datasetOps.ts：資料夾選取（標題/取消/失敗）、匯出成功/失敗/錯誤/存檔對話框標題、雲端上傳成功/失敗/錯誤/進度標題。</li>
+            <li>sidecarManager.ts：sidecar 啟動失敗通知；serialOps.ts：選取 python.exe 對話框標題。</li>
+            <li>註：AGENTS.md 訊息責任定義長遠應由前端 i18n 錯誤碼翻譯；本輪為 host 端通知（Notification/對話框）既有人工文案的雙語收斂，非 data 錯誤碼變更。</li>
+        </ul>
+    </div>
+
+    <h2>驗證（第五輪）</h2>
+    <ul>
+        <li>✅ npx tsc --noEmit + npm run compile + node --check ×3 全綠；grep 掃描 src/ 下 showXxxMessage/title 中文 hard-code = 0（backup/ 與 hostI18n.ts 本身除外）</li>
+    </ul>
+</body>
+        <li>☐ 實機：遠端訓練 → VS Code「Cocoya Training」終端機應出現日誌、webview 點點在連線成功後停止；本地訓練 → 顯示「--- Training complete ---」；若終端機仍無訊息，看「Cocoya Sidecar」與「Cocoya Training (fallback)」輸出頻道定位斷點</li>
+    </ul>
+</body>
     </ol>
 </body>
 </html>

@@ -186,3 +186,23 @@
 - [x] 自動化驗證全綠（cargo check / tsc / node --check / vite build / py_compile）
 - [ ] 實機驗證：Release 開 examples/test/02_PC_train.xml 全流程（複製→錨定→訓練→報告）；Dev 模式直開範例回歸
 - [ ] （妥協債）native 確認框文案 hard-code 於 Rust，未來改前端自訂對話框以 i18n
+
+### [2026-09-03] VSIX 訓練終端機除錯（遠端無訊息 / 點點不停 / 本地誤標 Remote）
+- [x] sidecarManager onEvent 例外不再靜默（寫 Cocoya Sidecar outputChannel）
+- [x] TrainingTerminal.writeLine 失敗 fallback（Cocoya Training (fallback) 輸出頻道）
+- [x] 點點提前停止：VSIX 第一筆 trainingLog 送一次性 trainingConnected，webview 清 _remoteConnTimer
+- [x] 本地訓練誤標修正：trainingComplete 增 remote:true（VSIX 遠端鏈 + Tauri trainRemote），base.js 文案分流
+- [ ] 實機驗證：遠端訓練 VS Code 終端機出現日誌＋點點提前停；本地訓練顯示 Training complete
+- [x] 遠端完成無報告：VSIX trainingComplete 補轉發 reportPath/curvePath/historyPath/kerasPath/tflitePaths；終端機加「=== 遠端訓練完成/失敗 ===」結束標記（Pseudoterminal 無 shell prompt）；sidecarManager 對未配對 response 輸出警告
+- [x] i18n：webview 新增 MSG_TRAINING_COMPLETE_LOCAL/REMOTE key（zh-hant/en）；host 端 trainingOps HOST_MSGS+hostMsg（vscode.env.language 推導）套用於遠端通知/結束標記/缺 SSH 訊息
+- [x] Host 端訊息全量雙語化：新增共用 src/hostI18n.ts（HOST_MSGS zh-hant/en + hostMsg），trainingOps/datasetOps/sidecarManager/serialOps 所有使用者可見訊息改走 hostMsg，殘留掃描=0
+
+### [2026-09-04] 模型檔本地轉換問題除錯（log/errors 四檔）
+- [x] A esptool 安裝警告：config/python_modules.json esptool 加 pipPackage="esptool==4.7.0"（有預編 wheel、cryptography 相依較寬鬆，不再觸發 msal 衝突與 sdist 現場 build）；Rust PYTHON_MODULES_JSON 內嵌常數同步；hardware.js/tauri.js/envOps.ts 安裝鏈傳遞 pipPackage 並加 --no-warn-script-location
+- [x] B 遠端 keras 本地轉換失敗（renorm）：_local_convert_tflite.py 新增 _sanitize_keras_config()——.keras(zip) config.json 遞迴剝除 renorm/renorm_clipping/renorm_momentum/synchronized 後重打包再 load（custom_objects 對 Keras 3 內建類別無效之替代路線）；_load_model_compat 改四層 fallback
+- [x] C 遠端權重快取：dataset_sidecar.py docker_cmd 掛載 ~/cocoya_ai/keras_cache/models → /root/.keras/models，訓練前自動 mkdir，imagenet 權重首次下載後永久重用
+- [x] 實機驗證 (2026-09-04 第三輪)：①環境診斷安裝 esptool 4.7.0 無衝突 ERROR；②Release 遠端訓練 → 本地 TFLite 轉換成功；③遠端連跑兩次訓練，第二次 log 無 "Downloading data from storage.googleapis.com"——三案全數通過，任務結案 ✅
+- [x] B2 (2026-09-04) 遠端轉換仍失敗：0904 log 判讀 — sanitize 已生效，下一個不相容參數為 Dense quantization_config；_STRIP_KEYS 擴充（+quantization_config/lora_*）+ 失敗訊息自動解析下一個不相容層；合成測試 PASS。待：重 build msi → 學生機重測遠端訓練轉換
+- [x] D (2026-09-04) 03_PC_inference.xml KeyError:1：範例仍用舊版列表索引 API，改用 py_ai_get_confidence/py_ai_get_label 解析積木；XML VALID + vite build PASS。待：實機重開範例驗證推論流程
+- [x] D2 (2026-09-04) examples/AI_* 推論範例 dict API 更新：AI_01_classifier 三處改 py_ai_get_confidence/py_ai_get_label；AI_02_detector 已相容無需改；全 XML VALID + vite build PASS
+- [x] E (2026-09-04) int8 推論精度崩壞：_local_convert_tflite.py representative dataset 缺 1/255 正規化（與訓練 pipeline 不一致，值域差 255 倍）→ 補 map 正規化；實測 int8 vs f32 一致率 96.7%、準確率 81.7% vs 85.0%（正常損耗）。待：重 build msi + 重新產生 int8 模型

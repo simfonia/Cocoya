@@ -212,7 +212,7 @@ export class CocoyaManager {
                     await this.envOps.handleCheckEnvironment();
                     break;
                 case 'installModule':
-                    await this.envOps.handleInstallModule(message.module);
+                    await this.envOps.handleInstallModule(message.module, message.pipPackage);
                     break;
                 case 'pickMcuModel':
                     await this.firmwareOps.handlePickMcuModel(message);

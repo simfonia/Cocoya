@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import { hostMsg } from '../hostI18n';
 
 /**
  * 序列埠操作 Handler（序列埠列表、監控器、Python 路徑設定等）
@@ -88,7 +89,7 @@ export class SerialOpsHandler {
     }
 
     public async handleSetPythonPath() {
-        const uris = await vscode.window.showOpenDialog({ canSelectMany: false, filters: { 'Executables': ['exe'] }, title: '選取 python.exe' });
+        const uris = await vscode.window.showOpenDialog({ canSelectMany: false, filters: { 'Executables': ['exe'] }, title: hostMsg('pickPythonTitle') });
         if (uris && uris[0]) {
             const newPath = uris[0].fsPath;
             await this.manager.context.globalState.update('pythonPath', newPath);
