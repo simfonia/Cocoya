@@ -47,6 +47,126 @@
                 }
             };
         }
+
+        // 複製全部文字到剪貼簿
+        const copyBtn = document.getElementById('btn-copy-terminal');
+        if (copyBtn) {
+            copyBtn.onclick = () => {
+                const content = document.getElementById('terminalContent');
+                if (!content) return;
+                navigator.clipboard.writeText(content.textContent).then(() => {
+                    if (this.flashButton) this.flashButton('btn-copy-terminal', '#c8e6c9');
+                });
+            };
+        }
+
+        // 字體大小切換（終端機）與（程式碼預覽）——共用機制、各自記憶
+        this.setupFontSizeCycler('btn-fontsize-terminal', 'terminalContent', [12, 14, 16, 18], 'cocoya_terminal_fontsize');
+        this.setupFontSizeCycler('btn-fontsize-code', 'codeContent', [13, 15, 17], 'cocoya_code_fontsize');
+
+        // 三角形收合把手
+        const toggleHandle = document.getElementById('terminal-toggle');
+        if (toggleHandle) {
+            toggleHandle.onclick = () => this.toggleTerminal();
+        }
+
+        // 高度拖曳調整（對齊 #panel-resizer 風格）
+        const resizer = document.getElementById('terminal-resizer');
+        const panel = document.getElementById('terminalArea');
+        if (resizer && panel) {
+            let isResizing = false;
+            let startY = 0, startHeight = 0;
+            let rafId = null;
+
+            resizer.onmousedown = (e) => {
+                // 點擊收合把手時不啟動拖曳
+                if (e.target.closest && e.target.closest('#terminal-toggle')) return;
+                if (panel.classList.contains('collapsed')) return;
+                isResizing = true;
+                startY = e.clientY;
+                startHeight = panel.offsetHeight;
+                document.body.classList.add('resizing-terminal');
+                resizer.classList.add('is-dragging');
+            };
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isResizing) return;
+                if (rafId) cancelAnimationFrame(rafId);
+                rafId = requestAnimationFrame(() => {
+                    // 向上拖 = 變高
+                    const h = startHeight + (startY - e.clientY);
+                    if (h > 100 && h < window.innerHeight - 200) {
+                        panel.style.height = `${h}px`;
+                        this.syncTerminalToggle();
+                        if (window.Blockly) {
+                            const ws = Blockly.getMainWorkspace();
+                            if (ws) Blockly.svgResize(ws);
+                        }
+                    }
+                });
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (!isResizing) return;
+                isResizing = false;
+                document.body.classList.remove('resizing-terminal');
+                resizer.classList.remove('is-dragging');
+                if (rafId) cancelAnimationFrame(rafId);
+                setTimeout(() => {
+                    if (window.Blockly) {
+                        const ws = Blockly.getMainWorkspace();
+                        if (ws) Blockly.svgResize(ws);
+                    }
+                    window.dispatchEvent(new Event('resize'));
+                }, 50);
+            });
+        }
+
+        // 視窗縮放時同步把手位置
+        window.addEventListener('resize', () => this.syncTerminalToggle());
+
+        // 初始同步
+        this.syncTerminalToggle();
+    };
+
+    /**
+     * 字體大小循環切換（共用機制，各面板獨立記憶）
+     * @param {string} btnId 按鈕 id
+     * @param {string} targetId 套用字體大小的目標元素 id
+     * @param {number[]} sizes 循環的大小序列 (px)
+     * @param {string} storageKey localStorage 儲存 key
+     */
+    UI.setupFontSizeCycler = function(btnId, targetId, sizes, storageKey) {
+        const btn = document.getElementById(btnId);
+        const target = document.getElementById(targetId);
+        if (!btn || !target) return;
+
+        let idx = sizes.indexOf(parseInt(localStorage.getItem(storageKey), 10));
+        if (idx < 0) idx = 0;
+
+        const apply = () => {
+            target.style.fontSize = `${sizes[idx]}px`;
+            localStorage.setItem(storageKey, String(sizes[idx]));
+        };
+        apply();
+
+        btn.onclick = () => {
+            idx = (idx + 1) % sizes.length;
+            apply();
+        };
+    };
+
+    /**
+     * 同步終端機收合把手箭頭方向
+     * 把手位於 #terminal-resizer 內（面板上緣水平置中），位置由 CSS 錨定，無需 JS 同步
+     * 箭頭語意：收合時顯示 ▲，展開時顯示 ▼
+     */
+    UI.syncTerminalToggle = function() {
+        const toggle = document.getElementById('terminal-toggle');
+        const panel = document.getElementById('terminalArea');
+        if (!toggle || !panel) return;
+        const arrow = toggle.querySelector('.arrow');
+        if (arrow) arrow.textContent = panel.classList.contains('collapsed') ? '▲' : '▼';
     };
 
     /**
@@ -65,6 +185,9 @@
         } else {
             panel.classList.remove('collapsed');
         }
+
+        // 同步收合把手位置與箭頭方向
+        this.syncTerminalToggle();
 
         // 觸發畫布調整
         setTimeout(() => {

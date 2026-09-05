@@ -341,6 +341,19 @@ body.cocoya-dark-mode {
     height: 24px;
 }
 
+/* normal/hover-icon 通用切換（#btn-run 有專屬規則，其餘如 AI owl 用此通用版） */
+.toolbar-btn .hover-icon {
+    display: none;
+}
+
+.toolbar-btn:hover .normal-icon {
+    display: none;
+}
+
+.toolbar-btn:hover .hover-icon {
+    display: block;
+}
+
 /* 下拉選單容器 */
 .toolbar-dropdown {
     position: relative;
@@ -510,8 +523,8 @@ body.cocoya-dark-mode .dropdown-item:hover img {
     display: block;
 }
 
-/* 所有 toolbar-btn（除了 run/stop）hover 時 img 變 #FE2F89 色 */
-.toolbar-btn:not(#btn-run):not(#btn-stop):hover img {
+/* 所有 toolbar-btn（除了 run/stop）hover 時 img 變 #FE2F89 色（排除 AI owl 彩色圖示） */
+.toolbar-btn:not(#btn-run):not(#btn-stop):hover img:not([src*="owl"]) {
     filter: brightness(0) saturate(100%) invert(24%) sepia(89%) saturate(6543%) hue-rotate(317deg) brightness(98%) contrast(93%);
 }
 
@@ -654,7 +667,11 @@ body.resizing-panel {
 body.vscode-dark #code-toggle,
 body.cocoya-dark-mode #code-toggle,
 body.vscode-high-contrast #code-toggle,
-body.cocoya-dark-mode #code-toggle {
+body.cocoya-dark-mode #code-toggle,
+body.vscode-dark #terminal-toggle,
+body.cocoya-dark-mode #terminal-toggle,
+body.vscode-high-contrast #terminal-toggle,
+body.cocoya-dark-mode #terminal-toggle {
     background-color: #2d2d2d;
     border-color: #404040;
 }
@@ -680,6 +697,11 @@ body.cocoya-dark-mode #panel-resizer.is-dragging {
     justify-content: space-between;
     align-items: center;
     box-sizing: border-box;
+}
+
+/* 關閉鈕 (X 文字) hover 變品牌色（背景 hover 由 .toolbar-btn 既有規則處理） */
+#btn-close-code:hover span {
+    color: #FE2F89;
 }
 
 .indent-dropdown {
@@ -1155,7 +1177,7 @@ body.cocoya-dark-mode .btn-close {
 }
 
 #terminalArea.collapsed {
-    height: 0;
+    height: 0 !important; /* 覆寫使用者拖曳後的 inline height，確保能收合 */
     border-top: none;
     opacity: 0;
     pointer-events: none;
@@ -1203,6 +1225,12 @@ body.cocoya-dark-mode .btn-close {
     filter: brightness(0) invert(1);
 }
 
+/* 關閉鈕 (X 文字) 對齊其他按鈕的品牌色（id 優先權高於 .terminal-tool-btn:hover 的 color:#fff，hover 維持粉色） */
+#btn-close-terminal span {
+    color: #FE2F89;
+    opacity: 0.8;
+}
+
 #terminalContent {
     flex: 1;
     overflow-y: auto;
@@ -1234,6 +1262,58 @@ body.cocoya-dark-mode .btn-close {
 
 #terminalContent::-webkit-scrollbar-thumb:hover {
     background: #555;
+}
+
+/* --- 終端機高度調整棒 (對齊 #panel-resizer 風格) --- */
+#terminal-resizer {
+    position: relative; /* 作為 #terminal-toggle 的定位基準 */
+    height: 6px;
+    background-color: transparent;
+    cursor: row-resize;
+    z-index: 100;
+    transition: background-color 0.2s;
+    margin-top: -3px; /* 跨越邊界以便點擊 */
+    margin-bottom: -3px;
+    flex-shrink: 0;
+}
+
+#terminal-resizer:hover, #terminal-resizer.is-dragging {
+    background-color: #FE2F89;
+}
+
+/* --- 終端機收合把手：貼在面板上緣水平置中 (對齊 #code-toggle 風格) --- */
+#terminal-toggle {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: 6px;
+    width: 40px;
+    height: 16px;
+    background-color: #f3f3f3;
+    border: 1px solid #ddd;
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    z-index: 101;
+    color: #FE2F89;
+    font-size: 10px;
+    user-select: none;
+}
+
+body.resizing-terminal #resizer-overlay {
+    display: block;
+}
+
+body.resizing-terminal #terminalArea {
+    transition: none !important; /* 拖動時關閉動畫，確保 Blockly 同步 */
+}
+
+body.resizing-terminal {
+    cursor: row-resize;
+    user-select: none;
 }
 
 /* --- AI 下拉選單 (psychology icon) --- */

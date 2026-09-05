@@ -151,7 +151,7 @@
             var styles = document.createElement('style');
             styles.id = 'cocoya-theme-switch-styles';
             styles.textContent = '' +
-                '.cocoya-theme-switch-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10001;}' +
+                '.cocoya-theme-switch-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10100;}' +
                 '.cocoya-theme-switch-dialog{background:var(--dsm-surface,#ffffff);border:1px solid var(--dsm-border-strong,#cccccc);border-radius:8px;padding:20px;min-width:320px;max-width:480px;box-shadow:0 4px 20px rgba(0,0,0,0.3);color:var(--dsm-text,#333333);}' +
                 '.cocoya-theme-switch-msg{margin-bottom:16px;font-size:13px;white-space:pre-wrap;word-break:break-word;}' +
                 '.cocoya-theme-switch-buttons{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;}' +

@@ -206,3 +206,18 @@
 - [x] D (2026-09-04) 03_PC_inference.xml KeyError:1：範例仍用舊版列表索引 API，改用 py_ai_get_confidence/py_ai_get_label 解析積木；XML VALID + vite build PASS。待：實機重開範例驗證推論流程
 - [x] D2 (2026-09-04) examples/AI_* 推論範例 dict API 更新：AI_01_classifier 三處改 py_ai_get_confidence/py_ai_get_label；AI_02_detector 已相容無需改；全 XML VALID + vite build PASS
 - [x] E (2026-09-04) int8 推論精度崩壞：_local_convert_tflite.py representative dataset 缺 1/255 正規化（與訓練 pipeline 不一致，值域差 255 倍）→ 補 map 正規化；實測 int8 vs f32 一致率 96.7%、準確率 81.7% vs 85.0%（正常損耗）。待：重 build msi + 重新產生 int8 模型
+
+### [2026-09-05] terminal UI 新增功能（字體大小 / 複製全部 / 高度拖曳 / 收合把手）
+- [x] 終端機字體大小循環切換（12/14/16/18px，localStorage 記憶）+ 程式碼預覽字體切換（13/15/17px）——共用 setupFontSizeCycler 機制、各自記憶
+- [x] 複製終端機全部文字到剪貼簿（navigator.clipboard + flashButton 綠閃）
+- [x] 終端機高度上下拖曳（#terminal-resizer，對齊 #panel-resizer 風格：raf 節流、overlay、svgResize 收尾）
+- [x] 三角形收合把手（#terminal-toggle，位於 #blocklyArea 右下角、JS 同步貼終端機上緣，▲/▼ 方向切換，dark 主題規則）
+- [x] i18n key（zh-hant/en）：TLB_TOGGLE_TERMINAL / TLB_COPY_TERMINAL / TLB_FONT_SIZE_TERMINAL / TLB_FONT_SIZE_CODE / TLB_DRAG_RESIZE_HEIGHT
+- [x] 自動化驗證：node --check ×3 + vite build 全綠
+- [x] 修正：終端機收合把手的 normal/hover-icon 通用切換規則缺失（兩張並排 + hover 全染粉）→ 補 `.toolbar-btn` 通用三條 + hover filter 排除 owl
+- [x] codeHeader 關閉鈕 (X) hover 無變色 → `#btn-close-code:hover span{color:#FE2F89}`
+- [x] terminal 關閉鈕 (X) 色彩行為對齊其他按鈕 → `#btn-close-terminal span{color:#FE2F89;opacity:.8}`
+- [x] AI 按鈕 hover 換圖（owl.png → owl-hover.png）+ dark 主題反轉規則排除 owl
+- [x] 首頁操作訊息對話框被首頁蓋住（z-index）→ `.cocoya-prompt-dialog-overlay`/theme-switch/dialogs 動態框統一提到 10100（> 首頁 10002）
+- [x] 實機驗證（VSIX + Tauri）：字體記憶、複製、拖曳高度、收合/展開、深淺主題、首頁診斷成功訊息彈出
+
