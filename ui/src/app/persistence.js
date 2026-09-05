@@ -42,9 +42,8 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             const dom = Blockly.Xml.workspaceToDom(this.workspace);
             dom.setAttribute('platform', this.currentPlatform || 'PC');
             const xml = Blockly.Xml.domToPrettyText(dom);
-            // 從標題取目前檔名（可能含 dirty 的 * 旗標，剝除）
-            const rawTitle = (typeof document !== 'undefined' && document.title) || '';
-            const filename = rawTitle.replace(/\s*\*+/g, '').trim();
+            // 檔名取自 UI 狀態（視窗標題已改為只顯示 Cocoya，不再承載檔名）
+            const filename = (window.CocoyaUI && window.CocoyaUI.currentFilename) || '';
             sessionStorage.setItem(this.SNAPSHOT_KEY, JSON.stringify({
                 xml,
                 filename,

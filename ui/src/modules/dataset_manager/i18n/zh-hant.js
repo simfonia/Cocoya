@@ -85,9 +85,11 @@
     "DSM_SAMPLE_COUNT": "樣本數",
     "DSM_COLOR": "顏色",
     "DSM_DELETE_IMAGE": "刪除照片",
+    "DSM_DELETE_FILE_NOT_FOUND": "原始檔已不存在，已從清單移除",
 
     // 狀態訊息
     "DSM_STATUS_LOADING": "載入中: %1...",
+    "DSM_STATUS_LOADING_FILE": "正在選取檔案...",
     "DSM_STATUS_IMPORTING_FOLDER": "正在選取資料夾...",
     "DSM_STATUS_EXPORTING": "📦 正在準備匯出...",
     "DSM_EXPORT_IN_PROGRESS": "正在打包 ZIP 並產生 dataset.json...",

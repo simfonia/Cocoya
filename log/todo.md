@@ -219,5 +219,14 @@
 - [x] terminal 關閉鈕 (X) 色彩行為對齊其他按鈕 → `#btn-close-terminal span{color:#FE2F89;opacity:.8}`
 - [x] AI 按鈕 hover 換圖（owl.png → owl-hover.png）+ dark 主題反轉規則排除 owl
 - [x] 首頁操作訊息對話框被首頁蓋住（z-index）→ `.cocoya-prompt-dialog-overlay`/theme-switch/dialogs 動態框統一提到 10100（> 首頁 10002）
-- [x] 實機驗證（VSIX + Tauri）：字體記憶、複製、拖曳高度、收合/展開、深淺主題、首頁診斷成功訊息彈出
+- [ ] 實機驗證（VSIX + Tauri）：字體記憶、複製、拖曳高度、收合/展開、深淺主題、首頁診斷成功訊息彈出
+- [x] Dataset Manager 資料夾/檔案選取預設路徑 = XML 專案根（pick_folder 加 default_path；新增 pick_data_file；importDirectory/importDataFilePath 傳專案根）——自動化全綠
+- [ ] 實機驗證：VSIX + Tauri 下資料夾/檔案 dialog 起始目錄皆為專案根
+- [x] Dataset Manager 刪除縮圖預防性保守處理：前端等待 datasetDeleteImageResult（成功/FILE_NOT_FOUND 皆移除縮圖，IO 失敗保留並提示）、VSIX/Rust 後端不存在改回 FILE_NOT_FOUND（非靜默成功）、VSIX 加 filePath debug log——自動化全綠
+- [ ] 實機驗證：刪縮圖正常流程 + 手動移除真檔後刪縮圖應提示「原始檔已不存在」
+- [x] toolbar 專案 label hover 顯示完整路徑（capabilities 快照 + getProjectAnchor 權威校正）；視窗標題（Tauri + VSIX）只顯示 Cocoya（+ dirty *）；persistence snapshot filename 改用 currentFilename——自動化全綠
+- [x] 修正：Title 檔名改回原樣（多視窗辨識需求）；保留 hover 完整路徑與 persistence snapshot 修正
+- [x] 修正：hover 路徑分隔符混用（projectRoot 反斜線統一為正斜線）
+- [x] 修正：編輯模式換主題不再詢問——一律 snapshot 後直接 reload 保留內容；移除三選對話框死碼
+- [x] 實機驗證：label hover 完整路徑、視窗標題帶檔名（原樣）、Ctrl+R reload 還原檔名正確、dirty 換主題直接保留還原
 

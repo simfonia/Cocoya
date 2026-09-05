@@ -184,7 +184,7 @@ C:\Workspace\cocoya\
 │       ├── trainingOps.ts   # 訓練：startTraining, openTrainingReport, openLatestTrainingReport (+ TrainingTerminal：訓練日誌導向 VS Code Pseudoterminal「Cocoya Training」)
 │       ├── fileOps.ts       # 檔案：new/open/save/saveAs/backup/recovery
 │       ├── firmwareOps.ts   # 韌體：resetFirmware, eraseFilesystem, setupStableMode
-│       ├── datasetOps.ts    # 資料集：capture/export/upload/scan/pickFolder + SaveProgress/LoadProgress 存讀 [NEW]
+│       ├── datasetOps.ts    # 資料集：capture/export/upload/scan/pickFolder/pickDataFile + SaveProgress/LoadProgress 存讀 [NEW]
 │       ├── serialOps.ts     # 序列埠：refreshPorts, serialMonitor, setPythonPath
 │       └── envOps.ts        # 環境：checkEnvironment, installModule, runCode, checkUpdate
 ├── src-tauri/             # Tauri 後端專案 (Rust)

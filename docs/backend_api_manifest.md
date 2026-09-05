@@ -100,8 +100,9 @@ Notation: `key?` = Optional. **Rule: changing a Rust signature -> immediately up
 | file | check_startup_backup | -- | {} | Option<String> |
 | file | clear_backup       | -- | {} | Result<(), String> |
 | file | reject_recovery    | -- | {} | Result<(), String> |
-| file | delete_file        | path: String | {path} | Result<(), String> |
-| file | pick_folder        | -- | {} | Result<PickFolderResult, String> |
+| file | delete_file        | path: String | {path} | Result<(), String>；檔案不存在 → Err(`FILE_NOT_FOUND: ...`)（非靜默成功，前端據此仍移除縮圖並提示）；刪除失敗 → Err(IO 錯誤字串) |
+| file | pick_folder        | default_path: Option<String> | {defaultPath} | Result<PickFolderResult, String>；default_path 為對話框起始目錄（XML 專案根），僅作起始位置不限制選取 |
+| file | pick_data_file     | default_path: Option<String> | {defaultPath} | Result<PickDataFileResult, String>；PickDataFileResult { path, content }（content 為 UTF-8 檔案內容）；CSV/JSON 資料檔匯入 |
 | file | dataset_save_progress | folder_path, project_name, spec_json: String | {folderPath, projectName, specJson} | Result<String, String>（Err 以 `CODE: message` 前綴回傳：`PROJECT_NAME_INVALID` / `IO_ERROR`） |
 | file | dataset_load_progress  | folder_path: String | {folderPath} | Result<DatasetProgressResult, String>；DatasetProgressResult 含 hasProgress, spec?, path, errorCode?（無檔案時 `PROGRESS_NOT_FOUND`）。2026-08-26 精簡：folderPath 必為 canonical 目錄，direct 讀取，fallback 掃描已移除 |
 | （bridge message）| getProjectAnchor | requestId: String | {requestId} | 無 Rust 指令；VSIX 由 cocoyaManager 以 currentFilePath 回覆、Tauri 由 tauri.js invoke get_project_anchor 後回覆 `projectAnchorResult { isAnchored, projectRoot }`。供 Dataset Manager 進入閘使用 |

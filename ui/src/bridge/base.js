@@ -103,9 +103,10 @@ export class BaseBridge {
 
     /**
      * 彈出資料夾選取視窗 (回傳 Promise<Object|null>)
+     * @param {string|null} defaultPath 對話框起始目錄（預設用 XML 專案根）
      * 回傳物件包含 { path, images, labelCounts, labelMap }
      */
-    pickFolder() {
+    pickFolder(defaultPath = null) {
         const requestId = 'pickFolder_' + Date.now();
         return new Promise((resolve) => {
             const handler = (msg) => {
@@ -124,7 +125,33 @@ export class BaseBridge {
                 }
             };
             this.onMessage(handler);
-            this.send('pickFolder', { requestId });
+            this.send('pickFolder', { requestId, defaultPath });
+        });
+    }
+
+    /**
+     * 彈出資料檔（CSV/JSON）選取視窗 (回傳 Promise<Object|null>)
+     * @param {string|null} defaultPath 對話框起始目錄（預設用 XML 專案根）
+     * 回傳物件包含 { path, content }（content 為 UTF-8 檔案內容）
+     */
+    pickDataFile(defaultPath = null) {
+        const requestId = 'pickDataFile_' + Date.now();
+        return new Promise((resolve) => {
+            const handler = (msg) => {
+                if (msg.command === 'dataFileSelected' && msg.requestId === requestId) {
+                    this.offMessage(handler);
+                    if (msg.error) {
+                        resolve(null);
+                    } else {
+                        resolve({
+                            path: msg.path,
+                            content: msg.content
+                        });
+                    }
+                }
+            };
+            this.onMessage(handler);
+            this.send('pickDataFile', { requestId, defaultPath });
         });
     }
 

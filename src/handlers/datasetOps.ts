@@ -20,10 +20,14 @@ export class DatasetOpsHandler {
 
     public async handlePickFolder(message: any) {
         const { requestId, fieldName } = message;
+        // 預設起始目錄 = XML 專案根（前端傳入），無錨定時 fallback 上次資料夾
+        const projectRoot = message.defaultPath || this.manager.getProjectRoot?.() || null;
         const lastPath = (this.manager.context.globalState as any).get('lastDatasetFolder') as string | undefined;
         
         try {
-            const defaultUri = lastPath ? vscode.Uri.file(lastPath) : undefined;
+            const defaultUri = (projectRoot && fs.existsSync(projectRoot))
+                ? vscode.Uri.file(projectRoot)
+                : (lastPath ? vscode.Uri.file(lastPath) : undefined);
             const uris = await vscode.window.showOpenDialog({
                 canSelectFolders: true,
                 canSelectFiles: false,
@@ -62,6 +66,47 @@ export class DatasetOpsHandler {
                 command: 'folderSelected',
                 requestId: requestId,
                 fieldName: fieldName,
+                error: e.message
+            });
+        }
+    }
+
+    /** 選取資料檔（CSV/JSON）並讀取內容（原生 dialog，預設起始目錄 = XML 專案根） */
+    public async handlePickDataFile(message: any) {
+        const { requestId } = message;
+        const projectRoot = message.defaultPath || this.manager.getProjectRoot?.() || null;
+
+        try {
+            const uris = await vscode.window.showOpenDialog({
+                canSelectFolders: false,
+                canSelectFiles: true,
+                canSelectMany: false,
+                defaultUri: (projectRoot && fs.existsSync(projectRoot)) ? vscode.Uri.file(projectRoot) : undefined,
+                filters: { 'Data File': ['csv', 'json'] },
+                title: hostMsg('pickDataFileTitle')
+            });
+
+            if (uris && uris[0]) {
+                const filePath = uris[0].fsPath;
+                const content = fs.readFileSync(filePath, 'utf8');
+                this.manager.panel.webview.postMessage({
+                    command: 'dataFileSelected',
+                    requestId: requestId,
+                    path: filePath,
+                    content: content
+                });
+            } else {
+                this.manager.panel.webview.postMessage({
+                    command: 'dataFileSelected',
+                    requestId: requestId,
+                    error: hostMsg('userCancelledPick')
+                });
+            }
+        } catch (e: any) {
+            vscode.window.showErrorMessage(hostMsg('dataFilePickFailed', e.message));
+            this.manager.panel.webview.postMessage({
+                command: 'dataFileSelected',
+                requestId: requestId,
                 error: e.message
             });
         }
@@ -364,7 +409,9 @@ export class DatasetOpsHandler {
             return;
         }
         try {
-            if (fs.existsSync(filePath)) {
+            const exists = fs.existsSync(filePath);
+            console.log(`[Host] delete image filePath = ${filePath} | exists = ${exists}`);
+            if (exists) {
                 fs.unlinkSync(filePath);
                 console.log(`[Host] Deleted image file: ${filePath}`);
                 this.manager.panel.webview.postMessage({
@@ -372,11 +419,12 @@ export class DatasetOpsHandler {
                     success: true
                 });
             } else {
-                // 檔案可能來自外部資料夾、或已被其他方式刪除 — 視為成功
-                console.log(`[Host] Image file not found (may be external): ${filePath}`);
+                // 檔案已不存在 → 仍屬「可移除縮圖」情境，但以 errorCode 表露真相（非靜默成功）
                 this.manager.panel.webview.postMessage({
                     command: 'datasetDeleteImageResult',
-                    success: true
+                    success: false,
+                    errorCode: 'FILE_NOT_FOUND',
+                    error: 'image file does not exist on disk'
                 });
             }
         } catch (e: any) {

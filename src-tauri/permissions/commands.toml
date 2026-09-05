@@ -32,6 +32,7 @@ commands.allow = [
   "dataset_upload_chunk",
   "delete_file",
   "pick_folder",
+  "pick_data_file",
   "export_dataset",
   "open_report",
   "find_latest_training_report",

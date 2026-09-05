@@ -30,6 +30,8 @@ const HOST_MSGS: Record<string, Record<string, string>> = {
         // --- 資料集（datasetOps.ts）---
         folderPickFailed: '選擇資料夾失敗: %1',
         pickFolderTitle: '選取資料集資料夾',
+        pickDataFileTitle: '選取資料檔 (CSV/JSON)',
+        dataFilePickFailed: '選擇資料檔失敗: %1',
         userCancelledPick: '使用者取消選擇',
         exportSuccess: '資料集匯出成功: %1',
         exportSaveTitle: '匯出資料集',
@@ -67,6 +69,8 @@ const HOST_MSGS: Record<string, Record<string, string>> = {
         // --- Dataset (datasetOps.ts) ---
         folderPickFailed: 'Failed to pick folder: %1',
         pickFolderTitle: 'Select dataset folder',
+        pickDataFileTitle: 'Select data file (CSV/JSON)',
+        dataFilePickFailed: 'Failed to pick data file: %1',
         userCancelledPick: 'User cancelled selection',
         exportSuccess: 'Dataset exported successfully: %1',
         exportSaveTitle: 'Export dataset',

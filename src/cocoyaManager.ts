@@ -295,6 +295,9 @@ export class CocoyaManager {
                 case 'pickFolder':
                     await this.datasetOps.handlePickFolder(message);
                     break;
+                case 'pickDataFile':
+                    await this.datasetOps.handlePickDataFile(message);
+                    break;
                 case 'openTrainingReport':
                     this.trainingOps.handleOpenTrainingReport(message);
                     break;

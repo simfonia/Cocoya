@@ -526,13 +526,20 @@ export class BridgeTauri extends BaseBridge {
                         this._dispatchToFrontend({ command: 'datasetDeleteImageResult', success: true });
                     } catch (e) {
                         console.error('[Bridge] Delete image failed:', e);
-                        this._dispatchToFrontend({ command: 'datasetDeleteImageResult', success: false, error: String(e) });
+                        // Rust 回 "FILE_NOT_FOUND: ..." → 帶 errorCode 供前端區分「檔案本就不存在」與真實 IO 失敗
+                        const codeMatch = String(e || '').match(/^([A-Z][A-Z0-9_]*):/);
+                        this._dispatchToFrontend({
+                            command: 'datasetDeleteImageResult',
+                            success: false,
+                            errorCode: codeMatch ? codeMatch[1] : 'IO_ERROR',
+                            error: String(e)
+                        });
                     }
                     break;
 
                 case 'pickFolder':
                     try {
-                        const result = await this.tauriInvoke('pick_folder');
+                        const result = await this.tauriInvoke('pick_folder', { defaultPath: data.defaultPath || null });
                         const { convertFileSrc } = await import('@tauri-apps/api/core');
                         const images = (result.images || []).map(img => ({
                             name: img.name,
@@ -559,6 +566,33 @@ export class BridgeTauri extends BaseBridge {
                             console.error('[Bridge] Pick folder failed:', e);
                             this._dispatchToFrontend({
                                 command: 'folderSelected',
+                                requestId: data.requestId,
+                                error: String(e)
+                            });
+                        }
+                    }
+                    break;
+
+                case 'pickDataFile':
+                    try {
+                        const fileResult = await this.tauriInvoke('pick_data_file', { defaultPath: data.defaultPath || null });
+                        this._dispatchToFrontend({
+                            command: 'dataFileSelected',
+                            requestId: data.requestId,
+                            path: fileResult.path,
+                            content: fileResult.content
+                        });
+                    } catch (e) {
+                        if (e === 'Canceled') {
+                            this._dispatchToFrontend({
+                                command: 'dataFileSelected',
+                                requestId: data.requestId,
+                                error: '使用者取消選擇'
+                            });
+                        } else {
+                            console.error('[Bridge] Pick data file failed:', e);
+                            this._dispatchToFrontend({
+                                command: 'dataFileSelected',
                                 requestId: data.requestId,
                                 error: String(e)
                             });
