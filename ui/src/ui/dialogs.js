@@ -150,7 +150,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         dialog = document.createElement('div');
         dialog.id = 'dataset-ssh-dialog';
         dialog.className = 'dataset-manager-overlay';
-        dialog.style.zIndex = '10001';
+        dialog.style.zIndex = '10100'; /* 高於 Startup Home(10002)，避免被首頁蓋住 */
         dialog.style.display = 'flex';
 
         const current = this.sshConfig || {};
@@ -333,7 +333,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         dialog = document.createElement('div');
         dialog.id = 'training-backend-dialog';
         dialog.className = 'dataset-manager-overlay';
-        dialog.style.zIndex = '10001';
+        dialog.style.zIndex = '10100'; /* 高於 Startup Home(10002)，避免被首頁蓋住 */
         dialog.style.display = 'flex';
 
         const escapeHtml = (val) => {

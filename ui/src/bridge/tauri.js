@@ -1299,7 +1299,7 @@ export class BridgeTauri extends BaseBridge {
                         display: flex;
                         align-items: center;
                         justify-content: center;
-                        z-index: 9999;
+                        z-index: 10100; /* 須高於 Startup Home(10002) 與診斷視窗(10050)，否則首頁操作的成功訊息會被蓋住 */
                     }
                     .cocoya-prompt-dialog {
                         background: var(--dsm-surface, #ffffff);

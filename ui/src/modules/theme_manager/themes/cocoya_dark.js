@@ -219,13 +219,13 @@ body.cocoya-dark-mode .dropdown-item:hover {
     background-color: #3e3e3e;
     color: #FE2F89;
 }
-/* 自動反轉圖示顏色 (排除 Python Logo 與停止按鈕) */
-body.cocoya-dark-mode .normal-icon:not([src*="python"]):not([src*="stop_24dp_EA3323"]),
-body.cocoya-dark-mode .normal-icon:not([src*="python"]):not([src*="stop_24dp_EA3323"]) {
+/* 自動反轉圖示顏色 (排除 Python Logo 與停止按鈕、AI owl 彩色圖示) */
+body.cocoya-dark-mode .normal-icon:not([src*="python"]):not([src*="stop_24dp_EA3323"]):not([src*="owl"]),
+body.cocoya-dark-mode .normal-icon:not([src*="python"]):not([src*="stop_24dp_EA3323"]):not([src*="owl"]) {
     filter: invert(1) brightness(0.65);
 }
-  /* toolbar 按鈕與首頁版本檢查的黑色圖示：深色下反白（排除 Python Logo、停止、執行按鈕與版本檢查的彩色狀態圖示） */
-  body.cocoya-dark-mode .toolbar-btn img:not([src*="python"]):not([src*="stop_24dp_EA3323"]):not([src*="run_blocks"]):not([src*="published_with_changes"]):not([src*="cloud_download"]),
+  /* toolbar 按鈕與首頁版本檢查的黑色圖示：深色下反白（排除 Python Logo、停止、執行按鈕與版本檢查的彩色狀態圖示、AI owl 彩色圖示） */
+  body.cocoya-dark-mode .toolbar-btn img:not([src*="python"]):not([src*="stop_24dp_EA3323"]):not([src*="run_blocks"]):not([src*="published_with_changes"]):not([src*="cloud_download"]):not([src*="owl"]),
   body.cocoya-dark-mode #startup-home .startup-update-btn img:not([src*="75FB4C"]):not([src*="FE2F89"]),
   body.cocoya-dark-mode #startup-home .startup-update-btn img:not([src*="75FB4C"]):not([src*="FE2F89"]) {
       filter: invert(1) brightness(0.65);

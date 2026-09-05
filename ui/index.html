@@ -114,7 +114,8 @@
                     <!-- AI 功能下拉選單 (僅 PC 模式顯示) -->
                         <div class="toolbar-dropdown" id="ai-dropdown" style="display: none;" title="%{BKY_TLB_AI_MENU}">
                             <div class="toolbar-btn" id="btn-ai-menu" title="%{BKY_TLB_AI_MENU}">
-                                <img src="src/icons/ai-education.png">
+                                <img src="src/icons/owl.png" class="normal-icon">
+                                <img src="src/icons/owl-hover.png" class="hover-icon">
                             </div>
                             <div class="dropdown-content ai-dropdown-content">
                                 <div class="dropdown-item" id="btn-dataset-manager-dropdown" title="%{BKY_TLB_AI_DATASET_MANAGER}">
@@ -155,6 +156,11 @@
                 </div>
             </div>
             <div id="blocklyDiv"></div>
+            <div id="terminal-resizer" title="%{BKY_TLB_DRAG_RESIZE_HEIGHT}">
+                <div id="terminal-toggle" title="%{BKY_TLB_TOGGLE_TERMINAL}">
+                    <span class="arrow">▲</span>
+                </div>
+            </div>
             <!-- 整合式終端機面板 -->
             <div id="terminalArea" class="collapsed">
                 <div id="terminalHeader">
@@ -163,11 +169,17 @@
                         <span id="terminalTitle">%{BKY_TLB_TERMINAL_TITLE}</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px;">
+                        <button class="terminal-tool-btn" id="btn-copy-terminal" title="%{BKY_TLB_COPY_TERMINAL}">
+                            <img src="src/icons/log-16_FE2F89.png" style="width: 16px; height: 16px; opacity: 0.8;">
+                        </button>
+                        <button class="terminal-tool-btn" id="btn-fontsize-terminal" title="%{BKY_TLB_FONT_SIZE_TERMINAL}">
+                            <img src="src/icons/font-size_FE2F89.png" style="width: 16px; height: 16px; opacity: 0.8;">
+                        </button>
                         <button class="terminal-tool-btn" id="btn-pause-terminal" title="%{BKY_TLB_PAUSE_SCROLL}">
                             <img src="src/icons/list_arrow_24dp_FE2F89.png" style="width: 16px; height: 16px; opacity: 0.8;">
                         </button>
                         <button class="terminal-tool-btn" id="btn-clear-terminal" title="%{BKY_TLB_CLEAR_CONSOLE}">
-                            <img src="src/icons/brush-3-ai-line_ff007c.png" style="width: 16px; height: 16px;">
+                            <img src="src/icons/brush-3-ai-line_FE2F89.png" style="width: 16px; height: 16px;">
                         </button>
                         <button class="terminal-tool-btn" id="btn-close-terminal" title="%{BKY_TLB_CLOSE_PANEL}">
                             <span style="font-size: 16px; font-weight: bold;">×</span>
@@ -190,8 +202,11 @@
                     <span>%{BKY_TLB_PYTHON_PREVIEW}</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="toolbar-btn" id="btn-fontsize-code" title="%{BKY_TLB_FONT_SIZE_CODE}" style="width: 24px; height: 24px;">
+                        <img src="src/icons/font-size.png" style="width: 18px; height: 18px;">
+                    </div>
                     <div class="toolbar-btn" id="btn-copy-code" title="%{BKY_TLB_COPY_CODE}" style="width: 24px; height: 24px;">
-                        <img src="src/icons/copy-duotone.png" style="width: 18px; height: 18px;">
+                        <img src="src/icons/python.png" style="width: 18px; height: 18px;">
                     </div>
                     <div class="toolbar-separator" style="height: 16px; margin: 0;"></div>
                     <span style="font-size: 10px;">%{BKY_TLB_INDENT}</span>
