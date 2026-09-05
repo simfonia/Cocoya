@@ -54,6 +54,7 @@ pub fn run() {
             commands::dataset_upload_chunk,
             commands::delete_file,
             commands::pick_folder,
+            commands::pick_data_file,
             commands::export_dataset,
             commands::open_report,
             commands::find_latest_training_report,

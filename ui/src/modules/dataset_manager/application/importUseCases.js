@@ -104,7 +104,10 @@ export function createImportUseCases(deps) {
         showStatusMessage(t('STATUS_IMPORTING_FOLDER', '正在選取資料夾...'));
 
         try {
-            const result = await datasetBridge.pickFolder();
+            // 預設起始目錄 = XML 專案根（與後端錨定來源一致）
+            const anchor = await datasetBridge.getProjectAnchor();
+            const defaultPath = (anchor && anchor.projectRoot) || null;
+            const result = await datasetBridge.pickFolder(defaultPath);
             if (!result) {
                 showStatusMessage('');
                 return;
@@ -197,6 +200,55 @@ export function createImportUseCases(deps) {
         }
     }
 
-    return { importDataFile, importDirectory };
+    /** 檔案匯入（CSV/JSON 表格資料，原生 dialog，預設起始目錄 = XML 專案根） */
+    async function importDataFilePath() {
+        showStatusMessage(t('STATUS_LOADING_FILE', '正在選取檔案...'));
+
+        try {
+            const anchor = await datasetBridge.getProjectAnchor();
+            const defaultPath = (anchor && anchor.projectRoot) || null;
+            const picked = await datasetBridge.pickDataFile(defaultPath);
+            if (!picked || !picked.path) {
+                showStatusMessage('');
+                return;
+            }
+
+            const filePath = picked.path;
+            const fileName = filePath.split(/[\\/]/).pop() || 'data';
+            let rows;
+            try {
+                rows = parseDataFileRows(fileName, picked.content);
+            } catch (e) {
+                if (e.message === 'EMPTY_OR_INVALID') {
+                    throw new Error(t('ERROR_IMPORT_EMPTY', '檔案內容為空或格式不符'));
+                }
+                throw e;
+            }
+
+            const rawFileName = fileName.split('.')[0];
+            const safeFileName = sanitizeName(rawFileName) || rawFileName;
+
+            const proceed = await reconcileProjectName(safeFileName, null);
+            if (!proceed) {
+                showStatusMessage(t('IMPORT_CANCELLED', '已取消匯入'));
+                return;
+            }
+
+            // 更新 State
+            state.tableRows = rows;
+            state.images = [];
+
+            const detectedSchema = DatasetSpec.detectSchema(rows);
+            state.spec.updateSchema(detectedSchema);
+
+            refreshDynamicPanels();
+            showStatusMessage(t('SUCCESS_IMPORT_DATA', '✅ 成功匯入 %1 筆資料').replace('%1', rows.length));
+        } catch (e) {
+            console.error('[DatasetManager] Import Error:', e);
+            showStatusMessage(t('ERROR_PREFIX', '❌ 錯誤: %1').replace('%1', e.message));
+        }
+    }
+
+    return { importDataFile, importDirectory, importDataFilePath };
 }
 

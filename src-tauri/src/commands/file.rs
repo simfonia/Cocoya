@@ -412,11 +412,11 @@ pub fn reject_recovery(window: Window, state: State<'_, AppState>) -> Result<(),
 }
 
 /// 刪除單一檔案（供 datasetDeleteImage 使用）
+/// 檔案不存在 → Err("FILE_NOT_FOUND: ...")（前端據此仍移除縮圖但提示，非靜默成功）
 #[tauri::command]
 pub fn delete_file(path: String) -> Result<(), String> {
     if fs::metadata(&path).is_err() {
-        // 檔案不存在視為成功（同 VSIX 行為）
-        return Ok(());
+        return Err("FILE_NOT_FOUND: image file does not exist on disk".into());
     }
     fs::remove_file(&path).map_err(|e| format!("Failed to delete file: {}", e))
 }
@@ -439,12 +439,29 @@ pub struct PickFolderResult {
     pub label_map: std::collections::HashMap<String, u32>,
 }
 
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PickDataFileResult {
+    pub path: String,
+    pub content: String,
+}
+
 /// 選擇資料夾並掃描影像（供 datasetManager pickFolder 使用）
+/// default_path：對話框起始目錄（XML 專案根），僅作為起始位置，不限制選取
 #[tauri::command]
-pub async fn pick_folder(handle: AppHandle) -> Result<PickFolderResult, String> {
-    let picked = handle.dialog().file()
-        .set_title("選取資料集資料夾")
-        .blocking_pick_folder();
+pub async fn pick_folder(handle: AppHandle, default_path: Option<String>) -> Result<PickFolderResult, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let mut builder = handle.dialog().file()
+        .set_title("選取資料集資料夾");
+
+    if let Some(dp) = default_path {
+        let p = std::path::PathBuf::from(&dp);
+        if p.is_dir() {
+            builder = builder.set_directory(p);
+        }
+    }
+
+    let picked = builder.blocking_pick_folder();
 
     let folder_path = match picked {
         Some(p) => p.into_path().map_err(|_| "Failed to parse folder path".to_string())?,
@@ -471,6 +488,36 @@ pub async fn pick_folder(handle: AppHandle) -> Result<PickFolderResult, String> 
         images,
         label_counts,
         label_map,
+    })
+}
+
+/// 選取資料檔（CSV/JSON）並讀取內容（供 datasetManager 檔案匯入，預設起始目錄 = XML 專案根）
+#[tauri::command]
+pub fn pick_data_file(handle: AppHandle, default_path: Option<String>) -> Result<PickDataFileResult, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let mut builder = handle.dialog().file()
+        .set_title("選取資料檔 (CSV/JSON)")
+        .add_filter("Data File", &["csv", "json"]);
+
+    if let Some(dp) = default_path {
+        let p = std::path::PathBuf::from(&dp);
+        if p.is_dir() {
+            builder = builder.set_directory(p);
+        }
+    }
+
+    let picked = builder.blocking_pick_file();
+    let file_path = match picked {
+        Some(p) => p.into_path().map_err(|_| "Failed to parse file path".to_string())?,
+        None => return Err("Canceled".into()),
+    };
+
+    let content = fs::read_to_string(&file_path)
+        .map_err(|e| format!("IO_ERROR: {}", e))?;
+
+    Ok(PickDataFileResult {
+        path: file_path.to_string_lossy().to_string(),
+        content,
     })
 }
 

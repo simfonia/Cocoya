@@ -85,9 +85,11 @@
     "DSM_SAMPLE_COUNT": "Count",
     "DSM_COLOR": "Color",
     "DSM_DELETE_IMAGE": "Delete photo",
+    "DSM_DELETE_FILE_NOT_FOUND": "Source file no longer exists, removed from list",
 
     // Status messages
     "DSM_STATUS_LOADING": "Loading: %1...",
+    "DSM_STATUS_LOADING_FILE": "Selecting file...",
     "DSM_STATUS_IMPORTING_FOLDER": "Selecting folder...",
     "DSM_STATUS_EXPORTING": "📦 Preparing export...",
     "DSM_EXPORT_IN_PROGRESS": "Building ZIP and generating dataset.json...",

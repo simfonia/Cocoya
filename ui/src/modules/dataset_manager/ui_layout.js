@@ -459,6 +459,10 @@ async function handleDirectoryImport() {
     getImportUC().importDirectory();
 }
 
+async function handleDataFileImport() {
+    getImportUC().importDataFilePath();
+}
+
 /** Stage 3：匯入 use-case（延遲初始化，注入 UI 依賴） */
 let importUC = null;
 function getImportUC() {
@@ -1045,7 +1049,7 @@ async function handleSamplerSnapshot() {
 /**
  * 刪除指定索引的照片
  */
-function handleDeleteImage(index) {
+async function handleDeleteImage(index) {
     const removed = state.images[index];
     if (!removed) return;
 
@@ -1056,7 +1060,27 @@ function handleDeleteImage(index) {
             console.error('[DatasetManager] Blocked delete of unsafe image path:', removed.path, pathCheck.code);
             return;
         }
-        datasetBridge.send('datasetDeleteImage', { filePath: pathCheck.value });
+        // 預防性保守處理：等待後端結果，成功或「檔案已不存在」皆移除縮圖；真實 IO 失敗才保留並提示
+        try {
+            const { promise } = datasetBridge.request({
+                command: 'datasetDeleteImage',
+                payload: { filePath: pathCheck.value },
+                resultCommand: 'datasetDeleteImageResult',
+                timeoutMs: 10000
+            });
+            const result = await promise;
+            if (result && result.success === false && result.errorCode !== 'FILE_NOT_FOUND') {
+                showStatusMessage(t('ERROR_PREFIX', '❌ 錯誤: %1').replace('%1', result.error || 'delete failed'));
+                return;
+            }
+            if (result && result.errorCode === 'FILE_NOT_FOUND') {
+                showStatusMessage(t('DELETE_FILE_NOT_FOUND', '原始檔已不存在，已從清單移除'));
+            }
+        } catch (e) {
+            console.error('[DatasetManager] Delete image failed:', e);
+            showStatusMessage(t('ERROR_PREFIX', '❌ 錯誤: %1').replace('%1', e.message || e));
+            return;
+        }
     }
 
     // 釋放 blobUrl 避免記憶體洩漏
@@ -1269,8 +1293,12 @@ function bindModalEvents(modal) {
 
     const importBtn = modal.querySelector('#dataset-import-btn');
     const fileInput = modal.querySelector('#dataset-file-input');
-    if (importBtn && fileInput) {
-        importBtn.onclick = () => fileInput.click();
+    if (importBtn) {
+        // 原生 dialog 選取檔案（預設起始目錄 = XML 專案根），取代 <input type=file>
+        importBtn.onclick = () => handleDataFileImport();
+    }
+    if (fileInput) {
+        // 保留舊機制作為 fallback（file input 的 change 仍可觸發）
         fileInput.onchange = (e) => handleFileImport(e.target.files[0]);
     }
 

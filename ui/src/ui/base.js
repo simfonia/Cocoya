@@ -40,7 +40,23 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
 
         if (fileLabel) {
             fileLabel.textContent = displayName;
-            fileLabel.title = displayName; // Hover 顯示完整路徑/名稱
+            // Hover 顯示完整路徑（專案根 + 檔名）；未錨定或未命名時 fallback 為顯示名稱
+            // 分隔符統一正斜線（projectRoot 可能為反斜線，避免混合）
+            const caps = window.CocoyaBridge ? window.CocoyaBridge.capabilities : null;
+            const root = (caps && caps.projectRoot) ? String(caps.projectRoot).replace(/\\/g, '/').replace(/\/+$/, '') : null;
+            const hasFile = !!this.currentFilename;
+            fileLabel.title = (hasFile && root)
+                ? (root + '/' + this.currentFilename)
+                : displayName;
+
+            // capabilities 快照可能過期（開檔/存檔後），以後端權威錨定非同步校正
+            if (hasFile && window.CocoyaBridge && window.CocoyaBridge.getProjectAnchor) {
+                window.CocoyaBridge.getProjectAnchor().then((anchor) => {
+                    if (anchor && anchor.projectRoot && this.currentFilename) {
+                        fileLabel.title = String(anchor.projectRoot).replace(/\\/g, '/').replace(/\/+$/, '') + '/' + this.currentFilename;
+                    }
+                }).catch(() => {});
+            }
         }
         
         // 同步更新 Tauri 視窗標題
