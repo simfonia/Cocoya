@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Cocoya UI 基礎模組
  * 負責核心 UI 狀態 (檔名、髒狀態)、i18n 套用、更新提示與工具列事件初始化
  */
@@ -397,6 +397,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                     const nextLang = opt.getAttribute('data-lang');
                     if (nextLang === currentLang) return; // 點擊目前語系側不動作
                     try { localStorage.setItem('cocoya_lang', nextLang); } catch (err) { }
+                    if (window.CocoyaApp && window.CocoyaApp.snapshotWorkspaceForReload) window.CocoyaApp.snapshotWorkspaceForReload();
                     if (window.CocoyaBridge && typeof window.CocoyaBridge.send === 'function') {
                         window.CocoyaBridge.send('reloadWebview');
                     } else {

@@ -1,4 +1,4 @@
-[[permission]]
+﻿[[permission]]
 identifier = "allow-all-commands"
 description = "Allows all custom commands for Cocoya"
 commands.allow = [
@@ -41,5 +41,6 @@ commands.allow = [
   "dataset_load_progress",
   "dataset_import_from_folder",
   "open_folder",
+  "open_help",
   "set_window_focus"
 ]

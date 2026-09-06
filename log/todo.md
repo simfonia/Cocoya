@@ -1,4 +1,4 @@
-# Cocoya 專案任務清單 (Todo List)
+﻿# Cocoya 專案任務清單 (Todo List)
 **專案名稱**：Cocoya (Code, Compute, Yield AI)
 **核心目標**：以 Blockly 為介面，幫助 Python 初學者進入 AI 世界的 VSCode extension 與獨立桌面應用程式。
 
@@ -242,3 +242,10 @@
 - [x] 修正：編輯模式換主題不再詢問——一律 snapshot 後直接 reload 保留內容；移除三選對話框死碼
 - [x] 實機驗證：label hover 完整路徑、視窗標題帶檔名（原樣）、Ctrl+R reload 還原檔名正確、dirty 換主題直接保留還原
 
+
+
+### [2026-09-06] 語系切換對齊主題切換——保留編輯區積木
+- [x] 語系切換前先 snapshotWorkspaceForReload()：ui/src/ui/base.js（工具列語系膠囊）與 ui/src/app/persistence.js（首頁語系膠囊）兩處 click handler 於 reloadWebview 前加入快照呼叫，對齊 theme_manager.setMode 行為
+- [x] 驗證：node --check ×2 + vite build 全綠
+- [ ] 實機驗證：VSIX + Tauri 下切換語系後編輯區積木保留、dirty 狀態保留
+`r`n### [2026-09-06] 新增 Try/Except 例外處理積木`r`n- [x] 新增 py_try_except 積木定義（logic_blocks.js）：try body + except body + 例外型別下拉選單`r`n- [x] 新增產生器（logic_generators.js）：輸出 try/except Python 代碼`r`n- [x] 更新 toolbox.xml：Logic 分類加入新積木`r`n- [x] 更新 i18n：zh-hant.js + en.js 新增 TRY_EXCEPT_TRY/EXCEPT/TOOLTIP`r`n- [x] 新增 Help 文件：docs/help/py_try_except_zh-hant.html + en.html`r`n- [x] 驗證：node --check + vite build 全綠`r`n- [ ] 實機驗證：VSIX + Tauri 下拉選單、代碼產生、MicroPython 燒錄執行

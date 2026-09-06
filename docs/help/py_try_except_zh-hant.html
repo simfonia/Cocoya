@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Try/Except 例外處理 - py_try_except 積木說明</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 20px; max-width: 800px; margin: 0 auto; }
+  h1 { color: #b198de; border-bottom: 2px solid #b198de; padding-bottom: 8px; }
+  h2 { color: #9575cd; margin-top: 24px; }
+  .section { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .param-table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  .param-table th, .param-table td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+  .param-table th { background: #ede7f6; color: #6a1b9a; }
+  .code { background: #f8f8f8; padding: 12px; border-radius: 4px; font-family: Consolas, monospace; font-size: 13px; overflow-x: auto; }
+  .note { background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px 14px; margin: 12px 0; border-radius: 0 4px 4px 0; }
+  .tip { background: #e8f5e9; border-left: 4px solid #4caf50; padding: 10px 14px; margin: 12px 0; border-radius: 0 4px 4px 0; }
+</style>
+</head>
+<body>
+  <h1>🛡️ Try/Except 例外處理積木 (py_try_except)</h1>
+
+  <div class="section">
+    <h2>功能說明</h2>
+    <p>嘗試執行一段程式碼，當發生指定的例外（錯誤）時，執行例外處理邏輯。</p>
+    <p>這讓您的程式能夠優雅地處理錯誤，不會因為意外狀況而直接崩潰。</p>
+  </div>
+
+  <div class="section">
+    <h2>使用方式</h2>
+    <ol>
+      <li>將要保護的程式放入 <strong>try</strong> 區塊</li>
+      <li>從下拉選單選擇要捕捉的例外型別</li>
+      <li>將例外發生時要執行的程式放入 <strong>except</strong> 區塊</li>
+    </ol>
+  </div>
+
+  <div class="section">
+    <h2>例外型別說明</h2>
+    <table class="param-table">
+      <tr><th>例外型別</th><th>說明</th><th>常見情境</th></tr>
+      <tr><td>Exception</td><td>捕捉所有例外（最通用）</td><td>不確定會發生何種錯誤</td></tr>
+      <tr><td>ValueError</td><td>數值錯誤</td><td>字串轉數字失敗</td></tr>
+      <tr><td>TypeError</td><td>型別錯誤</td><td>對錯誤型別進行操作</td></tr>
+      <tr><td>OSError</td><td>系統/IO錯誤</td><td>檔案不存在、無法開啟</td></tr>
+      <tr><td>IndexError</td><td>索引錯誤</td><td>列表索引超出範圍</td></tr>
+      <tr><td>KeyError</td><td>鍵值錯誤</td><td>字典中找不到指定的鍵</td></tr>
+      <tr><td>ZeroDivisionError</td><td>除以零錯誤</td><td>數學運算中除以零</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>使用範例</h2>
+    <div class="code">
+try:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;result = 10 / 0<br>
+except ZeroDivisionError:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;print("不能除以零！")</div>
+  </div>
+
+  <div class="section">
+    <div class="tip">✅ 此積木在 PC 模式和 MicroPython 模式下都可使用。</div>
+    <div class="note">💡 例外處理是撰寫強健程式的重要技巧，建議在可能發生錯誤的地方使用。</div>
+  </div>
+</body>
+</html>

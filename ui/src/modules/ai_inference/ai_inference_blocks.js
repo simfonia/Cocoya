@@ -1,4 +1,4 @@
-// AI Inference Blocks: 訓練與推論積木
+﻿// AI Inference Blocks: 訓練與推論積木
 
 Blockly.Blocks['py_ai_train_run'] = {
   init: function() {
@@ -56,7 +56,10 @@ Blockly.Blocks['py_ai_train_run'] = {
         .appendField(new Blockly.FieldDropdown([
           [Blockly.Msg["AI_BACKEND_LOCAL"], "local"],
           [Blockly.Msg["AI_BACKEND_REMOTE"], "remote"]
-        ]), 'BACKEND');
+        ], function(newValue) {
+          // 舊版工作檔可能存有已移除的 auto 值 → 自動遷移為 local
+          return newValue === 'auto' ? 'local' : newValue;
+        }), 'BACKEND');
 
     // 資料集同步模式（僅 backend=remote 時生效）
     this.appendDummyInput()

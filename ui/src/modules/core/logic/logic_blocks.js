@@ -1,4 +1,4 @@
-// Logic Blocks: logic_blocks.js
+﻿// Logic Blocks: logic_blocks.js
 
 // --- If-Elif-Else Block --- (Keep Procedural for Mutator)
 Blockly.Blocks['py_logic_if'] = {
@@ -195,5 +195,33 @@ Blockly.Blocks['py_logic_ternary'] = {
       "colour": Blockly.Msg["COLOUR_LOGIC"],
       "tooltip": Blockly.Msg["LOGIC_TERNARY_TOOLTIP"]
     });
+  }
+};
+
+// --- Try-Except Block ---
+Blockly.Blocks['py_try_except'] = {
+  init: function() {
+    this.setHelpUrl("py_try_except");
+    this.appendDummyInput()
+        .appendField(Blockly.Msg['TRY_EXCEPT_TRY']);
+    this.appendStatementInput('TRY_BODY')
+        .setCheck(null);
+    this.appendDummyInput()
+        .appendField(Blockly.Msg['TRY_EXCEPT_EXCEPT'])
+        .appendField(new Blockly.FieldDropdown([
+          ['Exception', 'Exception'],
+          ['ValueError', 'ValueError'],
+          ['TypeError', 'TypeError'],
+          ['OSError', 'OSError'],
+          ['IndexError', 'IndexError'],
+          ['KeyError', 'KeyError'],
+          ['ZeroDivisionError', 'ZeroDivisionError']
+        ]), 'EXCEPTION_TYPE');
+    this.appendStatementInput('EXCEPT_BODY')
+        .setCheck(null);
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour(Blockly.Msg['COLOUR_LOGIC']);
+    this.setTooltip(Blockly.Msg['TRY_EXCEPT_TOOLTIP']);
   }
 };

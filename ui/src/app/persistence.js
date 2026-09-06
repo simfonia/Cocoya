@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Cocoya App 持久化模組
  * 負責 XML 載入/儲存、自動備份、恢復與髒狀態管理
  */
@@ -384,6 +384,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
                     const nextLang = opt.getAttribute('data-lang');
                     if (nextLang === currentLang) return; // 點擊目前語系側不動作
                     try { localStorage.setItem('cocoya_lang', nextLang); } catch (err) { }
+                    if (window.CocoyaApp && window.CocoyaApp.snapshotWorkspaceForReload) window.CocoyaApp.snapshotWorkspaceForReload();
                     if (window.CocoyaBridge && typeof window.CocoyaBridge.send === 'function') {
                         window.CocoyaBridge.send('reloadWebview');
                     } else {
