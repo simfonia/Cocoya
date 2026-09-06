@@ -95,7 +95,7 @@ Notation: `key?` = Optional. **Rule: changing a Rust signature -> immediately up
 | file | get_project_anchor  | -- | {} | ProjectAnchor（serde camelCase：`isAnchored` / `projectRoot`；呼叫端勿以 snake_case 讀欄位） |
 | file | open_file          | -- | {} | Result<OpenFileResult, String> |
 | file | open_examples      | -- | {} | Result<OpenFileResult, String> |
-| file | save_file          | xml, save_as: bool, force_examples: Option<bool> | {xml, saveAs, forceExamples?} | Result<String, String> |
+| file | save_file          | xml, save_as: bool, force_examples: Option<bool>, dialog_title: Option<String> | {xml, saveAs, forceExamples?, dialogTitle?} | Result<String, String>（Err 碼：`Canceled` / `EXAMPLES_PATH` / `SAME_AS_CURRENT`（開新/另存命中目前專案檔位置，防呆擋下） / `檔案已被其他視窗開啟...`） |
 | file | auto_backup        | xml: String | {xml} | Result<(), String> |
 | file | check_startup_backup | -- | {} | Option<String> |
 | file | clear_backup       | -- | {} | Result<(), String> |

@@ -190,10 +190,14 @@ export class BaseBridge {
     }
 
     /**
-     * 彈出警告視窗
+     * 彈出警告視窗。
+     * ★ 必須回傳 this.send(...) 的 promise：Tauri 端 send('alert') 會 await 自訂對話框
+     *   （使用者按確認才 resolve）。若不回傳，呼叫端 `await bridge.alert(msg)` 立即通過，
+     *   導致「先提示、後進行」的流程未等待確認就繼續（例：開新專案流程原檔已儲存提示
+     *   未按 OK 就跳出下一個另存對話框）。VSIX 為 fire-and-forget，無回傳值可等待。
      */
     alert(message) {
-        this.send('alert', { message });
+        return this.send('alert', { message });
     }
 
     /**

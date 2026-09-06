@@ -159,6 +159,10 @@
     "TLB_INDENT_4": "4 空格",
     "TLB_SELECT_OPTION": "選擇選項",
     "MSG_SAVE_CONFIRM_DETAIL": "您對此專案所做的變更若不儲存將會遺失。",
+    "MSG_NEW_PROJECT_SAVED": "原始專案已儲存。接下來請為新的%1專案選擇存放位置與檔名。",
+    "MSG_SAME_AS_CURRENT": "不能存到目前專案檔的位置，請更換檔名或位置。",
+    "MSG_SAME_AS_CURRENT_ABORT": "多次選到目前專案檔的位置，已中止操作。",
+    "TITLE_NEW_PROJECT": "開新專案：選擇儲存位置",
 
     // 環境診斷
     "DIAG_TITLE": "環境診斷與安裝助手",
