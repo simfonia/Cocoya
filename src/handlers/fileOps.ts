@@ -36,8 +36,11 @@ export class FileOpsHandler {
                 );
                 
                 if (choice === '另存新檔') {
-                    await this.handleSaveFileAs({ xml });
-                    return true;
+                    // ★ 必須回傳 handleSaveFileAs 的真實結果（取消 → false）。
+                    // 先前在此無條件 return true（假成功），導致 checkDirtyAndConfirm 誤判
+                    // 「已存檔」，即使使用者在另存對話框取消，仍會繼續 resetWorkspace / 開檔 /
+                    // 關閉編輯器，未儲存的變更遭丟棄。
+                    return await this.handleSaveFileAs({ xml });
                 } else if (choice === '覆蓋範例') {
                     fs.writeFileSync(this.manager.currentFilePath, xml, 'utf8');
                     this.handleClearBackup();
@@ -128,7 +131,7 @@ export class FileOpsHandler {
         }
     }
 
-    public async handleSaveFileAs(message: any) {
+    public async handleSaveFileAs(message: any): Promise<boolean> {
         const lastPath = (this.manager.context.globalState as any).get('lastWorkspacePath') as string | undefined;
         // 僅在路徑仍存在時作為預設目錄，避免無效 defaultUri 導致存檔對話框被直接取消
         const defaultUri = (lastPath && fs.existsSync(lastPath)) ? vscode.Uri.file(lastPath) : undefined;
@@ -137,13 +140,26 @@ export class FileOpsHandler {
             defaultUri: defaultUri
         });
         if (uri) {
+            // 防呆（2026-09-06）：另存/開新專案若命中「目前專案檔」位置，禁止覆寫自己。
+            // 開新專案時 saveFileAs 寫入的是目標平台的乾淨初始積木（非工作區內容），
+            // 若使用者誤把「另存」存到與原檔相同路徑，原檔內容會被乾淨初始積木覆寫。
+            if (this.manager.currentFilePath) {
+                const chosedPath = path.resolve(uri.fsPath);
+                const currentPath = path.resolve(this.manager.currentFilePath);
+                if (chosedPath === currentPath) {
+                    vscode.window.showWarningMessage('不能存到目前專案檔的位置，請更換檔名或位置。');
+                    return false;
+                }
+            }
             this.manager.currentFilePath = uri.fsPath;
             await this.manager.context.globalState.update('lastWorkspacePath', path.dirname(this.manager.currentFilePath));
             fs.writeFileSync(this.manager.currentFilePath, message.xml, 'utf8');
             this.manager.lastDirtyState = false;
             this.manager.updateTitle();
             this.manager.panel.webview.postMessage({ command: 'saveCompleted', success: true, filename: path.basename(this.manager.currentFilePath), tag: message.tag });
+            return true; // 真正寫檔成功
         }
+        return false; // 使用者取消
     }
 
     public async handleCloseEditor(message: any) {

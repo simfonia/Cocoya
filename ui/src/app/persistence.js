@@ -415,7 +415,16 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         const nextPlatform = (selectedPlatform || this.currentPlatform).trim();
 
         // 檢查 dirty：取消則中止，不進入開新流程
-        if (!(await this._confirmSaveBeforeNew())) return;
+        const confirmRes = await this._confirmSaveBeforeNew();
+        if (!confirmRes || !confirmRes.proceed) return;
+
+        // 若使用者選擇「儲存」並已將原 dirty 專案存回原檔，
+        // 告知下一步的「另存」是為「新專案」命名/選位置，避免誤解為把 dirty 另存。
+        if (confirmRes.saved && window.CocoyaBridge && typeof window.CocoyaBridge.alert === 'function') {
+            const keyMsg = (window.Blockly && Blockly.Msg['MSG_NEW_PROJECT_SAVED']) || '原始專案已儲存。接下來請為新的%1專案選擇存放位置與檔名。';
+            const msg = keyMsg.replace('%1', nextPlatform);
+            await window.CocoyaBridge.alert(msg);
+        }
 
         // 記錄目標平台，待另存成功後（onSaveCompleted 收到 tag='newProject'）才套用初始積木
         this._pendingNewProjectPlatform = nextPlatform;
@@ -471,22 +480,25 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
     },
 
     /**
-     * 開新專案前的 dirty 檢查：回傳 false 表示使用者取消，應中止開新
+     * 開新專案前的 dirty 檢查。
+     * @returns {Promise<{proceed:boolean, saved:boolean}>}
+     *   - proceed：是否繼續開新（取消 → false）
+     *   - saved：是否已執行「存回原檔」（供 startNewProjectFromHome 提示「原檔已儲存」）
      */
     _confirmSaveBeforeNew: async function() {
-        if (!this.isDirty) return true;
+        if (!this.isDirty) return { proceed: true, saved: false };
         const msg = (window.Blockly && Blockly.Msg['MSG_SAVE_CONFIRM']) || 'Do you want to save changes to the current project?';
         let choice = 'cancel';
         if (window.CocoyaUI && window.CocoyaUI.showSaveConfirm) {
             choice = await window.CocoyaUI.showSaveConfirm(msg);
         }
-        if (choice === 'cancel') return false;
+        if (choice === 'cancel') return { proceed: false, saved: false };
         if (choice === 'save') {
             // 已錨定存回原檔（靜默寫回）；VSIX send 無回傳值，以 undefined 容錯
             const saved = await window.CocoyaBridge.send('saveFile', { xml: this._getCurrentXmlWithPlatform() });
-            return saved !== false;
+            return { proceed: saved !== false, saved: saved !== false };
         }
-        return true; // discard
+        return { proceed: true, saved: false }; // discard
     },
 
     /**

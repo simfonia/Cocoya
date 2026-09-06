@@ -153,6 +153,10 @@
     "TLB_INDENT_4": "4 Spaces",
     "TLB_SELECT_OPTION": "Select Option",
     "MSG_SAVE_CONFIRM_DETAIL": "Changes you make will be lost if not saved.",
+    "MSG_NEW_PROJECT_SAVED": "Original project saved. Next, choose the location and filename for the new %1 project.",
+    "MSG_SAME_AS_CURRENT": "Cannot save to the current project file location. Please choose a different filename or location.",
+    "MSG_SAME_AS_CURRENT_ABORT": "Multiple attempts hit the current project file location. Operation aborted.",
+    "TITLE_NEW_PROJECT": "New Project: Choose Save Location",
 
     // Environment Diagnosis
     "DIAG_TITLE": "Environment Diagnostic Assistant",
