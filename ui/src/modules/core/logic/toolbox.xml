@@ -1,4 +1,4 @@
-<category name="%{BKY_CAT_LOGIC}" colour="%{BKY_COLOUR_LOGIC}">
+﻿<category name="%{BKY_CAT_LOGIC}" colour="%{BKY_COLOUR_LOGIC}">
     <block type="py_logic_if"></block>
     <block type="py_logic_compare">
         <value name="A"><shadow type="py_math_number"><field name="NUM">0</field></shadow></value>
@@ -8,4 +8,5 @@
     <block type="py_logic_negate"></block>
     <block type="py_logic_boolean"></block>
     <block type="py_logic_ternary"></block>
+    <block type="py_try_except"></block>
 </category>

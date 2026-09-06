@@ -1,4 +1,4 @@
-// Logic Generators: logic_generators.js
+﻿// Logic Generators: logic_generators.js
 
 Blockly.Python.forBlock['py_logic_if'] = function(block, generator) {
   var n = 0;
@@ -54,4 +54,12 @@ Blockly.Python.forBlock['py_logic_ternary'] = function(block, generator) {
   var valueElse = generator.valueToCode(block, 'ELSE', Blockly.Python.ORDER_CONDITIONAL) || 'None';
   var code = valueThen + ' if ' + valueIf + ' else ' + valueElse;
   return [code, Blockly.Python.ORDER_CONDITIONAL];
+};
+
+Blockly.Python.forBlock['py_try_except'] = function(block, generator) {
+  var tryBody = generator.statementToCode(block, 'TRY_BODY') || generator.INDENT + 'pass\n';
+  var exceptionType = block.getFieldValue('EXCEPTION_TYPE') || 'Exception';
+  var exceptBody = generator.statementToCode(block, 'EXCEPT_BODY') || generator.INDENT + 'pass\n';
+  var code = 'try:\n' + tryBody + 'except ' + exceptionType + ':\n' + exceptBody;
+  return code;
 };

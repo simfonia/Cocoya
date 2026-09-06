@@ -1,4 +1,4 @@
-pub mod state;
+﻿pub mod state;
 pub mod utils;
 pub mod commands;
 
@@ -63,6 +63,7 @@ pub fn run() {
             commands::dataset_load_progress,
             commands::dataset_import_from_folder,
             commands::open_folder,
+            commands::open_help,
             commands::set_window_focus
         ])
         .on_window_event(|window, event| {
