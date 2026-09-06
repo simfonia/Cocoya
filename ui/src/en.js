@@ -36,6 +36,13 @@
     "COLOUR_MCU_CAR_SENSOR": "#b1b100",
     "COLOUR_MCU_CAR_BUTTON": "#0c8b03",
 
+    "COLOUR_SPIKE": "#d28303",
+    "COLOUR_SPIKE_MOTOR": "#ee5b56",
+    "COLOUR_SPIKE_MUSIC": "#de57ad",
+    "COLOUR_SPIKE_LED": "#544eca",
+    "COLOUR_SPIKE_SENSOR": "#b1b100",
+    "COLOUR_SPIKE_BUTTON": "#0c8b03",
+
     // Category Names
     "CAT_SEARCH": "Search",
     "CAT_STRUCTURE": "Structure",
@@ -61,6 +68,13 @@
     "CAT_MCU_CAMERA": "AI Camera",
     "CAT_HUSKYLENS": "HuskyLens",
     "CAT_MCU_CAR": "πCar / Motor",
+    "CAT_SPIKE": "Lego SPIKE Prime",
+    "CAT_SPIKE_INIT": "Init",
+    "CAT_SPIKE_MOTOR": "Motors",
+    "CAT_SPIKE_COLOR": "Color Sensor",
+    "CAT_SPIKE_DISTANCE": "Distance Sensor",
+    "CAT_SPIKE_FORCE": "Force Sensor",
+    "CAT_SPIKE_HUB": "Hub Built-in",
 
     // Types Group Labels
     "TYPE_LBL_DEF": "Definitions",

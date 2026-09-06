@@ -41,7 +41,17 @@
     "COLOUR_MCU_CAR_LED": "#544eca",
     "COLOUR_MCU_CAR_SENSOR": "#b1b100",
     "COLOUR_MCU_CAR_BUTTON": "#0c8b03",
-    
+
+    "COLOUR_SPIKE": "#d28303",
+    "COLOUR_SPIKE_MOTOR": "#ee5b56",
+    "COLOUR_SPIKE_MUSIC": "#de57ad",
+    "COLOUR_SPIKE_LED": "#544eca",
+    "COLOUR_SPIKE_SENSOR_COLOR": "#b1b100",
+    "COLOUR_SPIKE_SENSOR_DISTANCE": "#014b70",
+    "COLOUR_SPIKE_SENSOR_FORCE": "#712000",
+    "COLOUR_SPIKE_SENSOR_IMU": "#ac00a9",
+    "COLOUR_SPIKE_BUTTON": "#0c8b03",
+
     // 分類名稱 (核心管理)
     "CAT_SEARCH": "搜尋積木",
     "CAT_STRUCTURE": "Structure",
@@ -67,6 +77,13 @@
     "CAT_MCU_CAMERA": "AI 相機",
     "CAT_HUSKYLENS": "HuskyLens",
     "CAT_MCU_CAR": "πCar 小車",
+    "CAT_SPIKE": "Lego SPIKE Prime",
+    "CAT_SPIKE_INIT": "初始化",
+    "CAT_SPIKE_MOTOR": "馬達控制",
+    "CAT_SPIKE_COLOR": "顏色感測器",
+    "CAT_SPIKE_DISTANCE": "距離感測器",
+    "CAT_SPIKE_FORCE": "力道感測器",
+    "CAT_SPIKE_HUB": "Hub 內建",
 
     // Types 分組標籤
     "TYPE_LBL_DEF": "建立資料結構",

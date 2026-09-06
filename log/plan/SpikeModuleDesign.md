@@ -54,7 +54,7 @@ resources/deploy/
 
 #### 初始化
 - `spike_init_hub` - 初始化 Hub
-- `spike_motor_init` - 初始化馬達（端口 A-F，Large/Medium）
+- `spike_motor_init` - 初始化馬達（接口 A-F，Large/Medium）
 - `spike_color_init` - 初始化顏色感測器
 - `spike_distance_init` - 初始化距離感測器
 - `spike_force_init` - 初始化力道感測器

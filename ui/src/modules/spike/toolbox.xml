@@ -1,0 +1,99 @@
+<category name="%{BKY_CAT_SPIKE}" colour="%{BKY_COLOUR_SPIKE}">
+    <!-- 初始化 -->
+    <category name="%{BKY_CAT_SPIKE_INIT}" colour="%{BKY_COLOUR_SPIKE}">
+        <block type="spike_init_hub"></block>
+        <block type="spike_motor_init">
+            <field name="PORT">A</field>
+            <field name="TYPE">Large</field>
+        </block>
+        <block type="spike_color_init">
+            <field name="PORT">B</field>
+        </block>
+        <block type="spike_distance_init">
+            <field name="PORT">C</field>
+        </block>
+        <block type="spike_force_init">
+            <field name="PORT">D</field>
+        </block>
+    </category>
+
+    <!-- 馬達控制 -->
+    <category name="%{BKY_CAT_SPIKE_MOTOR}" colour="%{BKY_COLOUR_SPIKE_MOTOR}">
+        <block type="spike_motor_run">
+            <field name="PORT">A</field>
+            <field name="SPEED">500</field>
+        </block>
+        <block type="spike_motor_run_angle">
+            <field name="PORT">A</field>
+            <field name="SPEED">500</field>
+            <field name="ANGLE">360</field>
+        </block>
+        <block type="spike_motor_run_target">
+            <field name="PORT">A</field>
+            <field name="SPEED">500</field>
+            <field name="TARGET">90</field>
+        </block>
+        <block type="spike_motor_stop">
+            <field name="PORT">A</field>
+            <field name="STOP_TYPE">COAST</field>
+        </block>
+        <block type="spike_motor_angle">
+            <field name="PORT">A</field>
+        </block>
+    </category>
+
+    <!-- 顏色感測器 -->
+    <category name="%{BKY_CAT_SPIKE_COLOR}" colour="%{BKY_COLOUR_SPIKE_SENSOR_COLOR}">
+        <block type="spike_color_detect">
+            <field name="PORT">B</field>
+        </block>
+        <block type="spike_color_reflection">
+            <field name="PORT">B</field>
+        </block>
+        <block type="spike_color_ambient">
+            <field name="PORT">B</field>
+        </block>
+    </category>
+
+    <!-- 距離感測器 -->
+    <category name="%{BKY_CAT_SPIKE_DISTANCE}" colour="%{BKY_COLOUR_SPIKE_SENSOR_DISTANCE}">
+        <block type="spike_distance_get">
+            <field name="PORT">C</field>
+        </block>
+    </category>
+
+    <!-- 力道感測器 -->
+    <category name="%{BKY_CAT_SPIKE_FORCE}" colour="%{BKY_COLOUR_SPIKE_SENSOR_FORCE}">
+        <block type="spike_force_pressed">
+            <field name="PORT">D</field>
+        </block>
+        <block type="spike_force_force">
+            <field name="PORT">D</field>
+        </block>
+    </category>
+
+    <!-- Hub 內建 -->
+    <category name="%{BKY_CAT_SPIKE_HUB}" colour="%{BKY_COLOUR_SPIKE}">
+        <block type="spike_button_pressed">
+            <field name="BUTTON">LEFT</field>
+        </block>
+        <block type="spike_wait_button">
+            <field name="BUTTON">LEFT</field>
+        </block>
+        <block type="spike_imu_tilt">
+            <field name="AXIS">TILT_X</field>
+        </block>
+        <block type="spike_imu_up"></block>
+        <block type="spike_display_text">
+            <field name="TEXT">Hello!</field>
+        </block>
+        <block type="spike_display_clear"></block>
+        <block type="spike_play_note">
+            <field name="FREQUENCY">440</field>
+            <field name="DURATION">500</field>
+        </block>
+        <block type="spike_play_beep">
+            <field name="DURATION">500</field>
+        </block>
+    </category>
+</category>

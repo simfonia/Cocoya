@@ -66,7 +66,7 @@ Cocoya 目前若「未先存檔專案（無 currentFilePath / 未開工作區）
 | `ui/src/bridge/*` | capabilities 增加 `isAnchored` / `projectRoot` |
 | `src-tauri/src/commands/app.rs`（或新增） | `get_project_anchor` 指令回傳錨定狀態 |
 | `src-tauri/src/commands/file.rs` | 確認 `force_examples` 前端硬存時有傳（一致性） |
-| `src-tauri/src/lib.rs` | `create_window` 產生的視窗初始狀態（未錨定 → 前端口) |
+| `src-tauri/src/lib.rs` | `create_window` 產生的視窗初始狀態（未錨定 → 前接口) |
 | `ui/src/modules/*/i18n/*` | Startup Home 文案 |
 
 ## 里程碑
