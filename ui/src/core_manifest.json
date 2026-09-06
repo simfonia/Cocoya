@@ -20,6 +20,7 @@
         { "id": "hardware", "name": "Hardware", "platforms": ["MicroPython"], "group": "hardware" },
         { "id": "mcu_camera", "name": "MCU Camera", "platforms": ["MicroPython"], "group": "hardware" },
         { "id": "mcu_huskylens", "name": "HuskyLens", "platforms": ["MicroPython"], "group": "hardware" },
-        { "id": "mcu_car", "name": "πCar", "platforms": ["MicroPython"], "group": "hardware" }
+        { "id": "mcu_car", "name": "πCar", "platforms": ["MicroPython"], "group": "hardware" },
+        { "id": "spike", "name": "Lego SPIKE", "platforms": ["MicroPython"], "group": "hardware" }
     ]
 }

@@ -179,6 +179,18 @@
 - **Phase 4 進階功能**：彩色積木、完整範例檔
 - 備註：使用 Pybricks 第三方韌體（API 直覺、適合初學者）；Toolbox 使用 Blockly 巢狀 category 實現多層分類
 
+### [2026-09-05] Lego SPIKE 多層分類實驗（最小可行模組）
+- [x] 建立 `ui/src/modules/spike/` 目錄結構（blocks/generators/toolbox/i18n）
+- [x] 實作 `toolbox.xml`：外層 category 包住 7 個子 category（初始化/馬達/顏色/距離/力道/Hub/工具）
+- [x] 實作 `spike_blocks.js`：22 個積木定義（完整 Phase 1-3 範圍）
+- [x] 實作 `spike_generators.js`：22 個 Python 產生器（Pybricks API 風格）
+- [x] 建立 `i18n/zh-hant.js` + `i18n/en.js`：完整雙語文案
+- [x] 顏色 SSOT：`zh-hant.js`/`en.js` 加入 `COLOUR_SPIKE: "#FF6680"`
+- [x] 分類名稱：`zh-hant.js`/`en.js` 加入 `CAT_SPIKE` + 7 個子分類
+- [x] `core_manifest.json` 註冊 spike 模組（group: hardware, platforms: MicroPython）
+- [x] 自動化驗證：node --check ×4 + vite build 全綠
+- [ ] 實機驗證：切換 MicroPython 模式 → 確認 toolbox 顯示「Lego SPIKE Prime」外層分類 → 點擊展開顯示 7 個子分類 → 子分類可展開顯示積木
+
 ### [2026-09-02] Tauri Release 訓練範例三案修復（cp950 亂碼 / 模板路徑 / examples 唯讀）
 - [x] A 編碼：PYTHONIOENCODING/PYTHONUTF8 注入 + 模板 reconfigure + open encoding='utf-8'
 - [x] B 模板路徑權威化：env COCOYA_TRAIN_TEMPLATES 注入 + train_model() 候選 0

@@ -14,7 +14,7 @@ import platform
 # --- 語系字典 ---
 MESSAGES = {
     "zh-hant": {
-        "title": "--- Cocoya MicroPython 部署工具 ---",
+        "title": "--- Cocoya 部署工具 ---",
         "connect_serial": "正在透過序列埠連接 %s...",
         "uploading": "\n>>> 正在透過序列埠推送程式碼... <<<",
         "repl_failed": "無法進入 Raw REPL 模式。請確認韌體為 MicroPython 並嘗試 Reset。",
@@ -26,7 +26,7 @@ MESSAGES = {
         "stopped": "\n--- 監控已停止 ---",
     },
     "en": {
-        "title": "--- Cocoya MicroPython Deployer ---",
+        "title": "--- Cocoya Deployer ---",
         "connect_serial": "Connecting to %s via Serial...",
         "uploading": "\n>>> Pushing code via Raw REPL... <<<",
         "repl_failed": "Failed to enter Raw REPL. Please ensure MicroPython is running.",

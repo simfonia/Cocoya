@@ -15,6 +15,44 @@ pub struct SerialPortResult {
     pub pid: Option<String>,
 }
 
+/// 根據 VID/PID 判斷板子類型（對應 deploy_mcu.py 的 board-type 參數）
+/// 返回 "micropython", "pybricks", 或 "auto"（未知時 fallback）
+fn detect_board_type(vid: Option<&str>, pid: Option<&str>) -> String {
+    match (vid, pid) {
+        // Pybricks 生態系（LEGO SPIKE/Essential/Technic/BOOST/City/Robot Inventor）
+        (Some("0694"), _) => "pybricks".to_string(),  // SPIKE Prime
+        (Some("0695"), _) => "pybricks".to_string(),  // SPIKE Essential
+        (Some("0696"), _) => "pybricks".to_string(),  // Robot Inventor
+        (Some("0693"), _) => "pybricks".to_string(),  // Technic Hub
+        (Some("0697"), _) => "pybricks".to_string(),  // BOOST Move Hub
+        (Some("0698"), _) => "pybricks".to_string(),  // City Hub
+        // MicroPython 生態系
+        (Some("2E8A"), _) => "micropython".to_string(),  // Raspberry Pi (Pico / Maker Pi)
+        (Some("303A"), _) => "micropython".to_string(),  // Espressif ESP32-S3 (XIAO)
+        (Some("0D28"), _) => "micropython".to_string(),  // Micro:bit V1/V2
+        (Some("10C4"), _) => "micropython".to_string(),  // Silicon Labs CP210x
+        (Some("1A86"), _) => "micropython".to_string(),  // CH340 (Arduino)
+        // 未知：交給 deploy_mcu.py 的 auto-detect
+        _ => "auto".to_string(),
+    }
+}
+
+/// 根據埠名查找對應的 VID/PID 並判斷板子類型
+fn detect_board_type_by_port(port: &str) -> String {
+    if let Ok(ports) = serialport::available_ports() {
+        for p in ports {
+            if p.port_name == port {
+                if let serialport::SerialPortType::UsbPort(info) = p.port_type {
+                    let vid_hex = format!("{:04X}", info.vid);
+                    let pid_hex = format!("{:04X}", info.pid);
+                    return detect_board_type(Some(&vid_hex), Some(&pid_hex));
+                }
+            }
+        }
+    }
+    "auto".to_string()
+}
+
 #[tauri::command]
 pub fn get_serial_ports() -> Result<Vec<SerialPortResult>, String> {
     let ports = serialport::available_ports().map_err(|e| e.to_string())?;
@@ -37,7 +75,15 @@ pub fn get_serial_ports() -> Result<Vec<SerialPortResult>, String> {
             let hw_name = match (vid_hex.as_str(), pid_hex.as_str()) {
                 ("2E8A", "0005") => "Maker Pi RP2040",
                 ("2E8A", "0003") => "Raspberry Pi Pico",
+                ("2E8A", _) => "Raspberry Pi (Other)",
                 ("303A", _) => "XIAO / ESP32-S3",
+                ("0D28", "0204") => "Micro:bit V1/V2",
+                ("0694", _) => "LEGO SPIKE Prime",
+                ("0695", _) => "LEGO SPIKE Essential",
+                ("0696", _) => "LEGO Robot Inventor",
+                ("0693", _) => "LEGO Technic Hub",
+                ("0697", _) => "LEGO BOOST",
+                ("0698", _) => "LEGO City Hub",
                 ("10C4", "EA60") => "Silicon Labs CP210x",
                 ("1A86", "7523") => "CH340 (Arduino)",
                 _ => "USB Serial",
@@ -91,6 +137,9 @@ pub async fn deploy_mcu(
 
     let deployer_path = get_deployer_path(&handle);
 
+    // 根據 VID/PID 偵測板子類型
+    let board_type = detect_board_type_by_port(&port);
+
     let mut cmd = Command::new(&python_path);
     cmd.arg("-u")
         .arg(&deployer_path)
@@ -98,8 +147,10 @@ pub async fn deploy_mcu(
         .arg(&script_path)
         .arg("--lang")
         .arg(&lang)
-        .arg("--tauri");
-    
+        .arg("--tauri")
+        .arg("--board-type")
+        .arg(&board_type);
+
     if serial_upload_only {
         cmd.arg("--no-monitor");
     }
