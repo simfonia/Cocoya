@@ -185,6 +185,9 @@ export class CocoyaManager {
                     await this.stopAllCocoyaTerminals();
                     this.serialOps.handleOpenSerialMonitor(message);
                     break;
+                case 'toggleSerialMonitor':
+                    this.serialOps.handleToggleSerialMonitor(message);
+                    break;
                 case 'refreshSerialPorts':
                     await this.serialOps.handleRefreshSerialPorts();
                     break;

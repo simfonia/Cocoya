@@ -184,8 +184,11 @@ pub async fn stop_python(window: Window, state: State<'_, AppState>) -> Result<(
             let _ = child.kill();
         }
     }
-    // 一併釋放該視窗的串列埠監看（若有），避免與執行/部署資源重疊
-    let _ = crate::commands::mcu::stop_serial_monitor(state, window.label().to_string());
+    // 一併釋放該視窗的串列埠監看（若有），避免與執行/部署資源重疊；
+    // 並清除 serial_wants：按「停止」是明確終止意圖，重新聚焦不應自動重開監看
+    let own_label = window.label().to_string();
+    let _ = crate::commands::mcu::stop_serial_monitor(state.clone(), own_label.clone());
+    state.serial_wants.lock().unwrap().remove(&own_label);
     Ok(())
 }
 

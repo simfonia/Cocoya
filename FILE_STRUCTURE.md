@@ -121,6 +121,11 @@ C:\Workspace\cocoya\
 │   │   │   │   └── i18n/
 │   │   │   │       ├── zh-hant.js          # 繁體中文 (含 AI_ANGLE_* [NEW])
 │   │   │   │       └── en.js               # English (含 AI_ANGLE_* [NEW])
+│   │   │   ├── hardware/    # MCU 硬體控制積木模組（板子感知腳位）
+│   │   │   │   ├── board_defs.js         # 開發板資訊表 SSOT（vidPid + pins + gpioMap；新增板子只改此檔，loadScript 載入）
+│   │   │   │   ├── hardware_blocks.js    # 積木定義 + CocoyaBoard 登錄器（mcu_board_init 宣告積木、動態 mcu_pin_shadow）
+│   │   │   │   ├── hardware_generators.js # Python 產生器（cocoyaResolvePinNum 權威映射 + 未知腳位錯誤註解）
+│   │   │   ├── dataset_manager/ # Dataset Spec 與資料集管理器應用層模組
 │   │   │   └── dataset_manager/ # Dataset Spec 與資料集管理器應用層模組
 │   │   │       ├── core/      # 純資料規則層，禁止依賴 DOM、Bridge、window 與 i18n
 │   │   │       │   ├── labelMap.js # label map 清理、建立與下一個類別 id

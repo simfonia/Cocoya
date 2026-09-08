@@ -1,8 +1,9 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
-  <variables>
+<variables>
     <variable id="var_cmd">cmd</variable>
     <variable id="var_angle">angle</variable>
   </variables>
+  <block type="mcu_board_init" id="board_init_0d6fd144ab" x="10" y="-70"><field name="BOARD">maker-pi</field></block>
   <block type="py_definition_zone" id="mcu_def_root" deletable="false" x="10" y="10">
     <statement name="DEFS">
       <block type="py_io_serial_init" id="mcu_ser_init">

@@ -170,6 +170,33 @@ export class BridgeTauri extends BaseBridge {
                     }
                     break;
 
+                case 'toggleSerialMonitor': {
+                    // 序列監看鈕 toggle：後端已啟用中 → 停止；否則對指定埠啟動
+                    try {
+                        if (!data.serialPort) break;
+                        const monPython = localStorage.getItem('pythonPath') || 'python';
+                        const monLang = (window.Blockly && Blockly.Msg['BKY_LANG']) || 'zh-hant';
+                        const res = await this.tauriInvoke('toggle_serial_monitor', {
+                            port: data.serialPort,
+                            pythonPath: monPython,
+                            lang: monLang
+                        });
+                        const opened = res === 'opened';
+                        if (window.CocoyaUI) {
+                            window.CocoyaUI.setSerialMonitorActive(opened);
+                            window.CocoyaUI.appendTerminal(
+                                opened ? `--- Opening Monitor: ${data.serialPort} ---` : '--- Monitor Stopped ---',
+                                'info'
+                            );
+                            if (opened) window.CocoyaUI.toggleTerminal(true);
+                        }
+                    } catch (e) {
+                        console.error('[Bridge] Failed to toggle monitor:', e);
+                        this.alert('Failed to toggle monitor: ' + e);
+                    }
+                    break;
+                }
+
                 case 'refreshSerialPorts':
                 case 'getSerialPorts':
                     result = await this.tauriInvoke('get_serial_ports');
@@ -949,7 +976,14 @@ export class BridgeTauri extends BaseBridge {
                     this._firstLogReceived = true;
                     if (window.CocoyaUI) window.CocoyaUI.hideLoadingModal();
                 }
-                if (window.CocoyaUI) window.CocoyaUI.appendTerminal(event.payload, 'out');
+                if (window.CocoyaUI) {
+                    // 等待連線的點點（"."）以 inline 模式附加，避免每點獨立一行
+                    if (typeof event.payload === 'string' && event.payload.trim() === '.') {
+                        window.CocoyaUI.appendTerminal('.', 'out', true);
+                    } else {
+                        window.CocoyaUI.appendTerminal(event.payload, 'out');
+                    }
+                }
 
                 // 解析訓練結果 RESULT: {...} 格式（由 classifier_train.py 輸出）
                 // 注意：輸出可能以 \n 開頭，需用 includes + indexOf 定位
@@ -970,6 +1004,17 @@ export class BridgeTauri extends BaseBridge {
                 this._firstLogReceived = true;
                 if (window.CocoyaUI) window.CocoyaUI.hideLoadingModal();
                 if (window.CocoyaUI) window.CocoyaUI.appendTerminal(event.payload, 'err');
+            });
+
+            // 序列埠熱插拔輪詢：埠清單變化（全域事實）→ 走既有 serialPortsData 流程
+            // （updateSerialPorts 會自動選埠/切板；偵測到埠即顯示，無需手動按偵測）
+            await appWindow.listen('serial-ports-changed', (event) => {
+                this._dispatchToFrontend({ command: 'serialPortsData', ports: event.payload || [] });
+            });
+
+            // 序列監看行程結束（被停止/自行退出）→ 熄滅監看鈕狀態
+            await appWindow.listen('serial-monitor-stopped', () => {
+                if (window.CocoyaUI) window.CocoyaUI.setSerialMonitorActive(false);
             });
 
             // 監聽 sidecar 事件（如 cameraStatus 變化）

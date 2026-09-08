@@ -10,15 +10,12 @@
      * 初始化終端機相關事件監聽
      */
     UI.initTerminal = function() {
-        const terminalToggleBtn = document.getElementById('btn-terminal');
         const terminalCloseBtn = document.getElementById('btn-close-terminal');
         const terminalClearBtn = document.getElementById('btn-clear-terminal');
         const terminalPauseBtn = document.getElementById('btn-pause-terminal');
 
-        // 終端機切換按鈕
-        if (terminalToggleBtn) {
-            terminalToggleBtn.onclick = () => this.toggleTerminal();
-        }
+        // （原 btn-terminal 開/關終端機綁定已移除：toolbar 改為「序列監看」按鈕，
+        //  終端機展開/收合由下方三角箭頭 terminal-toggle 負責）
 
         // 關閉按鈕
         if (terminalCloseBtn) {

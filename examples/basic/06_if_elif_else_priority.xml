@@ -1,5 +1,6 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
-  <comment id="]n,h|XbPgy6IuA_t0R:I" x="10" y="-50" w="402.46160888671875" h="137.5384521484375">if-elif-else（單選）— 前面的條件會攔截後面！
+  <block type="mcu_board_init" id="board_init_56f8cb4e3b" x="10" y="-70"><field name="BOARD">maker-pi</field></block>
+<comment id="]n,h|XbPgy6IuA_t0R:I" x="10" y="-50" w="402.46160888671875" h="137.5384521484375">if-elif-else（單選）— 前面的條件會攔截後面！
 就像單選題：選了 A 就不會再看 B/C/D
 注意：同時按兩個按鈕時，只會執行第一個符合的！
   </comment>

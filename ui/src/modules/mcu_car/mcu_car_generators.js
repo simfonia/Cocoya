@@ -1,6 +1,25 @@
 // mcu_car_generators.js
 // Optimized for MicroPython (Machine module)
 
+/**
+ * 共用腳位解析（嚴格模式）：boardRef（board.GPx）→ GPIO 號碼。
+ * 只走 CocoyaBoard.resolveGpio（board_defs.json gpioMap 權威映射），
+ * 解析失敗回 null，由各 generator 產生明確錯誤註解。
+ */
+function mcuCarResolvePin(pinCode) {
+  if (typeof CocoyaBoard !== 'undefined' && CocoyaBoard.resolveGpio) {
+    var num = CocoyaBoard.resolveGpio(CocoyaBoard.getCurrent(), String(pinCode));
+    if (num !== null && num !== undefined) return String(num);
+  }
+  return null;
+}
+
+/** 產生「未知腳位」的錯誤註解代碼（取代默默產生壞碼） */
+function mcuCarPinError(pinCode) {
+  return '# [Cocoya] 無法解析腳位: ' + String(pinCode).replace(/['"]/g, '') +
+         ' （請在工具列選擇開發板）\npass\n';
+}
+
 Blockly.Python.forBlock['mcu_car_motor'] = function(block, generator) {
   generator.definitions_['import_machine'] = 'import machine';
 
@@ -124,7 +143,8 @@ Blockly.Python.forBlock['mcu_car_servo'] = function(block, generator) {
   generator.definitions_['class_picar_servo'] = SERVO_CLASS_INJECT;
 
   var pin_str = block.getFieldValue('PIN');
-  var pin_num = pin_str.replace('board.GP', '');
+  var pin_num = mcuCarResolvePin(pin_str);
+  if (pin_num === null) return mcuCarPinError(pin_str);
   var type = block.getFieldValue('TYPE');
   var angle = generator.valueToCode(block, 'ANGLE', Blockly.Python.ORDER_ATOMIC) || '90';
 
@@ -148,7 +168,8 @@ Blockly.Python.forBlock['mcu_car_servo_setup'] = function(block, generator) {
   generator.definitions_['class_picar_servo'] = SERVO_CLASS_INJECT;
   
   var hand_str = block.getFieldValue('HAND');
-  var pin_num = hand_str.replace('board.GP', '');
+  var pin_num = mcuCarResolvePin(hand_str);
+  if (pin_num === null) return mcuCarPinError(hand_str);
   var min = block.getFieldValue('MIN') || '460';
   var max = block.getFieldValue('MAX') || '2400';
   var max_angle = block.getFieldValue('MAX_ANGLE') || '180';
@@ -263,8 +284,9 @@ class UltrasonicHelper:
 
   var trig_str = block.getFieldValue('TRIG');
   var echo_str = block.getFieldValue('ECHO');
-  var trig_num = trig_str.replace('board.GP', '');
-  var echo_num = echo_str.replace('board.GP', '');
+  var trig_num = mcuCarResolvePin(trig_str);
+  var echo_num = mcuCarResolvePin(echo_str);
+  if (trig_num === null || echo_num === null) return mcuCarPinError(trig_num === null ? trig_str : echo_str);
   var instance_name = 'ultrasonic_' + trig_num + '_' + echo_num;
 
   generator.definitions_['init_' + instance_name] = `
@@ -280,7 +302,8 @@ Blockly.Python.forBlock['mcu_car_check_color'] = function(block, generator) {
   generator.definitions_['import_time'] = 'import time';
 
   var pin_str = block.getFieldValue('PIN');
-  var pin_num = pin_str.replace('board.GP', '');
+  var pin_num = mcuCarResolvePin(pin_str);
+  if (pin_num === null) return [mcuCarPinError(pin_str) + '0', 6];
   var irVar = 'ir_d_' + pin_num;
 
   generator.definitions_['init_' + irVar] = 
@@ -296,7 +319,8 @@ Blockly.Python.forBlock['mcu_car_check_gray'] = function(block, generator) {
   generator.definitions_['import_time'] = 'import time';
 
   var pin_str = block.getFieldValue('PIN');
-  var pin_num = pin_str.replace('board.GP', '');
+  var pin_num = mcuCarResolvePin(pin_str);
+  if (pin_num === null) return [mcuCarPinError(pin_str) + '0', 6];
   var irVar = 'ir_a_' + pin_num;
 
   generator.definitions_['init_' + irVar] = 
@@ -441,7 +465,8 @@ Blockly.Python.forBlock['mcu_car_wait_start'] = function(block, generator) {
   generator.definitions_['import_time'] = 'import time';
 
   var pin_str = block.getFieldValue('PIN');
-  var pin_num = pin_str.replace('board.GP', '');
+  var pin_num = mcuCarResolvePin(pin_str);
+  if (pin_num === null) return mcuCarPinError(pin_str);
 
   generator.definitions_['init_btn_' + pin_num] = `
 if 'btn_${pin_num}' not in globals():
@@ -472,7 +497,8 @@ _LED_MAP[_p_id].value(1 if ${state} else 0)
 Blockly.Python.forBlock['mcu_car_button_pressed'] = function(block, generator) {
   generator.definitions_['import_machine'] = 'import machine';
   var pin_str = block.getFieldValue('PIN');
-  var pin_num = pin_str.replace('board.GP', '');
+  var pin_num = mcuCarResolvePin(pin_str);
+  if (pin_num === null) return mcuCarPinError(pin_str);
 
   generator.definitions_['init_btn_' + pin_num] = `
 if 'btn_${pin_num}' not in globals():

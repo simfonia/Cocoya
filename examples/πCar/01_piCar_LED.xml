@@ -1,7 +1,8 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
-  <variables>
+<variables>
     <variable id=";o1_WMEGa/:3|glP7#yW">i</variable>
   </variables>
+  <block type="mcu_board_init" id="board_init_c213cf1c59" x="10" y="-70"><field name="BOARD">maker-pi</field></block>
   <block type="py_definition_zone" id="p%o^qm1mE*.CEB!5%_(W" x="10" y="10"></block>
   <block type="mcu_main" id="=NJ]emz+oNaL~f(Z,1Hj" x="10" y="90">
     <statement name="DO">

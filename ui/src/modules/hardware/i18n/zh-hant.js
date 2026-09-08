@@ -1,6 +1,8 @@
 (function (Blockly) {
   Object.assign(Blockly.Msg, {
     "HW_SET_LED": "內建 LED %1",
+    "HW_BOARD_INIT": "初始化開發板 %1",
+    "HW_BOARD_INIT_TOOLTIP": "宣告本專案使用的開發板，工作區所有腳位積木以此為準。上傳時會與實際連接的板子比對。",
     "HW_SET_LED_ON": "開啟",
     "HW_SET_LED_OFF": "關閉",
     "HW_SET_LED_TOOLTIP": "控制開發板上的內建 LED 燈。",

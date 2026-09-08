@@ -1,11 +1,12 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
-  <variables>
+<variables>
     <variable id="v_line">thetaL0</variable>
     <variable id="v_percent_val">thetaR0</variable>
     <variable id="[9c-_WOYIH$7[?+b5g,d">rotate</variable>
     <variable id="Zf%k|wx$.N{]HMx:gKI!">thetaL1</variable>
     <variable id="ep*(S7)de0eTRl]XB+V;">thetaR1</variable>
   </variables>
+  <block type="mcu_board_init" id="board_init_ec7e833a55" x="10" y="-70"><field name="BOARD">maker-pi</field></block>
   <comment id="h2J=clurjJ`m)C5XPr=(" x="10" y="-170" w="621" h="165">使用Cytron maker pi RP2040 控制Geekservo 270
 先組裝一個小機器人，面對自己，
 以自己的方向來看，左手 servo 接GP12，右手 servo 接GP13。

@@ -219,6 +219,16 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             dialog.remove();
             if (onConfirm) onConfirm(this.sshConfig);
         };
+
+        // 輸入框按 Enter 直接触發「連線」（UX：密碼框輸入完不必再碰滑鼠）
+        dialog.querySelectorAll('input').forEach((inp) => {
+            inp.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    dialog.querySelector('#ssh-dialog-confirm').click();
+                }
+            });
+        });
     },
 
     ensureSshConfig: function(onConfirm, onCancel) {

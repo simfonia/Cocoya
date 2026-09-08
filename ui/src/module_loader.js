@@ -34,10 +34,19 @@ async function fetchXMLViaHost(moduleId) {
     });
 }
 
-async function loadModule(moduleId, mediaUri, lang) {
+async function loadModule(module, mediaUri, lang) {
+    const moduleId = module.id;
     try {
         const basePath = `${mediaUri}/modules`;
-        
+
+        // 0. 載入模組選用的 board_defs.js（開發板資訊 SSOT；僅 manifest 標記 boardDefs 的模組載入）
+        if (module.boardDefs && typeof window.CocoyaBoardDefs === 'undefined') {
+            window.CocoyaBoardDefs = {};
+            try {
+                await CocoyaLoader.loadScript(`${basePath}/${moduleId}/board_defs.js`);
+            } catch (e) { console.warn(`[Loader] board_defs.js not found for ${moduleId}`); }
+        }
+
         // 1. 先載入語系檔 (如果有的話)
         if (lang) {
             try {
@@ -80,7 +89,7 @@ window.CocoyaLoader = {
                 return null;
             }
             
-            const xml = await loadModule(module.id, mediaUri, lang);
+            const xml = await loadModule(module, mediaUri, lang);
             return xml ? { id: module.id, xml: xml } : null;
         });
 

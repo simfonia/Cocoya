@@ -451,7 +451,8 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
     /**
      * 產生目標平台的新專案初始 XML（靜態模板，結構對應 createDefaultBlocks）：
      * - PC：py_definition_zone + py_main
-     * - MicroPython：py_definition_zone + mcu_main(DO) > py_loop_while(CONDITION) > py_logic_boolean(True)
+     * - MicroPython：mcu_board_init(帽子積木，最上方) + py_definition_zone + mcu_main(DO) > py_loop_while(CONDITION) > py_logic_boolean(True)
+     *   （座標直接寫在模板中，避免初始積木群重疊）
      * @param {string} platform PC / MicroPython
      */
     _getInitialProjectXml: function(platform) {
@@ -459,8 +460,9 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         let body;
         if (platform === 'MicroPython') {
             body =
-                '  <block type="py_definition_zone" x="100" y="20"></block>\n' +
-                '  <block type="mcu_main" x="100" y="200">\n' +
+                '  <block type="mcu_board_init" x="100" y="20"></block>\n' +
+                '  <block type="py_definition_zone" x="100" y="130"></block>\n' +
+                '  <block type="mcu_main" x="100" y="360">\n' +
                 '    <statement name="DO">\n' +
                 '      <block type="py_loop_while">\n' +
                 '        <value name="CONDITION">\n' +

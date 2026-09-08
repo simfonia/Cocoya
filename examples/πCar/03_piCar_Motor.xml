@@ -1,5 +1,6 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
-  <block type="py_definition_zone" id="p%o^qm1mE*.CEB!5%_(W" x="10" y="10"></block>
+  <block type="mcu_board_init" id="board_init_b329df899a" x="10" y="-70"><field name="BOARD">maker-pi</field></block>
+<block type="py_definition_zone" id="p%o^qm1mE*.CEB!5%_(W" x="10" y="10"></block>
   <block type="mcu_main" id="=NJ]emz+oNaL~f(Z,1Hj" x="10" y="90">
     <statement name="DO">
       <block type="mcu_car_in_position" id="[MnO/-e916%Wv/P:}h2n">

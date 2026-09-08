@@ -1,7 +1,8 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
-  <variables>
+<variables>
     <variable id="i_var">i</variable>
   </variables>
+  <block type="mcu_board_init" id="board_init_aacb7a7e4b" x="10" y="-70"><field name="BOARD">maker-pi</field></block>
   <comment id="0?T{HRguz26N%76!VcPJ" x="10" y="-30" w="287.8053741455078" h="119.69232177734375">for 迴圈入門 — LED 跑馬燈
 for 迴圈讓變數 i 從 start 跑到 stop-1
 每次跑一步，執行 DO 裡面的程式

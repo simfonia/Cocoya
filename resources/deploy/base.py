@@ -101,10 +101,15 @@ class BaseDeployer:
                     data_raw = ser.read(ser.in_waiting)
                     data_str = data_raw.decode("utf-8", errors="ignore")
                     if banner_pending:
-                        if time.time() - banner_timer > 2.0:
-                            print(welcome_msg); banner_pending = False
-                        continue
-                    sys.stdout.write(data_str); sys.stdout.flush()
+                        # 對齊重構前行為：pending 期間仍寫出收到的資料（不丟棄），
+                        # 待見到 soft reboot/>>> 或逾時 2 秒才補 welcome，避免吃掉程式開頭的 print()
+                        sys.stdout.write(data_str); sys.stdout.flush()
+                        if "soft reboot" in data_str or ">>>" in data_str or (time.time() - banner_timer > 2.0):
+                            if welcome_msg:
+                                print(welcome_msg)
+                            banner_pending = False
+                    else:
+                        sys.stdout.write(data_str); sys.stdout.flush()
             except KeyboardInterrupt:
                 print(get_msg("stopped", lang)); stop_event.set(); break
             except Exception as e:

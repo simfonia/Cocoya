@@ -11,9 +11,16 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         const root = document.getElementById('serial-selector');
         if (!root) return;
         const trigger = root.querySelector('.serial-dropdown-trigger');
-        const labelEl = root.querySelector('.serial-dropdown-label');
         const menu = root.querySelector('.serial-dropdown-menu');
         if (!trigger || !menu) return;
+
+        // 記錄埠 → boardId 對應（Tauri 由 Rust detect_board_id 提供；VSIX 由 serialOps.ts 推導）
+        root.__boardIdMap = {};
+        (ports || []).forEach(p => {
+            if (p && typeof p === 'object' && p.port && p.boardId) {
+                root.__boardIdMap[p.port] = p.boardId;
+            }
+        });
 
         const currentVal = root.getAttribute('data-value') || '';
 
@@ -30,22 +37,40 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         };
 
         if (!ports || ports.length === 0) {
-            root.setAttribute('data-value', '');
-            addItem('', '(No Port)');
+            if (currentVal) {
+                // 偵測不到任何埠時仍保留已選取的埠項目（避免下拉清單消失），
+                // 並維持 data-value 以支援上傳/監視；顯示用先前選取時的完整 label
+                const lastLabel = root.__lastLabel || currentVal;
+                addItem(currentVal, lastLabel);
+                root.setAttribute('data-value', currentVal);
+            } else {
+                root.setAttribute('data-value', '');
+                addItem('', '(No Port)');
+            }
         } else {
             ports.forEach(p => {
                 const portValue = typeof p === 'string' ? p : p.port;
                 const portLabel = typeof p === 'string' ? p : p.label;
                 addItem(portValue, portLabel);
             });
-            // 嘗試保留上次選取（若埠仍在）
-            if (currentVal && Array.from(menu.children).some(c => c.getAttribute('data-value') === currentVal)) {
+            const values = ports.map(p => (typeof p === 'string' ? p : p.port));
+            // 目前選取的埠已消失（拔線/換板）或尚未選取 → 自動選第一個偵測到的埠並切板
+            // （解決「拔掉 A 板插 B 板後仍卡舊埠、硬體不更新」的問題）
+            if (ports.length > 0 && (!currentVal || !values.includes(currentVal))) {
+                const first = ports[0];
+                const firstVal = typeof first === 'string' ? first : first.port;
+                const firstLabel = typeof first === 'string' ? first : first.label;
+                root.setAttribute('data-value', firstVal);
+                root.__lastLabel = firstLabel; // 記錄完整 label，供偵測不到時重現
+                this._applyBoardFromPort(root); // 自動切板（boardIdMap 已含該埠）
+            } else if (currentVal && values.includes(currentVal)) {
+                // 保留上次選取（埠仍在）
                 root.setAttribute('data-value', currentVal);
             }
         }
 
-        this._bindSerialDropdown(root, trigger, labelEl, menu);
-        this.setSerialPortLabel(root, labelEl);
+        this._bindSerialDropdown(root, trigger, menu);
+        this.setSerialPortLabel(root);
     },
 
     /** 從自繪 serial 下拉讀取目前選取的埠 */
@@ -55,24 +80,47 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         return root.getAttribute('data-value') || '';
     },
 
-    /** 設定 serial 下拉目前的選取值（data-value + label + active 樣式） */
-    setSerialPortLabel: function(root, labelEl) {
-        const currentVal = root.getAttribute('data-value') || '';
+    /** 設定 serial 下拉目前的選取值（data-value + label + active 樣式）
+     *  鐵壁版：直接寫 trigger.textContent，不依賴內部 span 是否可被 query 到，
+     *  且顯示文字不以 %{BKY_ 開頭，徹底避開 applyI18n 掃描重置。 */
+    setSerialPortLabel: function(root) {
+        const trigger = root.querySelector('.serial-dropdown-trigger');
         const menu = root.querySelector('.serial-dropdown-menu');
-        if (!labelEl) return;
+        if (!trigger) return;
+        const currentVal = root.getAttribute('data-value') || '';
+        let displayText = '';
         if (menu) {
             const active = Array.from(menu.children).find(c => c.getAttribute('data-value') === currentVal);
             Array.from(menu.children).forEach(c => c.classList.toggle('active', c === active));
-            labelEl.textContent = active ? active.textContent : (currentVal || '');
+            displayText = active ? active.textContent : (currentVal || root.__lastLabel || '');
+        } else {
+            displayText = currentVal || root.__lastLabel || '';
         }
-        if (currentVal && menu) {
-            const activeEl = Array.from(menu.children).find(c => c.getAttribute('data-value') === currentVal);
-            if (activeEl) root.setAttribute('title', activeEl.textContent);
+        trigger.textContent = displayText ? displayText + ' \u25BE' : '(No Port)';
+        if (displayText) root.setAttribute('title', displayText);
+    },
+
+    /** 根據目前選取的序列埠自動切換板子 */
+    _applyBoardFromPort: function(root) {
+        if (!window.CocoyaBoard || typeof window.CocoyaBoard.setCurrent !== 'function') return;
+        const port = root.getAttribute('data-value') || '';
+        const boardIdMap = root.__boardIdMap || {};
+        const boardId = boardIdMap[port] || '';
+        if (boardId) {
+            window.CocoyaBoard.setCurrent(boardId, 'port');
         }
     },
 
+    /** 序列監看鈕狀態（toggle 亮燈；由 bridge 收到結果/結束事件時呼叫） */
+    _serialMonitorActive: false,
+    setSerialMonitorActive: function(on) {
+        this._serialMonitorActive = !!on;
+        const btn = document.getElementById('btn-serial-monitor');
+        if (btn) btn.style.backgroundColor = on ? '#c8e6c9' : '';
+    },
+
     /** 綁定 serial 自繪下拉的開闔與點選 */
-    _bindSerialDropdown: function(root, trigger, labelEl, menu) {
+    _bindSerialDropdown: function(root, trigger, menu) {
         if (root.__serialBound) return;
         root.__serialBound = true;
 
@@ -91,7 +139,9 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             const val = item.getAttribute('data-value');
             if (val === '') return; // 忽略「無連接埠」
             root.setAttribute('data-value', val);
-            this.setSerialPortLabel(root, labelEl);
+            root.__lastLabel = item.textContent; // 記錄完整 label，供偵測不到時重現
+            this.setSerialPortLabel(root);
+            this._applyBoardFromPort(root);
             close();
         });
         document.addEventListener('click', () => close());

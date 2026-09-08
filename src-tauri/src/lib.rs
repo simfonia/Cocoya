@@ -34,6 +34,7 @@ pub fn run() {
             commands::get_serial_ports,
             commands::deploy_mcu,
             commands::open_serial_monitor,
+            commands::toggle_serial_monitor,
             commands::setup_stable_mode,
             commands::erase_filesystem,
             commands::auto_backup,
@@ -66,6 +67,35 @@ pub fn run() {
             commands::open_help,
             commands::set_window_focus
         ])
+        .setup(|app| {
+            // 序列埠熱插拔輪詢（全程序單一共用執行緒，多視窗共享一份 diff 快照）：
+            // 只列舉不開埠；有變化才逐一 emit_to 各視窗 serial-ports-changed（廣播全域事實，非視窗專屬資料）
+            let handle = app.handle().clone();
+            std::thread::spawn(move || {
+                let mut last: Vec<String> = Vec::new();
+                loop {
+                    std::thread::sleep(std::time::Duration::from_millis(1500));
+                    let ports = commands::mcu::list_serial_ports();
+                    let sig: Vec<String> = ports
+                        .iter()
+                        .map(|p| format!(
+                            "{}|{}|{}|{}",
+                            p.port,
+                            p.vid.clone().unwrap_or_default(),
+                            p.pid.clone().unwrap_or_default(),
+                            p.board_id
+                        ))
+                        .collect();
+                    if sig != last {
+                        last = sig;
+                        for w in handle.webview_windows().values() {
+                            let _ = w.emit_to(w.label(), "serial-ports-changed", ports.clone());
+                        }
+                    }
+                }
+            });
+            Ok(())
+        })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 let state: State<AppState> = window.state();
