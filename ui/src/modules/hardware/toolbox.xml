@@ -1,5 +1,7 @@
 <category name="%{BKY_CAT_HARDWARE}" colour="%{BKY_COLOUR_HARDWARE}">
-    <!-- 系統控制 (置頂) -->
+    <!-- 板子宣告 (置頂，工作區腳位 SSOT) -->
+    <block type="mcu_board_init" gap="12"></block>
+    <!-- 系統控制 -->
     <block type="mcu_stop_program" gap="12"></block>
     <block type="mcu_reset" gap="24"></block>
     

@@ -48,6 +48,7 @@
     ],
     "resources": {
       "../resources/deploy_mcu.py": "resources/deploy_mcu.py",
+      "../resources/deploy": "resources/deploy",
       "../ui/src/core_manifest.json": "resources/core_manifest.json",
       "../resources/firmware": "resources/firmware",
       "../resources/train_templates": "resources/train_templates",

@@ -17,7 +17,7 @@
         { "id": "ai_face", "name": "MediaPipe Face", "platforms": ["PC"], "group": "ai_vision" },
         { "id": "ai_pose", "name": "MediaPipe Pose", "platforms": ["PC"], "group": "ai_vision" },
         { "id": "ai_inference", "name": "AI Inference", "platforms": ["PC"], "group": "ai_inference" },
-        { "id": "hardware", "name": "Hardware", "platforms": ["MicroPython"], "group": "hardware" },
+        { "id": "hardware", "name": "Hardware", "platforms": ["MicroPython"], "group": "hardware", "boardDefs": true },
         { "id": "mcu_camera", "name": "MCU Camera", "platforms": ["MicroPython"], "group": "hardware" },
         { "id": "mcu_huskylens", "name": "HuskyLens", "platforms": ["MicroPython"], "group": "hardware" },
         { "id": "mcu_car", "name": "πCar", "platforms": ["MicroPython"], "group": "hardware" },

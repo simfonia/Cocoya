@@ -1,5 +1,5 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
-  <variables>
+<variables>
     <variable id="PU%!payIl$;TnL~ru5V~">thetaL0</variable>
     <variable id="QD[{0.M6-Ca7]o|27Fjz">thetaR0</variable>
     <variable id="3ohu5DnI_wu}T_eSX7(`">rotate</variable>
@@ -9,6 +9,7 @@
     <variable id="A~Py:;dx0|BWFf{WjO+?">theta_L</variable>
     <variable id="}?$T|{~YyGC8vkcfY?}D">theta_R</variable>
   </variables>
+  <block type="mcu_board_init" id="board_init_55df8e0b63" x="10" y="-70"><field name="BOARD">maker-pi</field></block>
   <comment id="K$_1J9]o9c,2E0dpZp8p" x="10" y="-170" w="553.8461303710938" h="141.23077392578125">使用Cytron maker pi RP2040 ，接收 Serial 傳來的數據控制 Geekservo 270
 先組裝一個小機器人，面對自己，
 以自己的方向來看，左手 servo 接GP12，右手 servo 接GP13。

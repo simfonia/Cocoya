@@ -1,7 +1,8 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
-  <variables>
+<variables>
     <variable id="]/amHkkU#]%Rlg-|^vhT">gesture_data</variable>
   </variables>
+  <block type="mcu_board_init" id="board_init_03ce49e0db" x="10" y="-70"><field name="BOARD">maker-pi</field></block>
   <block type="py_definition_zone" id="def_root" deletable="false" x="10" y="10">
     <statement name="DEFS">
       <block type="py_io_serial_init" id="kI/.N1;]+Q~]iA@S%-Fc">

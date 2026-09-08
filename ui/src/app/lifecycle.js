@@ -265,26 +265,36 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             if (isNaN(offsetX) || offsetX < 20 || offsetX > 350) offsetX = 100;
 
             this.workspace.clear();
-            const defBlock = this.workspace.newBlock('py_definition_zone');
-            defBlock.initSvg(); defBlock.render(); 
-            defBlock.moveTo(new Blockly.utils.Coordinate(offsetX, 20));
-            
+            // 板子宣告積木為帽子積木，置於工作區最上方；全域定義區依序往下排，避免重疊
             if (this.currentPlatform === 'MicroPython') {
+                const boardBlock = this.workspace.newBlock('mcu_board_init');
+                boardBlock.setFieldValue('maker-pi', 'BOARD');
+                boardBlock.initSvg(); boardBlock.render();
+                boardBlock.moveTo(new Blockly.utils.Coordinate(offsetX, 20));
+
+                const defBlock = this.workspace.newBlock('py_definition_zone');
+                defBlock.initSvg(); defBlock.render();
+                defBlock.moveTo(new Blockly.utils.Coordinate(offsetX, 130));
+
                 const mcuMain = this.workspace.newBlock('mcu_main');
-                mcuMain.initSvg(); mcuMain.render(); 
-                mcuMain.moveTo(new Blockly.utils.Coordinate(offsetX, 200));
-                
+                mcuMain.initSvg(); mcuMain.render();
+                mcuMain.moveTo(new Blockly.utils.Coordinate(offsetX, 360));
+
                 const loopBlock = this.workspace.newBlock('py_loop_while');
                 loopBlock.initSvg(); loopBlock.render();
                 const trueBlock = this.workspace.newBlock('py_logic_boolean');
                 trueBlock.setFieldValue('True', 'BOOL');
                 trueBlock.initSvg(); trueBlock.render();
-                
+
                 loopBlock.getInput('CONDITION').connection.connect(trueBlock.outputConnection);
                 mcuMain.getInput('DO').connection.connect(loopBlock.previousConnection);
             } else {
+                const defBlock = this.workspace.newBlock('py_definition_zone');
+                defBlock.initSvg(); defBlock.render();
+                defBlock.moveTo(new Blockly.utils.Coordinate(offsetX, 20));
+
                 const mainBlock = this.workspace.newBlock('py_main');
-                mainBlock.initSvg(); mainBlock.render(); 
+                mainBlock.initSvg(); mainBlock.render();
                 mainBlock.moveTo(new Blockly.utils.Coordinate(offsetX, 140));
             }
             setTimeout(() => { 

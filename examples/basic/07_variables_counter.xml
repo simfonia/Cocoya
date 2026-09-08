@@ -1,8 +1,9 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
-  <variables>
+<variables>
     <variable id="Rb.GL`^/o?^663^S)aFC">i</variable>
     <variable id="count_var">count</variable>
   </variables>
+  <block type="mcu_board_init" id="board_init_f12fb87357" x="10" y="-70"><field name="BOARD">maker-pi</field></block>
   <comment id="*2]Fk-3`u[+~i:Kgi2m," x="10" y="-70" w="361.4465026855469" h="154.15383911132812">變數入門 — 按鈕計數器
 變數就像一個盒子，可以存入數字
 按按鈕1 加1，按按鈕2 減1，用 LED 顯示數字

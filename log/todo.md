@@ -254,3 +254,38 @@
 - [x] 修復：開新檔「原專案已儲存」提示未等待確認就跳第五步——`ui/src/bridge/base.js` `alert()` 原未 return `this.send(...)`，`await bridge.alert()` 立即通過。改 `return this.send('alert',...)`，Tauri 端真正等待 `_showAlertDialog` 關閉後才繼續——node --check ×3 + vite build 全綠，實機待測（見 log/work/2026-09-06.md）
 - [x] 改善：`SAME_AS_CURRENT` 提示後自動重試開新專案對話框——`tauri.js` case saveFile/saveFileAs 改防呆重試迴圈（上限 5）：命中目前路徑 → 提示後 continue 重新彈出另存對話框讓使用者改選位置；連續命中達上限才中止（MSG_SAME_AS_CURRENT_ABORT）。（追加：SAME_AS_CURRENT/BKY_SAVE_FAILED/ABORT 三處 alert 補 await，避免提示未關閉即重疊彈出下一個對話框。）node --check ×3 + vite build 全綠，實機待測（見 log/work/2026-09-06.md）
 `r`n### [2026-09-06] 新增 Try/Except 例外處理積木`r`n- [x] 新增 py_try_except 積木定義（logic_blocks.js）：try body + except body + 例外型別下拉選單`r`n- [x] 新增產生器（logic_generators.js）：輸出 try/except Python 代碼`r`n- [x] 更新 toolbox.xml：Logic 分類加入新積木`r`n- [x] 更新 i18n：zh-hant.js + en.js 新增 TRY_EXCEPT_TRY/EXCEPT/TOOLTIP`r`n- [x] 新增 Help 文件：docs/help/py_try_except_zh-hant.html + en.html`r`n- [x] 驗證：node --check + vite build 全綠`r`n- [ ] 實機驗證：VSIX + Tauri 下拉選單、代碼產生、MicroPython 燒錄執行
+
+### [2026-09-06] MCU 硬體控制模組一般化（板子感知腳位 SSOT + VID/PID 連動）
+- [x] 新增 ui/src/modules/hardware/board_defs.json：開發板資訊表 SSOT（picow/maker-pi/xiao-s3，含 vidPid/pins/gpioMap）
+- [x] ui/src/module_loader.js：載入模組級 board_defs.json → window.CocoyaBoardDefs（無檔靜默略過）
+- [x] ui/src/modules/hardware/hardware_blocks.js：CocoyaBoard 登錄器（mcu_pin_shadow 動態 options、localStorage 記憶目前板、切板刷新所有 pin 積木、未指定板 fallback 全板合併清單）
+- [x] ui/src/modules/hardware/hardware_generators.js：共用 cocoyaResolvePinNum（gpioMap 權威映射 + 舊格式 fallback）+ 未知腳位產生明確錯誤註解（不再默默產壞碼）
+- [x] src-tauri/src/commands/mcu.rs：SerialPortResult 加 board_id（serde rename_all camelCase → 前端 boardId）+ detect_board_id(vid,pid)；get_serial_ports 回填
+- [x] ui/src/ui/hardware.js：序列埠選取/刷新 → _applyBoardFromPort → CocoyaBoard.setCurrent(boardId) 自動切板
+- [x] src/handlers/serialOps.ts（VSIX）：PNPDeviceID 推導 boardId（boardIdMap 對齊 JSON SSOT）
+- [x] 文件：FILE_STRUCTURE.md（hardware 模組）、docs/backend_api_manifest.md（SerialPortResult 欄位）
+- [x] 驗證：node --check ×4 + JSON parse + cargo check + tsc --noEmit + vite build 全綠
+- [ ] Python deploy 端對齊：resources/deploy/base.py 讀同一份 board_defs.json 的 vidPid，回傳與 Rust/前端相同 boardId（避免兩套偵測 drift）
+- [ ] 實機驗證：插 Pico/XIAO 自動切板、腳位下拉只列該板腳位、未指定板合併清單、未知腳位錯誤註解
+- [ ] （未來）Rust detect_board_id 改為執行期讀 board_defs.json，消除手動同步
+- [x] 手動開發板選擇器（ui/index.html board-selector + hardware.js initBoardSelector/updateBoardSelector + style.css + i18n TLB_BOARD*）——MCU 模式顯示，未插板可手動選板
+- [x] 嚴格腳位映射清理：移除 board.GPx/board.Dx/board.LED 字串解析與跨板合併 fallback（舊 XML 相容移除，依用戶要求）——resolveGpio/cocoyaResolvePinNum 只認 gpioMap
+- [x] 驗證：node --check ×5 + vite build 全綠
+- [ ] 依 tags 過濾腳位下拉（digital_write→digital/pwm、analog_read→adc）+ 補齊各板完整 pinout（目前為常用子集）
+- [x] mcu_car 模組遷移 gpioMap 嚴格映射（maker-pi 專用車行為不變，選錯板擋下）：picow/maker-pi gpioMap 擴充 GP0-28 全腳 + mcu_car_generators 8 處舊解析替換——node --check + vite build 全綠
+- [ ] 實機驗證：Maker Pi RP2040 上 mcu_car 積木（伺服/超音波/按鈕/循跡）代碼與遷移前一致
+- [x] board_init 宣告積木架構定案與實作：board_defs.js 取代 JSON（loadScript，修 fetch 失敗根因）+ mcu_board_init 積木（toolbox/i18n/generator 註解）+ 新專案自動預置(maker-pi) + 移除 toolbar 選板 + 上傳不符 confirm 攔截 + 28 個 MicroPython 範例 XML 批次塞入宣告——node --check ×9 + vite build + cargo check 全綠
+- [ ] 實機驗證 board_init 五情境（見 log/work/2026-09-06.md Next Steps）
+- [ ] （未來）Rust/VSIX vidPid 表改執行期讀 board_defs.js 或 codegen，消除手動同步
+
+### [2026-09-07] 開發板偵測及上傳除錯
+- [x] 修復：`tauri.conf.json` 的 `bundle.resources` 缺少 `deploy/` 資料夾 → 加入 `"../resources/deploy": "resources/deploy"`（Serial Monitor 啟動時 `ModuleNotFoundError: No module named 'deploy'` 的根因）
+- [x] 修復：`hardware.js` 的 `updateSerialPorts` 在 `ports` 為空時強制清空 `data-value` → 改為保留已選擇的埠（選擇序列埠後顯示「(無序列埠)」的根因）
+- [x] 修復：`hardware.js` 缺少 `_applyBoardFromPort` 函式 → 新增以支援選埠自動切板（`this._applyBoardFromPort is not a function` 的根因）
+- [x] 修復：`hardware.js` `updateSerialPorts` 在 `ports` 為空時，雖保留 data-value 但 menu 選項被清成只剩「(No Port)」→ 改為同時加入已選取的埠項目（用 `__lastLabel` 重現完整名稱），解決「下拉看不到板子」
+- [x] 驗證：node --check + JSON parse 全綠
+- [ ] 實機驗證：Tauri 開發模式下 `deploy/` 資料夾正確打包、Serial Monitor 可啟動
+- [ ] 實機驗證：選擇序列埠後重新整理，label 不會被清空
+- [x] [2026-09-07 續] serial 下拉「(無序列埠)」最終根治（鐵壁版）：setSerialPortLabel 直接寫 trigger.textContent（不依賴 .serial-dropdown-label query、避開 applyI18n 重置）+ 偵測到埠 autoSelect 自動顯示/切板 + ports 空時保留已選埠 + 清除全部 debug log——使用者實機確認成功；回歸測試 HEAD/2947033/040a0a3 皆復現，判定為長期結構性缺陷；「query 為 null」最底層環境因素列為低優先未深究
+- [ ] 實機驗證：Tauri 開發模式下 deploy/ 資料夾正確打包、Serial Monitor 可啟動（無 ModuleNotFoundError）
+- [x] [2026-09-07 第二輪] 按鈕拆分（偵測板子/序列監看 toggle）+ Rust toggle_serial_monitor + serial-monitor-stopped/serial-ports-changed 事件 + stop_python 清 serial_wants + 1.5s 熱插拔輪詢（單執行緒 diff 廣播）+ updateSerialPorts 埠消失重選切板 + deploy/base.py banner 恢復不丟資料 + 點點 inline + Micro:bit（board_defs/vidPid 表/board_init 下拉）+ board_init 帽子積木(hat=cap) + 初始積木模板座標重排 + SSH Enter 連線——node --check ×12/py_compile/tsc/vite/cargo check 全綠；待實機驗證（microbit Pin(n) 語義與 P5/P11 共用腳位標記待驗）

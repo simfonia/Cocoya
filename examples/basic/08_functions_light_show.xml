@@ -1,7 +1,8 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
-  <variables>
+<variables>
     <variable id="i_var">i</variable>
   </variables>
+  <block type="mcu_board_init" id="board_init_cd1c563549" x="10" y="-70"><field name="BOARD">maker-pi</field></block>
   <comment id="%r7~4p[n0=;vVClEq)!C" x="10" y="-50" w="374.76922607421875" h="162.15383911132812">函式入門 — 自訂聲光表演
 函式就像「打包好的動作」，取個名字就能重複使用
 def blink_all(): 定義閃燈函式

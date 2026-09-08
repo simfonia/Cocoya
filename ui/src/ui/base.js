@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Cocoya UI 基礎模組
  * 負責核心 UI 狀態 (檔名、髒狀態)、i18n 套用、更新提示與工具列事件初始化
  */
@@ -81,7 +81,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
      */
     applyI18n: function() {
         if (typeof Blockly === 'undefined') return;
-        
+
         // 1. 處理 Tooltip (title) - 獨立處理，不影響內容
         const titleElements = document.querySelectorAll('[title^="%{BKY_"]');
         titleElements.forEach(el => {
@@ -165,7 +165,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         
         const stopBtn = document.getElementById('btn-stop');
         const closeBtn = document.getElementById('btn-close');
-        const terminalToggleBtn = document.getElementById('btn-terminal');
+        const terminalToggleBtn = document.getElementById('btn-serial-monitor');
 
         if (window.CocoyaBridge) {
             const caps = window.CocoyaBridge.capabilities;
@@ -194,7 +194,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             const el = document.getElementById(id);
             if (!el) return;
             
-            el.onclick = () => {
+            el.onclick = async () => {
                 // 1. 處理外部連結 (更新按鈕)
                 if (id === 'btn-update') {
                     if (self.updateUrl && el.classList.contains('update-available')) {
@@ -293,6 +293,22 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                             });
                         })();
                         return; // 不走本地 runCode
+                    }
+
+                    // --- MCU 上傳前板子比對：board_init 宣告 vs 序列埠 VID/PID 偵測 ---
+                    if (msg.platform === 'MicroPython' && window.CocoyaBoard && window.CocoyaBridge?.confirm) {
+                        const declared = window.CocoyaBoard.getCurrent();
+                        const serialRoot = document.getElementById('serial-selector');
+                        const detected = ((serialRoot && serialRoot.__boardIdMap) || {})[msg.serialPort];
+                        if (declared && detected && declared !== detected) {
+                            const declaredName = window.CocoyaBoard.boardName(declared);
+                            const detectedName = window.CocoyaBoard.boardName(detected);
+                            const ok = await window.CocoyaBridge.confirm(
+                                (Blockly.Msg['MSG_BOARD_MISMATCH'] || '專案宣告的開發板 (%1) 與偵測到的板子 (%2) 不符，仍要上傳嗎？')
+                                    .replace('%1', declaredName).replace('%2', detectedName)
+                            );
+                            if (!ok) return; // 使用者取消上傳
+                        }
                     }
                 }
 
@@ -524,14 +540,26 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         const refreshBtn = document.getElementById('btn-refresh-serial');
         if (refreshBtn) {
             refreshBtn.onclick = () => {
-                const port = window.CocoyaUI && window.CocoyaUI.getSerialPort ? window.CocoyaUI.getSerialPort() : (document.getElementById('serial-selector')?.getAttribute('data-value') || '');
-                // 1. 執行原本的整理清單
+                // 純偵測：只刷新埠清單（含自動選埠/切板），不再自動開啟監看
+                // （開啟監看改由「序列監看」按鈕明確觸發，避免偵測時搶佔序列埠）
                 postMessageFunc({ command: 'refreshSerialPorts' });
-                // 2. 如果有選埠，則嘗試開啟監控器 (對齊使用者想重新進入的需求)
-                if (port) {
-                    postMessageFunc({ command: 'openSerialMonitor', serialPort: port });
-                }
                 if (self.flashButton) self.flashButton('btn-refresh-serial', '#e3f2fd');
+            };
+        }
+
+        // 序列監看按鈕（toggle：啟用中再按 = 停止）
+        const monitorBtn = document.getElementById('btn-serial-monitor');
+        if (monitorBtn) {
+            monitorBtn.onclick = () => {
+                const port = window.CocoyaUI && window.CocoyaUI.getSerialPort ? window.CocoyaUI.getSerialPort() : (document.getElementById('serial-selector')?.getAttribute('data-value') || '');
+                if (!port) {
+                    const msg = Blockly.Msg['MSG_SELECT_PORT'] || 'Please select a port first.';
+                    if (window.CocoyaBridge?.alert) window.CocoyaBridge.alert(msg);
+                    else alert(msg);
+                    return;
+                }
+                postMessageFunc({ command: 'toggleSerialMonitor', serialPort: port });
+                if (self.flashButton) self.flashButton('btn-serial-monitor', '#e3f2fd');
             };
         }
 

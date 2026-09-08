@@ -7,12 +7,16 @@ use crate::state::AppState;
 use crate::utils::{get_deployer_path, get_firmware_dir};
 use crate::commands::python::stop_python;
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct SerialPortResult {
     pub port: String,
     pub label: String,
     pub vid: Option<String>,
     pub pid: Option<String>,
+    /// 細粒度板子 ID（對應 ui/src/modules/hardware/board_defs.js 的 boards key）
+    /// 未知板子回空字串，由前端 fallback 手動選板
+    pub board_id: String,
 }
 
 /// 根據 VID/PID 判斷板子類型（對應 deploy_mcu.py 的 board-type 參數）
@@ -37,6 +41,19 @@ fn detect_board_type(vid: Option<&str>, pid: Option<&str>) -> String {
     }
 }
 
+/// 根據 VID/PID 判斷細粒度 boardId（SSOT: ui/src/modules/hardware/board_defs.js 的 vidPid 欄位）
+/// 注意：新增板子請先改 board_defs.json，再同步更新此表（未來可改為執行期讀取同一份 JSON）。
+/// 通用橋接晶片（CP210x/CH340）無法辨識後端 MCU，回空字串交由前端手動選板。
+fn detect_board_id(vid: Option<&str>, pid: Option<&str>) -> String {
+    match (vid, pid) {
+        (Some("2E8A"), Some("0003")) => "picow".to_string(),
+        (Some("2E8A"), Some("0005")) => "maker-pi".to_string(),
+        (Some("303A"), _) => "xiao-s3".to_string(),
+        (Some("0D28"), _) => "microbit".to_string(),  // Micro:bit V1/V2
+        _ => String::new(),
+    }
+}
+
 /// 根據埠名查找對應的 VID/PID 並判斷板子類型
 fn detect_board_type_by_port(port: &str) -> String {
     if let Ok(ports) = serialport::available_ports() {
@@ -53,10 +70,10 @@ fn detect_board_type_by_port(port: &str) -> String {
     "auto".to_string()
 }
 
-#[tauri::command]
-pub fn get_serial_ports() -> Result<Vec<SerialPortResult>, String> {
-    let ports = serialport::available_ports().map_err(|e| e.to_string())?;
+/// 列舉序列埠（get_serial_ports 指令與熱插拔輪詢共用）
+pub fn list_serial_ports() -> Vec<SerialPortResult> {
     let mut results = Vec::new();
+    let Ok(ports) = serialport::available_ports() else { return results; };
 
     for p in ports {
         let mut port_info = SerialPortResult {
@@ -64,6 +81,7 @@ pub fn get_serial_ports() -> Result<Vec<SerialPortResult>, String> {
             label: p.port_name.clone(),
             vid: None,
             pid: None,
+            board_id: String::new(),
         };
 
         if let serialport::SerialPortType::UsbPort(info) = p.port_type {
@@ -71,13 +89,16 @@ pub fn get_serial_ports() -> Result<Vec<SerialPortResult>, String> {
             let pid_hex = format!("{:04X}", info.pid);
             port_info.vid = Some(vid_hex.clone());
             port_info.pid = Some(pid_hex.clone());
+            port_info.board_id = detect_board_id(Some(&vid_hex), Some(&pid_hex));
 
             let hw_name = match (vid_hex.as_str(), pid_hex.as_str()) {
                 ("2E8A", "0005") => "Maker Pi RP2040",
                 ("2E8A", "0003") => "Raspberry Pi Pico",
                 ("2E8A", _) => "Raspberry Pi (Other)",
                 ("303A", _) => "XIAO / ESP32-S3",
-                ("0D28", "0204") => "Micro:bit V1/V2",
+                ("0D28", "0204") => "Micro:bit V1",
+                ("0D28", "0209") => "Micro:bit V2",
+                ("0D28", _) => "Micro:bit",
                 ("0694", _) => "LEGO SPIKE Prime",
                 ("0695", _) => "LEGO SPIKE Essential",
                 ("0696", _) => "LEGO Robot Inventor",
@@ -94,8 +115,12 @@ pub fn get_serial_ports() -> Result<Vec<SerialPortResult>, String> {
 
         results.push(port_info);
     }
+    results
+}
 
-    Ok(results)
+#[tauri::command]
+pub fn get_serial_ports() -> Result<Vec<SerialPortResult>, String> {
+    Ok(list_serial_ports())
 }
 
 #[tauri::command]
@@ -279,6 +304,8 @@ fn spawn_serial_monitor(
             // 精準單播：只發給本視窗，避免多視窗終端機互相污染
             let _ = window_clone.emit_to(&monitor_stdout_label, "python-log", s);
         }
+        // monitor 行程結束（被 stop/toggle 或自行退出）→ 通知前端熄滅監看鈕狀態
+        let _ = window_clone.emit_to(&monitor_stdout_label, "serial-monitor-stopped", ());
     });
 
     let monitor_stderr_label = label.clone();
@@ -295,6 +322,31 @@ fn spawn_serial_monitor(
     });
 
     Ok(())
+}
+
+/// 切換序列埠監看（序列監看按鈕 toggle 用）：
+/// 已有啟用中的 monitor → 停止並清除 wants（明確終止意圖，不再自動重取）；
+/// 無 → 對指定埠啟動監看。回傳 "opened" / "stopped"。
+#[tauri::command]
+pub async fn toggle_serial_monitor(
+    window: Window,
+    state: State<'_, AppState>,
+    handle: AppHandle,
+    port: Option<String>,
+    python_path: Option<String>,
+    lang: Option<String>,
+) -> Result<String, String> {
+    let label = window.label().to_string();
+    let had = stop_serial_monitor(state.clone(), label.clone());
+    if had {
+        state.serial_wants.lock().unwrap().remove(&label);
+        return Ok("stopped".to_string());
+    }
+    let port = port.ok_or_else(|| "NO_PORT".to_string())?;
+    let pp = python_path.unwrap_or_else(|| "python".to_string());
+    let lg = lang.unwrap_or_else(|| "en".to_string());
+    spawn_serial_monitor(window.clone(), state.clone(), handle, port, pp, lg)?;
+    Ok("opened".to_string())
 }
 
 #[tauri::command]

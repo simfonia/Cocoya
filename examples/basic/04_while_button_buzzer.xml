@@ -1,5 +1,6 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
-  <comment id="bCC0N;1Z}dh~LcC_:TR/" x="10" y="-50" w="350.6023406982422" h="144.3076934814453">while 迴圈入門 — 按鈕控制蜂鳴器與 LED
+  <block type="mcu_board_init" id="board_init_3bf0785469" x="10" y="-70"><field name="BOARD">maker-pi</field></block>
+<comment id="bCC0N;1Z}dh~LcC_:TR/" x="10" y="-50" w="350.6023406982422" h="144.3076934814453">while 迴圈入門 — 按鈕控制蜂鳴器與 LED
 while 條件成立時，重複執行 DO 裡面的內容
 while True 就是「永遠執行」
 

@@ -83,10 +83,11 @@ Notation: `key?` = Optional. **Rule: changing a Rust signature -> immediately up
 | python | stop_sidecar   | -- | {} | Result<(), String> |
 | python | export_dataset | spec_json, source_folder_path, python_path: String | {specJson, sourceFolderPath, pythonPath} | Result<String, String> |
 | python | check_environment | python_path: String | {pythonPath} | Result<serde_json::Value, String> |
-| mcu | get_serial_ports    | -- | {} | Result<Vec<SerialPortResult>, String> |
+| mcu | get_serial_ports    | -- | {} | Result<Vec<SerialPortResult>, String>（欄位 camelCase：port/label/vid/pid/boardId；boardId 對應 board_defs.json，未知板空字串） |
 | mcu | setup_stable_mode   | port: String, lang: String | {port, lang} | Result<(), String> |
 | mcu | deploy_mcu          | python_path, port, code, serial_upload_only: bool, lang | {pythonPath, port, code, serialUploadOnly, lang} | Result<(), String> |
 | mcu | open_serial_monitor | port: String, python_path, lang | {port, pythonPath, lang} | Result<(), String> |
+| mcu | toggle_serial_monitor | port: Option<String>, python_path, lang: Option<String> | {port?, pythonPath?, lang?} | Result<String, String>（回 "opened"/"stopped"；已啟用中 → 停止並清除 serial_wants；否則啟動） |
 | mcu | erase_filesystem    | port: String, python_path, lang | {port, pythonPath, lang} | Result<(), String> |
 | mcu | reset_firmware      | model: String, should_clear: bool, serial_port: Option<String> | {model, shouldClear, serialPort?} | Result<(), String> |
 | mcu | set_window_focus    | focused: bool | {focused} | Result<(), String> |

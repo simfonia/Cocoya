@@ -1,6 +1,8 @@
 (function (Blockly) {
   Object.assign(Blockly.Msg, {
     "HW_SET_LED": "Onboard LED %1",
+    "HW_BOARD_INIT": "Initialize Board %1",
+    "HW_BOARD_INIT_TOOLTIP": "Declare the board used by this project. All pin blocks in the workspace follow this setting. Verified against the connected board on upload.",
     "HW_SET_LED_ON": "ON",
     "HW_SET_LED_OFF": "OFF",
     "HW_SET_LED_TOOLTIP": "Control the onboard LED.",

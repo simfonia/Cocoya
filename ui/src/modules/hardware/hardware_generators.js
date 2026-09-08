@@ -6,6 +6,32 @@ Blockly.Python.forBlock['mcu_pin_shadow'] = function(block, generator) {
   return [JSON.stringify(pin), Blockly.Python.ORDER_ATOMIC];
 };
 
+// --- 宣告積木：初始化開發板（純宣告，僅輸出註解，不產生硬體碼） ---
+Blockly.Python.forBlock['mcu_board_init'] = function(block, generator) {
+  var boardId = block.getFieldValue('BOARD');
+  var name = (typeof CocoyaBoard !== 'undefined' && CocoyaBoard.boardName) ? CocoyaBoard.boardName(boardId) : boardId;
+  return '# Board: ' + name + ' (' + boardId + ')\n';
+};
+
+/**
+ * 共用腳位解析（嚴格模式）：boardRef 字串 → GPIO 號碼。
+ * 只走 CocoyaBoard.resolveGpio（board_defs.json gpioMap 權威映射），
+ * 解析失敗回 null，由各 generator 產生明確錯誤註解（不產壞碼、無舊格式 fallback）。
+ */
+function cocoyaResolvePinNum(pinCode) {
+  if (typeof CocoyaBoard !== 'undefined' && CocoyaBoard.resolveGpio) {
+    var num = CocoyaBoard.resolveGpio(CocoyaBoard.getCurrent(), String(pinCode));
+    if (num !== null && num !== undefined) return String(num);
+  }
+  return null;
+}
+
+/** 產生「未知腳位」的錯誤註解代碼（取代默默產生壞碼） */
+function cocoyaPinErrorComment(pinCode) {
+  return '# [Cocoya] 無法解析腳位: ' + String(pinCode).replace(/['"]/g, '') +
+         ' （請確認已選擇開發板，或改用腳位下拉選單）\npass\n';
+}
+
 Blockly.Python.forBlock['mcu_set_led'] = function(block, generator) {
   var state = block.getFieldValue('STATE');
   generator.definitions_['import_machine'] = 'import machine';
@@ -30,18 +56,14 @@ if 'led' not in globals():
 Blockly.Python.forBlock['mcu_digital_write'] = function(block, generator) {
   var pin = generator.valueToCode(block, 'PIN', Blockly.Python.ORDER_ATOMIC) || '"board.GP0"';
   var state = block.getFieldValue('STATE');
-  
-  // 移除引號並清理
-  var pinRaw = pin.replace(/['"]/g, '');
-  // 支援 board.GPx -> x, board.Dx -> x (需注意 XIAO D0-D10 映射)
-  var pinNum = pinRaw.replace('board.GP', '').replace('board.D', '');
-  // 特殊處理 board.LED
-  if (pinRaw === 'board.LED') pinNum = '25'; 
-  
+
+  var pinNum = cocoyaResolvePinNum(pin);
+  if (pinNum === null) return cocoyaPinErrorComment(pin);
+
   var pinVar = 'pin_' + pinNum;
 
   generator.definitions_['import_machine'] = 'import machine';
-  generator.definitions_['init_' + pinVar] = 
+  generator.definitions_['init_' + pinVar] =
     pinVar + ' = machine.Pin(' + pinNum + ', machine.Pin.OUT)';
 
   return pinVar + '.value(1 if ' + state + ' else 0)\n';
@@ -50,15 +72,14 @@ Blockly.Python.forBlock['mcu_digital_write'] = function(block, generator) {
 // --- 數位輸入 ---
 Blockly.Python.forBlock['mcu_digital_read'] = function(block, generator) {
   var pin = generator.valueToCode(block, 'PIN', Blockly.Python.ORDER_ATOMIC) || '"board.GP0"';
-  
-  var pinRaw = pin.replace(/['"]/g, '');
-  var pinNum = pinRaw.replace('board.GP', '').replace('board.D', '');
-  if (pinRaw === 'board.LED') pinNum = '25';
+
+  var pinNum = cocoyaResolvePinNum(pin);
+  if (pinNum === null) return [cocoyaPinErrorComment(pin) + '0', Blockly.Python.ORDER_ATOMIC];
 
   var pinVar = 'pin_' + pinNum;
 
   generator.definitions_['import_machine'] = 'import machine';
-  generator.definitions_['init_' + pinVar] = 
+  generator.definitions_['init_' + pinVar] =
     pinVar + ' = machine.Pin(' + pinNum + ', machine.Pin.IN, machine.Pin.PULL_UP)';
 
   return [pinVar + '.value()', Blockly.Python.ORDER_ATOMIC];
@@ -67,10 +88,10 @@ Blockly.Python.forBlock['mcu_digital_read'] = function(block, generator) {
 // --- 類比輸入 ---
 Blockly.Python.forBlock['mcu_analog_read'] = function(block, generator) {
   var pin = generator.valueToCode(block, 'PIN', Blockly.Python.ORDER_ATOMIC) || '"board.GP26"';
-  
-  var pinRaw = pin.replace(/['"]/g, '');
-  var pinNum = pinRaw.replace('board.GP', '').replace('board.D', '');
-  
+
+  var pinNum = cocoyaResolvePinNum(pin);
+  if (pinNum === null) return [cocoyaPinErrorComment(pin) + '0', Blockly.Python.ORDER_ATOMIC];
+
   var pinVar = 'adc_' + pinNum;
 
   generator.definitions_['import_machine'] = 'import machine';
@@ -85,10 +106,10 @@ Blockly.Python.forBlock['mcu_analog_read'] = function(block, generator) {
 Blockly.Python.forBlock['mcu_pwm_write'] = function(block, generator) {
   var pin = generator.valueToCode(block, 'PIN', Blockly.Python.ORDER_ATOMIC) || '"board.GP0"';
   var value = generator.valueToCode(block, 'VALUE', Blockly.Python.ORDER_ATOMIC) || '0';
-  
-  var pinRaw = pin.replace(/['"]/g, '');
-  var pinNum = pinRaw.replace('board.GP', '').replace('board.D', '');
-  
+
+  var pinNum = cocoyaResolvePinNum(pin);
+  if (pinNum === null) return cocoyaPinErrorComment(pin);
+
   var pinVar = 'pwm_' + pinNum;
 
   generator.definitions_['import_machine'] = 'import machine';
