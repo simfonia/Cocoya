@@ -11,11 +11,13 @@ Cocoya Deploy Module
 from .base import BaseDeployer, get_msg, MESSAGES
 from .micropython import MicroPythonDeployer
 from .pybricks import PybricksDeployer
+from .official_spike import OfficialSpikeDeployer
 
 # 註冊表：board_type -> Deployer 類別
 _DEPLOYERS = {
     "micropython": MicroPythonDeployer,
     "pybricks": PybricksDeployer,
+    "spike-official": OfficialSpikeDeployer,
 }
 
 
@@ -49,6 +51,7 @@ __all__ = [
     "BaseDeployer",
     "MicroPythonDeployer",
     "PybricksDeployer",
+    "OfficialSpikeDeployer",
     "get_msg",
     "MESSAGES",
 ]

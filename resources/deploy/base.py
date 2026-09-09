@@ -130,13 +130,35 @@ class BaseDeployer:
 
 
 def detect_board(port, baud=115200, timeout=2.0):
-    """自動偵測連線的韌體類型"""
+    """自動偵測連線的韌體類型。
+    回傳 "micropython" / "pybricks" / "spike-official" / "unknown"。
+    順序關鍵：先排除 Pybricks（其 MicroPython banner 含 "MicroPython" 字樣，
+    不可先走一般 micropython 分支）；再排除官方 SPIKE（互動 REPL 含 SPIKE/prime
+    banner，需再探 Raw REPL：官方行式 REPL 無 raw；Pybricks 韌體有 raw 但已在上一步排除）。"""
     try:
         ser = serial.Serial(port, baud, timeout=timeout)
         ser.dtr = True; ser.rts = True; time.sleep(0.1)
         ser.reset_input_buffer()
         ser.write(b"\x03"); time.sleep(0.3)
         response = ser.read_all().decode("utf-8", errors="ignore")
+        lowered = response.lower()
+        # 1. Pybricks 韌體：banner 含 "Pybricks"（雖基於 MicroPython，必須先判）
+        if "pybricks" in lowered:
+            ser.close(); return "pybricks"
+        # 2. 官方 SPIKE 韌體：互動 REPL 有 SPIKE/prime banner；再探 Raw REPL 確認
+        if "spike" in lowered or "prime" in lowered:
+            has_raw = False
+            try:
+                ser.reset_input_buffer()
+                ser.write(b"\x01"); time.sleep(0.5)
+                res_raw = ser.read_all().decode("utf-8", errors="ignore")
+                has_raw = "raw REPL" in res_raw
+                ser.write(b"\x02"); time.sleep(0.2)
+            except Exception:
+                has_raw = False
+            ser.close()
+            return "micropython" if has_raw else "spike-official"
+        # 3. 標準 MicroPython（Pico / XIAO / micro:bit 等）
         if ">>>" in response or "MicroPython" in response:
             ser.close(); return "micropython"
         ser.write(b"\x03\x03"); time.sleep(0.3)

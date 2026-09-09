@@ -21,15 +21,19 @@ pub struct SerialPortResult {
 
 /// 根據 VID/PID 判斷板子類型（對應 deploy_mcu.py 的 board-type 參數）
 /// 返回 "micropython", "pybricks", 或 "auto"（未知時 fallback）
+/// 注意：LEGO 系（0694~0698）故意走 "auto"——兩種韌體（官方 SPIKE / Pybricks）
+/// 同 VID/PID，VID 判不出韌體；交給 deploy_mcu.py 上傳前 REPL 握手自動分流
+/// （pybricks banner → pybricks；spike/prime banner＋無 raw → spike-official）。
 fn detect_board_type(vid: Option<&str>, pid: Option<&str>) -> String {
     match (vid, pid) {
-        // Pybricks 生態系（LEGO SPIKE/Essential/Technic/BOOST/City/Robot Inventor）
-        (Some("0694"), _) => "pybricks".to_string(),  // SPIKE Prime
-        (Some("0695"), _) => "pybricks".to_string(),  // SPIKE Essential
-        (Some("0696"), _) => "pybricks".to_string(),  // Robot Inventor
-        (Some("0693"), _) => "pybricks".to_string(),  // Technic Hub
-        (Some("0697"), _) => "pybricks".to_string(),  // BOOST Move Hub
-        (Some("0698"), _) => "pybricks".to_string(),  // City Hub
+        // LEGO SPIKE/Essential/Inventor/Technic/BOOST/City：官方與 Pybricks 韌體
+        // 同 VID/PID → 統一走 "auto"，由上傳前 REPL 握手自動分流（見上）
+        (Some("0694"), _) => "auto".to_string(),  // SPIKE Prime
+        (Some("0695"), _) => "auto".to_string(),  // SPIKE Essential
+        (Some("0696"), _) => "auto".to_string(),  // Robot Inventor
+        (Some("0693"), _) => "auto".to_string(),  // Technic Hub
+        (Some("0697"), _) => "auto".to_string(),  // BOOST Move Hub
+        (Some("0698"), _) => "auto".to_string(),  // City Hub
         // MicroPython 生態系
         (Some("2E8A"), _) => "micropython".to_string(),  // Raspberry Pi (Pico / Maker Pi)
         (Some("303A"), _) => "micropython".to_string(),  // Espressif ESP32-S3 (XIAO)

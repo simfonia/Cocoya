@@ -50,6 +50,19 @@ class PybricksDeployer(BaseDeployer):
             for _ in range(3):
                 ser.write(b"\x03"); time.sleep(0.1)
 
+            # 確認進入 Pybricks REPL（讀回 banner，避免把官方韌體誤當 Pybricks）
+            time.sleep(0.3)
+            echo = ser.read_all().decode("utf-8", errors="ignore")
+            if "pybricks" not in echo.lower() and ">>>" not in echo:
+                print(">>> [Warning] no REPL echo (device may be busy), retrying once...")
+                for _ in range(3):
+                    ser.write(b"\x03"); time.sleep(0.1)
+                time.sleep(0.3)
+                echo = ser.read_all().decode("utf-8", errors="ignore")
+                if ">>>" not in echo:
+                    print(">>> [Error] cannot reach device REPL. Is this Pybricks firmware?")
+                    ser.close(); sys.exit(1)
+
             # 等待就緒
             time.sleep(0.3)
             ser.reset_input_buffer()
