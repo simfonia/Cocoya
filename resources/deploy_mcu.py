@@ -27,7 +27,7 @@ def main():
     parser.add_argument("--setup-stable", action="store_true", help="Setup stable mode")
     parser.add_argument("--erase-filesystem", action="store_true", help="Erase all files (deep repair)")
     parser.add_argument("--board-type", default="micropython",
-                        choices=["micropython", "pybricks", "auto"],
+                        choices=["micropython", "pybricks", "spike-official", "auto"],
                         help="Firmware type (default: micropython, or auto-detect)")
     parser.add_argument("--tauri", action="store_true", help="Running in Tauri mode")
     parser.add_argument("--lang", default="en", help="Language code (zh-hant or en)")
