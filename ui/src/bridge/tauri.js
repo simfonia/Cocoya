@@ -976,18 +976,24 @@ export class BridgeTauri extends BaseBridge {
                     this._firstLogReceived = true;
                     if (window.CocoyaUI) window.CocoyaUI.hideLoadingModal();
                 }
+                // 生資料轉發：Rust 端已整行緩衝，此處僅剝除 \r（Raw REPL 輸出），空白行由
+                // deploy/base.py 統一控制（含「OK 後補一行」），不再做壓平/跨區塊猜測。
+                let payload = event.payload;
+                if (typeof payload === 'string') {
+                    payload = payload.replace(/\r/g, '');
+                }
                 if (window.CocoyaUI) {
                     // 等待連線的點點（"."）以 inline 模式附加，避免每點獨立一行
-                    if (typeof event.payload === 'string' && event.payload.trim() === '.') {
+                    if (typeof payload === 'string' && payload.trim() === '.') {
                         window.CocoyaUI.appendTerminal('.', 'out', true);
                     } else {
-                        window.CocoyaUI.appendTerminal(event.payload, 'out');
+                        window.CocoyaUI.appendTerminal(payload, 'out');
                     }
                 }
 
                 // 解析訓練結果 RESULT: {...} 格式（由 classifier_train.py 輸出）
                 // 注意：輸出可能以 \n 開頭，需用 includes + indexOf 定位
-                const text = event.payload || '';
+                const text = payload || '';
                 const resultIdx = text.indexOf('RESULT:');
                 if (resultIdx !== -1) {
                     try {

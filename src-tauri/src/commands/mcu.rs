@@ -205,6 +205,9 @@ pub async fn deploy_mcu(
     let window_clone = window.clone();
     std::thread::spawn(move || {
         use std::io::Read;
+        // chunk 直通：原樣送出 stdout 每塊，換行/空行之控制統一交由 deploy/base.py 於源頭完成
+        // （含「OK 後補空行」與資料行壓平）；此處不另行整行切分，避免把 base 已產好的
+        // 空白行（\n\n）拆成獨立 payload，在前端 pre-wrap 渲染成多餘空行。
         let mut buffer = [0; 1024];
         while let Ok(n) = stdout.read(&mut buffer) {
             if n == 0 { break; }
@@ -301,6 +304,8 @@ fn spawn_serial_monitor(
 
     let window_clone = window.clone();
     std::thread::spawn(move || {
+        // stdout：chunk 直通原樣送出（空白行控制統一在 deploy/base.py 源頭完成），
+        // 避免在此整行切分把 base 產的 \n\n 拆成獨立 payload 於前端渲染成多餘空行
         use std::io::Read;
         let mut buffer = [0; 1024];
         while let Ok(n) = stdout.read(&mut buffer) {

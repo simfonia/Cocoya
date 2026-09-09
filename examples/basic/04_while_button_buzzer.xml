@@ -1,13 +1,16 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
-  <block type="mcu_board_init" id="board_init_3bf0785469" x="10" y="-70"><field name="BOARD">maker-pi</field></block>
-<comment id="bCC0N;1Z}dh~LcC_:TR/" x="10" y="-50" w="350.6023406982422" h="144.3076934814453">while 迴圈入門 — 按鈕控制蜂鳴器與 LED
+  <comment id="bCC0N;1Z}dh~LcC_:TR/" x="30" y="-210" w="399.2307434082031" h="205.5384521484375">while 迴圈入門 — 按鈕控制蜂鳴器與 LED
 while 條件成立時，重複執行 DO 裡面的內容
 while True 就是「永遠執行」
 
 if ... else ... 可以依條件，控制程式進行分支流程。
+  
   </comment>
-  <block type="py_definition_zone" id="dz01" x="10" y="110"></block>
-  <block type="mcu_main" id="main01" x="10" y="190">
+  <block type="mcu_board_init" id="board_init_3bf0785469" x="30" y="30">
+    <field name="BOARD">maker-pi</field>
+  </block>
+  <block type="py_definition_zone" id="dz01" x="30" y="110"></block>
+  <block type="mcu_main" id="main01" x="30" y="190">
     <statement name="DO">
       <block type="py_coding_comment" id="c02">
         <field name="TEXT">等待按鈕1 按下才開始</field>

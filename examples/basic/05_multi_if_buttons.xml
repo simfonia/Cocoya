@@ -1,11 +1,14 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
-  <block type="mcu_board_init" id="board_init_7db1bc0fd2" x="10" y="-70"><field name="BOARD">maker-pi</field></block>
-<comment id="[/7yVdl[Y,hm1rArzlf#" x="10" y="-50" w="401.1204528808594" h="141.23080444335938">多個 if（多選）— 每個 if 各自獨立判斷
+  <comment id="[/7yVdl[Y,hm1rArzlf#" x="30" y="-170" w="401" h="141">多個 if（多選）— 每個 if 各自獨立判斷
 就像多選題：每個選項都會被檢查，可以同時選多個
 按鈕1→LED0亮，按鈕2→LED1亮，可同時亮
+  
   </comment>
-  <block type="py_definition_zone" id="dz01" x="10" y="110"></block>
-  <block type="mcu_main" id="main01" x="10" y="190">
+  <block type="mcu_board_init" id="board_init_7db1bc0fd2" x="30" y="10">
+    <field name="BOARD">maker-pi</field>
+  </block>
+  <block type="py_definition_zone" id="dz01" x="30" y="90"></block>
+  <block type="mcu_main" id="main01" x="30" y="190">
     <statement name="DO">
       <block type="py_coding_comment" id="c02">
         <field name="TEXT">等待按鈕1 按下才開始</field>
