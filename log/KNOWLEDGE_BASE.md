@@ -187,3 +187,65 @@
 - Minimap 註解同步 v1 增量法 => 已棄用，現行 v2/v3 完整重載法。
 - media/ 目錄結構、ui_manager.js/main.js/utils.js 單檔架構 => 已模組化為 ui/src/{app,ui,utils,modules}。
 - extension.ts 巨型單檔 => 已拆 src/cocoyaManager.ts + src/handlers/*.ts。
+
+## 第 11 章 2026-08-25 ~ 09-07 追加蒸餾（2026-09-08 #task[整理todo] 期間核定）
+> 蒸餾自 log/work/2026-08-26 ~ 2026-09-07；以「第 1-10 章與 AGENTS.md 尚未收錄或有重要補充」為選材標準。
+
+### 11.1 Dataset Manager 三層架構完成（取代 ui_layout.js 上帝模組）
+- 拆解 `ui_layout.js`（108KB/60+ 函式）為 `core/io/ui/application` 四層，Phase 0-6 全完成（見 todo Archive A）。
+- **唯一 Bridge Port**：`ui/src/modules/dataset_manager/io/bridge.js`——所有 DSM 通訊一律經此（request correlation / timeout / cancel / unsubscribe）；UI 層嚴禁 direct `window.CocoyaBridge`。
+- **訊息責任邊界（AGENTS.md「Dataset Manager 訊息責任定義」）**：錯誤「碼」後端定義（如 `PROGRESS_NOT_FOUND`），人類文案前端 i18n（`DSM_*`）；core/application 層禁 hard-code 中文。
+- **狀態訊息**：一律 `showStatusMessage(msg, {duration})` 顯示於 `#dataset-manager-message`（預設 8s 自動清除），禁手寫 `#dataset-import-status`。
+- **style token 化**：DSM 色彩以 `--dsm-*` CSS 變數統一（vscode/vscode-dark/cocoya_dark 三主題各自定義），深色確認框改用 token 化自訂對話框取代 native confirm（i18n 需求）。
+- 開發 SOP 見 `log/mappings/DatasetManager_DevGuide.html`；色彩盤點見 `log/plan/DatasetManagerStyleTokens.md`。
+
+### 11.2 硬體板子感知 SSOT（board_defs.js）與 board_init 帽子積木
+- 腳位權威 SSOT＝`ui/src/modules/hardware/board_defs.js`（`window.CocoyaBoardDefs`），由 module_loader `loadScript` 載入（**避免 fetch/CSP 風險**；由 JSON 改 JS 的原因）。
+- 每板條目：`vidPid`（含萬用 `"303A":"*"`）、`pins`（`ref`/`label`/`tags[digital,pwm,adc,input]`）、`gpioMap`（**權威**；`cocoyaResolvePinNum` 找不到即報錯註解，不再 fallback）。
+- `mcu_board_init` 帽子積木：宣告板子 → 決定腳位下拉選項、初始座標、開新 MCU 檔預設 `maker-pi`；插板與宣告不符 → confirm 攔截。
+- **目前支援板**：picow / maker-pi / xiao-s3 / microbit（board_defs.js）；**Lego SPIKE Prime 獨立**於 `ui/src/modules/spike/`＋`resources/deploy/pybricks.py`（Pybricks 機制，非 board_defs）。
+- **三處 vidPid 手動同步債**：board_defs.js（前端）/ `mcu.rs detect_board_id` / `serialOps.ts boardIdMap`——未來執行期讀或 codegen。
+- micro:bit MicroPython：`Pin(n)` 的 n 對應 edge connector pin0~pin20（17/18 不外露）；P5/P11 為按鈕 A/B 共用，實機後再定。
+
+### 11.3 部署器模組化（deploy/ 工廠模式）
+- `resources/deploy/`：`__init__.py` 工廠 `get_deployer()`＋`base.py`（BaseDeployer：序列埠監控/`detect_board()`）＋`micropython.py`（Raw REPL）＋`pybricks.py`（SPIKE）。`deploy_mcu.py` 為向後相容薄 CLI 包裝。
+- **Tauri 資源打包坑**：`bundle.resources` 若只列 `deploy_mcu.py` 而未列 `deploy/` 資料夾，dev 打包後 `target/debug/resources/` 缺該資料夾 → 子進程 `ModuleNotFoundError: deploy`；必須加入 `"../resources/deploy": "resources/deploy"`（log/work/2026-09-07.md）。
+
+### 11.4 Keras 跨版本序列化相容（遠端訓練→本地 TFLite 轉換）
+- 遠端容器（較新 Keras 3）產生的 `.keras`(zip) 本地（較舊）載入失敗：`_local_convert_tflite.py::_sanitize_keras_config()` 讀 config.json 遞迴剝除不相容鍵（`renorm/renorm_clipping/renorm_momentum/synchronized`）後重打包再 load；未知新參數把鍵名加入 `_STRIP_KEYS` 即可（失敗訊息會印「下一個不相容層/參數」）。
+- 四層 fallback 載入：`_load_model_compat`。
+- **TFLite int8 量化必須與訓練 pipeline 一致**：representative dataset 缺 `1/255` 正規化會使值域差 255 倍 → int8 精度崩壞；實測補正規化後 int8 vs f32 一致率 96.7%。
+- 遠端權重快取：keras_cache 掛載避免重下權重。
+- esptool 版本 pin `==4.7.0`（有預編 wheel、cryptography 相依較寬、避免 msal 衝突與 sdist 現場 build）；type 檢查清單在 `config/python_modules.json`。
+- 深入見 `log/mappings/KerasSerializationCompat.html`。
+
+### 11.5 VSIX 訓練終端機除錯（Total：三案）
+- sidecar `onEvent` 例外不再靜默（寫 Cocoya Sidecar outputChannel）；`TrainingTerminal.writeLine` 失敗 fallback 輸出頻道。
+- 本地訓練誤標 remote 之根因：remote 旗標偵測；host i18n：新增共用 `src/hostI18n.ts`（`HOST_MSGS` zh-hant/en＋`hostMsg()`），trainingOps/datasetOps/sidecarManager/serialOps 使用者可見訊息全走 hostMsg（殘留掃描=0）。
+
+### 11.6 Tauri 開發板偵測與序列埠互動細節
+- serial「(無序列埠)」根治：`updateSerialPorts` 在 `ports` 為空時只有 `currentVal` 也空才清 `data-value`（否則已選 COM 被 monitor 佔用時誤清空）。
+- 序列埠被 monitor 程序佔用時 `serialport::available_ports()` 未必回傳該埠。
+- `_applyBoardFromPort`：由選單 `root.__boardIdMap` 取 boardId → `CocoyaBoard.setCurrent(boardId,'port')` 自動切板（曾因未註冊而 `is not a function`）。
+- 多視窗輪詢事件須互不污染（呼應 2.3 emit_to）：`serial-ports-changed` 等採輪詢，確認不廣播混流。
+
+### 11.7 開新專案「先確認後破壞」與範例保護（2026-09-06 追記彙整）
+- 開新/切換前先 snapshotWorkspaceForReload()（語系/主題切換對齊），保留編輯區積木與 dirty 狀態（sessionStorage 快照）。
+- `SAME_AS_CURRENT` 防呆＋開新重試迴圈；examples 唯讀保護下 dirty「開新檔」流程中斷問題已修（Tauri/VSIX 雙）。
+- `base.js::alert()` 必須 `return this.send(...)`，否則 `await bridge.alert()` 不等待確認就往下跑。
+
+## 附錄補充（2026-09-08）
+- dataset_manager/ui_layout.js 上帝模組 => 已拆 core/io/ui/application 四層（Stage 6 完成，見第 11.1）。
+- 遠端環境面板（checkRemoteEnvironment/trainRemote 前端 UI）=> 前端已移除，後端指令保留供 `backend==='remote'` 用。
+- board_defs.json（fetch 載入）=> 已改 board_defs.js（module_loader loadScript，修 CSP/fetch 失敗）。
+- 開新專案流程 => 以「先確認後破壞」為唯一模式（不再先清狀態）。
+- line_follower/table 訓練模板 => 仍待以 common 模組實作（呼應第 10 章第 4 項）。
+
+### 11.8 程式碼→積木 反向定位（2026-09-08 實作，renderer.js）
+- **背景**：原 Cocoya 定位僅「積木→code」單向（workspace.js `SELECTED`→`syncSelection`；renderer.js `blockToRangeMap` + `findLocatableBlock` 高亮 `.highlight-line`）。README 原先「雙向點擊定位」為誇大不實，已改正。
+- **新增反向**：renderer.js ①建立 `lineIndexToBlockId` 反查表 ②每 `.code-line` 綁 click → `locateBlockByLineIndex(lineIndex)`。
+- **反向的兩個落點**：Blockly 原生 `workspace.centerOnBlock(blockId)`（捲動置中）+ `Block.select()`（無參數，內部 `fireSelectedEvent` → `SELECTED` → `syncSelection` 回饋整段高亮，與正向視覺一致）。
+- **選擇語意**：一行 code 常被多層積木範圍覆蓋 → 取「覆蓋該行且範圍最窄」的可定位積木（與 `findLocatableBlock` 對稱；value 積木往上轉 statement 父積木，內層較精確）。
+- **誤觸保護**：文字選取中（`window.getSelection().toString()` 非空）不觸發；`cursor:pointer` 提示可點。
+- **驗證**：node --check ✓、vite build ✓（537ms）。實機待測（todo 登錄）。
+- **踩坑**：反向切換積木選取不可用 `block.select()`（只 addSelect 不 unselect 舊框，多積木框疊加）；需用 focus 驅動的 `Blockly.setSelected(block)`（自動 unselect 舊 + addSelect 新 + fire SELECTED）。且 code 高亮切換要**明確呼叫 `syncSelection(newId)`**（其開頭必清 `.highlight-line`），別只依賴 SELECTED 事件回饋（可能被 isInputActive 中斷）。

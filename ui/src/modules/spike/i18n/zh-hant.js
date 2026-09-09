@@ -1,8 +1,10 @@
 // spike i18n (zh-hant) - Lego SPIKE Prime 積木文案
 
 // === 初始化 ===
-Blockly.Msg["SPIKE_INIT_HUB"] = "初始化 Hub";
-Blockly.Msg["SPIKE_INIT_HUB_TOOLTIP"] = "初始化 Lego SPIKE Prime Hub。必須在程式開頭呼叫一次。";
+Blockly.Msg["SPIKE_INIT_HUB"] = "初始化 Hub %1";
+Blockly.Msg["SPIKE_INIT_HUB_TOOLTIP"] = "初始化 Lego SPIKE Prime Hub。必須在程式開頭呼叫一次。韌體模式請依 Hub 實際安裝的韌體選擇（官方 SPIKE 3 App 或 Pybricks）。";
+Blockly.Msg["SPIKE_FW_OFFICIAL"] = "官方韌體 (SPIKE 3)";
+Blockly.Msg["SPIKE_FW_PYBRICKS"] = "Pybricks 韌體";
 Blockly.Msg["SPIKE_MOTOR_INIT"] = "初始化馬達 接口 %1 類型 %2";
 Blockly.Msg["SPIKE_MOTOR_INIT_TOOLTIP"] = "初始化指定接口的馬達。Large 為大力馬達，Medium 為中力馬達。";
 Blockly.Msg["SPIKE_MOTOR_TYPE_LARGE"] = "Large";

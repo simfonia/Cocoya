@@ -42,7 +42,9 @@ C:\Workspace\cocoya\
 ├── log/                   # 專案日誌與任務追蹤
 │   ├── details.md         # 技術細節與 API 踩坑紀錄
 │   ├── handover.md        # 任務交接檔
-│   ├── todo.md            # 任務清單
+│   ├── todo.md            # 任務清單（僅未完成項；已完成歸檔見 Archive 指針）
+│   ├── COCOYA_STATE.md    # [NEW 2026-09-08] 專案現況快覽（任務前快速掌握：開發板/模組/架構/技術債/啟動順序）
+│   ├── KNOWLEDGE_BASE.md  # 知識蒸餾基礎（第 1-10 章 2026-08-24；第 11 章 2026-09-08 追加）
 │   ├── todo/              # 任務規格與開發流程文件
 │   │   ├── dataset_manager_development_spec.md # Dataset Manager 分階段開發規格
 │   │   └── hand_gesture_pitch_pbl_plan.md # 手勢分類控制 πCar 音高 PBL 計畫
@@ -280,6 +282,5 @@ C:\Workspace\cocoya\
 │   └── media_pipe_service.py # AI 特徵提取服務 (MediaPipe)
 ├── temp_scripts/          # 執行期間暫存目錄
 ├── package.json           # 根目錄設定
-└── tsconfig.json          # TS 編譯設定ui/src/modules/theme_manager/themes/cocoya_dark.js # [REFACTORED] 完全自足深色主題：componentStyles+cssVars+css（主題專屬規則由 ThemeManager 注入 <style>，style.css 不再含任何深色規則）
-
-| log/KNOWLEDGE_BASE.md | 知識蒸餾基礎（2026-08-24）：十章整理重大技術、開發鐵律、踩坑快查表與過時知識校正；關鍵點已對照現行程式碼求證 |
+└── tsconfig.json          # TS 編譯設定
+└── ui/src/modules/theme_manager/themes/cocoya_dark.js # [REFACTORED] 完全自足深色主題：componentStyles+cssVars+css（主題專屬規則由 ThemeManager 注入 <style>，style.css 不再含任何深色規則）

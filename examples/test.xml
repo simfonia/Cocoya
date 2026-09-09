@@ -1,13 +1,26 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
-  <block type="py_definition_zone" x="100" y="20"></block>
-  <block type="mcu_main" x="100" y="200">
+  <block type="mcu_board_init" id="fBkFJaz0ae65ah{ao(Kx" x="100" y="20">
+    <field name="BOARD">spike-prime</field>
+    <next>
+      <block type="spike_init_hub" id="J}sHTgSAp,aVi{oPvV~3">
+        <field name="FIRMWARE">official</field>
+      </block>
+    </next>
+  </block>
+  <block type="py_definition_zone" id="i^d:f}Pt?zZ$;r~/fzJ9" x="100" y="130"></block>
+  <block type="mcu_main" id="mV9ROc~:nS9q_Bs|c-r6" x="100" y="360">
     <statement name="DO">
-      <block type="py_loop_while">
+      <block type="py_loop_while" id="LnMcZI1b$A~2Fk@rNa{c">
         <value name="CONDITION">
-          <block type="py_logic_boolean">
+          <block type="py_logic_boolean" id="kYdlDzI6{?YmIZS-BYgY">
             <field name="BOOL">True</field>
           </block>
         </value>
+        <statement name="DO">
+          <block type="spike_display_text" id="ax5.%`#6/opIuMvc)}AI">
+            <field name="TEXT">Hello!</field>
+          </block>
+        </statement>
       </block>
     </statement>
   </block>
