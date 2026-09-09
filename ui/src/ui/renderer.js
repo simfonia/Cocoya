@@ -9,6 +9,9 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
     /** @type {HTMLElement[]} 儲存所有代碼行 DOM 以便快速存取 */
     lineDoms: [],
 
+    /** @type {(string|null)[]} 行索引 (0-based) 到「可定位積木 ID」的反查表（由 code 定位回積木用） */
+    lineIndexToBlockId: [],
+
     /**
      * 更新 Python 代碼預覽區域
      * @param {string} rawCode Blockly 產出的原始碼 (包含隱藏的 ID 標記)
@@ -29,6 +32,10 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         codeContent.innerHTML = '';
         this.blockToRangeMap.clear();
         this.lineDoms = [];
+        this.lineIndexToBlockId = [];
+
+        // 確保空白點擊清除高亮的綁定已就緒（render 必然執行；有去重標記，多次呼叫無副作用）
+        this.bindWorkspaceClickToClearHighlight();
 
         lines.forEach((line, index) => {
             // 解析並提取 ID 資訊
@@ -40,6 +47,14 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             lineDiv.className = 'code-line';
             lineDiv.setAttribute('data-line-index', index);
             this.lineDoms.push(lineDiv);
+
+            // [反向定位] 點擊代碼行 → 定位到對應積木
+            lineDiv.style.cursor = 'pointer';
+            lineDiv.addEventListener('click', (evt) => {
+                // 避免誤觸純文字選取
+                if (window.getSelection && window.getSelection().toString()) return;
+                this.locateBlockByLineIndex(index);
+            });
             
             // 處理代碼渲染與縮排輔助線
             if (cleanLine.length > 0) {
@@ -91,6 +106,37 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             });
 
             codeContent.appendChild(lineDiv);
+        });
+
+        // [反向定位] 建立「行索引 → 可定位積木 ID」反查表。
+        // 取覆蓋該行、且範圍最窄的積木（內層通常比外層更特定），並把 value 積木
+        // 往上轉成 statement 父積木（與單向定位 findLocatableBlock 對稱）。
+        this.lineIndexToBlockId = new Array(this.lineDoms.length).fill(null);
+        const pickNarrower = (best, challenger) => {
+            if (challenger === null) return best;
+            if (best === null) return challenger;
+            const r1 = this.blockToRangeMap.get(best);
+            const r2 = this.blockToRangeMap.get(challenger);
+            if (!r1) return challenger;
+            if (!r2) return best;
+            return ((r2.end - r2.start) < (r1.end - r1.start)) ? challenger : best;
+        };
+        this.blockToRangeMap.forEach((range, blockId) => {
+            let targetId = blockId;
+            // value 積木 → 往上找 statement 父積木（若無法解析則保留原 id）
+            try {
+                const ws = (typeof Blockly !== 'undefined') ? Blockly.getMainWorkspace() : null;
+                const block = ws ? ws.getBlockById(blockId) : null;
+                if (block) {
+                    const loc = this.findLocatableBlock(block);
+                    if (loc) targetId = loc.id;
+                }
+            } catch (e) { /* 保留 blockId */ }
+            const start = Math.max(0, range.start);
+            const end = Math.min(range.end, this.lineIndexToBlockId.length - 1);
+            for (let i = start; i <= end; i++) {
+                this.lineIndexToBlockId[i] = pickNarrower(this.lineIndexToBlockId[i], targetId);
+            }
         });
 
         // 同步目前的選取狀態
@@ -152,6 +198,63 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             const startLine = this.lineDoms[range.start];
             if (startLine) {
                 startLine.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+    },
+
+    /**
+     * [反向定位] 清除所有積木的選取框與高亮 (手動管理，繞開 Blockly focus 系統)
+     * @param {object} ws Blockly workspace
+     */
+    clearBlockHighlight: function(ws) {
+        if (!ws) return;
+        // 清除 workspace 維護的 highlightedBlocks 陣列 (若曾用 auto-fallback 的 highlightBlock)
+        if (typeof ws.highlightBlock === 'function') {
+            try { ws.highlightBlock(); } catch (e) { }
+        }
+        // 對所有積木 removeSelect() 移除 .blocklySelected 框 (直接操作視覺，不需 DOM focus)
+        try {
+            const all = typeof ws.getAllBlocks === 'function' ? ws.getAllBlocks(false) : [];
+            all.forEach((b) => {
+                if (b && typeof b.removeSelect === 'function') {
+                    try { b.removeSelect(); } catch (e) { }
+                }
+            });
+        } catch (e) { }
+    },
+
+    /**
+     * [反向定位] 由代碼行索引定位到對應積木（點擊代碼行時觸發）
+     * @param {number} lineIndex 代碼行索引 (0-based)
+     */
+    locateBlockByLineIndex: function(lineIndex) {
+        if (lineIndex === null || lineIndex === undefined) return;
+        const blockId = this.lineIndexToBlockId ? this.lineIndexToBlockId[lineIndex] : null;
+        if (!blockId) return;
+
+        const ws = (typeof Blockly !== 'undefined') ? Blockly.getMainWorkspace() : null;
+        if (!ws) return;
+
+        // 1. 捲動並置中到積木
+        if (typeof ws.centerOnBlock === 'function') {
+            ws.centerOnBlock(blockId);
+        }
+
+        // 2. 明確切換 code 高亮：syncSelection 開頭必然清除所有舊 .highlight-line，
+        //    再高亮新範圍 —— 不依賴 SELECTED 事件回饋，保證第二次點其它行也能清除舊高亮。
+        this.syncSelection(blockId);
+
+        // 3. 積木側：手動「先清全部積木選取框 → 再對目標 addSelect」。
+        //    這繞開 Blockly focus 系統 (其在 webview 下不穩定，會造成舊積木高亮累積)：
+        //    - 先 removeSelect() 所有積木框（含目標本身重複無害）
+        //    - 再對目標 addSelect() 加框
+        this.clearBlockHighlight(ws);
+        const block = ws.getBlockById(blockId);
+        if (block) {
+            if (typeof block.addSelect === 'function') {
+                block.addSelect();
+            } else if (typeof block.select === 'function') {
+                block.select();
             }
         }
     },
@@ -257,5 +360,36 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         if (codeCloseBtn) {
             codeCloseBtn.onclick = () => self.toggleCodeArea(false);
         }
+
+        self.bindWorkspaceClickToClearHighlight();
+    },
+
+    /**
+     * [反向定位] 點擊 Blockly 工作區空白處時，清除所有積木選取框與 code 高亮。
+     * 這補償 Blockly focus 系統在 webview 下失效（原生「點空白取消選取」不作用）。
+     */
+    bindWorkspaceClickToClearHighlight: function() {
+        try {
+            const ws = (typeof Blockly !== 'undefined') ? Blockly.getMainWorkspace() : null;
+            if (!ws) return;
+            const svg = typeof ws.getParentSvg === 'function' ? ws.getParentSvg() : null;
+            if (!svg || svg.getAttribute('data-cocoya-clear-bound') === '1') return;
+            svg.setAttribute('data-cocoya-clear-bound', '1');
+
+            svg.addEventListener('pointerdown', (evt) => {
+                // 若點在積木/欄位/對話框上：交給 Blockly 原生處理，不做清除
+                const t = evt.target;
+                if (!t) return;
+                const inBlock = (typeof t.closest === 'function') && (t.closest('[data-id]') || t.closest('.blocklyWidgetDiv') || t.closest('.blocklyDropdownDiv'));
+                if (inBlock) return;
+
+                // 點在空白 → 清除積木選取框 + code 高亮
+                const ws2 = (typeof Blockly !== 'undefined') ? Blockly.getMainWorkspace() : null;
+                if (window.CocoyaUI) {
+                    window.CocoyaUI.clearBlockHighlight(ws2);
+                    window.CocoyaUI.syncSelection(null);
+                }
+            }, true);
+        } catch (e) { }
     }
 });

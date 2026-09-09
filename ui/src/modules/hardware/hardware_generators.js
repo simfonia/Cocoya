@@ -10,7 +10,10 @@ Blockly.Python.forBlock['mcu_pin_shadow'] = function(block, generator) {
 Blockly.Python.forBlock['mcu_board_init'] = function(block, generator) {
   var boardId = block.getFieldValue('BOARD');
   var name = (typeof CocoyaBoard !== 'undefined' && CocoyaBoard.boardName) ? CocoyaBoard.boardName(boardId) : boardId;
-  return '# Board: ' + name + ' (' + boardId + ')\n';
+  // 注入 definitions_（Blockly 產生器會把 definitions 置於程式最前），
+  // 使板子宣告註解出現在第一行（imports/Helper/主程式之前），而非碼流中間
+  generator.definitions_['board_declaration'] = '# Board: ' + name + ' (' + boardId + ')';
+  return null;
 };
 
 /**

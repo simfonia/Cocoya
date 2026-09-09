@@ -5,6 +5,16 @@ Blockly.Blocks['spike_init_hub'] = {
   init: function() {
     this.jsonInit({
       "message0": Blockly.Msg["SPIKE_INIT_HUB"],
+      "args0": [
+        {
+          "type": "field_dropdown",
+          "name": "FIRMWARE",
+          "options": [
+            [Blockly.Msg["SPIKE_FW_OFFICIAL"] || "Official (SPIKE 3)", "official"],
+            [Blockly.Msg["SPIKE_FW_PYBRICKS"] || "Pybricks", "pybricks"]
+          ]
+        }
+      ],
       "previousStatement": null,
       "nextStatement": null,
       "colour": Blockly.Msg["COLOUR_SPIKE"],

@@ -1,8 +1,10 @@
 // spike i18n (en) - Lego SPIKE Prime block messages
 
 // === Initialization ===
-Blockly.Msg["SPIKE_INIT_HUB"] = "Initialize Hub";
-Blockly.Msg["SPIKE_INIT_HUB_TOOLTIP"] = "Initialize the Lego SPIKE Prime Hub. Must be called once at the start.";
+Blockly.Msg["SPIKE_INIT_HUB"] = "Initialize Hub %1";
+Blockly.Msg["SPIKE_INIT_HUB_TOOLTIP"] = "Initialize the Lego SPIKE Prime Hub. Must be called once at the start. Choose the firmware mode matching the firmware actually installed on the hub (Official SPIKE 3 App or Pybricks).";
+Blockly.Msg["SPIKE_FW_OFFICIAL"] = "Official (SPIKE 3)";
+Blockly.Msg["SPIKE_FW_PYBRICKS"] = "Pybricks";
 Blockly.Msg["SPIKE_MOTOR_INIT"] = "Initialize motor port %1 type %2";
 Blockly.Msg["SPIKE_MOTOR_INIT_TOOLTIP"] = "Initialize a motor on the specified port. Large is high-torque, Medium is standard.";
 Blockly.Msg["SPIKE_MOTOR_TYPE_LARGE"] = "Large";

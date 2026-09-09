@@ -1,63 +1,33 @@
-﻿# Cocoya 專案任務清單 (Todo List)
+# Cocoya 專案任務清單 (Todo List)
 **專案名稱**：Cocoya (Code, Compute, Yield AI)
 **核心目標**：以 Blockly 為介面，幫助 Python 初學者進入 AI 世界的 VSCode extension 與獨立桌面應用程式。
 
 ## [核心開發原則]
 - **SSOT (單一事實來源)**：所有積木、產生器與前端邏輯統一存放於 `ui/src`，由 VSIX 與 Tauri 共享。
 - **通訊抽象化**：前端一律透過 `CocoyaBridge` 與後端通訊，禁止在 UI 層直接使用環境專屬 API。
-- 完整技術知識請參閱 `log/KNOWLEDGE_BASE.md`（2026-08-24 蒸餾自全部工作日誌並已對照程式碼求證）。
+- **任務前快取現況**：先讀 `log/COCOYA_STATE.md`（現況快覽）再讀本檔對應章節；技術深層知識見 `log/KNOWLEDGE_BASE.md`；每日細節見 `log/work/`。
 
 ---
-
 ## [進行中 / 待辦]
 
-### [規劃完成] Dataset Manager 重構計畫 (2026-08-24)
-- 計畫文件：`log/plan/DatasetManagerRefactor.md`
-- 目標：拆解 ui_layout.js 上帝模組（108KB/60+ 函式）為 core/io/ui 三層；CSS 變數化主題；i18n 補齊；雙橋接集中於 io/bridge.js
-- Phase 2 io 抽出 ☐ / Phase 3 UI 拆解 ☐ / Phase 4 樣式重構 ☐ / Phase 5 文件與知識蒸餾 ☐ / Phase 6 清理總驗證 ☐（Phase 0/1 已完成，見下方 Stage 1 結案）
-- 注意：showStatusMessage 定義位置遷移至 ui/statusMessage.js 後須同步 AGENTS.md
-- Phase 0 基線備份 ✅ / Phase 1 core 抽出 ✅ / Phase 2 io 抽出 ☐ / Phase 3 UI 拆解 ☐ / Phase 4 樣式重構 ☐ / Phase 5 文件與知識蒸餾 ☐ / Phase 6 清理總驗證 ☐
-- **Stage 1（2026-08-26）結案**：交付 `core/{labelMap,stats,state,projectNaming,pathPolicy}.js` + `core/pathPolicy.test.mjs`(11 測試全過)；後端 canonical save/load（VSIX+Tauri）含 errorCode；canonical-only 匯入閘（資料集必須於「專案根/dataset/<資料集名稱>」，外部資料夾提示複製/拒絕中止）；載入 direct canonical 並移除 fallback/AMBIGUOUS 死碼；進入 Dataset Manager 前權威錨定閘；修復自動落盤被快照擋、縮圖 convertFileSrc、Ctrl+R/F5 回首頁、close 誤彈。自動化全綠(node/test/vite/tsc/compile/cargo check/test)。手動 Tauri Dev 實測 PASS(落盤/匯入複製/縮圖/Ctrl+R)。待補：VSIX 對應手動案例、Tauri Release 安裝 smoke、SSH/SFTP 遠端驗證(BLOCKED 主機不通)。
-- 下階段：Phase 2 io 層抽出。
-- **Stage 2 切片 1-5（2026-08-29）**：補做指引 Stage 2（Ports/Adapter）——新增 `dataset_manager/io/bridge.js`（唯一 Bridge Port：request correlation/timeout/cancel/unsubscribe/dispose，fake transport 測試 8/8 PASS）；`ui_layout.js` 與 `sampler.js` 全部通訊改經 datasetBridge，direct `window.CocoyaBridge` 殘留 = 0；行為契約未變、後端零修改。A2-5/6/7（雲端上傳）標 N/A（RemoteTrainingRefactor D2 已移除）。詳見 `log/work/2026-08-29.md`。
-- **Stage 3 切片 4（2026-08-29）**：新增 `application/annotationMutations.js`（10 純函式 + 7 測試）；ui_layout 5 處 mutation 接線、exportUseCases 計數共用。**Stage 3 收斂**（指引 §6.2 步驟 1-5 完成，cloud upload N/A）；enter/exit 模式編排屬 Stage 4。U3-1~U3-4 實機待測（backlog）。
-- **Stage 3 切片 3（2026-08-29）**：新增 `application/exportUseCases.js`（exportDataset 編排：未標註/未分類 confirm + Spec 驗證 + datasetExport correlation）；ui_layout 匯出入口改委派 wrapper（3 處 onclick 零改動）。自動化全綠。Stage 3 剩：annotation/classification mutation 搬移（建議下一輪獨立切片）。
-- **Stage 3 切片 2（2026-08-29）**：新增 `application/importUseCases.js`（parseDataFileRows 純轉換 + importDataFile/importDirectory 編排，測試 7/7）；ui_layout 匯入入口改委派 wrapper。自動化全綠；U3-3 實機待測（backlog）。下一切片：exporter 抽出（handleExportDataset → application/exportUseCases.js，U3-1 匯出側）。
-- **Stage 3 切片 1（2026-08-29）**：新增 `application/progressUseCases.js`（load/save/autosave/cancelAutoSave use-case，依賴注入、通訊經 io/bridge.js）；ui_layout 保留同名 wrapper；close 時 cancelAutoSave + Sampler.dispose。自動化全綠；U3-1/U3-2 實機待測（backlog）。下一切片：importer/exporter 純轉換與 I/O 分離（U3-3）。
-- **手動測試延後決策（2026-08-29）**：A2-1~A2-4、C1 遺留、U3-* 統一登錄 `log/plan/DatasetManagerManualTestBacklog.md`，最後集中執行；Gate 簽核延後。
-- **Stage 4 切片 1（2026-08-30）**：新增 `ui/statusMessage.js`（集中式狀態訊息 Presenter：showStatusMessage/dispose，計時器重置與 dispose 語意不變，documentRef 可注入）；`ui_layout.js` 移除全域 statusMessageTimer/STATUS_MESSAGE_DURATION/showStatusMessage function，改模組頂部 const 暴露（use-case 注入不變），closeDatasetManager 補 statusMessagePresenter.dispose()；新增 `ui/statusMessage.test.mjs`（7 測試）；AGENTS.md 定義位置 + FILE_STRUCTURE.md 同步。自動化全綠（node --check ×3、node --test 40/40、vite build）。UI4-4 實機待測（backlog）。下一切片：ui/modal.js（createModal/bindModalEvents/open-close 生命週期，§7.2 步驟 2）。
-- **Stage 4 切片 2（2026-08-30）**：新增 `ui/modal.js`（buildModalTemplate 純函式，modal 模板自 createModal 原樣移出、DOM 契約零變更）+ `ui/modal.test.mjs`（5 測試）；`ui_layout.js` createModal 改用之；**修正訂閱洩漏**——offBridgeMessage 原被丟棄致 refreshI18n 重建累積重複 listener，改掛 modal._offBridgeMessage 並於卸載前解除。自動化全綠（node --check ×3、node --test 45/45、vite build）。UI4-1 實機待測（backlog）。下一切片：ui/form.js（§7.2 步驟 3：form 讀寫與 spec sync 分離）。
-- **Stage 4 切片 3（2026-08-30）**：新增 `ui/form.js`（createFormPresenter({getModalRoot})→{getFormValue,getColumnsFromUI,dispose}，唯讀、modal root 可注入）+ `ui/form.test.mjs`（7 測試）；`ui_layout.js` 改 formPresenter 委派 wrapper（呼叫點零改動）；`syncSpecFromUI` 依「form 讀寫與 spec sync 分離」留在協調層、讀取改經 presenter。自動化全綠（node --check ×3、node --test 52/52、vite build）。下一切片：ui/thumbnails.js（§7.2 步驟 4：scroll save/restore 集中管理）。
-- **Stage 4 切片 4（2026-08-30）**：新增 `ui/thumbnails.js`（createGridScrollManager({state,getContainer,hasImages})→{saveGridScroll,restoreGridScroll,dispose}；state._savedGridScrollTop 契約不變、container 缺失早退不清空等原語意逐行對齊）+ `ui/thumbnails.test.mjs`（8 測試含 round-trip）；`ui_layout.js` 改 gridScrollManager 委派 wrapper（四處呼叫點零改動）。自動化全綠（node --check ×3、node --test 60/60、vite build）。UI4-3 實機待測（backlog）。下一切片：ui/classification.js（§7.2 步驟 5：分離 classification state machine）。
-- **Stage 4 切片 5（2026-08-30）**：新增 `ui/classification.js`（createClassificationController——分類校正模式五函式 enter/load/renderControls/updateProgress/keyboard bind-unbind + dispose；依賴全注入、沿用 state.annotationMode 統一狀態機、classificationKeyHandler 改閉包私有）+ `ui/classification.test.mjs`（7 測試）；`ui_layout.js` 改五個同名委派 wrapper（呼叫點零改動），closeDatasetManager 補 classificationController.dispose()。自動化全綠（node --check ×3、node --test 67/67、vite build）。UI4-2 實機待測（backlog）。
-- **Stage 4 切片 6（2026-08-30）**：新增 `ui/annotation.js`（createAnnotationController——bbox/line 標註模式八函式 enter/save/load(UICanvas.init+debounce)/renderControls/renderListUI/progress/畫布鍵盤/delete + dispose；mutation 純函式 import application/annotationMutations.js；image 分流與 exit/navigate/updateThumbnailHighlight 共用邏輯留協調層）+ `ui/annotation.test.mjs`（7 測試）；`ui_layout.js` 改同名委派 wrapper（呼叫點零改動），closeDatasetManager 補 annotationController.dispose()。自動化全綠（node --check ×3、node --test 74/74、vite build）。UI4-2 bbox 側自動化 PASS、實機待測（backlog）。下一切片：ui/panels.js（§7.2 步驟 7）。
-- **Stage 4 切片 7（2026-08-30）**：新增 `ui/panels.js`（createPanelsPresenter——renderColumnRow/renderValidation/renderPreviewTable/addColumn/renderAllColumns + dispose；唯呈現層、依賴全注入）+ `ui/panels.test.mjs`（6 測試）；`ui_layout.js` 改同名委派 wrapper；`refreshDynamicPanels`（Sampler/label manager 重度耦合編排）留協調層。自動化全綠（node --check ×3、node --test 80/80、vite build）。Stage 4 剩餘：Gate 收斂（手動案例集中測）。
-
-### [待辦] 引入 tauri-codegen 產生 typed invoke (2026-08-19)
+### tauri-codegen 產生 typed invoke (待辦, 2026-08-19)
 - [ ] 評估 tauri-codegen / @tauri-apps/types：自動從 #[tauri::command] 簽名生成 TS invoke<cmd>(args)
 - [ ] 目標：command 參數缺漏在 tsc 編譯期發現（而非執行期 invalid args）
 - [ ] 相依：與 docs/backend_api_manifest.md Parameters 表同步維護 (SSOT -> generate type -> manifest)
 
-### [待辦] 遠端訓練與 SSH 整合（沿用 VSIX 既有 Python sidecar / paramiko 模式）
-- [x] **D1 (2026-08-28) 模板 smart 同步**：sidecar trainRemote 前自動上傳變更的 `train_templates/`（find+zip+sftp+遠端解壓至 `~/cocoya_ai/sessions/{machine}/templates`）；未變更零上傳
-- [x] **D2 (2026-08-28) docker_cmd 改掛 /workspace + 依 task_type**：`-v templates:/workspace python3 /workspace/{task}/{task}_train.py`，傳完整 hyperparams + `--model_output`（none→只產報告 / keras→產keras）
-- [x] **D3 (2026-08-28) 全參數傳遞 + 本地 TFLite 轉換**：tauri.js/VSIX trainingOps.ts 解析 modelOutput/taskType/backbone 等全參；新增 `_local_convert_tflite.py` 掃本地 dataset 建 representative 依 model_output 轉 int8/f32/all（對齊 classifier_train 命名）
-- [x] **D4 (2026-08-28) 產物路徑回傳**：sidecar 回傳 report/keras/curve/history 絕對路徑；前端開啟報告正確位置
-- [ ] D5 文件同步收尾（parity matrix / manifest / FILE_STRUCTURE / help）
-- [ ] **SSH/Sidecar 上傳流程整合**：實作 `extension.ts` 中 `backend === 'remote'` 的分支（VSIX 已透過 `dataset_sidecar.py` paramiko SFTP 上傳並原位解壓；`checkRemoteEnvironmentResult`/`datasetUploadResult` 已回前端）
-- [ ] **Tauri 版 SSH/雲端訓練藍圖**（規劃細節見備份 todo.md_20260824 之「Tauri 版 SSH/雲端訓練實作藍圖」L560）：
-  - 新增 `resources/ssh_sidecar.py` 封裝 paramiko（SSH 連線、指令執行、SFTP 傳輸）
-  - 新增 Rust `ssh.rs` 指令：`check_remote_env`、`upload_dataset`、`start_remote_training`、`download_results`
-  - DGX 流程：「上傳資料集 → SSH 啟動容器 → 監控進度 → 下載結果」；訓練對話框後端選擇（local/DGX）在 Tauri 啟用；SSH 帳密儲存（Tauri 可考慮 `tauri-plugin-store`）
-  - 遠端推論 API 整合
-- [ ] **Tauri `datasetUploadArchive`**：需後端支援（VSIX 已透過 sidecar SFTP，Tauri 前端仍為空殼 `_dispatchToFrontend`）
-- [ ] **容器化訓練腳本**：建立基於 DGX 鏡像（NGC `nvcr.io/nvidia/pytorch` ARM64）的訓練容器與模板程式（舊 Docker 模板已封存於 mvp_hand_gesture/train_templates/）
+### 遠端訓練與 SSH 整合（待辦, 未完項）
+- [ ] **D5 文件同步收尾**（parity matrix / manifest / FILE_STRUCTURE / help）
+- [ ] **SSH/Sidecar 上傳流程整合**：實作 `extension.ts` 中 `backend === 'remote'` 的分支（VSIX 已透過 `dataset_sidecar.py` paramiko SFTP 上傳並原位解壓）
+- [ ] **Tauri 版 SSH/雲端訓練藍圖**（舊規劃細節見備份 todo.md_20260824「Tauri 版 SSH/雲端訓練實作藍圖」L560）：新增 ssh_sidecar.py(paramiko) + Rust ssh.rs 指令(check_remote_env/upload_dataset/start_remote_training/download_results) + DGX 流程(上傳→SSH 啟動容器→監控→下載)；訓練對話框後端選擇在 Tauri 啟用；SSH 帳密儲存(可考慮 tauri-plugin-store)
+- [ ] 遠端推論 API 整合
+- [ ] **Tauri `datasetUploadArchive`**：需後端支援（Tauri 前端仍為空殼 _dispatchToFrontend）
+- [ ] **容器化訓練腳本**：基於 DGX 鏡像（NGC nvcr.io/nvidia/pytorch ARM64）的訓練容器與模板
 
-### [待辦] 長期優化
-- [ ] 跨平台序列埠 Friendly Name（macOS/Linux 顯示優化；Windows 已有 VID/PID 映射）
+### 長期優化（待辦）
+- [ ] 跨平台序列埠 Friendly Name（macOS/Linux；Windows 已有 VID/PID 映射）
 - [ ] 重置韌體 esptool 整合為 Tauri Sidecar 的可行性評估
 
-### 實機驗證未完成項彙整（截至 2026-08-24）
+### 實機驗證未完成項彙整（截至 2026-08-24，跨任務 backlog）
 - [ ] Dataset Manager 第二輪 UI：統計同步、label id、三處標籤管理器一致性、排序與顏色（VSIX+Tauri）
 - [ ] Startup Home 開新專案流程雙平台（dirty 提示、另存錨定、取消零副作用）、btn-new-window 開新視窗
 - [ ] 主題系統：candy 主題實機配色、auto 跟隨系統、重啟記住偏好、VSIX 切語系 reloadWebview
@@ -65,227 +35,85 @@
 - [ ] Tauri 多視窗：雙視窗 run/serial 不污染、失焦釋放/聚焦重取 serial
 - [ ] VSIX Deep Repair 實機（Tauri 已驗證）；XIAO CAMERA/FACTORY 模式燒錄埠檢查提醒
 - [ ] M4b dataset.json 存讀混合資料（Live+File）套回回驗證（雙平台）
+- [ ] [NEW 2026-09-08] code→積木 反向定位實機驗證（點擊 code 行 → 捲動並選取對應積木；實作於 renderer.js locateBlockByLineIndex，VSIX+Tauri 雙平台）
 
----
+### Dataset Manager 三層重構 - 收尾（Stage 1-6 已完成；僅剩下項）
+- [ ] 手動測試 backlog（log/plan/DatasetManagerManualTestBacklog.md：A2-1~A2-4、C1、U3-*、UI4-*）
+- [ ] Stage 6 Gate 簽核（§9.3 六項）＋ D6-2/B0-1 公開 API 實機對照（console Object.keys(window.CocoyaDataset).sort()）
+- [ ] Stage 7 總驗證（compile/lint/cargo check+test/tauri build + E2E 矩陣 §10）
+- （長遠債）--dsm-* dark/token 收斂（vscode-dark CSS 覆寫與 cocoya_dark 主題 cssVars 各持一份，非 SSOT；見 log/plan/DatasetManagerDarkThemeFinish.md）
+- （長遠債）spec.js 直用 t() transitional boundary（core 層文案耦合 i18n）
+- （長遠債）Tauri dev 模式 sidecar 路徑優先序（get_sidecar_dir Resource 目錄優先於專案根原始檔）
+- （長遠債）Tauri 深色 prompt hover 白底（--dsm-btn-hover-bg 深色值未定義→fallback 白）
+- （低優先）Tauri webview 下 .serial-dropdown-label query 為 null 的環境因素（已被鐵壁版繞過）
 
-## [已完成里程碑總覽]（時間序精簡版，詳情見 log/work/ 對應日期日誌）
+### [2026-09-05] Lego SPIKE Prime 多層分類（模組/部署已完成，未完項）
+- [ ] 實機驗證：切換 MicroPython 模式 → toolbox 顯示「Lego SPIKE Prime」外層分類 → 展開 7 子分類 → 子分類可展開顯示積木
+- Phase 0 續（log/plan/SpikeModuleDesign.md）：deploy/pybricks.py 上傳支援、serialOps.ts/mcu.rs VID/PID（Pybricks hub）
 
-### 2026-02 — 專案誕生 v1.0 ~ v2.x
-- 02-12 專案命名 Cocoya、混合架構確立、Webview 通訊修復、Python 產生器整合
-- 02-13~14 雙欄佈局、ID 定位註解 (# ID:xxx)、工具列/髒狀態/CocoyaManager 模組化、PC/CircuitPython 雙模式
-- 02-16~19 AI 視覺模組 (cv_basic/cv_draw/ai_hand/ai_face)、S_ID/E_ID 區間高亮、MediaPipe ai_pose、中文繪圖 PIL Bridge
-- 02-21~24 IO/Coding 分類、Serial 模組、平台產生器切換 (PLATFORM)、環境診斷助手
+### [2026-09-02] Tauri Release 訓練範例三案（已完成，未完項）
+- [ ] 實機驗證：Release 開 02_PC_train.xml 全流程；Dev 模式直開範例回歸
+- （妥協債）native 確認框文案 hard-code 於 Rust，未來改前端自訂對話框以 i18n
 
-### 2026-03 — 硬體整合 v3.x
-- mcu_camera/mcu_huskylens/mcu_car (Maker Pi RP2040 PWM 零依賴)、πCar 全面移植（PiCarServo/MusicEngine）、Minimap/搜尋引擎/ScrollOptions 插件
-
-### 2026-04 — 雙模架構與 Tauri 啟動 v5.0
-- 04-09 SSOT 目錄重構、CocoyaBridge 抽象化
-- 04-18 deploy_mcu.py Errno22 修復（原生 copy + 內容校驗）
-- 04-19 Tauri 2.0 後端啟動（Rust lib.rs、bridge.js 鏡像）
-- 04-24~26 主題同步、Minimap NaN 防護、實體自動備份系統（跟隨專案路徑+Forking 保護）、UF2 韌體重置 Strategy A
-- 04-29 **重大決策：放棄 CircuitPython 改 MicroPython (Serial REPL)**，deploy_mcu.py 全序列埠 Raw REPL 重寫，硬體產生器遷移 machine 模組
-- 04-30 Terminal Singleton 解決 COM 佔用、序列埠智慧辨識 (VID/PID)
-
-### 2026-05 — 架構成熟 v5.x/v6.0
-- 05-03~04 響應式佈局、面板收合縮放、Tauri 關閉攔截+3按鈕存檔確認、備份視窗隔離 untitled_backup_{label}
-- 05-06~09 **大重構**：ui_manager/main.js/utils.js 模組化拆分、Rust lib.rs 拆 state/utils/commands、AppController Map 分發、Capabilities 能力系統、Tauri 二階段權限定義鐵律確立
-- 05-06 MWIP 多視窗完整性協議（file_locks、emit_to 單播、.recovering 備份宣示權）
-- 05-14 產生器 definitions_ 解耦（解 NameError）、雲端 AI 模式一期（Remote-SSH 感知、路徑沙盒化）
-- 05-20 Blockly.hideChaff 強制寫回值、Geek 270°舵機安全限位
-- 05-27~31 **Dataset Manager Phase 1-4**（DatasetSpec/Modal UI/Importer/影像匯入+BBox 標註）、Python Sidecar 架構轉型（OpenCV 原生預覽繞過 Webview getUserMedia 封鎖）
-
-### 2026-06 — 資料集與雲端訓練
-- 06-03 Phase 6 匯出 ZIP、401 localResourceRoots 根治
-- 04(補)~05 循線標註、畫布 clamp 限幅、遠端 Base64 上傳、zipfile 原位解壓、PATH 注入解 nvidia-smi 找不到
-- 07 XIAO S3 全面支援（esptool Serial 燒錄、多段 Factory 韌體、128-byte 分塊）、REPL 雙向通訊、Silence Mode 修打字失焦
-- 11 SSH Sidecar 方案 C 閉環（paramiko SFTP 上傳解壓）
-- 20 Y姿勢控制 πCar 範例
-- 24 DGX Spark Docker 訓練鏈路驗證完成（94.68% vs 本地 92.55%）、ARM64 用 NGC pytorch 容器
-- 25~29 通用訓練模板 train_templates/、訓練積木 py_ai_train_run、推論積木 py_ai_model_init/predict、i18n BKY_ 前綴規則確立
-
-### 2026-07 — 訓練生態完善
-- 05~08 訓練報告 HTML 化、extension.ts 模組化重構（handlers/*.ts）、範例英文化（中文路徑 openExternal 0x2 坑）
-- 09~10 多攝影機選擇、刪除照片同步磁碟、pickFolder 修復
-- 11~12 MicroPython 入門範例 6 個、AI 訓練積木擴充（common/*.py 共同模組、通用推論 _ModelInference、4 解析積木）、Help 系統 docs/help/
-- 18 Tauri sidecar 三指令（start_sidecar/sidecar_send/stop_sidecar）、逐 byte 讀 stdout 防 BufReader 吃 event
-- 29 serde camelCase 鐵律確立（ScanedImage blob_url 坑）、datasetExport Rust 版、Value 積木定位 findLocatableBlock、工作區註解功能（registerCommentOptions）、Minimap 註解同步 v2/v3
-- 30~31 Dataset Manager 7 項優化、sidecar ping 輕量健康檢查、i18n.js 共享 t() 模組
-
-### 2026-08 — 錨定、多視窗與主題系統
-- 01~02 openTrainingReport Tauri 版、訓練確定性（TF 種子+deterministic ops）、MODEL_OUTPUT 下拉與推論 MODEL_TYPE
-- 04 detector_train.py（MobileNetV2 回歸頭 Dense(4)）、YOLO 匯出、py_ai_get_bbox_center
-- 06~09 BBox 全寬 3 欄標註 UI、分類標籤校正模式、validate() 類型感知分級、sidecar 區域 import 遮蔽全殘 bug
-- 10~15 **專案根錨定 SSOT**（get_project_anchor、Startup Home、_refreshAnchor）、live savePath 接回、M4b dataset.json 等級一存讀、自動落盤方案 A（800ms 防抖）、savePath basename 單一時間戳鐵律
-- 17 Dataset Manager 第二輪 UI（showStatusMessage 集中化、名稱衝突警示、FNV-1a 標籤配色、nextLabelId）
-- 19 reset_firmware invalid args 修復（Option<String>）、backend_api_manifest.md Parameters SSOT、跨語言簽名同步規範
-- 20 **多視窗終端機隔離**（emit_to 全轉換）+ serial 失焦釋放/聚焦重取方案 B（set_window_focus）
-- 21~24 Startup Home 平台選擇/範例/快速設定、「先確認後破壞」開新流程、tag 回傳鏈、乾淨初始 XML、**Theme Manager 主題模組**（registry/msgColours/cssVars/reloadWebview+時間戳強制重建）、candy 第三主題驗證資料驅動換膚
-
-*本清單於 2026-08-24 精簡重整（原始完整版備份於 backup/todo.md_20260824_231017.bak）*
-- **Stage 4 Gate 收斂盤點（2026-08-30）**：§7.4 Gate 逐項盤點完成——項 1/3/5 自動化 PASS（80/80、index.js/sampler.js/ui_canvas.js 零修改）；項 2/4 部分達成（UI4-1~UI4-5 實機集中測待執行、Object URL revoke 無自動化測試）；項 6 簽核 PENDING。§7.2 步驟 6 之 sampler/canvas lifecycle 判定：sampler.js 已於 Stage 2 controller 化（dispose/correlation/revoke）、UICanvas init 已注入 annotation controller，邊界清楚、不需第八切片；選配可補 sampler Object URL revoke 單元測試。剩餘：手動測試集中執行 → Gate 簽核。
-
-## AI Agent Handoff（Stage 5 切片 1：CSS 色彩盤點）
-
-- 日期：2026-08-30
-- Agent：Cline
-- 階段：Stage 5 切片 1（§8.2 步驟 1：列出現有色彩/尺寸/focus/error/disabled selector）
-- 狀態：READY_FOR_REVIEW（純盤點，零程式碼/視覺變更）
-- HEAD：`7705536`（Stage 4 已 commit；本切片僅新增 log/plan/DatasetManagerStyleTokens.md + 日誌）
-- 產出：`log/plan/DatasetManagerStyleTokens.md`——207 處色彩/99 唯一值/var()=0/dark 覆寫 128 行的總量盤點；品牌粉/中性灰/暗表面/成功綠/錯誤紅/警示橘/資訊藍/遮罩八組語意分組；focus/error/warning 狀態 selector 位置（disabled 無 selector，需補 token）；`--dsm-*` token 對照表提案；VSIX 靜態載入與 theme_manager cssVars 層級相容性風險（關鍵：light 預設須掛 :root/body 而非 dialog，否則主題換膚失效）
-- 修改檔案：log/plan/DatasetManagerStyleTokens.md（新）、log/work/2026-08-30.md、log/todo.md、parity matrix
-- 測試命令與結果：N/A（無程式碼變更）；盤點數據以 Select-String 統計（207 處、99 唯一、var()=0、dark selector 128 行）
-- 下一個 agent 第一動作：Stage 5 切片 2（§8.2 步驟 2）——依盤點文件 §4 對照表，以 `:root`/body 定義 `--dsm-*` light 預設值，逐批把高頻色彩（#FE2F89 19 處、灰階文字/邊框）改為 var() 參照；每批後 node --test + vite build + light/dark/candy 三主題目視對照
-- 禁止重做或修改的事項：§8.2 步驟 2 鐵律——token 化不改視覺值；不得動 ESLint config/Vite classic warnings；不得將 BLOCKED 標 PASS
-- 需要產品決策的問題：① alpha 變體收斂幅度（brand 7 種 → 1-2 種？）② disabled 態目前無樣式，是否補定義 ③ 尺寸 token（間距/圓角）是否納入本 Stage 或僅做色彩
-- 交接者：Cline
-
-## 下次啟動方向 (Next Steps)
-
-- Stage 5 切片 2：token 定義 + 高頻色彩 var() 化（依 DatasetManagerStyleTokens.md §4/§6）；決策點見 Handoff。
-- **Stage 5 切片 2（2026-08-30）**：token 定義（:root：--dsm-brand/soft/strong + disabled 三 token）+ 品牌粉 19 處 var() 化 + alpha 7 處收斂（soft .15/strong .3，使用者裁示）+ dialog disabled 規則。事故：regex 誤替換 :root 致循環參照已修正。自動化全綠（80/80、build PASS）。三主題目視待實機。下一切片：灰階 token 化 + dark 區塊收斂（切片 3）。
-- **Stage 5 切片 3（2026-08-30）**：灰階 token 化——`:root` 補 5 個 text/border token（精確等值）+ light 側 21 處 var() 化；dark 區塊留切片 4。事故：substring Replace 誤傷 dark 區塊 border-color（7 處），以區間掃描器偵測還原。自動化全綠（80/80、build PASS）。下一切片：dark/HC token 覆寫收斂（切片 4）。
-- **Stage 5 切片 4（2026-08-30）**：dark/HC token 覆寫——`body.vscode-dark/high-contrast` 定義 text/border 五 token dark 值（等值），dark 區塊 24 處 var() 化；語意色與 surface 背景保留。自動化全綠（80/80、build PASS）。下一切片：candy/dark 主題 cssVars 補 `--dsm-*`（切片 5，解決 candy 換膚 DM 無變化）。
-- **Stage 5 切片 5（2026-08-30）**：candy/dark/light 三主題 cssVars 各補 11 個 --dsm-*（DM 隨主題換膚真正生效）；light 也補確保切回無殘留（theme_manager 不清舊 cssVars）。node --check ×3、80/80、build PASS。下一切片：i18n key parity（切片 6）。
-- **Stage 5 切片 5b（2026-08-30）**：DM 容器背景 token 化（--dsm-surface/-alt，light/dark/candy 三值），修正「DM 背景未套用主題」。每主題 --dsm-* 13 key。node --check ×3、80/80、build PASS。
-- **（長遠債）--`--dsm-*` dark/token 收斂（延伸，Stage 5）**：vscode-dark 覆寫（16）與 cocoya_dark 主題 cssVars（22）各持有 --dsm-* dark 值、非單一事實來源（例 --dsm-error-bg 兩處 #3d1b1b / #2d1515）。目前互斥無實際衝突，但調色需改兩處。建議設計「一份深色基底 token」為單一事實來源（log/plan/DatasetManagerDarkThemeFinish.md 一）。
-- **Stage 5 切片 5c（2026-08-30）**：深色收尾＋遠端面板移除——①--dsm-list-item-bg（標註列表）②tauri.js 全域 .cocoya-prompt-* token 化（影響所有模組 prompt，含 fallback）+ --dsm-success-*（打包 ZIP 面板）③DM 遠端環境面板前端移除（模板/綁定/訂閱/i18n DSM_CLOUD_* ×16 兩語系/_offBridgeMessage 機制）；**後端 checkRemoteEnvironment/trainRemote 保留**。node --check ×5、80/80、build 183ms 全綠。手動驗證清單見 log/work/2026-08-30.md。
-- **（中斷任務）Tauri SSH 遠端訓練三案修復（2026-08-31，已結案實測通過）**：①模板同步 WinError 123（`\\?\` 前綴+混合斜線，剝前綴+os.sep）②殘留 keras 誤下載（遠端 output 清空+下載白名單+none 不掃 keras）③本地 TFLite 轉換卡住（子進程改環境白名單+DEVNULL+CREATE_NO_WINDOW+watchdog；f32 免掃樣本 need_rep）。實測 int8+f32 產出 2820KB/9331KB 正常。詳見 log/work/2026-08-31.md。
-- **（長遠債）Tauri dev 模式 sidecar 路徑優先序**：`get_sidecar_dir` Resource 目錄（target\debug\resources）優先於專案根原始檔，違反 AGENTS.md「開發模式優先原始檔案」；改 sidecar 後須手動同步 dev 副本+重啟 app。建議 dev 優先序對調或 build 時自動同步。
-- **Stage 5 切片 6（2026-09-01，i18n key parity）**：①修正 5 處 key 呼叫錯誤（STATUS_CAPTURETTING 拼字、NEED_ANCHOR/IMPORT_* 共 6 處雙重前綴）——英文語系此前永遠 fallback 中文；②zh/en 各刪 21 個未使用 key（含 ERROR_UPLOAD_RESULT_IGNORED、SAVE_PROGRESS 系列——「儲存進度」按鈕已移除）；CLOSE_UNSAVED_CONFIRM 依 ui_layout 註解決策保留。自動化全綠（node --check ×4、node --test 80/80、vite build 532ms）；zh/en 118/118 全對齊。實機 T5-1 語系切換：**PASS（使用者確認）**，已 commit 3956591。
-- **Stage 5 收尾切片（2026-09-01，locale refresh race，§8.2 步驟 5）**：`index.js` loadI18n 舊實作以 `<script>` DOM 存在判斷已載入，in-flight 期間第二次呼叫立即 resolve → refreshI18n 在新語系就緒前重建 UI（T5-2 race）。改為 localeScriptPromises Map（onload resolve / onerror 清除+fallback），行為契約不變；refreshI18n listener 洩漏已由 Stage 4 切片 2 涵蓋。node --check + vite build PASS。T5-2/T5-3 實機待測。
-- **Stage 6 切片 2（2026-09-01，manifest 核對 + 訊息責任 + DevGuide）**：backend_api_manifest Dataset 段逐項對照 Rust（lib.rs/file.rs/dataset.rs）與 VSIX datasetOps.ts——簽名/result command 全一致、無 breaking change；get_project_anchor 重複列合併+camelCase 鐵律註記；AGENTS.md 落成「訊息責任定義」（§8.1 未竟項：錯誤碼在後端、文案在前端 i18n）；新建 `log/mappings/DatasetManager_DevGuide.html`（開發 SOP）。node --check + build PASS。
-- **（長遠債）spec.js 直用 t() 為 transitional boundary**：core 層錯誤文案耦合 i18n（重構計畫 P1 建議收斂為 error code 由 UI 翻譯）；AGENTS.md 訊息責任定義已明令「不得新增同類耦合」。
-- **（本次追加，Stage 6）Tauri DM 深色確認框白底已修**：tauri.js alert/confirm 改走 token 化自訂對話框（`_showConfirmDialog`/`_showAlertDialog`，共用 `_ensureDialogStyles()`），取代 OS 原生 plugin-dialog；深色下 DM 清除資料確認框隨 `--dsm-*` 換膚。commit 3699281。待實機深色/candy 目視。
-- **（待收斂債）Tauri 深色 prompt hover 白底**：`.cocoya-prompt-btn:hover` 的 `--dsm-btn-hover-bg` 深色未定義 → fallback 白（prompt/confirm/alert 皆然）；既有行為，待改三主題 cssVars 補 `--dsm-btn-hover-bg` 深色值。
-- **（本次追加，已修）換主題 dirty 專案被無預警重載**（2026-09-01）：根因＝setMode 直接 reload 銷毀記憶體 dirty；現改「兩者都要」——dirty 三選「保留並換/捨棄並換/取消」；keep 用 sessionStorage 快照（persistence.js snapshot/consume）於 lifecycle.initializeCocoya 還原並維持 dirty；cancel 不 reload。Ctrl+R/F5 早已攔截，唯主題切換漏網，已補。node --check×3、build PASS。待實機三選各分支。
-- **（待收斂債）discard 捨棄後仍「前端未命名、後端仍錨定」**：為使用者明示捨棄的合理結果，但後端 current_paths 未清，後續存檔可能寫回舊檔；若需更乾淨需「捨棄並回首頁/清錨定」產品決策。
-- **下一切片：Stage 6 Gate 簽核**——D6-2/B0-1 公開 API 實機對照（console `Object.keys(window.CocoyaDataset).sort()`）+ Stage 6 Gate（§9.3 六項）審核者（使用者）簽核 → Stage 7 總驗證（compile/lint/cargo check+test/tauri build + E2E 矩陣 §10）。
-- **Stage 6 收尾切片（2026-09-01，已 commit b93f3f1）**：DATASET_MANAGER_PLAN.md、DatasetManagerOptimization.md、DatasetManagerProgressAndGuardrails.md 標記 SUPERSEDED（保留原文）；system_spec.html 原無 DM 章節，增補〈24. Dataset Manager 模組規範〉（三層架構/雙平台/安全不變量，指向 mapping）。Stage 6 Gate 六項：①-③⑤已完成，④靜態通過（D6-2/B0-1 實機待測）、⑥審核者簽核待使用者。
-- **Stage 6 切片 1（2026-09-01，D6-3 靜態清理 + D6-1/D6-2 文件核對）**：①掃描證據——direct Bridge 僅 io/bridge.js（合法）、全域 emit=0、legacy DOM id=0、未使用 export=0；②ui_layout.js 刪 5 個零呼叫未 export 死 wrapper（renderColumnRow/bindCanvasKeyboardEvents/deleteSelectedAnnotation/updateClassifyProgress/bindClassificationKeyboardEvents）+3 孤兒註解；③annotation/classification 共用 7 面板 id 為互斥模式合法設計（記錄保留原因）；④DatasetManager.html 公開 API 表補齊 7 項、遠端節標記前端已移除、Importer 更正為 importUseCases；⑤FILE_STRUCTURE i18n/index/ui_layout 描述更新。node --test 80/80、build PASS。事故：worklog 重排腳本誤刪 Stage 5 收尾區段，已自 git 還原零損失。
-
-### [2026-09-03] Lego SPIKE Prime 模組開發計畫
-- 計畫文件：`log/plan/SpikeModuleDesign.md`
-- 目標：新增 `spike` 積木模組，支援 Lego SPIKE Prime 機器人（Pybricks 韌體）
-- **Phase 0 基礎設施**：
-  - [ ] 重構 `deploy_mcu.py` 為模組化結構（deploy/ 套件：base.py / micropython.py / pybricks.py）
-  - [ ] 新增 `deploy/pybricks.py` 上傳支援
-  - [ ] 更新 serialOps.ts / mcu.rs 的 VID/PID 偵測（Pybricks hub）
-- **Phase 1 Hub + 馬達基礎控制**：
-  - [ ] spike_init_hub / spike_motor_init / spike_motor_run / spike_motor_stop / spike_motor_angle
-  - [ ] Toolbox + i18n + Help
-- **Phase 2 感測器積木**：顏色 / 距離 / 力道
-- **Phase 3 Hub 內建設備**：螢幕 / 按鈕 / 喇叭 / IMU
-- **Phase 4 進階功能**：彩色積木、完整範例檔
-- 備註：使用 Pybricks 第三方韌體（API 直覺、適合初學者）；Toolbox 使用 Blockly 巢狀 category 實現多層分類
-
-### [2026-09-05] Lego SPIKE 多層分類實驗（最小可行模組）
-- [x] 建立 `ui/src/modules/spike/` 目錄結構（blocks/generators/toolbox/i18n）
-- [x] 實作 `toolbox.xml`：外層 category 包住 7 個子 category（初始化/馬達/顏色/距離/力道/Hub/工具）
-- [x] 實作 `spike_blocks.js`：22 個積木定義（完整 Phase 1-3 範圍）
-- [x] 實作 `spike_generators.js`：22 個 Python 產生器（Pybricks API 風格）
-- [x] 建立 `i18n/zh-hant.js` + `i18n/en.js`：完整雙語文案
-- [x] 顏色 SSOT：`zh-hant.js`/`en.js` 加入 `COLOUR_SPIKE: "#FF6680"`
-- [x] 分類名稱：`zh-hant.js`/`en.js` 加入 `CAT_SPIKE` + 7 個子分類
-- [x] `core_manifest.json` 註冊 spike 模組（group: hardware, platforms: MicroPython）
-- [x] 自動化驗證：node --check ×4 + vite build 全綠
-- [ ] 實機驗證：切換 MicroPython 模式 → 確認 toolbox 顯示「Lego SPIKE Prime」外層分類 → 點擊展開顯示 7 個子分類 → 子分類可展開顯示積木
-
-### [2026-09-02] Tauri Release 訓練範例三案修復（cp950 亂碼 / 模板路徑 / examples 唯讀）
-- [x] A 編碼：PYTHONIOENCODING/PYTHONUTF8 注入 + 模板 reconfigure + open encoding='utf-8'
-- [x] B 模板路徑權威化：env COCOYA_TRAIN_TEMPLATES 注入 + train_model() 候選 0
-- [x] C 範例唯讀保護（Release 確認後複製到 Documents\Cocoya\Projects；Dev 直接開啟）+ EXAMPLES_READ_ONLY 前端 i18n
-- [x] 自動化驗證全綠（cargo check / tsc / node --check / vite build / py_compile）
-- [ ] 實機驗證：Release 開 examples/test/02_PC_train.xml 全流程（複製→錨定→訓練→報告）；Dev 模式直開範例回歸
-- [ ] （妥協債）native 確認框文案 hard-code 於 Rust，未來改前端自訂對話框以 i18n
-
-### [2026-09-03] VSIX 訓練終端機除錯（遠端無訊息 / 點點不停 / 本地誤標 Remote）
-- [x] sidecarManager onEvent 例外不再靜默（寫 Cocoya Sidecar outputChannel）
-- [x] TrainingTerminal.writeLine 失敗 fallback（Cocoya Training (fallback) 輸出頻道）
-- [x] 點點提前停止：VSIX 第一筆 trainingLog 送一次性 trainingConnected，webview 清 _remoteConnTimer
-- [x] 本地訓練誤標修正：trainingComplete 增 remote:true（VSIX 遠端鏈 + Tauri trainRemote），base.js 文案分流
+### [2026-09-03] VSIX 訓練終端機除錯（已完成，未完項）
 - [ ] 實機驗證：遠端訓練 VS Code 終端機出現日誌＋點點提前停；本地訓練顯示 Training complete
-- [x] 遠端完成無報告：VSIX trainingComplete 補轉發 reportPath/curvePath/historyPath/kerasPath/tflitePaths；終端機加「=== 遠端訓練完成/失敗 ===」結束標記（Pseudoterminal 無 shell prompt）；sidecarManager 對未配對 response 輸出警告
-- [x] i18n：webview 新增 MSG_TRAINING_COMPLETE_LOCAL/REMOTE key（zh-hant/en）；host 端 trainingOps HOST_MSGS+hostMsg（vscode.env.language 推導）套用於遠端通知/結束標記/缺 SSH 訊息
-- [x] Host 端訊息全量雙語化：新增共用 src/hostI18n.ts（HOST_MSGS zh-hant/en + hostMsg），trainingOps/datasetOps/sidecarManager/serialOps 所有使用者可見訊息改走 hostMsg，殘留掃描=0
 
-### [2026-09-04] 模型檔本地轉換問題除錯（log/errors 四檔）
-- [x] A esptool 安裝警告：config/python_modules.json esptool 加 pipPackage="esptool==4.7.0"（有預編 wheel、cryptography 相依較寬鬆，不再觸發 msal 衝突與 sdist 現場 build）；Rust PYTHON_MODULES_JSON 內嵌常數同步；hardware.js/tauri.js/envOps.ts 安裝鏈傳遞 pipPackage 並加 --no-warn-script-location
-- [x] B 遠端 keras 本地轉換失敗（renorm）：_local_convert_tflite.py 新增 _sanitize_keras_config()——.keras(zip) config.json 遞迴剝除 renorm/renorm_clipping/renorm_momentum/synchronized 後重打包再 load（custom_objects 對 Keras 3 內建類別無效之替代路線）；_load_model_compat 改四層 fallback
-- [x] C 遠端權重快取：dataset_sidecar.py docker_cmd 掛載 ~/cocoya_ai/keras_cache/models → /root/.keras/models，訓練前自動 mkdir，imagenet 權重首次下載後永久重用
-- [x] 實機驗證 (2026-09-04 第三輪)：①環境診斷安裝 esptool 4.7.0 無衝突 ERROR；②Release 遠端訓練 → 本地 TFLite 轉換成功；③遠端連跑兩次訓練，第二次 log 無 "Downloading data from storage.googleapis.com"——三案全數通過，任務結案 ✅
-- [x] B2 (2026-09-04) 遠端轉換仍失敗：0904 log 判讀 — sanitize 已生效，下一個不相容參數為 Dense quantization_config；_STRIP_KEYS 擴充（+quantization_config/lora_*）+ 失敗訊息自動解析下一個不相容層；合成測試 PASS。待：重 build msi → 學生機重測遠端訓練轉換
-- [x] D (2026-09-04) 03_PC_inference.xml KeyError:1：範例仍用舊版列表索引 API，改用 py_ai_get_confidence/py_ai_get_label 解析積木；XML VALID + vite build PASS。待：實機重開範例驗證推論流程
-- [x] D2 (2026-09-04) examples/AI_* 推論範例 dict API 更新：AI_01_classifier 三處改 py_ai_get_confidence/py_ai_get_label；AI_02_detector 已相容無需改；全 XML VALID + vite build PASS
-- [x] E (2026-09-04) int8 推論精度崩壞：_local_convert_tflite.py representative dataset 缺 1/255 正規化（與訓練 pipeline 不一致，值域差 255 倍）→ 補 map 正規化；實測 int8 vs f32 一致率 96.7%、準確率 81.7% vs 85.0%（正常損耗）。待：重 build msi + 重新產生 int8 模型
+### [2026-09-04] 模型檔本地轉換（已完成，follow-up）
+- [ ] 重 build msi → 重測遠端訓練→本地 TFLite 轉換（int8 須重新產生；新參數加 _STRIP_KEYS）
+- （評估債）遠端容器 TF 版本與本地對齊，根除跨版本序列化差異
 
-### [2026-09-05] terminal UI 新增功能（字體大小 / 複製全部 / 高度拖曳 / 收合把手）
-- [x] 終端機字體大小循環切換（12/14/16/18px，localStorage 記憶）+ 程式碼預覽字體切換（13/15/17px）——共用 setupFontSizeCycler 機制、各自記憶
-- [x] 複製終端機全部文字到剪貼簿（navigator.clipboard + flashButton 綠閃）
-- [x] 終端機高度上下拖曳（#terminal-resizer，對齊 #panel-resizer 風格：raf 節流、overlay、svgResize 收尾）
-- [x] 三角形收合把手（#terminal-toggle，位於 #blocklyArea 右下角、JS 同步貼終端機上緣，▲/▼ 方向切換，dark 主題規則）
-- [x] i18n key（zh-hant/en）：TLB_TOGGLE_TERMINAL / TLB_COPY_TERMINAL / TLB_FONT_SIZE_TERMINAL / TLB_FONT_SIZE_CODE / TLB_DRAG_RESIZE_HEIGHT
-- [x] 自動化驗證：node --check ×3 + vite build 全綠
-- [x] 修正：終端機收合把手的 normal/hover-icon 通用切換規則缺失（兩張並排 + hover 全染粉）→ 補 `.toolbar-btn` 通用三條 + hover filter 排除 owl
-- [x] codeHeader 關閉鈕 (X) hover 無變色 → `#btn-close-code:hover span{color:#FE2F89}`
-- [x] terminal 關閉鈕 (X) 色彩行為對齊其他按鈕 → `#btn-close-terminal span{color:#FE2F89;opacity:.8}`
-- [x] AI 按鈕 hover 換圖（owl.png → owl-hover.png）+ dark 主題反轉規則排除 owl
-- [x] 首頁操作訊息對話框被首頁蓋住（z-index）→ `.cocoya-prompt-dialog-overlay`/theme-switch/dialogs 動態框統一提到 10100（> 首頁 10002）
-- [ ] 實機驗證（VSIX + Tauri）：字體記憶、複製、拖曳高度、收合/展開、深淺主題、首頁診斷成功訊息彈出
-- [x] Dataset Manager 資料夾/檔案選取預設路徑 = XML 專案根（pick_folder 加 default_path；新增 pick_data_file；importDirectory/importDataFilePath 傳專案根）——自動化全綠
-- [ ] 實機驗證：VSIX + Tauri 下資料夾/檔案 dialog 起始目錄皆為專案根
-- [x] Dataset Manager 刪除縮圖預防性保守處理：前端等待 datasetDeleteImageResult（成功/FILE_NOT_FOUND 皆移除縮圖，IO 失敗保留並提示）、VSIX/Rust 後端不存在改回 FILE_NOT_FOUND（非靜默成功）、VSIX 加 filePath debug log——自動化全綠
-- [ ] 實機驗證：刪縮圖正常流程 + 手動移除真檔後刪縮圖應提示「原始檔已不存在」
-- [x] toolbar 專案 label hover 顯示完整路徑（capabilities 快照 + getProjectAnchor 權威校正）；視窗標題（Tauri + VSIX）只顯示 Cocoya（+ dirty *）；persistence snapshot filename 改用 currentFilename——自動化全綠
-- [x] 修正：Title 檔名改回原樣（多視窗辨識需求）；保留 hover 完整路徑與 persistence snapshot 修正
-- [x] 修正：hover 路徑分隔符混用（projectRoot 反斜線統一為正斜線）
-- [x] 修正：編輯模式換主題不再詢問——一律 snapshot 後直接 reload 保留內容；移除三選對話框死碼
-- [x] 實機驗證：label hover 完整路徑、視窗標題帶檔名（原樣）、Ctrl+R reload 還原檔名正確、dirty 換主題直接保留還原
+### [2026-09-05] terminal UI 新增功能（已完成，未完項）
+- [ ] 實機驗證（VSIX+Tauri）：字體記憶、複製、拖曳高度、收合/展開、深淺主題、首頁診斷成功訊息彈出
+- [ ] 實機驗證：資料夾/檔案 dialog 起始目錄皆為專案根
+- [ ] 實機驗證：刪縮圖正常流程＋手動移除真檔後應提示「原始檔已不存在」
 
+### [2026-09-06] 語系切換對齊主題切換（已完成，未完項）
+- [ ] 實機驗證：VSIX+Tauri 切換語系後編輯區積木保留、dirty 狀態保留
 
+### [2026-09-06] Try/Except 例外處理積木（已完成，未完項）
+- [ ] 實機驗證：VSIX+Tauri 下拉選單、代碼產生、MicroPython 燒錄執行
+- [ ] 收斂確認：舊工作檔 BACKEND auto 值被 FieldDropdown validator 攔截遷移到 local
 
-### [2026-09-06] 語系切換對齊主題切換——保留編輯區積木
-- [x] 語系切換前先 snapshotWorkspaceForReload()：ui/src/ui/base.js（工具列語系膠囊）與 ui/src/app/persistence.js（首頁語系膠囊）兩處 click handler 於 reloadWebview 前加入快照呼叫，對齊 theme_manager.setMode 行為
-- [x] 驗證：node --check ×2 + vite build 全綠
-- [ ] 實機驗證：VSIX + Tauri 下切換語系後編輯區積木保留、dirty 狀態保留
-- [x] 修復：Tauri「examples dirty 開新檔」流程中止——`ui/src/bridge/tauri.js` case 'saveFile'/'saveFileAs' 的 EXAMPLES_PATH 分支原忽略 `_handleExamplesSaveDialog` 回傳值而無條件 false，導致 `_confirmSaveBeforeNew` 誤判取消、存檔完成但開新檔被中止、畫面停在原檔。改回傳真實結果（成功 true / 取消 false）並補 `_refreshAnchor`——node --check + vite build 全綠，實機待測（見 log/work/2026-09-06.md）
-- [x] 修復：VSIX 同 family bug——`src/handlers/fileOps.ts` `performSave` 的 examples「另存新檔」分支原無條件 `return true`（假成功），`handleSaveFileAs` 另存被取消時仍誤判「已存檔」，導致 `handleNewFile`/`handleOpenFile`/`handleCloseEditor` 繼續破壞工作區、未儲存變更遭丟棄。改 `handleSaveFileAs` 回傳 `Promise<boolean>` + `performSave` 分支 `return await handleSaveFileAs(...)`——tsc --noEmit 全綠，實機待測（見 log/work/2026-09-06.md）
-- [x] 改善：開新檔「另存誤解」風險（方案 2）——① Rust `save_file` 新增 `SAME_AS_CURRENT` 防呆（另存命中目前專案檔 → 擋下，避免原檔被乾淨初始積木覆寫）+ 開新專案對話框標題；② VSIX `handleSaveFileAs` 相同防呆；③ `_confirmSaveBeforeNew` 改回傳 `{proceed,saved}`，存回原檔後以 alert 提示「原專案已儲存，接下來為新專案選位置」消除誤解；④ tauri.js 處理 `SAME_AS_CURRENT` + 傳 `dialogTitle`；⑤ i18n 三 key；⑥ manifest 同步——node --check ×4 + tsc + vite build + cargo check 全綠，實機待測（見 log/work/2026-09-06.md）
-- [x] 修復：開新檔「原專案已儲存」提示未等待確認就跳第五步——`ui/src/bridge/base.js` `alert()` 原未 return `this.send(...)`，`await bridge.alert()` 立即通過。改 `return this.send('alert',...)`，Tauri 端真正等待 `_showAlertDialog` 關閉後才繼續——node --check ×3 + vite build 全綠，實機待測（見 log/work/2026-09-06.md）
-- [x] 改善：`SAME_AS_CURRENT` 提示後自動重試開新專案對話框——`tauri.js` case saveFile/saveFileAs 改防呆重試迴圈（上限 5）：命中目前路徑 → 提示後 continue 重新彈出另存對話框讓使用者改選位置；連續命中達上限才中止（MSG_SAME_AS_CURRENT_ABORT）。（追加：SAME_AS_CURRENT/BKY_SAVE_FAILED/ABORT 三處 alert 補 await，避免提示未關閉即重疊彈出下一個對話框。）node --check ×3 + vite build 全綠，實機待測（見 log/work/2026-09-06.md）
-`r`n### [2026-09-06] 新增 Try/Except 例外處理積木`r`n- [x] 新增 py_try_except 積木定義（logic_blocks.js）：try body + except body + 例外型別下拉選單`r`n- [x] 新增產生器（logic_generators.js）：輸出 try/except Python 代碼`r`n- [x] 更新 toolbox.xml：Logic 分類加入新積木`r`n- [x] 更新 i18n：zh-hant.js + en.js 新增 TRY_EXCEPT_TRY/EXCEPT/TOOLTIP`r`n- [x] 新增 Help 文件：docs/help/py_try_except_zh-hant.html + en.html`r`n- [x] 驗證：node --check + vite build 全綠`r`n- [ ] 實機驗證：VSIX + Tauri 下拉選單、代碼產生、MicroPython 燒錄執行
-
-### [2026-09-06] MCU 硬體控制模組一般化（板子感知腳位 SSOT + VID/PID 連動）
-- [x] 新增 ui/src/modules/hardware/board_defs.json：開發板資訊表 SSOT（picow/maker-pi/xiao-s3，含 vidPid/pins/gpioMap）
-- [x] ui/src/module_loader.js：載入模組級 board_defs.json → window.CocoyaBoardDefs（無檔靜默略過）
-- [x] ui/src/modules/hardware/hardware_blocks.js：CocoyaBoard 登錄器（mcu_pin_shadow 動態 options、localStorage 記憶目前板、切板刷新所有 pin 積木、未指定板 fallback 全板合併清單）
-- [x] ui/src/modules/hardware/hardware_generators.js：共用 cocoyaResolvePinNum（gpioMap 權威映射 + 舊格式 fallback）+ 未知腳位產生明確錯誤註解（不再默默產壞碼）
-- [x] src-tauri/src/commands/mcu.rs：SerialPortResult 加 board_id（serde rename_all camelCase → 前端 boardId）+ detect_board_id(vid,pid)；get_serial_ports 回填
-- [x] ui/src/ui/hardware.js：序列埠選取/刷新 → _applyBoardFromPort → CocoyaBoard.setCurrent(boardId) 自動切板
-- [x] src/handlers/serialOps.ts（VSIX）：PNPDeviceID 推導 boardId（boardIdMap 對齊 JSON SSOT）
-- [x] 文件：FILE_STRUCTURE.md（hardware 模組）、docs/backend_api_manifest.md（SerialPortResult 欄位）
-- [x] 驗證：node --check ×4 + JSON parse + cargo check + tsc --noEmit + vite build 全綠
-- [ ] Python deploy 端對齊：resources/deploy/base.py 讀同一份 board_defs.json 的 vidPid，回傳與 Rust/前端相同 boardId（避免兩套偵測 drift）
+### [2026-09-06] MCU 硬體控制模組一般化（多數完成，未完項）
+- [ ] Python deploy 端對齊：resources/deploy/base.py 讀同一份 board_defs 的 vidPid，回傳相同 boardId（避免兩套 drift）
 - [ ] 實機驗證：插 Pico/XIAO 自動切板、腳位下拉只列該板腳位、未指定板合併清單、未知腳位錯誤註解
-- [ ] （未來）Rust detect_board_id 改為執行期讀 board_defs.json，消除手動同步
-- [x] 手動開發板選擇器（ui/index.html board-selector + hardware.js initBoardSelector/updateBoardSelector + style.css + i18n TLB_BOARD*）——MCU 模式顯示，未插板可手動選板
-- [x] 嚴格腳位映射清理：移除 board.GPx/board.Dx/board.LED 字串解析與跨板合併 fallback（舊 XML 相容移除，依用戶要求）——resolveGpio/cocoyaResolvePinNum 只認 gpioMap
-- [x] 驗證：node --check ×5 + vite build 全綠
 - [ ] 依 tags 過濾腳位下拉（digital_write→digital/pwm、analog_read→adc）+ 補齊各板完整 pinout（目前為常用子集）
-- [x] mcu_car 模組遷移 gpioMap 嚴格映射（maker-pi 專用車行為不變，選錯板擋下）：picow/maker-pi gpioMap 擴充 GP0-28 全腳 + mcu_car_generators 8 處舊解析替換——node --check + vite build 全綠
 - [ ] 實機驗證：Maker Pi RP2040 上 mcu_car 積木（伺服/超音波/按鈕/循跡）代碼與遷移前一致
-- [x] board_init 宣告積木架構定案與實作：board_defs.js 取代 JSON（loadScript，修 fetch 失敗根因）+ mcu_board_init 積木（toolbox/i18n/generator 註解）+ 新專案自動預置(maker-pi) + 移除 toolbar 選板 + 上傳不符 confirm 攔截 + 28 個 MicroPython 範例 XML 批次塞入宣告——node --check ×9 + vite build + cargo check 全綠
-- [ ] 實機驗證 board_init 五情境（見 log/work/2026-09-06.md Next Steps）
+- [ ] 實機驗證 board_init 五情境（①開新 MCU 見 board_init(maker-pi) ②無宣告 GPIO 可解析 ③改下拉 pin 即時刷新 ④插板與宣告不符 confirm 攔截 ⑤πCar 開檔即 maker-pi）
 - [ ] （未來）Rust/VSIX vidPid 表改執行期讀 board_defs.js 或 codegen，消除手動同步
 
-### [2026-09-07] 開發板偵測及上傳除錯
-- [x] 修復：`tauri.conf.json` 的 `bundle.resources` 缺少 `deploy/` 資料夾 → 加入 `"../resources/deploy": "resources/deploy"`（Serial Monitor 啟動時 `ModuleNotFoundError: No module named 'deploy'` 的根因）
-- [x] 修復：`hardware.js` 的 `updateSerialPorts` 在 `ports` 為空時強制清空 `data-value` → 改為保留已選擇的埠（選擇序列埠後顯示「(無序列埠)」的根因）
-- [x] 修復：`hardware.js` 缺少 `_applyBoardFromPort` 函式 → 新增以支援選埠自動切板（`this._applyBoardFromPort is not a function` 的根因）
-- [x] 修復：`hardware.js` `updateSerialPorts` 在 `ports` 為空時，雖保留 data-value 但 menu 選項被清成只剩「(No Port)」→ 改為同時加入已選取的埠項目（用 `__lastLabel` 重現完整名稱），解決「下拉看不到板子」
-- [x] 驗證：node --check + JSON parse 全綠
-- [ ] 實機驗證：Tauri 開發模式下 `deploy/` 資料夾正確打包、Serial Monitor 可啟動
+### [2026-09-07] 開發板偵測及上傳除錯（多數完成，未完項）
+- [ ] 實機驗證：Tauri dev 下 deploy/ 正確打包、Serial Monitor 可啟動（無 ModuleNotFoundError）
 - [ ] 實機驗證：選擇序列埠後重新整理，label 不會被清空
-- [x] [2026-09-07 續] serial 下拉「(無序列埠)」最終根治（鐵壁版）：setSerialPortLabel 直接寫 trigger.textContent（不依賴 .serial-dropdown-label query、避開 applyI18n 重置）+ 偵測到埠 autoSelect 自動顯示/切板 + ports 空時保留已選埠 + 清除全部 debug log——使用者實機確認成功；回歸測試 HEAD/2947033/040a0a3 皆復現，判定為長期結構性缺陷；「query 為 null」最底層環境因素列為低優先未深究
-- [ ] 實機驗證：Tauri 開發模式下 deploy/ 資料夾正確打包、Serial Monitor 可啟動（無 ModuleNotFoundError）
-- [x] [2026-09-07 第二輪] 按鈕拆分（偵測板子/序列監看 toggle）+ Rust toggle_serial_monitor + serial-monitor-stopped/serial-ports-changed 事件 + stop_python 清 serial_wants + 1.5s 熱插拔輪詢（單執行緒 diff 廣播）+ updateSerialPorts 埠消失重選切板 + deploy/base.py banner 恢復不丟資料 + 點點 inline + Micro:bit（board_defs/vidPid 表/board_init 下拉）+ board_init 帽子積木(hat=cap) + 初始積木模板座標重排 + SSH Enter 連線——node --check ×12/py_compile/tsc/vite/cargo check 全綠；待實機驗證（microbit Pin(n) 語義與 P5/P11 共用腳位標記待驗）
+- [ ] 實機驗證：①拆鈕後偵測/監看各自行為 ②熱插拔 1.5s 自動換埠切板 ③拔 Maker Pi 插 SPIKE 正確更新 ④上傳含 print() 開頭不被吃、點點同行 ⑤microbit Pin(n) 語義與 P5/P11 共用腳位 ⑥新 MCU 檔三塊不重疊+帽子外觀 ⑦SSH Enter 連線 ⑧多視窗輪詢不污染
+---
+## [已完成任務歸檔]（壓縮指針；詳細與每日異動一律見 log/work/ 與計畫文件）
+
+### Archive A：Dataset Manager 三層重構 Stage 0-6（2026-08-24 ~ 09-01，已完成）
+- 拆解 ui_layout.js（108KB/60+ 函式）為 core/io/ui/application 四層＋CSS 變數化主題＋i18n 補齊＋雙橋接集中於 io/bridge.js（唯一 Bridge Port）。
+- Stage 1(08-26) core 抽出＋後端 canonical save/load(VSIX+Tauri,errorCode)＋canonical-only 匯入閘＋權威錨定閘。
+- Stage 2(08-29) io/bridge.js（request correlation/timeout/cancel/unsubscribe，fake transport 8/8）；ui_layout/sampler 全通訊改造，direct Bridge 殘留=0。
+- Stage 3(08-29) application/{progressUseCases,importUseCases,exportUseCases,annotationMutations}.js。
+- Stage 4(08-30) ui/{statusMessage,modal,form,thumbnails,classification,annotation,panels}.js（取代 showStatusMessage global）；修正訂閱洩漏(offBridgeMessage)。
+- Stage 5(08-30~09-01) 色彩盤點(DatasetManagerStyleTokens.md：207 處/99 唯一值)＋--dsm-* token 化（三主題各 13 key）＋i18n key parity(zh/en 118/118)。
+- Stage 6(09-01) manifest 核對＋訊息責任定義(AGENTS.md)＋DatasetManager_DevGuide.html＋DM 深色確認框 token 化自訂對話框＋三份舊 DSM 計畫標 SUPERSEDED＋system_spec 增補〈24. DM 模組規範〉。
+- 詳細：log/work/2026-08-24.md、2026-08-26.md、2026-08-28.md、2026-08-29.md、2026-08-30.md、2026-08-31.md、2026-09-01.md；計畫 log/plan/DatasetManagerRefactor.md；SOP log/mappings/DatasetManager_DevGuide.html；token 計畫 log/plan/DatasetManagerStyleTokens.md。
+
+### Archive B：里程碑總覽 2026-02 ~ 2026-08（已完成）
+- 逐月摘要原本位在本檔「已完成里程碑總覽」章節；2026-08-24 已精簡一次；**完整版備份 backup/todo.md_20260824_231017.bak**。
+- 逐日執行細節一律見 log/work/2026-{02..08}-*.md。
+
+### Archive C：2026-09 各任務（已完成部分；未完項見上方對應節）
+| 日期 | 已完成摘要 | 對應工作日誌 |
+|---|---|---|
+| 09-02 | Tauri Release 訓練三案（cp950 亂碼 PYTHONIOENCODING/PYTHONUTF8 + 模板路徑 COCOYA_TRAIN_TEMPLATES + examples 唯讀保護） | log/work/2026-09-02.md |
+| 09-03 | SPIKE 部署計畫(plan/SpikeModuleDesign.md)；VSIX 訓練終端機除錯（onEvent 例外/點點提前停/本地誤標 remote/i18n hostI18n.ts hostMsg） | log/work/2026-09-03.html |
+| 09-04 | 模型檔本地轉換（esptool pin 4.7.0 / _sanitize_keras_config renorm/quantization_config+_STRIP_KEYS / 遠端權重快取 keras_cache / int8 代表集補 1/255 正規化） | log/work/2026-09-04.md |
+| 09-05 | SPIKE 多層分類最小模組（toolbox 巢狀 7 子類+22 積木/generators/i18n/COLOUR_SPIKE，已註冊 core_manifest）；terminal UI 五功能；DSM 刪縮圖保守處理/資料選取路徑=專案根/hover 完整路徑 | log/work/2026-09-05.md + 2026-09-05.html |
+| 09-06 | MCU 硬體一般化多數（board_defs.js 取代 JSON+CocoyaBoard+cocoyaResolvePinNum 嚴格 gpioMap+board_init 帽子積木+vidPid 連動）；語系切換保留編輯區積木；Try/Except 積木（含 Help 檔/auto→local 遷移）；examples dirty 開新檔雙平台修復；SAME_AS_CURRENT 防呆+開新重試迴圈 | log/work/2026-09-06.md |
+| 09-07 | 開發板偵測除錯（deploy/ 打包、_applyBoardFromPort、下拉保留）；serial「(無序列埠)」最終根治（鐵壁版）；偵測/監看按鈕拆分+toggle_serial_monitor+serial-monitor-stopped/serial-ports-changed；1.5s 熱插拔輪詢；Micro:bit；board_init 帽子積木+初始座標重排 | log/work/2026-09-07.md |
+
+*本清單於 2026-09-08 精簡重整（#task[整理todo]）；原始版本備份於 backup/todo_trim_20260908_132601.md。*
+- [x] [2026-09-09] SPIKE Prime：detect_board_id(0694:0009→spike-prime) + board_defs 條目（空 pins）+ spike 積木韌體雙模式（官方 SPIKE 3 / Pybricks，import 注入修補 + wait_button bug 修復）+ 序列埠 tooltip VID:PID——全驗證綠
+- [ ] 實機検証：SPIKE 官方模式 display/speaker/button/imu API 簽名、REPL 多行上傳、兩模式生成碼在 hub 執行
+- [ ] （未來里程碑）Pybricks 韌體支援：WinUSB 傳輸層（nusb/rusb + Pybricks USB 協議）+ 「偵測到 LEGO hub 但無 COM」UI 提示（引導刷官方韌體或用 code.pybricks.com）

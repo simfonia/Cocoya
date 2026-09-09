@@ -50,6 +50,7 @@ fn detect_board_id(vid: Option<&str>, pid: Option<&str>) -> String {
         (Some("2E8A"), Some("0005")) => "maker-pi".to_string(),
         (Some("303A"), _) => "xiao-s3".to_string(),
         (Some("0D28"), _) => "microbit".to_string(),  // Micro:bit V1/V2
+        (Some("0694"), Some("0009")) => "spike-prime".to_string(),  // LEGO SPIKE Prime（官方/Pybricks 韌體同 VID/PID）
         _ => String::new(),
     }
 }

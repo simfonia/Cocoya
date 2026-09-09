@@ -21,6 +21,13 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                 root.__boardIdMap[p.port] = p.boardId;
             }
         });
+        // 記錄埠 → VID/PID（除錯用：tooltip 顯示，韌體/驅動問題一眼可查）
+        root.__portInfoMap = {};
+        (ports || []).forEach(p => {
+            if (p && typeof p === 'object' && p.port && p.vid) {
+                root.__portInfoMap[p.port] = (p.vid || '') + ':' + (p.pid || '');
+            }
+        });
 
         const currentVal = root.getAttribute('data-value') || '';
 
@@ -97,7 +104,10 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             displayText = currentVal || root.__lastLabel || '';
         }
         trigger.textContent = displayText ? displayText + ' \u25BE' : '(No Port)';
-        if (displayText) root.setAttribute('title', displayText);
+        if (displayText) {
+            const vpid = (root.__portInfoMap || {})[currentVal];
+            root.setAttribute('title', vpid ? displayText + ' [' + vpid + ']' : displayText);
+        }
     },
 
     /** 根據目前選取的序列埠自動切換板子 */

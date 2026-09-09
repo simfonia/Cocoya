@@ -86,6 +86,15 @@ window.CocoyaBoardDefs.hardware = {
             // micro:bit MicroPython：Pin(n) 的 n 對應 edge connector 腳位編號 pin0~pin20（17/18 不外露）
             // 注意：P5/P11 為按鈕 A/B 共用，實機驗證後再依需求調整
             gpioMap: { P0: 0, P1: 1, P2: 2, P3: 3, P4: 4, P5: 5, P6: 6, P7: 7, P8: 8, P9: 9, P10: 10, P11: 11, P12: 12, P13: 13, P14: 14, P15: 15, P16: 16, P19: 19, P20: 20 }
+        },
+        "spike-prime": {
+            name: "LEGO SPIKE Prime",
+            vidPid: [["0694", "0009"]],
+            // SPIKE Prime 無 GPIO 腳位（馬達/感測器為 Port A~F，走 spike 專屬積木，
+            // 不使用 mcu_pin_shadow 腳位機制）；pins 留空以滿足必填欄位。
+            // 韌體模式（官方 SPIKE 3 / Pybricks）由 spike_init_hub 積木的下拉選擇。
+            pins: [],
+            gpioMap: {}
         }
     }
 };
