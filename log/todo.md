@@ -118,3 +118,5 @@
 - [ ] 實機検証：SPIKE 官方模式 display/speaker/button/imu API 簽名、REPL 多行上傳、兩模式生成碼在 hub 執行
 - [ ] （未來里程碑）Pybricks 韌體支援：WinUSB 傳輸層（nusb/rusb + Pybricks USB 協議）+ 「偵測到 LEGO hub 但無 COM」UI 提示（引導刷官方韌體或用 code.pybricks.com）
 - [x] [2026-09-09] SPIKE 支援凍結（實驗性）：現況說明 log/plan/SpikeSupportStatus.md（含決策理由、已完成清單、已知限制、Pybricks 里程碑啟動條件、相關日誌索引、重啟檢查清單）——日後重啟由此進入
+- [x] [2026-09-09] 上傳 RP2040 終端只顯示「OK」而非 complete_banner：根因「OK」為 Raw REPL 執行成功之韌體標記；complete_banner 未被印出因 monitor() 逾時檢查被關在 `ser.in_waiting>0` 區塊內、raw 模式不回 `>>>`，永遠觸發不到。修正：逾時兜底移至 while 層級強制補印（log/work/2026-09-09.md）
+- [x] [2026-09-09] 上傳 RP2040 空行不穩定復現（根治）：Raw REPL 換行 `b'\r\n'` 與內文**分批到達**、時序漂移 → 空行位置每次不同。三層分工修復：base.py 過濾純換行批+壓平+OK後補空行（單一源頭排版）、mcu.rs 回復 chunk 直通（不拆整行）、tauri.js 剝 `\r`；同步 target/debug 副本。實機確認成功（log/work/2026-09-09.md 踩坑記錄 6 條）

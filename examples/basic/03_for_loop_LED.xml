@@ -1,14 +1,17 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
-<variables>
+  <variables>
     <variable id="i_var">i</variable>
   </variables>
-  <block type="mcu_board_init" id="board_init_aacb7a7e4b" x="10" y="-70"><field name="BOARD">maker-pi</field></block>
-  <comment id="0?T{HRguz26N%76!VcPJ" x="10" y="-30" w="287.8053741455078" h="119.69232177734375">for 迴圈入門 — LED 跑馬燈
+  <comment id="0?T{HRguz26N%76!VcPJ" x="30" y="-130" w="287" h="119">for 迴圈入門 — LED 跑馬燈
 for 迴圈讓變數 i 從 start 跑到 stop-1
 每次跑一步，執行 DO 裡面的程式
+  
   </comment>
-  <block type="py_definition_zone" id="dz01" x="10" y="110"></block>
-  <block type="mcu_main" id="main01" x="10" y="190">
+  <block type="mcu_board_init" id="board_init_aacb7a7e4b" x="30" y="30">
+    <field name="BOARD">maker-pi</field>
+  </block>
+  <block type="py_definition_zone" id="dz01" x="30" y="110"></block>
+  <block type="mcu_main" id="main01" x="30" y="210">
     <statement name="DO">
       <block type="py_coding_comment" id="c02">
         <field name="TEXT">等待按鈕1 按下才開始</field>

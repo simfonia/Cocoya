@@ -1,13 +1,18 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
-<variables>
+  <variables>
     <variable id="U!T-@VPz.I%l#e}Ezue@">i</variable>
   </variables>
-  <block type="mcu_board_init" id="board_init_a162c8b88a" x="10" y="-70"><field name="BOARD">maker-pi</field></block>
-  <comment id="$XMV,a3IDn2T6`6gUQRi" x="10" y="-150" w="306.4615478515625" h="104.923095703125">使用 for 迴圈執行重複的工作
+  <comment id="$XMV,a3IDn2T6`6gUQRi" x="10" y="-310" w="307.3846130371094" h="177.61538696289062">使用 for 迴圈執行重複的工作
 
 for i in range(start, stop, step):
 
+  
+  
+  
   </comment>
+  <block type="mcu_board_init" id="board_init_a162c8b88a" x="10" y="-70">
+    <field name="BOARD">maker-pi</field>
+  </block>
   <block type="py_definition_zone" id="fZIf/kj)qz,ZyK:aZlMV" x="10" y="10"></block>
   <block type="mcu_main" id=":iaVv|K(}.pHeOdi={MR" x="10" y="90">
     <statement name="DO">

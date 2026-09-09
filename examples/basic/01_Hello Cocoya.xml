@@ -1,7 +1,9 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
-  <block type="mcu_board_init" id="board_init_e98a6d2799" x="10" y="-70"><field name="BOARD">maker-pi</field></block>
-<block type="py_definition_zone" id="fZIf/kj)qz,ZyK:aZlMV" x="100" y="20"></block>
-  <block type="mcu_main" id=":iaVv|K(}.pHeOdi={MR" x="100" y="200">
+  <block type="mcu_board_init" id="board_init_e98a6d2799" x="110" y="-50">
+    <field name="BOARD">maker-pi</field>
+  </block>
+  <block type="py_definition_zone" id="fZIf/kj)qz,ZyK:aZlMV" x="110" y="30"></block>
+  <block type="mcu_main" id=":iaVv|K(}.pHeOdi={MR" x="110" y="150">
     <statement name="DO">
       <block type="py_time_sleep" id="jA=oY;84;hyJp/-u!T{2">
         <value name="SECONDS">

@@ -53,20 +53,53 @@ class MicroPythonDeployer(BaseDeployer):
                 print(get_msg("repl_failed", lang))
                 sys.exit(1)
 
-            # 送出程式碼（分段傳輸避免 buffer overflow）
-            code_bytes = code.encode("utf-8")
+            # 送出程式碼：寫入 main.py（持久化到 Flash）→ soft reboot 執行。
+            # 注意：過去只把程式碼貼進 Raw REPL 直接執行（僅存 RAM），使用者按 reset 後
+            # MCU 會跑回 Flash 裡的舊 main.py（或無程式），造成「上傳成功但 reset 跑舊程式」。
+            # 現在改為透過 Raw REPL 執行寫檔腳本把程式存進 /main.py，再送 Ctrl-D soft reboot，
+            # 讓 MCU 從 Flash 載入並執行新程式 → reset 後行為與上傳結果一致。
+            writer = (
+                "import os\n"
+                "f = open('main.py', 'w')\n"
+                "f.write(" + repr(code) + ")\n"
+                "f.close()\n"
+                "print('WRITE_OK')\n"
+            )
+            wb = writer.encode("utf-8")
             chunk_size = 256
-            for i in range(0, len(code_bytes), chunk_size):
-                ser.write(code_bytes[i:i+chunk_size])
+            for i in range(0, len(wb), chunk_size):
+                ser.write(wb[i:i+chunk_size])
                 time.sleep(0.05)
+            ser.write(b"\x04")  # 執行寫檔腳本
 
-            # 結束 Raw REPL 並執行
-            ser.write(b"\x04")
-            time.sleep(0.5)
+            # 等待寫檔完成確認
+            start_time = time.time(); write_ok = False
+            while time.time() - start_time < 10:
+                res_w = ser.read_all().decode("utf-8", errors="ignore")
+                if "WRITE_OK" in res_w:
+                    write_ok = True; break
+                if "Traceback" in res_w or "OSError" in res_w:
+                    break
+                time.sleep(0.1)
+            if not write_ok:
+                print(">>> [Upload] Warning: main.py write not confirmed; aborting.")
+                sys.exit(1)
 
+            # 結束 Raw REPL 並 soft reboot 執行 main.py：
+            # 重要：必須先送 Ctrl-B 切回 normal REPL 再送 Ctrl-D。實測（Maker Pi RP2040）
+            # 在 raw REPL 下 soft reboot 後板子會停留在 raw REPL（印 "raw REPL; CTRL-B to exit"）
+            # 且不自動執行 main.py；normal REPL 下 Ctrl-D soft reboot 才會載入並執行 main.py。
+            # 在送出 Ctrl-D 之前先印成功 banner，並立即 flush，確保 banner 搶先於程式輸出。
             completion_msg = get_msg("complete_banner", lang)
             if use_mon:
-                self.monitor(port, lang, welcome_msg=completion_msg, existing_ser=ser, is_tauri=is_tauri)
+                print(completion_msg); sys.stdout.flush()
+            ser.write(b"\x02")  # Ctrl-B：離開 raw REPL 回 normal REPL
+            time.sleep(0.3); ser.reset_input_buffer()
+            ser.write(b"\x04")  # Ctrl-D：soft reboot → 執行 main.py
+            time.sleep(0.5)
+
+            if use_mon:
+                self.monitor(port, lang, existing_ser=ser, is_tauri=is_tauri)
             else:
                 print(completion_msg); ser.close()
 
