@@ -1,4 +1,4 @@
-import { DatasetSpec, DatasetSpecConstants } from './spec.js';
+import { DatasetSpec, DatasetSpecConstants, TABLE_SAMPLES_PERSIST_LIMIT } from './spec.js';
 import { Sampler } from './sampler.js';
 import { UIComponents } from './ui_components.js';
 import { UICanvas } from './ui_canvas.js';
@@ -7,14 +7,14 @@ import { buildLabelMap as buildCoreLabelMap, nextLabelId as getNextLabelId } fro
 import { calculateStats } from './core/stats.js';
 import { createInitialDatasetState, DatasetStore } from './core/state.js';
 import { sanitizeProjectName } from './core/projectNaming.js';
-import { validateDeletableImagePath, validateDeletableDiskPath } from './core/pathPolicy.js';
+import { validateDeletableImagePath, validateDeletableDiskPath, normalizePath } from './core/pathPolicy.js';
+import { escapeHtml } from './core/html.js';
 import { datasetBridge } from './io/bridge.js';
 import { createProgressUseCases } from './application/progressUseCases.js';
 import { createImportUseCases } from './application/importUseCases.js';
 import { createExportUseCases } from './application/exportUseCases.js';
 import {
-    countUnclassifiedBoxes, countBoxesWithClassId, countImagesWithLabel,
-    removeAnnotationsByClassId, reassignLabelsToUnlabeled
+    countUnclassifiedBoxes
 } from './application/annotationMutations.js';
 import { createStatusMessageUI } from './ui/statusMessage.js';
 import { buildModalTemplate } from './ui/modal.js';
@@ -23,7 +23,9 @@ import { createGridScrollManager } from './ui/thumbnails.js';
 import { createClassificationController } from './ui/classification.js';
 import { createAnnotationController } from './ui/annotation.js';
 import { createPanelsPresenter } from './ui/panels.js';
-import { buildEntryTemplate, getTypeEntry } from './ui/entryCards.js';
+import { createLabelManager } from './ui/labelManager.js';
+import { createSamplerPanel } from './ui/samplerPanel.js';
+import { buildEntryTemplate } from './ui/entryCards.js';
 import { allowedModes, isDevType } from './core/typePolicy.js';
 import { createSessionManager } from './application/sessionManager.js';
 
@@ -53,6 +55,20 @@ const sessionManager = createSessionManager({
 // （計時器重置/dispose 語意不變；此 const 供模組內各函式與 use-case 注入使用）
 const statusMessagePresenter = createStatusMessageUI();
 const showStatusMessage = statusMessagePresenter.showStatusMessage;
+
+// M2 R5：統一標籤管理器抽至 ui/labelManager.js（下方函式宣告已提升，可安全參照）
+const labelManager = createLabelManager({
+    state, t, escapeHtml, UIComponents, UICanvas,
+    getFormValue: (name) => getFormValue(name),
+    syncLabelMap: () => syncLabelMap(),
+    updateStatsFromImages: () => updateStatsFromImages(),
+    scheduleAutoSave: (immediate) => scheduleAutoSave(immediate),
+    refreshPreview: () => refreshPreview(),
+    renderClassificationControls: () => renderClassificationControls(),
+    renderAnnotationControls: () => renderAnnotationControls(),
+    updateThumbnailHighlight: () => updateThumbnailHighlight(),
+    bridge: datasetBridge
+});
 
 // Stage 4 切片 5：分類校正模式狀態機移至 ui/classification.js（依賴注入；下方函式宣告已提升，可安全參照）
 const classificationController = createClassificationController({
@@ -90,6 +106,19 @@ const annotationController = createAnnotationController({
     onDeleteImage: (index) => handleDeleteImage(index)
 });
 
+// M2 R6：live 採集面板編排抽至 ui/samplerPanel.js（下方函式宣告已提升，可安全參照）
+const samplerPanel = createSamplerPanel({
+    state, Sampler, UIComponents,
+    updateStatsFromImages: () => updateStatsFromImages(),
+    refreshPreview: () => refreshPreview(),
+    onSnapshot: () => handleSamplerSnapshot(),
+    onBurstToggle: () => handleSamplerBurstToggle(),
+    onStartCamera: () => Sampler.startCamera(Sampler.state.selectedDeviceId),
+    onStopCamera: () => Sampler.stopCamera(true),
+    onSampleCaptured: (blob, savePath) => addSampleFromSampler(blob, savePath),
+    nextLabelId: (map) => nextLabelId(map)
+});
+
 // Stage 4 切片 7：欄位列/驗證/表格預覽等面板呈現移至 ui/panels.js（依賴注入；下方函式宣告已提升，可安全參照）
 const panelsPresenter = createPanelsPresenter({
     state,
@@ -121,15 +150,6 @@ function optionList(values, selected) {
     return values
         .map((value) => `<option value="${value}" ${value === selected ? 'selected' : ''}>${value}</option>`)
         .join('');
-}
-
-function escapeHtml(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&' + 'amp;')
-        .replace(/</g, '&' + 'lt;')
-        .replace(/>/g, '&' + 'gt;')
-        .replace(/"/g, '&' + 'quot;')
-        .replace(/'/g, '&' + '#39;');
 }
 
 /**
@@ -180,13 +200,18 @@ function syncSpecFromUI(includeSamples = true) {
 
     // 優化：如果 includeSamples 為 false，則延用舊的 samples 列表，避免 O(N) 操作
     const oldSamples = state.spec.toJSON().data_source.samples || [];
-    const newSamples = includeSamples ? (
-        isImage ? state.images.map(img => ({
+    const oldStats = state.spec.toJSON().stats || {};
+    // R7：非影像系（table/feature/serial）落盤 samples——舊行為一律 [] 導致 dataset.json 表格永遠是空的。
+    // 委派 spec.js 純函式：samples 前 TABLE_SAMPLES_PERSIST_LIMIT 筆、stats.sample_count 記全量 rows、
+    // samples_truncated 表露是否截斷。後端透傳不解讀。
+    const tableCap = !isImage
+        ? DatasetSpec.buildTableSamples(state.tableRows, TABLE_SAMPLES_PERSIST_LIMIT)
+        : { samples: state.images.map((img) => ({
             image_path: img.path,
             label: img.label,
             annotations: img.annotations || []
-        })) : []
-    ) : oldSamples;
+        })), truncated: false, total: Array.isArray(state.images) ? state.images.length : 0 };
+    const newSamples = includeSamples ? tableCap.samples : oldSamples;
 
     state.spec = new DatasetSpec({
         project: {
@@ -206,20 +231,20 @@ function syncSpecFromUI(includeSamples = true) {
             label: labelColumn ? labelColumn.name : '',
             label_map: buildLabelMap(columns)
         },
-        stats: state.spec.toJSON().stats
+        stats: {
+            // R7：sample_count 記全量（影像=images.length／表格=tableRows 全量 total），
+            // 避免落盤 samples 截斷後低估；samples_truncated 表露是否因上限截斷。
+            sample_count: tableCap.total,
+            label_counts: oldStats.label_counts || {},
+            samples_truncated: tableCap.truncated
+        }
     });
-}
-
-/**
- * 正規化路徑（統一使用正斜線 /），供載入進度時比對 sample.image_path 與 images[].path。
- */
-function normalizePath(value) {
-    return String(value ?? '').replace(/\\/g, '/');
 }
 
 /**
  * 依專案類型重建 sourceMode 下拉選項（與 createModal 內的 updateSourceModeOptions 等效），
  * 供「依進度檔恢復 type」時同步 sourceMode 選項。
+ * 路徑比對一律用 core/pathPolicy.js normalizePath（SSOT）。
  */
 function rebuildSourceModeOptions(projectType) {
     const modal = getModal();
@@ -681,136 +706,10 @@ function unbindClassificationKeyboardEvents() {
 }
 
 /**
- * 渲染右側控制欄（類別選擇器 + 標註列表）
- */
-/**
- * 統一「label_map 標籤管理器」（類別下拉 + ➕✏️🗑）。
- * 供分類(image)標註、物件偵測標註、與檢視模式中間欄共用，行為一致。
- * 變更流程：updateSchema(label_map) → syncLabelMap() → updateStatsFromImages() → 重繪 → 自動落盤。
- * 依專案類型處理：image（分類）改名/刪除會同步 img.label、刪除改 unlabeled；object_detection 刪除移除對應 class_id 標註框。
- * 新增類別後自動選取新類別。
- * @param {HTMLElement} container 欲放置元件的容器（建議有 id）。
- * @param {HTMLElement|null} [statsContainer] 統計列表容器；非 null 時變更後於此重繪標籤統計（檢視模式使用）。
+ * 統一「label_map 標籤管理器」— 委派至 ui/labelManager.js（M2 R5）
  */
 function createLabelMapManager(container, statsContainer = null) {
-    if (!container) return;
-    const spec = state.spec.toJSON();
-    const projectType = spec.project.type || getFormValue('projectType') || 'table';
-    const labelMap = spec.schema.label_map || {};
-    const entries = Object.entries(labelMap).sort((a, b) => a[0].localeCompare(b[0]));
-
-    container.innerHTML = `
-        <div class="dataset-annotation-class-row">
-            <select class="dataset-label-manager-select">
-                ${entries.length > 0
-                    ? entries.map(([name, id]) => `<option value="${id}">${escapeHtml(name)}</option>`).join('')
-                    : '<option value="-1" disabled selected>' + t('ANNOTATION_EMPTY', '尚未有標註') + '</option>'}
-            </select>
-            <button type="button" class="dataset-icon-btn" data-action="add" title="${t('ANNOTATION_CLASS_ADD', '新增')}">+</button>
-            <button type="button" class="dataset-icon-btn" data-action="edit" title="${t('ANNOTATION_CLASS_EDIT', '編輯')}">✏️</button>
-            <button type="button" class="dataset-icon-btn" data-action="delete" title="${t('ANNOTATION_CLASS_DELETE', '刪除')}">🗑️</button>
-        </div>
-    `;
-
-    const select = container.querySelector('.dataset-label-manager-select');
-    if (!select) return;
-
-    const currentId = () => {
-        const v = parseInt(select.value, 10);
-        return Number.isInteger(v) ? v : -1;
-    };
-    // 物件偵測：選取類別即作為畫布當前類別
-    if (projectType === 'object_detection') {
-        select.onchange = () => { UICanvas.state.currentClassId = currentId(); };
-    }
-
-    const reRender = () => {
-        if (state.annotationMode && state.annotationMode.isActive) {
-            if (projectType === 'image') renderClassificationControls();
-            else renderAnnotationControls();
-            updateThumbnailHighlight();
-        } else {
-            createLabelMapManager(container, statsContainer);
-            if (statsContainer) UIComponents.renderLabelStats(statsContainer, state.spec.toJSON().stats);
-        }
-        scheduleAutoSave();
-        refreshPreview();
-    };
-    const freshContainer = () => (container.id ? (document.getElementById(container.id) || container) : container);
-
-// 新增
-    container.querySelector('[data-action="add"]').onclick = async () => {
-        const name = await datasetBridge.prompt(t('ANNOTATION_NEW_CLASS_PLACEHOLDER', '輸入新類別名稱'));
-        if (!(name && name.trim())) return;
-        const trimmed = name.trim();
-        const map = state.spec.toJSON().schema.label_map || {};
-        if (map[trimmed] !== undefined) return;
-        map[trimmed] = nextLabelId(map);
-        state.spec.updateSchema({ label_map: map });
-        syncLabelMap();
-        updateStatsFromImages();
-        reRender();
-        const sel = freshContainer().querySelector('.dataset-label-manager-select');
-        if (sel) {
-            sel.value = map[trimmed];
-            if (projectType === 'object_detection') UICanvas.state.currentClassId = map[trimmed];
-        }
-    };
-
-    // 編輯（改名）
-    container.querySelector('[data-action="edit"]').onclick = async () => {
-        const id = currentId();
-        const entry = entries.find(([, v]) => v === id);
-        if (!entry) return;
-        const newName = await datasetBridge.prompt(t('ANNOTATION_NEW_CLASS_PLACEHOLDER', '輸入新類別名稱'), entry[0]);
-        if (newName && newName.trim() && newName.trim() !== entry[0]) {
-            const trimmed = newName.trim();
-            const map = state.spec.toJSON().schema.label_map || {};
-            delete map[entry[0]];
-            map[trimmed] = id;
-            if (projectType === 'image') {
-                // 分類：一併更新所有使用該 label 的影像
-                state.images.forEach(img => { if (img.label === entry[0]) img.label = trimmed; });
-            }
-            state.spec.updateSchema({ label_map: map });
-            syncLabelMap();
-            updateStatsFromImages();
-            reRender();
-        }
-    };
-
-    // 刪除
-    container.querySelector('[data-action="delete"]').onclick = async () => {
-        const id = currentId();
-        const entry = entries.find(([, v]) => v === id);
-        if (!entry) return;
-        const count = (projectType === 'image')
-            ? countImagesWithLabel(state.images, entry[0])
-            : countBoxesWithClassId(state.images, id);
-        const confirmed = await datasetBridge.confirm(
-            t('ANNOTATION_DELETE_CLASS_CONFIRM', '確定刪除類別「%1」及其 %2 個標註框嗎？')
-                .replace('%1', entry[0]).replace('%2', count)
-        );
-        if (confirmed) {
-            const map = state.spec.toJSON().schema.label_map || {};
-            delete map[entry[0]];
-            if (projectType === 'image') {
-                // 分類：把使用該 label 的影像改為 unlabeled，避免載入時又被回填進 label_map
-                reassignLabelsToUnlabeled(state.images, entry[0]);
-            } else {
-                removeAnnotationsByClassId(state.images, id);
-                if (UICanvas.state.annotations) {
-                    UICanvas.state.annotations = UICanvas.state.annotations.filter(a => a.class_id !== id);
-                    UICanvas.state.selectedAnnotationIndex = -1;
-                    UICanvas.render();
-                }
-            }
-            state.spec.updateSchema({ label_map: map });
-            syncLabelMap();
-            updateStatsFromImages();
-            reRender();
-        }
-    };
+    return labelManager.createLabelMapManager(container, statsContainer);
 }
 
 /**
@@ -967,67 +866,9 @@ export function refreshDynamicPanels() {
         <pre id="dataset-json-preview"></pre>
     `;
 
-    // 顯示採集視圖
+    // 顯示採集視圖（M2 R6：委派 ui/samplerPanel.js）
     if (isLive) {
-        const samplerView = modal.querySelector('#dataset-sampler-view');
-        samplerView.style.display = 'block';
-        
-        const labels = Object.keys(state.spec.toJSON().schema.label_map || {});
-        // 移除自動推入 label_1，改為讓使用者手動新增標籤
-        
-        // [關鍵修正] 如果目前沒有選定標籤且有現成標籤，預設選取第一個
-        if (!Sampler.state.targetLabel && labels.length > 0) {
-            Sampler.setTargetLabel(labels[0]);
-        }
-
-        // [關鍵修正] 綁定採集回調，讓連拍也能觸發 UI 更新
-        Sampler.state.onSampleCaptured = (blob, label, savePath) => {
-            addSampleFromSampler(blob, savePath);
-        };
-
-        // 自動列舉可用攝影機 (但僅在清單為空時)
-        if (Sampler.state.cameraList.length === 0) {
-            Sampler.listCameras();
-        }
-
-        UIComponents.renderSamplerView(samplerView, {
-            labels,
-            onLabelChange: (l) => {
-                Sampler.setTargetLabel(l);
-                
-                // [關鍵修正] 如果是新標籤且尚未存在於 spec 中，手動加入 label_map
-                const spec = state.spec.toJSON();
-                const labelMap = spec.schema.label_map || {};
-                if (labelMap[l] === undefined) {
-                    labelMap[l] = nextLabelId(labelMap);
-                    state.spec.updateSchema({ label_map: labelMap });
-                }
-
-                // 重新以 label_map 為權威計算統計，確保新標籤/改名即時反映
-                updateStatsFromImages();
-                const structureContent = modal.querySelector('#dataset-structure-content');
-                if (structureContent) {
-                    UIComponents.renderLabelStats(structureContent, state.spec.toJSON().stats);
-                }
-
-                // 更新採集面板的 dropdown 選項清單（新增標籤後讓新標籤出現在下拉選單）
-                const updatedLabels = Object.keys(state.spec.toJSON().schema.label_map || {});
-                const labelSelect = samplerView.querySelector('#dataset-sampler-label-select');
-                if (labelSelect) {
-                    labelSelect.innerHTML = updatedLabels.map(lb => 
-                        `<option value="${lb}" ${lb === l ? 'selected' : ''}>${lb}</option>`
-                    ).join('');
-                }
-
-                // 新增標籤後即時刷新 Spec JSON 預覽
-                refreshPreview();
-            },
-            onSnapshot: () => handleSamplerSnapshot(),
-            onBurstToggle: () => handleSamplerBurstToggle(),
-            onStartCamera: () => Sampler.startCamera(Sampler.state.selectedDeviceId), 
-            onStopCamera: () => Sampler.stopCamera(true)
-        });
-
+        samplerPanel.setupLiveSamplerView(modal, modal.querySelector('#dataset-sampler-view'));
     } else {
         Sampler.stopCamera(true);
     }
@@ -1344,16 +1185,18 @@ function bindModalEvents(modal) {
             if (descInput) descInput.value = '';
 
             const typeSelect = modal.querySelector('[name="projectType"]');
-            if (typeSelect) typeSelect.value = 'table'; 
+            // M1 類型鎖定：清除資料僅清空內容，不變更鎖定類型（修正前誤寫死 'table'）
+            const lockedType = sessionManager.snapshot().lockedType || getFormValue('projectType') || 'table';
+            if (typeSelect) typeSelect.value = lockedType;
 
-            // 4. 動態關聯 Mode 選項 (table 只支援 file)
-            updateSourceModeOptions('table');
+            // 4. 動態關聯 Mode 選項（保留鎖定類型的允許 modes）
+            updateSourceModeOptions(lockedType);
 
-            // 5. 重設 Spec 為預設
-            state.spec = DatasetSpec.createDefault({ 
-                name: 'dataset', 
-                type: 'table',
-                mode: 'file'
+            // 5. 重設 Spec 為預設（保留鎖定類型）
+            state.spec = DatasetSpec.createDefault({
+                name: 'dataset',
+                type: lockedType,
+                mode: allowedModes(lockedType)[0]
             });
 
             // 6. 清理檔案選擇值（集中式狀態訊息由面板自動清除）

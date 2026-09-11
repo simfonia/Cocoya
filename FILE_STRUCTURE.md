@@ -134,6 +134,10 @@ C:\Workspace\cocoya\
 │   │   │       │   ├── projectNaming.js # 專案名稱純函式清理與比較
 │   │   │       │   ├── pathPolicy.js # 專案名稱與路徑安全規則（canonical path 組裝、containment、traversal 防護）
 │   │   │       │   ├── pathPolicy.test.mjs # path contract Node 測試（node --test 執行，不打包）
+│   │   │       │   ├── typePolicy.js # [M1 R3] 專案類型政策 SSOT（isImageType/needsAnnotationCheck/allowedModes/isDevType；純邏輯禁文案）
+│   │   │       │   ├── typePolicy.test.mjs # 類型政策契約測試（4 測試）
+│   │   │       │   ├── html.js # [M2 R4] HTML 轉義共用 SSOT（escapeHtml/escapeAttr；收斂 layout/ui_components/entryCards 三重複＋修 ui_components 轉義損壞）
+│   │   │       │   ├── html.test.mjs # escapeHtml/escapeAttr 契約測試（5 測試）
 │   │   │       │   ├── stats.js # 影像、bbox、line 統計純計算
 │   │   │       │   └── state.js # DatasetStore 與初始狀態（逐步接入中）
 │   │   │       ├── io/
@@ -143,10 +147,19 @@ C:\Workspace\cocoya\
 │   │   │       │   ├── progressUseCases.js # [Stage 3] 進度存讀與自動落盤 use-case（load/save/autosave/cancelAutoSave；注入 UI 依賴，通訊經 io/bridge.js）
 │   │   │       │   ├── importUseCases.js # [Stage 3] 資料匯入 use-case（parseDataFileRows 純轉換 + importDataFile/importDirectory 編排；canonical 匯入閘語意不變）
 │   │   │       │   ├── importUseCases.test.mjs # parseDataFileRows Node 測試（node --test 執行）
-│   │   │       │   ├── exportUseCases.js # [Stage 3] 匯出 use-case（未標註/未分類確認 + Spec 驗證 + datasetExport correlation 編排）
+│   │   │       │   ├── exportUseCases.js # [Stage 3＋R8] 匯出 use-case（吃 typePolicy isDevType/needsAnnotationCheck/needsUnclassifiedCheck；feature/serial 擋下；未標註/未分類確認＋Spec 驗證＋datasetExport correlation）
+│   │   │       │   ├── exportUseCases.test.mjs # [R8] 匯出契約測試（dev 類型擋下、非 dev 不早退；2 測試）
+│   │   │       │   ├── sessionManager.js # [M1 R1] 類型鎖定會話狀態機（openSession/backToEntry/requestSwitchType；DI 可測）
+│   │   │       │   ├── sessionManager.test.mjs # 會話鎖定契約測試（3 測試）
 │   │   │       │   ├── annotationMutations.js # [Stage 3] 標註/分類 mutation 純函式（計數、class_id 過濾、label→unlabeled、刪除索引解析）
 │   │   │       │   └── annotationMutations.test.mjs # annotationMutations Node 測試（node --test 執行）
 │   │   │       ├── ui/
+│   │   │       │   ├── entryCards.js # [M1 R2] 卡片入口純模板＋TYPE_CATALOG 目錄 SSOT（6 類型＋dev 徽章；轉義經 core/html.js）
+│   │   │       │   ├── entryCards.test.mjs # 卡片入口契約測試（2 測試）
+│   │   │       │   ├── labelManager.js # [M2 R5] 統一標籤管理器（createLabelManager 全注入；add/edit/delete＋image/object_detection 分流；layout 僅留委派）
+│   │   │       │   ├── labelManager.test.mjs # 標籤管理器契約測試（2 測試）
+│   │   │       │   ├── samplerPanel.js # [M2 R6] live 採集面板編排（createSamplerPanel；預選首標籤＋onSampleCaptured＋列舉＋onLabelChange 補 label_map；layout 僅留委派）
+│   │   │       │   ├── samplerPanel.test.mjs # 採集面板契約測試（3 測試）
 │   │   │       │   ├── form.js # [Stage 4 切片 3] 表單讀取 Presenter（createFormPresenter({getModalRoot})→{getFormValue,getColumnsFromUI,dispose}；唯讀、modal root 可注入）
 │   │   │       │   ├── form.test.mjs # form presenter Node 測試（node --test 執行）
 │   │   │       │   ├── thumbnails.js # [Stage 4 切片 4] 縮圖網格 scroll save/restore 集中管理（createGridScrollManager({state,getContainer,hasImages})；沿用 state._savedGridScrollTop、契約不變）
@@ -164,14 +177,15 @@ C:\Workspace\cocoya\
 │   │   │       ├── dataset_manager.css # Dataset Manager Modal、縮圖牆與標註畫布樣式 (含 3 欄標註模式、.dataset-name-warning 名稱衝突警示)
 │   │   │       ├── i18n.js # [NEW] 共享 i18n t() 函式庫 (支援佔位符替換)
 │   │   │       ├── index.js # 靜態 ESM 入口與 window.CocoyaDataset API 掛載（loadI18n 以 in-flight promise 防 locale race，Stage 5 收尾）
-│   │   │       ├── spec.js  # DatasetSpec 類別、Schema 偵測、強健型 CSV 解析與驗證邏輯 (i18n 化)
+│   │   │       ├── spec.js  # DatasetSpec 類別、Schema 偵測、強健型 CSV 解析與驗證邏輯 (i18n 化)（R7：buildTableSamples 表格落盤組裝＋TABLE_SAMPLES_PERSIST_LIMIT＋stats.samples_truncated 契約）
+│   │   │       ├── spec.test.mjs # [R7] spec 契約測試（buildTableSamples 截斷/total、samples_truncated round-trip；6 測試）
 │   │   │       ├── sampler.js # [Stage 2 重構] 攝影機採集核心、連拍邏輯（通訊改經 io/bridge.js：request correlation + timeout + dispose）
-│   │   │       ├── ui_layout.js # 協調層（Stage 4）：modal 生命週期、面板編排 refreshDynamicPanels、模式進入/退出分流；同名委派 wrapper 呼叫 core/application/ui/* presenter（呼叫點零改動），死 wrapper 已於 Stage 6 清理
-│   │   │       ├── ui_components.js # 動態視圖組件 (影像網格、字典序標籤統計、標註縮圖欄、getLabelColor FNV-1a+黃金角色相，含 XSS 防護)
+│   │   │       ├── ui_layout.js # 協調層（Stage 4＋M1 類型鎖定 entry/session/typePolicy＋P1/P2/P3 導航；轉義/路徑改吃 core/html.js 與 pathPolicy SSOT）
+│   │   │       ├── ui_components.js # 動態視圖組件 (影像網格、字典序標籤統計、標註縮圖欄、getLabelColor FNV-1a+黃金角色相；轉義經 core/html.js，前損壞實作已刪)
 │   │   │       ├── ui_canvas.js # 標註互動畫布 (物件偵測拉框與自駕循線畫線，支援座標限幅防護、bbox 高亮與雙模互動)
 │   │   │       └── i18n/      # 語系檔目錄
-│   │   │           ├── zh-hant.js # 繁體中文 i18n 鍵值 (VALIDATE_* 驗證、ANNOTATION_* 標註、NEED_ANCHOR/IMPORT_* 匯入閘、SOURCE_* 來源對齊；118 key 與 en 完全 parity)
-│   │   │           └── en.js      # 英文 i18n 鍵值 (同 zh-hant 118 key 全對齊)
+│   │   │           ├── zh-hant.js # 繁體中文 i18n 鍵值 (VALIDATE_*/ANNOTATION_*/ENTRY_*/PAGE_*/DEV_BANNER_*/SWITCH_TYPE_*；142 key 與 en parity)
+│   │   │           └── en.js      # 英文 i18n 鍵值 (同 zh-hant 142 key 全對齊)
 │   │   ├── main.js        # Legacy Entry Point
 │   │   ├── ui_manager.js  # Legacy Entry Point
 │   │   ├── utils.js       # [REFACTORED] 入口與命名空間初始化
