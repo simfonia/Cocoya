@@ -1,22 +1,4 @@
-<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
-  <block type="mcu_board_init" id="@Y7W0PZ{g0,k#vu`9F40" x="90" y="30">
-    <field name="BOARD">spike-prime</field>
-  </block>
-  <block type="py_definition_zone" id="T@={lT3wLg./E}kxeD]Q" x="100" y="130"></block>
-  <block type="mcu_main" id="i,ZE.|HTC`5t_@tL)!?|" x="100" y="360">
-    <statement name="DO">
-      <block type="py_loop_while" id="n?ln6=D2$KG$J?iI+0js">
-        <value name="CONDITION">
-          <block type="py_logic_boolean" id="!Xa!w%#{:I,/P4DU*w-;">
-            <field name="BOOL">True</field>
-          </block>
-        </value>
-        <statement name="DO">
-          <block type="spike_display_text" id="H;y5Lsx53~E-vvF$XLV)">
-            <field name="TEXT">Hello!</field>
-          </block>
-        </statement>
-      </block>
-    </statement>
-  </block>
+<xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
+  <block type="py_definition_zone" x="100" y="20"></block>
+  <block type="py_main" x="100" y="140"></block>
 </xml>

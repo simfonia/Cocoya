@@ -28,7 +28,7 @@ export function createClassificationController({
     saveGridScroll, exitAnnotationMode, navigateToImage,
     setAnnotationHeaderActions, handleExportDataset,
     updateStatsFromImages, updateThumbnailHighlight, refreshPreview,
-    createLabelMapManager, getDocument = () => globalThis.document
+    createLabelMapManager, onDeleteImage, getDocument = () => globalThis.document
 }) {
     let classificationKeyHandler = null; // 分類模式的鍵盤事件 handler（用於清理）
 
@@ -79,7 +79,7 @@ export function createClassificationController({
         const existingBackBtn = modal.querySelector('#dataset-annotation-back');
         if (existingBackBtn) existingBackBtn.remove();
         previewHeader.insertAdjacentHTML('afterbegin', `
-            <button type="button" id="dataset-annotation-back" class="dataset-small-btn" style="background: #FE2F89; color: white; border: none; margin-right: 8px;">${t('BACK_TO_LIST', '← 返回列表')}</button>
+            <button type="button" id="dataset-annotation-back" class="dataset-small-btn" style="background: #FE2F89; color: white; border: none; margin-right: 8px;">${t('BACK_TO_MANAGE', '← 回資料集管理')}</button>
         `);
         modal.querySelector('#dataset-annotation-back').onclick = exitAnnotationMode;
 
@@ -108,7 +108,8 @@ export function createClassificationController({
         const thumbnails = doc().getElementById('annotation-thumbnails');
         UIComponents.renderAnnotationThumbnails(thumbnails, state.images, index, {
             mode: 'classification',
-            onThumbnailClick: (newIndex) => navigateToImage(newIndex)
+            onThumbnailClick: (newIndex) => navigateToImage(newIndex),
+            onDeleteImage: (delIndex) => onDeleteImage(delIndex)
         });
 
         // 載入目前圖片

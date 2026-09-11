@@ -39,7 +39,7 @@ export function createAnnotationController({
     saveGridScroll, exitAnnotationMode, navigateToImage,
     setAnnotationHeaderActions, handleExportDataset,
     updateStatsFromImages, updateThumbnailHighlight, refreshPreview,
-    createLabelMapManager, getDocument = () => globalThis.document
+    createLabelMapManager, onDeleteImage, getDocument = () => globalThis.document
 }) {
     function doc() {
         return getDocument();
@@ -90,7 +90,7 @@ export function createAnnotationController({
 
         // 在預覽面板標題加入返回按鈕
         previewHeader.insertAdjacentHTML('afterbegin', `
-            <button type="button" id="dataset-annotation-back" class="dataset-small-btn" style="background: #FE2F89; color: white; border: none; margin-right: 8px;">${t('BACK_TO_LIST', '← 返回列表')}</button>
+            <button type="button" id="dataset-annotation-back" class="dataset-small-btn" style="background: #FE2F89; color: white; border: none; margin-right: 8px;">${t('BACK_TO_MANAGE', '← 回資料集管理')}</button>
         `);
         modal.querySelector('#dataset-annotation-back').onclick = exitAnnotationMode;
 
@@ -118,7 +118,8 @@ export function createAnnotationController({
         // 渲染縮圖欄
         const thumbnails = doc().getElementById('annotation-thumbnails');
         UIComponents.renderAnnotationThumbnails(thumbnails, state.images, index, {
-            onThumbnailClick: (newIndex) => navigateToImage(newIndex)
+            onThumbnailClick: (newIndex) => navigateToImage(newIndex),
+            onDeleteImage: (delIndex) => onDeleteImage(delIndex)
         });
 
         // 渲染右側控制欄

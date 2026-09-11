@@ -26,6 +26,7 @@ export function buildModalTemplate({ t, optionList, projectTypes, sourceModes })
                     <span id="dataset-manager-subtitle">${t('SUBTITLE', 'Dataset Spec')}</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
+                    <button type="button" id="dataset-header-entry" class="dataset-secondary-btn" style="display: none; padding: 4px 8px; font-size: 11px; margin: 0; line-height: 1.2;" title="${t('TYPE_LOCKED_TIP', '類型已鎖定；換類型請回入口另開新資料集')}">${t('ENTRY_BACK', '重新選擇類型')}</button>
                     <button type="button" id="dataset-manager-clear" class="dataset-secondary-btn" style="padding: 4px 8px; font-size: 11px; margin: 0; line-height: 1.2; display: flex; align-items: center; justify-content: center;" title="${t('CLEAR_DATA_TOOLTIP', '清空所有暫存資料記錄並重置')}">${t('CLEAR_DATA', '清除資料')}</button>
                     <button type="button" id="dataset-manager-close" class="dataset-icon-btn" title="${t('CLOSE', '關閉')}">×</button>
                 </div>
@@ -42,7 +43,7 @@ export function buildModalTemplate({ t, optionList, projectTypes, sourceModes })
                 <section class="dataset-panel dataset-source-panel">
                     <h3>${t('SOURCE', '資料來源')}</h3>
                     
-                    <label>
+                    <label style="display: none;">
                         <span>${t('PROJECT_TYPE', '專案類型')}</span>
                         <select name="projectType">${optionList(projectTypes, 'table')}</select>
                     </label>

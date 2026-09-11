@@ -42,6 +42,13 @@
     --dsm-disabled-bg: #f0f0f0;
     --dsm-disabled-text: #aaaaaa;
     --dsm-disabled-border: #e0e0e0;
+    /* 類型入口卡片（2026-09-10 M1：類型鎖定入口）*/
+    --dsm-card-bg: #ffffff;
+    --dsm-card-border: #dddddd;
+    --dsm-card-hover-border: #FE2F89;
+    --dsm-dev-badge-bg: #fff0f5;
+    --dsm-dev-badge-text: #c2185b;
+    --dsm-type-badge-bg: #fdf2f7;
 }
 
 /* dark / high-contrast token 覆寫（Stage 5 切片 4）：值與既有 dark 區塊原值等值 */
@@ -68,6 +75,13 @@ body.vscode-high-contrast {
     --dsm-success-border: #3d5543;
     --dsm-success-text: #8fd49a;
     --dsm-success-accent: #4CAF50;
+    /* 類型入口卡片（2026-09-10 M1：類型鎖定入口）*/
+    --dsm-card-bg: #2d2d2d;
+    --dsm-card-border: #555555;
+    --dsm-card-hover-border: #FE2F89;
+    --dsm-dev-badge-bg: #4a2333;
+    --dsm-dev-badge-text: #ff8fb3;
+    --dsm-type-badge-bg: #3a2b32;
 }
 
 
@@ -1206,6 +1220,22 @@ body.vscode-high-contrast .dataset-annotation-thumbnails {
     border-color: var(--dsm-brand);
 }
 
+/* 標註模式縮圖 hover 顯示刪除鈕（重用 .dataset-image-delete-btn 樣式） */
+.dataset-annotation-thumb-item .dataset-image-delete-btn {
+    display: none;
+    z-index: 2;
+}
+
+.dataset-annotation-thumb-item:hover .dataset-image-delete-btn {
+    display: flex;
+}
+
+/* 深色主題沿用 --dsm token（.dataset-image-delete-btn 既有規則已 token 化，僅補對比） */
+body.vscode-dark .dataset-annotation-thumb-item:hover .dataset-image-delete-btn,
+body.vscode-high-contrast .dataset-annotation-thumb-item:hover .dataset-image-delete-btn {
+    background: var(--dsm-danger, #F44336);
+}
+
 .dataset-annotation-thumb {
     width: 100%;
     height: 100%;
@@ -1265,6 +1295,82 @@ body.vscode-dark .dataset-annotation-info,
 body.vscode-high-contrast .dataset-annotation-info {
     color: #a0a0a0;
 }
+/* 類型鎖定入口（2026-09-10 M1）：卡片＋徽章＋banner＋工作區類型條 */
+.dataset-entry {
+    padding: 18px;
+    overflow-y: auto;
+}
+.dataset-entry-title {
+    margin: 0 0 4px;
+    font-size: 16px;
+}
+.dataset-entry-subtitle {
+    margin: 0 0 14px;
+    font-size: 12px;
+    color: var(--dsm-text-muted);
+}
+.dataset-entry-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+.dataset-entry-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+    text-align: left;
+    padding: 14px;
+    background: var(--dsm-card-bg);
+    border: 1.5px solid var(--dsm-card-border);
+    border-radius: 8px;
+    cursor: pointer;
+}
+.dataset-entry-card:hover {
+    border-color: var(--dsm-card-hover-border);
+}
+.dataset-entry-card-title {
+    font-size: 14px;
+    font-weight: 600;
+}
+.dataset-entry-card-desc {
+    font-size: 11px;
+    color: var(--dsm-text-muted);
+    line-height: 1.5;
+}
+.dataset-entry-card.is-dev {
+    border-style: dashed;
+}
+.dataset-entry-dev-badge {
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--dsm-dev-badge-bg);
+    color: var(--dsm-dev-badge-text);
+}
+.dataset-dev-banner {
+    margin: 0 0 10px;
+    padding: 8px 12px;
+    font-size: 12px;
+    border-radius: 6px;
+    background: var(--dsm-dev-badge-bg);
+    color: var(--dsm-dev-badge-text);
+}
+.dataset-typebar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding: 6px 10px;
+    font-size: 12px;
+    border-radius: 6px;
+    background: var(--dsm-type-badge-bg);
+}
+.dataset-typebar button {
+    margin-left: auto;
+}
+
 
 /* 中央圖片區 */
 .dataset-annotation-main {

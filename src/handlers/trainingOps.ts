@@ -137,12 +137,12 @@ export class TrainingOpsHandler {
                 }
             });
 
-            this.manager.sidecar.onEvent = (event: string, data: any) => {
+            this.setSidecarEventListener((event: string, data: any) => {
                 if (event === 'trainingLog') {
                     // 方案 A：導向 VS Code 原生終端機，而非 webview 自訂 terminal
                     TrainingTerminal.writeLine(data.message || '');
                 }
-            };
+            });
 
         } else if (backend === 'dgx' || backend === 'remote') {
             vscode.window.showWarningMessage(hostMsg('remoteNotAvailable'));
@@ -252,7 +252,7 @@ export class TrainingOpsHandler {
         // 第一筆 trainingLog 額外送一次性 trainingConnected 信號給 webview，讓「連線中…」點點計時器提前停止
         //（trainingComplete 才停會讓點點跑完整場訓練，2026-09-03 使用者回報）。
         let connectedSignalSent = false;
-        this.manager.sidecar.onEvent = (event: string, data: any) => {
+        this.setSidecarEventListener((event: string, data: any) => {
             if (event === 'trainingLog') {
                 TrainingTerminal.writeLine(data.message || '');
                 if (!connectedSignalSent) {
@@ -260,7 +260,15 @@ export class TrainingOpsHandler {
                     this.manager.panel.webview.postMessage({ command: 'trainingConnected' });
                 }
             }
-        };
+        });
+    }
+
+    /** sidecar 事件監聽器訂閱管理：換新 handler 前先解除舊訂閱，避免重複寫終端機。
+     *  （2026-09-10 起 sidecar.onEvent 單一槽位已改為多監聽器 addEventListener） */
+    private sidecarEventDisposer: (() => void) | null = null;
+    private setSidecarEventListener(fn: (event: string, data: any) => void) {
+        if (this.sidecarEventDisposer) this.sidecarEventDisposer();
+        this.sidecarEventDisposer = this.manager.sidecar.addEventListener(fn);
     }
 
     /**

@@ -7,7 +7,7 @@ import { buildLabelMap as buildCoreLabelMap, nextLabelId as getNextLabelId } fro
 import { calculateStats } from './core/stats.js';
 import { createInitialDatasetState, DatasetStore } from './core/state.js';
 import { sanitizeProjectName } from './core/projectNaming.js';
-import { validateDeletableImagePath } from './core/pathPolicy.js';
+import { validateDeletableImagePath, validateDeletableDiskPath } from './core/pathPolicy.js';
 import { datasetBridge } from './io/bridge.js';
 import { createProgressUseCases } from './application/progressUseCases.js';
 import { createImportUseCases } from './application/importUseCases.js';
@@ -23,6 +23,9 @@ import { createGridScrollManager } from './ui/thumbnails.js';
 import { createClassificationController } from './ui/classification.js';
 import { createAnnotationController } from './ui/annotation.js';
 import { createPanelsPresenter } from './ui/panels.js';
+import { buildEntryTemplate, getTypeEntry } from './ui/entryCards.js';
+import { allowedModes, isDevType } from './core/typePolicy.js';
+import { createSessionManager } from './application/sessionManager.js';
 
 const MODAL_ID = 'dataset-manager-modal';
 
@@ -39,6 +42,12 @@ const datasetStore = new DatasetStore(createInitialDatasetState(
     DatasetSpec.createDefault({ name: 'dataset', type: 'table', mode: 'file' })
 ));
 const state = datasetStore.getState();
+
+// M1 類型鎖定會話（R1）：lockedType＝已選定類型；phase＝entry|workspace
+const sessionManager = createSessionManager({
+    confirmFn: (key) => datasetBridge.confirm(t(key === 'SWITCH_TYPE_CONFIRM' ? 'SWITCH_TYPE_CONFIRM' : key, '確定嗎？')),
+    notifyFn: (key) => showStatusMessage(t(key, ''))
+});
 
 // Stage 4 切片 1：集中式狀態訊息呈現邏輯移至 ui/statusMessage.js
 // （計時器重置/dispose 語意不變；此 const 供模組內各函式與 use-case 注入使用）
@@ -58,7 +67,8 @@ const classificationController = createClassificationController({
     updateStatsFromImages: () => updateStatsFromImages(),
     updateThumbnailHighlight: () => updateThumbnailHighlight(),
     refreshPreview: () => refreshPreview(),
-    createLabelMapManager: (container, statsContainer) => createLabelMapManager(container, statsContainer)
+    createLabelMapManager: (container, statsContainer) => createLabelMapManager(container, statsContainer),
+    onDeleteImage: (index) => handleDeleteImage(index)
 });
 
 // Stage 4 切片 6：bbox/line 標註模式編排移至 ui/annotation.js（依賴注入；下方函式宣告已提升，可安全參照）
@@ -76,7 +86,8 @@ const annotationController = createAnnotationController({
     updateStatsFromImages: () => updateStatsFromImages(),
     updateThumbnailHighlight: () => updateThumbnailHighlight(),
     refreshPreview: () => refreshPreview(),
-    createLabelMapManager: (container, statsContainer) => createLabelMapManager(container, statsContainer)
+    createLabelMapManager: (container, statsContainer) => createLabelMapManager(container, statsContainer),
+    onDeleteImage: (index) => handleDeleteImage(index)
 });
 
 // Stage 4 切片 7：欄位列/驗證/表格預覽等面板呈現移至 ui/panels.js（依賴注入；下方函式宣告已提升，可安全參照）
@@ -214,10 +225,10 @@ function rebuildSourceModeOptions(projectType) {
     const modal = getModal();
     const sourceSelect = modal?.querySelector('[name="sourceMode"]');
     if (!sourceSelect) return;
-    const allowedModes = TYPE_TO_MODES_MAP[projectType] || ['file'];
+    const modes = allowedModes(projectType);
     const currentMode = sourceSelect.value;
-    const nextMode = allowedModes.includes(currentMode) ? currentMode : allowedModes[0];
-    sourceSelect.innerHTML = optionList(allowedModes, nextMode);
+    const nextMode = modes.includes(currentMode) ? currentMode : modes[0];
+    sourceSelect.innerHTML = optionList(modes, nextMode);
     sourceSelect.value = nextMode;
 }
 
@@ -566,6 +577,8 @@ function restoreGridScroll() {
  * 進入影像分類標籤校正模式（image 類型專用）— 委派至 ui/classification.js
  */
 function enterClassificationReviewMode(image, index) {
+    // P3：隱藏 header 的清除資料／重新選擇類型（X 改為返回資料集管理）
+    setHeaderButtons(false, false);
     return classificationController.enterClassificationReviewMode(image, index);
 }
 
@@ -581,6 +594,8 @@ function enterAnnotationMode(image, index) {
     if (getFormValue('projectType') === 'image') {
         return enterClassificationReviewMode(image, index);
     }
+    // P3：隱藏 header 的清除資料／重新選擇類型（X 改為返回資料集管理）
+    setHeaderButtons(false, false);
     return annotationController.enterAnnotationMode(image, index);
 }
 
@@ -862,7 +877,8 @@ async function exitAnnotationMode(skipUnannotatedCheck = false) {
 
     // 恢復副標題
     const subtitle = modal.querySelector('#dataset-manager-subtitle');
-    if (subtitle) subtitle.textContent = t('SUBTITLE', 'Dataset Spec');
+    if (subtitle) subtitle.textContent = t('PAGE_MANAGE', '資料集管理') + ' — ' + t('ENTRY_TYPE_' + (getFormValue('projectType') || 'table').toUpperCase(), getFormValue('projectType') || 'table');
+    setHeaderButtons(true, true);
 
     // 移除 overlay 撐滿 class，恢復原始布局
     modal.classList.remove('dataset-annotation-fullscreen');
@@ -1009,11 +1025,11 @@ export function refreshDynamicPanels() {
             onSnapshot: () => handleSamplerSnapshot(),
             onBurstToggle: () => handleSamplerBurstToggle(),
             onStartCamera: () => Sampler.startCamera(Sampler.state.selectedDeviceId), 
-            onStopCamera: () => Sampler.stopCamera()
+            onStopCamera: () => Sampler.stopCamera(true)
         });
 
     } else {
-        Sampler.stopCamera();
+        Sampler.stopCamera(true);
     }
 
     // 顯示影像或表格預覽（保留 scrollTop 避免回到列表或刪除時縮圖捲回最上方）
@@ -1053,18 +1069,32 @@ async function handleDeleteImage(index) {
     const removed = state.images[index];
     if (!removed) return;
 
-    // 計算實際檔案路徑並通知後端刪除實體檔案（前端預檢：拒絕絕對路徑與 traversal，防越界刪除）
+    // 解析實體檔案路徑並通知後端刪除（兩種來源）：
+    // a) 來源資料夾匯入：sourceFolderPath + 相對 path（前端預檢拒絕絕對路徑與 traversal）
+    // b) live 拍攝落盤：removed.diskPath（sidecar 實際存檔的絕對路徑；需 basename 一致驗證）
+    let deleteTarget = null;
     if (state.sourceFolderPath && removed.path) {
         const pathCheck = validateDeletableImagePath(state.sourceFolderPath, removed.path);
         if (!pathCheck.ok) {
             console.error('[DatasetManager] Blocked delete of unsafe image path:', removed.path, pathCheck.code);
             return;
         }
+        deleteTarget = pathCheck.value;
+    } else if (removed.diskPath) {
+        const diskCheck = validateDeletableDiskPath(removed.diskPath, state.sourceFolderPath, removed.path);
+        if (!diskCheck.ok) {
+            console.error('[DatasetManager] Blocked delete of unsafe disk path:', removed.diskPath, diskCheck.code);
+            return;
+        }
+        deleteTarget = diskCheck.value;
+    }
+
+    if (deleteTarget) {
         // 預防性保守處理：等待後端結果，成功或「檔案已不存在」皆移除縮圖；真實 IO 失敗才保留並提示
         try {
             const { promise } = datasetBridge.request({
                 command: 'datasetDeleteImage',
-                payload: { filePath: pathCheck.value },
+                payload: { filePath: deleteTarget },
                 resultCommand: 'datasetDeleteImageResult',
                 timeoutMs: 10000
             });
@@ -1117,6 +1147,42 @@ async function handleDeleteImage(index) {
 
             // 恢復捲動位置（統一由 restoreGridScroll 處理）
             restoreGridScroll();
+        }
+    }
+
+    // 標註/校正模式：左欄縮圖條是獨立 DOM（#annotation-thumbnails），刪除後需重繪＋修正 currentIndex
+    if (state.annotationMode.isActive) {
+        const am = state.annotationMode;
+        if (state.images.length === 0) {
+            exitAnnotationMode();
+        } else {
+            const wasCurrent = index === am.currentIndex;
+            if (am.currentIndex >= index) am.currentIndex = Math.max(0, am.currentIndex - 1);
+            if (am.currentIndex >= state.images.length) am.currentIndex = state.images.length - 1;
+            const strip = modal?.querySelector('#annotation-thumbnails');
+            if (strip) {
+                UIComponents.renderAnnotationThumbnails(strip, state.images, am.currentIndex, {
+                    mode: am.mode === 'classification' ? 'classification' : undefined,
+                    onThumbnailClick: (newIndex) => navigateToImage(newIndex),
+                    onDeleteImage: (delIndex) => handleDeleteImage(delIndex)
+                });
+            }
+            if (wasCurrent) {
+                // currentIndex 已調整為倖存鄰圖；navigateToImage 會因 newIndex===currentIndex 早退，
+                // 故直接載圖（bbox canvas / 分類預覽同步），內部會一併刷新進度
+                if (am.mode === 'classification') {
+                    classificationController.loadClassificationImage(am.currentIndex);
+                } else {
+                    annotationController.loadAnnotationImage(am.currentIndex);
+                }
+            }
+            // 刪除「當前圖之後」的圖時不會走載圖路徑，需顯式刷新「樣本 N / 總數」進度
+            if (am.mode === 'classification') {
+                classificationController.updateClassifyProgress();
+            } else {
+                updateAnnotationProgress();
+            }
+            updateThumbnailHighlight();
         }
     }
 
@@ -1219,11 +1285,33 @@ function updateStatsFromImages() {
             label_counts: stats.labelCounts
         }
     });
+
+    // 即時同步所有可見的統計面板（列表/檢視/標註模式皆涵蓋；容器不存在時為 no-op）
+    renderStatsPanels();
+}
+
+/** 重繪統計容器：優先 #view-label-stats（image/od 列表模式，與 label manager 並存），
+ *  否則退回 #dataset-structure-content（line_following 純統計） */
+function renderStatsPanels() {
+    const modal = getModal();
+    if (!modal) return;
+    const stats = state.spec.toJSON().stats;
+    const viewStats = document.getElementById('view-label-stats');
+    if (viewStats) {
+        UIComponents.renderLabelStats(viewStats, stats);
+        return;
+    }
+    const structureContent = modal.querySelector('#dataset-structure-content');
+    if (structureContent && state.images.length > 0) {
+        UIComponents.renderLabelStats(structureContent, stats);
+    }
 }
 
 function bindModalEvents(modal) {
-    modal.querySelector('#dataset-manager-close').onclick = closeDatasetManager;
+    modal.querySelector('#dataset-manager-close').onclick = requestCloseDM;
     modal.querySelector('#dataset-manager-validate').onclick = refreshPreview;
+    const headerEntryBtn = modal.querySelector('#dataset-header-entry');
+    if (headerEntryBtn) headerEntryBtn.onclick = backToEntry;
 
     const clearBtn = modal.querySelector('#dataset-manager-clear');
     if (clearBtn) {
@@ -1239,7 +1327,7 @@ function bindModalEvents(modal) {
             exitAnnotationMode(true);
 
             // 1. 停止攝影機與連拍動作
-            Sampler.stopCamera();
+            Sampler.stopCamera(true);
             Sampler.stopBurst();
 
             // 2. 還原暫存變數
@@ -1307,6 +1395,12 @@ function bindModalEvents(modal) {
         dirImportBtn.onclick = () => handleDirectoryImport();
     }
 
+    // M1：回入口按鈕（換類型唯一路徑）
+    const backBtn = modal.querySelector('#dataset-back-to-entry');
+    if (backBtn) {
+        backBtn.onclick = () => backToEntry();
+    }
+
     // 遠端環境診斷面板已移除（遠端訓練收斂至積木執行時的 SSH 精靈，見 log/plan/DatasetManagerDarkThemeFinish.md 四；
     // 後端 checkRemoteEnvironment / trainRemote command 保留，訓練端 sidecar 仍在使用）
 
@@ -1315,12 +1409,12 @@ function bindModalEvents(modal) {
         const sourceSelect = modal.querySelector('[name="sourceMode"]');
         if (!sourceSelect) return;
 
-        const allowedModes = TYPE_TO_MODES_MAP[projectType] || ['file'];
-        const currentMode = sourceSelect.value;
+        const allowedModesList = allowedModes(projectType);
 
         // 重新渲染選項，若原本選取的模式依舊在允許列表中，則保留它；否則使用預設第一個模式
-        const nextMode = allowedModes.includes(currentMode) ? currentMode : allowedModes[0];
-        sourceSelect.innerHTML = optionList(allowedModes, nextMode);
+        const currentMode = sourceSelect.value;
+        const nextMode = allowedModesList.includes(currentMode) ? currentMode : allowedModesList[0];
+        sourceSelect.innerHTML = optionList(allowedModesList, nextMode);
         
         // 確保 DOM 上的選定值也被同步更新
         sourceSelect.value = nextMode;
@@ -1328,56 +1422,16 @@ function bindModalEvents(modal) {
 
     const typeSelect = modal.querySelector('[name="projectType"]');
     if (typeSelect) {
-        typeSelect._prevType = typeSelect.value; // 記錄初始值供取消時回滾
-        typeSelect.onchange = async () => {
-            const newType = typeSelect.value;
-            const prevType = typeSelect._prevType || typeSelect.options[0]?.value || 'table';
-
-            // 防呆：切換類型會清空目前資料，若有未匯出工作需先確認；取消則回滾選項
-            if (prevType !== newType && hasUnsavedWork()) {
-                const ok = await datasetBridge.confirm(t('TYPE_SWITCH_CONFIRM', '切換專案類型將清除目前資料，確定繼續嗎？'));
-                if (!ok) {
-                    typeSelect.value = prevType;
-                    return;
-                }
-            }
-            typeSelect._prevType = newType;
-
-            // 1. 徹底關閉攝影機與連拍
-            Sampler.stopCamera();
-            Sampler.stopBurst();
-
-            // 2. 清除殘留的檔案與影像狀態，切換專案類型時務必乾淨重設
-            state.images = [];
-            state.tableRows = [];
-            state.sourceFolderPath = null;
-            setNameWarning(false);
-            
-            // 3. 動態連動過濾 Mode 的 options 並重設 value
-            updateSourceModeOptions(newType);
-
-            // 4. 重設 Spec 並同步為更新後安全的 Mode 值
-            state.spec = DatasetSpec.createDefault({ 
-                name: getFormValue('projectName') || 'dataset', 
-                type: newType,
-                mode: getFormValue('sourceMode')
-            });
-
-            // 5. 清理 input（集中式狀態訊息由面板自動清除）
-            
-            const fi = modal.querySelector('#dataset-file-input');
-            if (fi) fi.value = '';
-
-            refreshDynamicPanels();
-            refreshPreview();
-        };
+        // M1 類型鎖定：下拉改為 disabled 顯示用，變更唯一路徑＝回入口（backToEntry 按鈕）
+        typeSelect.disabled = true;
+        typeSelect.title = t('TYPE_LOCKED_TIP', '類型已鎖定');
     }
 
     const sourceSelect = modal.querySelector('[name="sourceMode"]');
     if (sourceSelect) {
         sourceSelect.onchange = () => {
             // 切換模式（例如從 Live 切換到 File）時，應確實關閉攝影機與連拍
-            Sampler.stopCamera();
+            Sampler.stopCamera(true);
             Sampler.stopBurst();
 
             refreshDynamicPanels();
@@ -1425,7 +1479,7 @@ function bindModalEvents(modal) {
         }
     });
     modal.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') closeDatasetManager();
+        if (event.key === 'Escape') requestCloseDM();
     });
 }
 
@@ -1503,14 +1557,132 @@ export async function openDatasetManager() {
     const modal = getModal() || createModal();
     state.isOpen = true;
     modal.style.display = 'flex';
-    
-    // 確保預覽面板與採集視圖 DOM 已根據目前的狀態渲染
+
+    // M1 卡片入口：每次開啟先停在 entry；選卡後才進 workspace
+    showEntryPhase(modal);
+
+    modal.querySelector('input[name="projectName"]')?.classList.remove('dataset-name-warning');
+    return state.spec;
+}
+
+/**
+ * M1 卡片入口 phase：body 隱藏、entry 容器顯示；選卡→鎖定→進 workspace。
+ */
+function showEntryPhase(modal) {
+    const body = modal.querySelector('.dataset-manager-body');
+    let entry = modal.querySelector('#dataset-entry-view');
+    if (!entry) {
+        entry = document.createElement('div');
+        entry.id = 'dataset-entry-view';
+        modal.querySelector('.dataset-manager-dialog')?.appendChild(entry);
+    }
+    if (body) body.style.display = 'none';
+    entry.style.display = 'block';
+    entry.innerHTML = buildEntryTemplate({ t });
+    entry.querySelectorAll('.dataset-entry-card').forEach((card) => {
+        card.onclick = () => enterWorkspace(card.dataset.type);
+    });
+    setHeaderButtons(false, false);
+    const subtitle = modal.querySelector('#dataset-manager-subtitle');
+    if (subtitle) subtitle.textContent = t('PAGE_NEW_DATASET', '建立新資料集');
+}
+
+/** 頁面級 header 按鈕顯隱（P1：全隱 / P2：清除資料＋重新選擇類型 / P3：全隱） */
+function setHeaderButtons(showClear, showEntry) {
+    const modal = getModal();
+    if (!modal) return;
+    const clearBtn = modal.querySelector('#dataset-manager-clear');
+    const entryBtn = modal.querySelector('#dataset-header-entry');
+    if (clearBtn) clearBtn.style.display = showClear ? 'flex' : 'none';
+    if (entryBtn) entryBtn.style.display = showEntry ? 'inline-block' : 'none';
+}
+
+/** 設定副標題頁面名（P1 建立新資料集 / P2 資料集管理 — 類型 / P3 標註 — 子模式） */
+function setPageSubtitle(text) {
+    const modal = getModal();
+    const subtitle = modal?.querySelector('#dataset-manager-subtitle');
+    if (subtitle) subtitle.textContent = text;
+}
+
+function enterWorkspace(type) {
+    const modal = getModal();
+    if (!modal || !type) return;
+    sessionManager.openSession(type);
+    // 停止舊會話殘留
+    Sampler.stopCamera(true);
+    Sampler.stopBurst();
+    state.images = [];
+    state.tableRows = [];
+    state.sourceFolderPath = null;
+    setNameWarning(false);
+    // 鎖定下拉顯示＋連動 modes
+    const typeSelect = modal.querySelector('[name="projectType"]');
+    if (typeSelect) {
+        typeSelect.value = type;
+        typeSelect.disabled = true;
+        typeSelect.title = t('TYPE_LOCKED_TIP', '類型已鎖定');
+    }
+    state.spec = DatasetSpec.createDefault({ name: getFormValue('projectName') || 'dataset', type, mode: allowedModes(type)[0] });
+    rebuildSourceModeOptions(type);
+    // 開發中 banner
+    renderDevBanner(modal, type);
+    const entry = modal.querySelector('#dataset-entry-view');
+    if (entry) entry.style.display = 'none';
+    const body = modal.querySelector('.dataset-manager-body');
+    if (body) body.style.display = '';
+    setHeaderButtons(true, true);
+    setPageSubtitle(t('PAGE_MANAGE', '資料集管理') + ' — ' + t('ENTRY_TYPE_' + type.toUpperCase(), type));
     refreshDynamicPanels();
     refreshPreview();
-    
-    modal.querySelector('input[name="projectName"]')?.classList.remove('dataset-name-warning');
     modal.querySelector('input[name="projectName"]')?.focus();
-    return state.spec;
+}
+
+function renderDevBanner(modal, type) {
+    let banner = modal.querySelector('#dataset-dev-banner');
+    if (isDevType(type)) {
+        if (!banner) {
+            banner = document.createElement('div');
+            banner.id = 'dataset-dev-banner';
+            banner.className = 'dataset-dev-banner';
+            modal.querySelector('.dataset-manager-dialog')?.insertBefore(banner, modal.querySelector('.dataset-manager-body'));
+        }
+        const key = type === 'feature' ? 'DEV_BANNER_FEATURE' : 'DEV_BANNER_SERIAL';
+        banner.textContent = t(key, '開發中，功能未完善');
+        banner.style.display = 'block';
+    } else if (banner) {
+        banner.style.display = 'none';
+    }
+}
+
+async function backToEntry() {
+    const modal = getModal();
+    const result = await sessionManager.requestSwitchType(hasUnsavedWork());
+    if (!result.switched || !modal) return;
+    // 清理工作區殘留後回入口
+    Sampler.stopCamera(true);
+    Sampler.stopBurst();
+    exitAnnotationMode(true);
+    showStatusMessage(t('SWITCH_TYPE_HINT', ''));
+    showEntryPhase(modal);
+}
+
+/**
+ * header X 統一出口（誤觸防護）：
+ * - P3 標註模式 → 返回 P2（exitAnnotationMode）
+ * - P2 工作區 → confirm 後退出 DM（資料已 autosave 落盤）
+ * - P1 入口 → 直接關閉
+ */
+async function requestCloseDM() {
+    if (state.annotationMode.isActive) {
+        exitAnnotationMode();
+        return;
+    }
+    if (sessionManager.snapshot().phase === 'workspace') {
+        const ok = await datasetBridge.confirm(t('EXIT_DM_CONFIRM',
+            '確定退出 Dataset Manager？\n目前的資料已自動儲存於專案的 dataset/<資料集名稱> 資料夾，\n下次可用「選擇影像資料夾」匯入繼續。'));
+        if (!ok) return;
+    }
+    closeDatasetManager();
 }
 
 export async function closeDatasetManager() {
@@ -1524,7 +1696,7 @@ export async function closeDatasetManager() {
 
     const modal = getModal();
     state.isOpen = false;
-    Sampler.stopCamera();
+    Sampler.stopCamera(true);
 
     // 清除標註模式的 debounce timer，避免 callback 在 DOM 銷毀後執行
     if (state.annotationMode.saveTimer) {

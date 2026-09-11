@@ -101,6 +101,7 @@ export const UIComponents = {
                         .filter(Boolean).join(' ');
                     return `
                     <div class="dataset-annotation-thumb-item ${itemClass}" data-index="${index}" title="${escapeHTML(img.path || img.name || '')}">
+                        <button type="button" class="dataset-image-delete-btn" data-index="${index}" title="${t('DELETE_IMAGE', '刪除照片')}">×</button>
                         ${img.blobUrl ? `<img src="${img.blobUrl}" class="dataset-annotation-thumb">` : '<div class="dataset-thumb-placeholder">?</div>'}
                         ${badgeHtml}
                     </div>
@@ -114,6 +115,15 @@ export const UIComponents = {
                 item.onclick = () => {
                     const index = parseInt(item.dataset.index);
                     options.onThumbnailClick(index);
+                };
+            });
+        }
+
+        if (options.onDeleteImage) {
+            container.querySelectorAll('.dataset-image-delete-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    e.stopPropagation();
+                    options.onDeleteImage(parseInt(btn.dataset.index));
                 };
             });
         }
@@ -315,7 +325,10 @@ export const UIComponents = {
         };
 
         toggleCamBtn.onclick = async () => {
-            if (!Sampler.state.isCamRunning) {
+            // 以 DOM 實際狀態（mainActions 可見性）判斷開關，而非 Sampler.state.isCamRunning，
+            // 避免 X 關窗→狀態事件→refreshDynamicPanels 重建按鈕後，state 與按鈕文字失步造成誤判
+            const isRunning = mainActions.style.display !== 'none' && mainActions.style.visibility !== 'hidden';
+            if (!isRunning) {
                 toggleCamBtn.disabled = true;
                 toggleCamBtn.textContent = t('SAMPLER_STARTING', '啟動中...');
                 const success = await options.onStartCamera();
@@ -334,6 +347,8 @@ export const UIComponents = {
                 }
             } else {
                 options.onStopCamera();
+                Sampler.state.isCamRunning = false;
+                Sampler.stopBurst();
                 toggleCamBtn.textContent = t('SAMPLER_START_CAM', '啟動預覽');
                 toggleCamBtn.className = 'dataset-primary-btn';
                 mainActions.style.display = 'none';
