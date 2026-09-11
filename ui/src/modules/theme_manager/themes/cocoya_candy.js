@@ -79,7 +79,13 @@
             '--dsm-success-text': '#8A4A6A',
             '--dsm-success-accent': '#FE2F89',
             '--dsm-error-bg': '#FFF0F0',
-            '--dsm-warning-bg': '#FFE8F0'
+            '--dsm-warning-bg': '#FFE8F0',
+            '--dsm-card-bg': '#FFFFFF',
+            '--dsm-card-border': '#FFC0E0',
+            '--dsm-card-hover-border': '#FE2F89',
+            '--dsm-dev-badge-bg': '#FFE3F0',
+            '--dsm-dev-badge-text': '#8A4A6A',
+            '--dsm-type-badge-bg': '#FFE9F3'
         }
     });
 })();

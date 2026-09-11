@@ -86,3 +86,28 @@ export function resolveSourceImagePath(sourceFolderPath, relativePath) {
 export function validateDeletableImagePath(sourceFolderPath, relativePath) {
     return resolveSourceImagePath(sourceFolderPath, relativePath);
 }
+
+/**
+ * 刪除「實體落盤檔」（live capture diskPath）前的安全驗證：
+ * - 必須為絕對路徑且不含 '..' traversal 段
+ * - 檔名必須與縮圖記錄的 path basename 一致（防竄改索引刪到無關檔案）
+ * - 若有來源資料夾，必須落在其內
+ */
+export function validateDeletableDiskPath(diskPath, sourceFolderPath, expectedFilename) {
+    const p = normalizePath(diskPath);
+    if (!p) return { ok: false, code: 'IMAGE_PATH_REQUIRED' };
+    if (!/^[a-zA-Z]:/.test(p) && p.indexOf('/') !== 0) {
+        return { ok: false, code: 'IMAGE_PATH_ABSOLUTE' };
+    }
+    if (String(p).split('/').some((segment) => segment === '..')) {
+        return { ok: false, code: 'IMAGE_PATH_TRAVERSAL' };
+    }
+    const base = p.split('/').pop();
+    if (expectedFilename && base !== normalizePath(expectedFilename).split('/').pop()) {
+        return { ok: false, code: 'PATH_OUTSIDE_ROOT' };
+    }
+    if (sourceFolderPath && !isPathWithinRoot(sourceFolderPath, p)) {
+        return { ok: false, code: 'PATH_OUTSIDE_ROOT' };
+    }
+    return { ok: true, value: p };
+}

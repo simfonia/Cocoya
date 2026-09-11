@@ -105,9 +105,11 @@ export const Sampler = {
 
     /**
      * 停止攝影機
+     * @param {boolean} [force] true＝略過 isCamRunning 守衛（關閉 modal／切換會話等清理路徑用，
+     *   避免狀態已失步時漏送 stopCamera 而留下 OpenCV 視窗）
      */
-    stopCamera() {
-        if (!this.state.isCamRunning) {
+    stopCamera(force = false) {
+        if (!force && !this.state.isCamRunning) {
             return; // 防止重複停止
         }
         datasetBridge.send('datasetStopCamera', {});

@@ -61,15 +61,15 @@ export class CocoyaManager {
         this.serialOps = new SerialOpsHandler(this);
         this.envOps = new EnvOpsHandler(this);
 
-        // 註冊事件轉發
-        this.sidecar.onEvent = (event, data) => {
+        // 註冊事件轉發（多監聽器 API：與 trainingOps 的 trainingLog 訂閱並存，不再互相覆蓋）
+        this.sidecar.addEventListener((event, data) => {
             if (event === 'cameraStatus') {
                 this.panel.webview.postMessage({
                     command: 'datasetCameraStatus',
                     success: data.running
                 });
             }
-        };
+        });
 
         this.setupMessageListener();
         this.scheduleUpdateCheck();

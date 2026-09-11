@@ -9,6 +9,11 @@
 
 ---
 ## [進行中 / 待辦]
+### [2026-09-10] Dataset Manager 類型鎖定改造（M1 完成，M2 待辦）
+- [x] M1：卡片入口＋類型鎖定＋dev 徽章/banner（typePolicy／entryCards／sessionManager＋9 新測試；layout/modal/i18n/CSS/三主題；45/45＋tsc＋cargo check＋vite＋parity 142/142）——計畫 `log/plan/DatasetManagerTypeLockedWorkflow.md`，日誌 `log/work/2026-09-10.md`
+- [ ] M2：重構收斂（R4 去重＋html.js／R5 labelManager／R6 samplerPanel／R7 表格落盤／R8 匯出分流／R9 後端實機）＋雙平台實機＋三主題目視
+- [ ] M3：表格＋循線模板（M-T1/M-L1）；M4：特徵最小可用（M-F1）；M5：文件＋清理
+
 
 ### tauri-codegen 產生 typed invoke (待辦, 2026-08-19)
 - [ ] 評估 tauri-codegen / @tauri-apps/types：自動從 #[tauri::command] 簽名生成 TS invoke<cmd>(args)

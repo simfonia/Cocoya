@@ -38,6 +38,7 @@ const REQUIRED_IDS = [
     'dataset-column-list',
     'dataset-manager-validate',
     'dataset-manager-export',
+    'dataset-header-entry',
     'dataset-json-preview'
 ];
 

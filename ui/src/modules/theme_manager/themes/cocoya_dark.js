@@ -70,7 +70,13 @@
             '--dsm-success-bg': '#26302a',
             '--dsm-success-border': '#3d5543',
             '--dsm-success-text': '#8fd49a',
-            '--dsm-success-accent': '#4CAF50'
+            '--dsm-success-accent': '#4CAF50',
+            '--dsm-card-bg': '#2d2d2d',
+            '--dsm-card-border': '#555555',
+            '--dsm-card-hover-border': '#FE2F89',
+            '--dsm-dev-badge-bg': '#4a2333',
+            '--dsm-dev-badge-text': '#ff8fb3',
+            '--dsm-type-badge-bg': '#3a2b32'
         },
         css: `
 /* --- VS Code / System Theme Integration --- */

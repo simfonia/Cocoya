@@ -86,12 +86,14 @@ class CameraService:
         return True
 
     def stop(self):
+        # 只設 flag 並等待 _run 執行緒自行退出。
+        # 鐵律：OpenCV HighGUI（Windows）視窗操作不可跨執行緒——若從 stdin 讀取
+        # 執行緒呼叫 destroyAllWindows，會與 _run 的 imshow/waitKey 相撞，隨機
+        # deadlock/crash（2026-09-10 Tauri 實機：stopCamera response 30s timeout）。
+        # _run 迴圈每幀檢查 running，最多 ~33ms 後自行 destroy 視窗並釋放 cap。
         self.running = False
         if self.thread:
-            self.thread.join(timeout=1.0)
-        if self.cap:
-            self.cap.release()
-            self.cap = None
+            self.thread.join(timeout=2.0)
 
     def is_running(self):
         return self.running
@@ -104,7 +106,15 @@ class CameraService:
             pass
 
         while self.running:
-            ret, frame = self.cap.read()
+            # 每幀取本地參照：避免 stop() 逾時後 _run 與釋放路徑競爭 self.cap
+            cap = self.cap
+            if cap is None:
+                break
+            try:
+                ret, frame = cap.read()
+            except Exception:
+                self.running = False
+                break
             if ret:
                 display_frame = cv2.flip(frame, 1)
                 with self.lock:

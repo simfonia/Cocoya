@@ -12,8 +12,18 @@ export class DatasetSidecarManager {
     private pythonPath: string;
     private callbacks: Map<string, (data: any) => void> = new Map();
     private stdoutBuffer: string = ''; 
-    public onEvent: ((event: string, data: any) => void) | null = null;
+    /** sidecar 主動事件（type=event）監聽器清單。
+     *  歷史教訓（2026-09-10）：原本為單一槽位 `onEvent` 屬性，trainingOps 註冊 trainingLog
+     *  時會整個覆蓋 cocoyaManager 的 cameraStatus 轉發，導致手動關閉 OpenCV 視窗後
+     *  前端按鈕永遠卡在「停止攝影機」。改為多監聽器，各訂閱者互不干擾。 */
+    private eventListeners: Set<(event: string, data: any) => void> = new Set();
     private outputChannel: vscode.OutputChannel;
+
+    /** 註冊 sidecar 事件監聽器；回傳 unsubscribe 函式 */
+    public addEventListener(fn: (event: string, data: any) => void): () => void {
+        this.eventListeners.add(fn);
+        return () => { this.eventListeners.delete(fn); };
+    }
 
     constructor(context: vscode.ExtensionContext, pythonPath: string) {
         this.context = context;
@@ -84,14 +94,16 @@ export class DatasetSidecarManager {
                             console.warn(unMatched);
                         }
                         else if (msg.type === 'event' && msg.event) {
-                            if (this.onEvent) {
-                                try {
-                                    this.onEvent(msg.event, msg);
-                                } catch (e: any) {
-                                    // 防禦：handler 例外不得靜默吞掉（先前會造成訓練日誌無聲消失）
-                                    const errMsg = `[Sidecar Manager] onEvent handler error (${msg.event}): ${e?.message || e}`;
-                                    this.outputChannel.appendLine(errMsg);
-                                    console.error(errMsg);
+                            if (this.eventListeners.size > 0) {
+                                for (const listener of this.eventListeners) {
+                                    try {
+                                        listener(msg.event, msg);
+                                    } catch (e: any) {
+                                        // 防禦：單一 listener 例外不得中斷其他 listener 或靜默吞掉
+                                        const errMsg = `[Sidecar Manager] event listener error (${msg.event}): ${e?.message || e}`;
+                                        this.outputChannel.appendLine(errMsg);
+                                        console.error(errMsg);
+                                    }
                                 }
                             }
                         }
