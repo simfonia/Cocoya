@@ -4,6 +4,7 @@
  * TYPE_CATALOG：6 類型 id／標題key／描述key／範例key／狀態 stable|dev／允許 modes。
  * i18n 由呼叫端注入 t()；模板僅輸出 key 對應的譯文。
  */
+import { escapeHtml as esc } from '../core/html.js';
 
 export const TYPE_CATALOG = [
     { id: 'image', status: 'stable', modes: ['live', 'file'] },
@@ -21,14 +22,6 @@ export function getTypeEntry(typeId) {
 export function isDevEntry(typeId) {
     const entry = getTypeEntry(typeId);
     return entry ? entry.status === 'dev' : false;
-}
-
-function esc(value) {
-    return String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
 }
 
 /**

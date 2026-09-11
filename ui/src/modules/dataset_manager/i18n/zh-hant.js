@@ -111,6 +111,7 @@
     "DSM_ERROR_EXPORT_FAILED": "❌ 匯出失敗: %1",
     "DSM_ERROR_CAPTURE_FAILED": "❌ 採集失敗: %1",
     "DSM_ERROR_EXPORT_VALIDATE": "資料集規格驗證失敗: %1",
+    "DSM_ERROR_EXPORT_DEV_UNAVAILABLE": "❌ 此類型（%1）開發中，尚未支援匯出，請使用完整類型的新資料集。",
 
     // 預覽表格
     "DSM_PREVIEW_MORE_SAMPLES": "... (還有 %1 個樣本未顯示於預覽區)",

@@ -4,16 +4,7 @@
  */
 import { Sampler } from './sampler.js';
 import { t } from './i18n.js';
-
-function escapeHTML(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&')
-        .replace(/</g, '<')
-        .replace(/>/g, '>')
-        .replace(/"/g, '"')
-        .replace(/'/g, '&#039;');
-}
+import { escapeHtml as escapeHTML } from './core/html.js';
 
 export const UIComponents = {
     /**

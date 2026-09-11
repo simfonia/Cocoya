@@ -9,6 +9,9 @@ const SOURCE_MODES = new Set(['live', 'file', 'hybrid']);
 const COLUMN_TYPES = new Set(['float', 'int', 'string', 'boolean', 'image_path', 'timestamp']);
 const COLUMN_ROLES = new Set(['feature', 'label', 'id', 'timestamp', 'metadata', 'ignore']);
 
+// R7 表格 samples 落盤上限：dataset.json 內 samples 最多保留筆數，超出以 stats.samples_truncated 旗標表露
+export const TABLE_SAMPLES_PERSIST_LIMIT = 2000;
+
 function isPlainObject(value) {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
@@ -114,7 +117,9 @@ function normalizeStats(stats) {
 
     return {
         sample_count: Number.isInteger(sampleCount) && sampleCount >= 0 ? sampleCount : 0,
-        label_counts: isPlainObject(input.label_counts) ? clone(input.label_counts) : {}
+        label_counts: isPlainObject(input.label_counts) ? clone(input.label_counts) : {},
+        // R7：表格截斷旗標（舊檔無此欄→false；後端透傳不解讀）
+        samples_truncated: input.samples_truncated === true
     };
 }
 
@@ -263,9 +268,27 @@ export class DatasetSpec {
             },
             stats: {
                 sample_count: 0,
-                label_counts: {}
+                label_counts: {},
+                samples_truncated: false
             }
         });
+    }
+
+    /**
+     * R7：表格系 samples 落盤組裝（純函式，可測）。
+     * 取前 limit 筆寫入 dataset.json，回傳是否截斷與全量總數；
+     * 供 syncSpecFromUI 填 samples／stats（sample_count 記全量 rows，非 samples 陣列長度）。
+     * @param {Array<object>} [tableRows]
+     * @param {number} [limit]
+     * @returns {{ samples: Array<object>, truncated: boolean, total: number }}
+     */
+    static buildTableSamples(tableRows, limit = TABLE_SAMPLES_PERSIST_LIMIT) {
+        const rows = Array.isArray(tableRows) ? tableRows : [];
+        return {
+            samples: rows.slice(0, limit),
+            truncated: rows.length > limit,
+            total: rows.length
+        };
     }
 
     static detectSchema(sampleRows = []) {

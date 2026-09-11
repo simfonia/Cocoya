@@ -6,6 +6,7 @@
  */
 import { datasetBridge } from '../io/bridge.js';
 import { countUnannotated, countUnclassifiedBoxes } from './annotationMutations.js';
+import { needsAnnotationCheck, needsUnclassifiedCheck, isDevType } from '../core/typePolicy.js';
 
 /**
  * deps：
@@ -29,10 +30,17 @@ export function createExportUseCases(deps) {
         showExportProgress(true);
 
         try {
-            // 0. 檢查是否有未標註圖片（僅物件偵測/循線需要 bbox/line）
             const projectType = getFormValue('projectType');
-            const needsAnnotationCheck = projectType === 'object_detection' || projectType === 'line_following';
-            if (needsAnnotationCheck && state.images.length > 0) {
+
+            // R8：開發中類型（feature/serial）擋下匯出，避免產出無法訓練的空資料集
+            if (isDevType(projectType)) {
+                showExportProgress(false);
+                showStatusMessage(t('ERROR_EXPORT_DEV_UNAVAILABLE', '❌ 此類型（%1）開發中，尚未支援匯出。').replace('%1', projectType));
+                return;
+            }
+
+            // 0. 檢查是否有未標註圖片（僅物件偵測/循線需要 bbox/line）
+            if (needsAnnotationCheck(projectType) && state.images.length > 0) {
                 const unannotated = countUnannotated(state.images);
                 if (unannotated > 0) {
                     if (!(await datasetBridge.confirm(t('ANNOTATION_EXPORT_UNANNOTATED_WARNING', '仍有 %1 張圖片未標註，確定要匯出嗎？').replace('%1', unannotated)))) {
@@ -44,7 +52,7 @@ export function createExportUseCases(deps) {
             }
 
             // 檢查是否有未分類標註框 (class_id === -1)（僅物件偵測）
-            if (projectType === 'object_detection' && state.images.length > 0) {
+            if (needsUnclassifiedCheck(projectType) && state.images.length > 0) {
                 const unclassified = countUnclassifiedBoxes(state.images);
                 if (unclassified > 0) {
                     if (!(await datasetBridge.confirm(t('ANNOTATION_EXPORT_UNCLASSIFIED_WARNING', '尚有 %1 個未分類標註框，確定要匯出嗎？').replace('%1', unclassified)))) {

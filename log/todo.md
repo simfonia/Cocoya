@@ -12,6 +12,13 @@
 ### [2026-09-10] Dataset Manager 類型鎖定改造（M1 完成，M2 待辦）
 - [x] M1：卡片入口＋類型鎖定＋dev 徽章/banner（typePolicy／entryCards／sessionManager＋9 新測試；layout/modal/i18n/CSS/三主題；45/45＋tsc＋cargo check＋vite＋parity 142/142）——計畫 `log/plan/DatasetManagerTypeLockedWorkflow.md`，日誌 `log/work/2026-09-10.md`
 - [ ] M2：重構收斂（R4 去重＋html.js／R5 labelManager／R6 samplerPanel／R7 表格落盤／R8 匯出分流／R9 後端實機）＋雙平台實機＋三主題目視
+  - [x] R4：`core/html.js`＋5 測試；三處去重＋修損壞轉義（86/86＋check×4＋vite PASS；備份 `backup/*pre_R4*`＋`*20260911_120000.bak`）
+  - [x] R5：`ui/labelManager.js`＋2 測試；上帝函式抽出＋委派（88/88＋check×4＋vite PASS；備份 `backup/*pre_R5*`）
+  - [x] R6：`ui/samplerPanel.js`＋3 測試；live 段抽出＋委派（91/91＋check×2＋vite PASS；備份 `backup/*pre_R6*`）
+  - [x] R7：表格 samples 落盤——spec.js `buildTableSamples(rows,limit)`＋`stats.samples_truncated` 契約＋`TABLE_SAMPLES_PERSIST_LIMIT=2000`；syncSpecFromUI 非影像系落盤 samples（舊一律 [] 修正）；spec.test 6 測（97/97＋check×3＋vite PASS；備份 `backup/*pre_R7*`）
+  - [x] R8：匯出按類型分流——typePolicy `isDevType/needsAnnotationCheck/needsUnclassifiedCheck`；feature/serial 擋下＋`ERROR_EXPORT_DEV_UNAVAILABLE`；exportUseCases.test 2 測；i18n parity 147/147（99/99＋check×4＋vite PASS；備份 `backup/*pre_R8*`）
+  - [x] R9 後端對齊：後端零 command 改動（spec.type/stats.samples_truncated 透傳不解讀）；cargo check（3 既有 warning）＋cargo test 1/0＋tsc＋npm run compile＋vite 全綠
+  - [ ] R9 雙平台實機（VSIX+Tauri 每類卡→徽章→匯出/存讀各一次）＋三主題目視（entry 卡片＋banner＋徽章＋dev 擋下訊息）——使用者 backlog
 - [ ] M3：表格＋循線模板（M-T1/M-L1）；M4：特徵最小可用（M-F1）；M5：文件＋清理
 
 

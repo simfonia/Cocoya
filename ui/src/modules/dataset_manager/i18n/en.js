@@ -112,6 +112,7 @@
     "DSM_ERROR_EXPORT_FAILED": "❌ Export failed: %1",
     "DSM_ERROR_CAPTURE_FAILED": "❌ Capture failed: %1",
     "DSM_ERROR_EXPORT_VALIDATE": "Dataset spec validation failed: %1",
+    "DSM_ERROR_EXPORT_DEV_UNAVAILABLE": "❌ This type (%1) is in development and does not support export yet. Please use a completed type dataset.",
 
     // Preview table
     "DSM_PREVIEW_MORE_SAMPLES": "... (%1 more samples not shown in preview)",
