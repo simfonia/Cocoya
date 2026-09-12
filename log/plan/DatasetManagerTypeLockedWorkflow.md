@@ -70,3 +70,49 @@ DM 開啟 → Step 0 卡片入口（新增 `ui/entryCards.js`）：4 正式卡�
 - 導航層級改造：P1 建立新資料集／P2 資料集管理 — 類型／P3 標註 — 子模式；`BACK_TO_LIST`→`BACK_TO_MANAGE`；header X／Esc 統一 `requestCloseDM()`；P3 隱藏清除資料＋回入口鈕；新 key `PAGE_NEW_DATASET/PAGE_MANAGE/PAGE_ANNOTATE/BACK_TO_MANAGE/EXIT_DM_CONFIRM`。
 - M2 施工鐵律：R4 起每步備份＋小步改＋`node --test`＋`node --check`＋`vite build`，再 `tsc`＋`cargo check`；`log/work/` 追加＋`todo.md` 更新。
 
+
+## 10. M3 施工計畫（2026-09-11 定案，表格＋循線模板跑通）
+
+> 對應 §7 的 M-T1（table）與 M-L1（line_following）。
+> 前置事實（M2 已驗）：
+> - 匯出分流 R8 完成：`exportUseCases` 吃 typePolicy，feature/serial 擋下，table/line_following 已放行。
+> - sidecar `exportDataset`（dataset_sidecar.py L131~184）：目前僅在 `type === 'object_detection'` 時由 dataset.json annotations 寫 YOLO labels + labels.txt，其後一律 `DatasetIO.export_dataset()` 打包（ZIP 內含 dataset.json）。
+> - line 標註格式（ui_canvas.js）：`annotations = [{ class_id, line: [x1,y1,x2,y2] }]`，比例座標 0~1，**每張圖僅一條**（line 模式畫第二條會整組取代）；class_id 恆 0（無多類 UI）。
+> - table 現況：spec.js 有匯入（CSV/JSON→schema.columns＋samples）與 R7 samples 落盤（前 2000 筆＋`stats.samples_truncated`）；**無** `load_table_dataset`／`table_train.py`。
+> - 分層鐵則（AGENTS.md）：table 依 label 欄位值分層；回歸型（label 連續數值）才允許隨機切且須在報告註明。line_following 無類別欄位 → 屬回歸型，隨機切＋註明即可。
+
+### 10.1 M-T1 table 模板
+
+| 步驟 | 內容 | 檔案 |
+|---|---|---|
+| T-1 | 新增 `common/table_dataset.py`：讀 dataset.json（schema.columns 決定欄位順序、samples 為 rows）→ numpy；`stratified_table_split(rows, labels, validation_split, seed)`——label 為類別型（string/int/boolean）依類別值分層（重用 classifier 分層邏輯，含教學保護：類別 ≥2 筆時 train/val 各至少 1 筆、切後為空報錯）；label 為 float（回歸）→ 隨機切＋報告註明「回歸型隨機切分」。輸出分層報告 `分層抽樣 (stratified split): <值>: train N / val M` | `resources/train_templates/common/table_dataset.py`（新） |
+| T-2 | 新增 `table/table_train.py`：比照 detector_train.py 骨架（argparse `--dataset_dir --spec_json --epochs --batch_size --model_output`；stdout reconfigure UTF-8；open 加 encoding）。模型頭依 label 欄位 type：string/int/boolean → Dense(n, softmax) 分類；float → Dense(1, linear) 回歸。輸出 TFLite＋訓練報告（open_report 流程同 classifier） | `resources/train_templates/table/table_train.py`（新） |
+| T-3 | sidecar 匯出分流：`exportDataset` 在 `type === 'table'` 時由 spec.samples＋schema.columns 寫 `data.csv`（欄序＝columns 順序、UTF-8、header），再打包；與既有 YOLO 分支互斥、不影響 image/line 路徑 | `resources/dataset_manager/dataset_sidecar.py` |
+| T-4 | 訓練進入點路徑映射：sidecar／host 的 train_templates 模板路徑清單加入 `table/table_train.py`＋`common/` 共用（確認既有 classifier/detector 如何解析 relative path，照抄） | sidecar / `src/handlers/sidecarManager.ts` / Rust 視映射所在而定 |
+| T-5 | 驗證：本機以 CSV 匯入建 table 專案 → 匯出（ZIP 內 data.csv＋dataset.json）→ 訓練跑通（分類＋回歸各一）→ 報告開啟。分層報告列印比對 | 實機 |
+
+### 10.2 M-L1 line_following 模板
+
+| 步驟 | 內容 | 檔案 |
+|---|---|---|
+| L-1 | sidecar 匯出分流：`type === 'line_following'` 時由 annotations（`line:[x1,y1,x2,y2]` 比例座標）寫 `lines.txt`（每張一列 `x1 y1 x2 y2`，歸一化、UTF-8），未標註影像跳過並於 stderr 統計；未標註比例過高（如 >50%）輸出警告 | `resources/dataset_manager/dataset_sidecar.py` |
+| L-2 | 新增 `common/line_dataset.py`：讀 images/＋lines.txt；回歸型隨機切分（seed 固定）＋報告註明「無類別欄位（回歸），隨機切分」；教學保護：樣本 <2 報錯 | `resources/train_templates/common/line_dataset.py`（新） |
+| L-3 | 新增 `line/line_train.py`：MobileNetV2 轉移學習＋回歸頭 Dense(4, sigmoid)（輸出歸一化端點，與標註同座標系）；loss=MSE；輸出 TFLite＋報告 | `resources/train_templates/line/line_train.py`（新） |
+| L-4 | 訓練進入點映射加入 `line/line_train.py`（同 T-4） | 同 T-4 |
+| L-5 | 驗證：line 專案 live/file 採樣＋畫線標註 → 匯出（ZIP 內 lines.txt）→ 訓練跑通 → 報告 | 實機 |
+
+> M3 施工結論（2026-09-12）：實作與本表有三處偏差，均為對齊既有 SSOT 映射所需——
+> 1. L-1 匯出改為 `lines/` 目錄（每張標註影像一個同名 .txt，一行 `x1 y1 x2 y2` 歸一化比例座標），不用單一 lines.txt：與 YOLO labels/ 慣例對稱、可逐一配對免錯位；未標註影像跳過不產檔＋>50% 警告。
+> 2. 循線腳本路徑為 `line_follower/line_follower_train.py`（本地 generator 既定映射），非 `line/line_train.py`；line 模型重用 detector `Dense(4, sigmoid)` 回歸頭（語意改為端點），不再另建 line 模型檔。
+> 3. T-4 擴大為訓練映射對齊：sidecar `trainLocal` 改 task→檔名映射（修硬編碼 classifier＋誤傳 `--model_type`→`--backbone`；舊參數下 argparse exit 2 全壞）；遠端 script_rel 對齊實檔（detector→`detector/detector_train.py`，修幽靈 `object_detection/`；table 已對）。
+> 驗證：table 分類（分層）/回歸（隨機切註明）訓練跑通＋f32/int8 TFLite＋labels.txt；line 訓練跑通＋f32 TFLite；sidecar exportDataset 真實行程 e2e（`temp_scripts/m3_export_e2e.py`：CSV 含逗號引號包覆＋未標註跳過）全 PASS；`py_compile` 5 檔 PASS。煙霧資料產生器 `temp_scripts/m3_smoke_make_data.py`（table_clf/table_reg/line_ds，均 git-ignored）供回歸重跑。詳見 `log/work/2026-09-12.md`。
+
+### 10.3 明確不做（M3 範圍外）
+- 推論 generator／積木（`py_ai_get_line`、table 推論磚）→ M4。
+- line 多類別標註 UI（class_id 恆 0）→ 未來需求再議；若日後加類別，切分改依 class_id 分層（比照 detector）。
+- feature/serial → M4／另立里程碑（R8 已擋下匯出）。
+- 後端零新增 command 維持不變（R9 契約）。
+
+### 10.4 施工鐵律（沿襲 §9）
+每步：先備份至 `backup/`（yyyyMMdd_HHmmss）→ 小步改 → `node --check`（新 JS 時）＋ `cargo check`（Rust 動到時）＋ Python 直接 `python -m py_compile` 新腳本 → 雙平台實機 → `log/work/2026-09-11.md` 追加＋`log/todo.md` 更新（禁刪歷史）。
+

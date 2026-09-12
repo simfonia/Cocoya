@@ -19,7 +19,17 @@
   - [x] R8：匯出按類型分流——typePolicy `isDevType/needsAnnotationCheck/needsUnclassifiedCheck`；feature/serial 擋下＋`ERROR_EXPORT_DEV_UNAVAILABLE`；exportUseCases.test 2 測；i18n parity 147/147（99/99＋check×4＋vite PASS；備份 `backup/*pre_R8*`）
   - [x] R9 後端對齊：後端零 command 改動（spec.type/stats.samples_truncated 透傳不解讀）；cargo check（3 既有 warning）＋cargo test 1/0＋tsc＋npm run compile＋vite 全綠
   - [ ] R9 雙平台實機（VSIX+Tauri 每類卡→徽章→匯出/存讀各一次）＋三主題目視（entry 卡片＋banner＋徽章＋dev 擋下訊息）——使用者 backlog
-- [ ] M3：表格＋循線模板（M-T1/M-L1）；M4：特徵最小可用（M-F1）；M5：文件＋清理
+- [ ] M3：表格＋循線模板跑通（M-T1 table / M-L1 line_following）——計畫 `log/plan/DatasetManagerTypeLockedWorkflow.md` §10，日誌 `log/work/2026-09-12.md`
+  - [x] T-1：`common/table_dataset.py`（label 欄 type 判定分類/回歸；分類依 label 值分層＋教學保護；回歸隨機切＋報告註明）
+  - [x] T-2：`table/table_train.py`（MLP 頭依任務：Dense(n,softmax)／Dense(1,linear)；TFLite＋labels.txt＋報告；RESULT 契約相容）
+  - [x] T-3：sidecar 匯出 table 分流（spec.samples＋schema.columns→`data.csv`，UTF-8；truncated 警告）
+  - [x] T-4：訓練映射——sidecar `trainLocal` 依 task_type 映射檔名（修硬編碼 classifier＋誤傳 `--model_type`）；遠端 script_rel 對齊實檔（`detector/detector_train.py`、`line_follower/line_follower_train.py`，修幽靈 `object_detection/`）
+  - [x] L-1：sidecar 匯出 line 分流（annotations→`lines/` 同名 .txt，`x1 y1 x2 y2`；未標註跳過＋>50% 警告）
+  - [x] L-2：`common/line_dataset.py`（images/＋lines/；隨機切＋報告註明；<2 樣本報錯）
+  - [x] L-3：`line_follower/line_follower_train.py`（重用 detector Dense(4,sigmoid) 回歸頭，語意為端點；MSE＋報告）
+  - [x] 實機：table 分類/回歸訓練跑通＋f32 TFLite＋labels.txt；line 訓練跑通＋f32 TFLite；sidecar exportDataset e2e（`temp_scripts/m3_export_e2e.py`，含逗號 CSV 引號＋未標註跳過）全 PASS
+  - [ ] T-5/L-5 殘：table int8 量化本機驗證（命令逾時，背景 job 執行中）；VSIX+Tauri 雙平台 GUI 實機（UI 匯出→訓練維）——使用者 backlog
+- [ ] M4：特徵最小可用（M-F1）；M5：文件＋清理
 
 
 ### tauri-codegen 產生 typed invoke (待辦, 2026-08-19)
