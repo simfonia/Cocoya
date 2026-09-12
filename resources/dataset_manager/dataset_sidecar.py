@@ -2,6 +2,7 @@ import sys
 import json
 import time
 import os
+import csv
 import threading
 import importlib
 import tempfile
@@ -180,6 +181,45 @@ class DatasetSidecar:
                                                 f.write(f"{class_id} {cx:.6f} {cy:.6f} {w:.6f} {h:.6f}\n")
                                 
                                 print(f"[Sidecar Log] Wrote YOLO labels for {len(samples)} images", file=sys.stderr)
+
+                            elif project_type == "table" and samples:
+                                # M-T1：表格 → data.csv（欄序 = schema.columns 順序，UTF-8）
+                                columns = spec.get("schema", {}).get("columns", [])
+                                col_names = [c.get("name", "") for c in columns if c.get("name")]
+                                csv_path = os.path.join(source_dir, "data.csv")
+                                with open(csv_path, 'w', encoding='utf-8', newline='') as f:
+                                    writer = csv.writer(f)
+                                    writer.writerow(col_names)
+                                    for sample in samples:
+                                        writer.writerow([sample.get(name, "") for name in col_names])
+                                print(f"[Sidecar Log] Wrote data.csv: {len(col_names)} columns, {len(samples)} rows", file=sys.stderr)
+                                if spec.get("stats", {}).get("samples_truncated"):
+                                    print(f"[Sidecar Log] 警告: 表格樣本超過 2000 筆上限，dataset.json 僅保留前 2000 筆，訓練資料亦以此為限", file=sys.stderr)
+
+                            elif project_type == "line_following" and samples:
+                                # M-L1：循線 → lines/ 目錄（每張標註影像一個同名 .txt，一行 x1 y1 x2 y2 歸一化比例座標）
+                                lines_dir = os.path.join(source_dir, "lines")
+                                os.makedirs(lines_dir, exist_ok=True)
+                                total, written = 0, 0
+                                for sample in samples:
+                                    total += 1
+                                    annotations = sample.get("annotations", [])
+                                    if not annotations:
+                                        continue
+                                    line = annotations[0].get("line")
+                                    if not line or len(line) != 4:
+                                        continue
+                                    img_filename = os.path.basename(sample.get("image_path", ""))
+                                    if not img_filename:
+                                        continue
+                                    txt_name = os.path.splitext(img_filename)[0] + ".txt"
+                                    txt_path = os.path.join(lines_dir, txt_name)
+                                    with open(txt_path, 'w', encoding='utf-8') as f:
+                                        f.write(f"{line[0]:.6f} {line[1]:.6f} {line[2]:.6f} {line[3]:.6f}\n")
+                                    written += 1
+                                print(f"[Sidecar Log] Wrote lines/ for {written}/{total} images", file=sys.stderr)
+                                if total > 0 and written < total / 2:
+                                    print(f"[Sidecar Log] 警告: 超過半數影像未標註線段（未標註 {total - written}/{total}），訓練資料量可能不足", file=sys.stderr)
                         
                         result_path = DatasetIO.export_dataset(source_dir, output_zip)
                         self.send_response(request_id, {"success": True, "path": result_path})
@@ -562,9 +602,9 @@ class DatasetSidecar:
                             # --- 遠端 Docker 訓練 (cocoya classifier_train.py v2) ---
                             task_type = str(hyperparams.get("taskType", "classifier")).lower()
                             if task_type == "detector":
-                                script_rel = "object_detection/object_detection_train.py"
+                                script_rel = "detector/detector_train.py"
                             elif task_type == "line_follower":
-                                script_rel = "line_following/line_following_train.py"
+                                script_rel = "line_follower/line_follower_train.py"
                             elif task_type == "table":
                                 script_rel = "table/table_train.py"
                             elif task_type == "feature":
@@ -797,8 +837,17 @@ class DatasetSidecar:
                             import subprocess
                             import sys
                             
-                            # 通用訓練腳本路徑（使用實際的訓練腳本）
-                            script_path = os.path.join(os.path.dirname(__file__), "..", "..", "train_templates", task_type, "classifier_train.py")
+                            # 通用訓練腳本路徑（依 task_type 映射檔名，與 ai_inference_generators.js 一致）
+                            # 修正（M3/T-4）：舊版硬編碼 classifier_train.py 且誤傳 --model_type
+                            # （三腳本 argparse 皆為 --backbone，舊參數會 unrecognized 直接失敗）
+                            task_scripts = {
+                                "classifier": "classifier_train.py",
+                                "detector": "detector_train.py",
+                                "line_follower": "line_follower_train.py",
+                                "table": "table_train.py"
+                            }
+                            script_name = task_scripts.get(str(task_type).lower(), "classifier_train.py")
+                            script_path = os.path.join(os.path.dirname(__file__), "..", "..", "train_templates", task_type, script_name)
                             
                             if not os.path.exists(script_path):
                                 self.send_response(request_id, {
@@ -814,7 +863,7 @@ class DatasetSidecar:
                                 f"--project_name={project_name}",
                                 f"--dataset_dir={dataset_dir}",
                                 f"--output_dir={output_dir}",
-                                f"--model_type=mobilenetv2",
+                                f"--backbone=mobilenetv2",
                                 f"--epochs={hyperparams.get('epochs', 30)}",
                                 f"--batch_size={hyperparams.get('batchSize', 32)}",
                                 f"--learning_rate={hyperparams.get('learningRate', 0.001)}"

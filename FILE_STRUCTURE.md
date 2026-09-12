@@ -276,6 +276,8 @@ C:\Workspace\cocoya\
 │   │   │   ├── classifier_model.py    # 分類模型建立、backbone 管理、FC 層自訂
 │   │   │   ├── detector_dataset.py    # [NEW] YOLO 格式資料載入、bbox 解析
 │   │   │   ├── detector_model.py      # [NEW] 物件偵測回歸模型（MobileNetV2 + Dense(4, sigmoid)）
+│   │   │   ├── table_dataset.py       # [M3] 表格 data.csv＋dataset.json 載入；分類分層/回歸隨機切分
+│   │   │   ├── line_dataset.py        # [M3] 循線 images/＋lines/ 載入；回歸隨機切分
 │   │   │   ├── training_loop.py       # 訓練迴圈、class weight、優化器選擇（共用）
 │   │   │   ├── model_export.py        # TFLite 轉換、模型儲存（共用）
 │   │   │   └── training_report.py     # 訓練曲線繪製、HTML 報告產生（共用）
@@ -283,13 +285,17 @@ C:\Workspace\cocoya\
 │   │   │   └── classifier_train.py    # 分類訓練腳本（使用 common 模組）
 │   │   └── detector/
 │   │       └── detector_train.py      # [NEW] 物件偵測訓練腳本（單一目標，MSE loss）
+│   │   ├── table/
+│   │   │   └── table_train.py         # [M3] 表格訓練（MLP；分類 softmax／回歸 linear＋報告）
+│   │   └── line_follower/
+│   │       └── line_follower_train.py # [M3] 循線訓練（線段端點回歸，重用 detector 回歸頭＋報告）
 │   ├── dataset_manager/   # Dataset Manager 模組
 │   │   └── train_templates/ # 訓練容器模板
 │   │       └── classifier/  # 手勢分類訓練模板
 │   │           ├── Dockerfile.train # Docker 映像定義
 │   │           ├── train_classifier.py # 訓練腳本
 │   │           └── requirements.txt # Python 套件需求
-│   ├── dataset_sidecar.py   # Sidecar 主進程與指令解析（含遠端訓練 docker_cmd、keras_cache 權重快取掛載）
+│   ├── dataset_sidecar.py   # Sidecar 主進程與指令解析（含遠端訓練 docker_cmd、keras_cache 權重快取掛載；[M3] exportDataset table/line 分流＋trainLocal 任務映射）
 │   ├── _local_convert_tflite.py # 遠端 keras 本地轉 TFLite（_sanitize_keras_config 剝除跨版本 Keras 3 不相容層參數）
 │   ├── camera_service.py    # OpenCV 攝影機預覽與擷取服務
 │   ├── dataset_io.py        # 資料集檔案存取與打包工具
