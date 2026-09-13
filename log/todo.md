@@ -29,7 +29,13 @@
   - [x] L-3：`line_follower/line_follower_train.py`（重用 detector Dense(4,sigmoid) 回歸頭，語意為端點；MSE＋報告）
   - [x] 實機：table 分類/回歸訓練跑通＋f32 TFLite＋labels.txt；line 訓練跑通＋f32 TFLite；sidecar exportDataset e2e（`temp_scripts/m3_export_e2e.py`，含逗號 CSV 引號＋未標註跳過）全 PASS
   - [ ] T-5/L-5 殘：table int8 量化本機驗證（命令逾時，背景 job 執行中）；VSIX+Tauri 雙平台 GUI 實機（UI 匯出→訓練維）——使用者 backlog
-- [ ] M4：特徵最小可用（M-F1）；M5：文件＋清理
+- [ ] M4：特徵最小可用（M-F1）；M5：文件＋清理——計畫 `log/plan/DatasetManagerFeatureMinimalM4.md`（Phase 0~5＋風險評估，2026-09-12 定稿）
+  - [ ] 決策待拍板（施工前）：①採集範圍（納入 live 特徵採集 UI Phase 4 與否）②點維度（含 z=162 或僅 xy=108）③訓練檔（新建 feature/feature_train.py 或映射 table/table_train.py）
+  - [ ] Phase 1：sidecar 特徵提取（media_pipe_service.py 重寫）＋collectFeature＋缺裝降級
+  - [ ] Phase 2：匯出分流（feature→data.csv）＋解封 exportUseCases/typePolicy/entryCards
+  - [ ] Phase 3：訓練管線 feature_train.py＋trainLocal/trainRemote 幽靈映射收斂
+  - [ ] Phase 4（選配）：DM 前端 live 採集 panel
+  - [ ] Phase 5：i18n/主題/測試/文件/清理
 
 
 ### tauri-codegen 產生 typed invoke (待辦, 2026-08-19)
@@ -142,3 +148,8 @@
 - [x] [2026-09-09] SPIKE 支援凍結（實驗性）：現況說明 log/plan/SpikeSupportStatus.md（含決策理由、已完成清單、已知限制、Pybricks 里程碑啟動條件、相關日誌索引、重啟檢查清單）——日後重啟由此進入
 - [x] [2026-09-09] 上傳 RP2040 終端只顯示「OK」而非 complete_banner：根因「OK」為 Raw REPL 執行成功之韌體標記；complete_banner 未被印出因 monitor() 逾時檢查被關在 `ser.in_waiting>0` 區塊內、raw 模式不回 `>>>`，永遠觸發不到。修正：逾時兜底移至 while 層級強制補印（log/work/2026-09-09.md）
 - [x] [2026-09-09] 上傳 RP2040 空行不穩定復現（根治）：Raw REPL 換行 `b'\r\n'` 與內文**分批到達**、時序漂移 → 空行位置每次不同。三層分工修復：base.py 過濾純換行批+壓平+OK後補空行（單一源頭排版）、mcu.rs 回復 chunk 直通（不拆整行）、tauri.js 剝 `\r`；同步 target/debug 副本。實機確認成功（log/work/2026-09-09.md 踩坑記錄 6 條）
+
+## 2026-09-13
+- [x] 校訂 py_ai_train_run 教學文件第 1~6 頁觀念（模型=架構+參數、Loss 定義、谷底=平均損失）。
+- [x] 新增第 7 頁交叉熵簡介頁，後續頁碼 +1（全 23 頁）。
+- [ ] 可選後續：第 14 頁骨幹頁可回頭呼應「模型=架構+參數」；交叉熵頁可再補 softmax 歸一化的簡短說明。

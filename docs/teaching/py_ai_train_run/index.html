@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 模型訓練 — AI訓練積木 參數教學</title>
+<link rel="stylesheet" href="lib/reveal/reveal.css">
+<link rel="stylesheet" href="lib/reveal/theme/beige.css" id="theme">
+<style>
+  /* ===== 全域配色（AI 紫 + 暖黃）===== */
+  :root{
+    --ink:#3A3480; --accent:#9C27B0; --gold:#F2A929; --teal:#26A69A;
+    --light:#F5F3FA; --card:#FFFFFF; --bad:#E53935; --good:#43A047;
+  }
+  .reveal{ background:linear-gradient(135deg,#F5F3FA 0%,#E8E2F6 55%,#FDF6E9 100%); }
+  .reveal .slides{ text-align:left; }
+  .reveal h1,.reveal h2,.reveal h3{ color:var(--ink); font-family:'Segoe UI','PingFang TC','Microsoft JhengHei',sans-serif; }
+  .reveal h2{ margin-bottom:.5em; }
+  .reveal p,.reveal li,.reveal td{ color:#333; font-size:.92em; line-height:1.42; }
+  .reveal a{ color:var(--teal); }
+
+  /* ===== 卡片 ===== */
+  .card{ background:var(--card); border-radius:14px; padding:18px 22px; box-shadow:0 6px 14px rgba(124,78,172,.16); }
+  .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .thin{ font-size:1em; color:#777; }
+  .hl{ font-weight:bold; color:#C2411B; }
+
+  /* ===== 標籤膠囊 ===== */
+  .pill{ display:inline-block; background:var(--accent); color:#fff; border-radius:20px; padding:2px 12px; font-size:.72em; font-weight:bold; margin-right:6px; }
+
+  /* ===== 終端機輸出 ===== */
+  .term{ background:#1E1E2E; color:#E6E6E6; border-radius:10px; padding:14px 18px; font-family:Consolas,'Courier New',monospace; font-size:.72em; line-height:1.35; white-space:pre-wrap; box-shadow:inset 0 0 20px rgba(0,0,0,.3); }
+  .term .ok{ color:#7CD27C; } .term .hi{ color:#F2A929; } .term .cy{ color:#7FD9E0; } .term .dim{ color:#9B9B9B; }
+
+  /* ===== 提示框 ===== */
+  .tip{ border-left:5px solid var(--accent); background:#EDE4F7; padding:8px 12px; border-radius:0 6px 6px 0; }
+  .warn{ border-left:5px solid var(--gold); background:#FDF0D9; padding:8px 12px; border-radius:0 6px 6px 0; }
+  .good{ border-left:5px solid var(--good); background:#E6F5E8; padding:8px 12px; border-radius:0 6px 6px 0; }
+
+  /* ===== 小測驗 ===== */
+  .quiz{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .qbtn{ background:#fff; border:2px solid #C9C3DA; border-radius:12px; padding:14px; font-size:.86em; cursor:pointer; text-align:left; transition:.15s; }
+  .qbtn:hover{ border-color:var(--accent); background:#F2EDFB; }
+  .qbtn.correct{ border-color:var(--good); background:#E6F5EA; }
+  .qbtn.wrong{ border-color:var(--bad); background:#FDEBEB; }
+  .qfb{ margin-top:10px; font-size:.85em; min-height:2em; font-weight:bold; }
+
+  /* ===== 表格 ===== */
+  table.params{ width:100%; border-collapse:collapse; font-size:.82em; }
+  table.params th,table.params td{ border:1px solid #D8D2E6; padding:7px 10px; text-align:left; }
+  table.params th{ background:#EFE9F8; color:var(--ink); }
+
+  /* ===== 下標 / 數學 ===== */
+  .sub{ font-size:.7em; vertical-align:sub; }
+  .formula{ background:#F7EFFB; font-family:'Cambria Math',serif; padding:6px 14px; border-radius:8px; }
+  /* ===== 頁尾：釘在頁面底部，內容超高時捲動、頁尾恆在 ===== */
+  .reveal .slides section{
+    max-height:100%;
+    overflow-y:auto;
+    scrollbar-width:thin;
+    scrollbar-color:#B9B0CC transparent;
+  }
+  .reveal .slides section::-webkit-scrollbar{ width:6px; }
+  .reveal .slides section::-webkit-scrollbar-thumb{ background:#B9B0CC; border-radius:3px; }
+  .reveal .slides section::-webkit-scrollbar-track{ background:transparent; }
+  .slide-footer{
+    position:sticky; bottom:0;
+    margin-top:auto; text-align:right;
+    padding:4px 18px 4px 8px;
+    background:rgba(245,243,250,.95);
+    border-radius:6px 6px 0 0;
+    font-size:.55em; color:#B9B0CC;
+  }
+  .nospk,.cs{color:inherit}
+
+  /* ===== 響應式自訂覆寫：縮小字級 + 壓縮間距，避免內容超高被裁（配合筆電大字型）===== */
+  :root{ --r-main-font-size:30px; --r-heading-margin:0 0 8px 0; --r-heading1-size:.8em; }
+  .reveal{ font-size:30px; }
+  .reveal h2{ font-size:1.28em; margin-bottom:.25em; }
+  .reveal h3{ font-size:1.02em; margin-bottom:.2em; }
+  .reveal p,.reveal li{ font-size:.88em; line-height:1.3; margin:.25em 0; }
+  .reveal td,.reveal th{ font-size:.82em; }
+  .card{ padding:12px 14px; border-radius:10px; box-shadow:0 4px 10px rgba(124,78,172,.14); }
+  .card h3{ margin-bottom:.2em; }
+  .term{ font-size:.64em; padding:9px 12px; line-height:1.28; }
+  table.params th,table.params td{ padding:5px 8px; }
+  .quiz .qbtn{ padding:9px 12px; font-size:.82em; }
+  .qfb{ font-size:.82em; }
+  .formula{ font-size:.92em; padding:4px 10px; }
+  .frac{ display:inline-block; vertical-align:-.38em; text-align:center; line-height:1.15; margin-right:.3em; }
+  .frac .num{ display:block; border-bottom:1.2px solid #444; padding:0 .38em; }
+  .frac .den{ display:block; padding:0 .38em; }
+  .sum{ display:inline-block; text-align:center; vertical-align:middle; margin-right:.15em; line-height:1.05; }
+  .sum .s-top{ display:block; font-size:.62em; }
+  .sum .s-sym{ display:block; font-size:1.25em; font-family:'Cambria Math',serif; }
+  .sum .s-bot{ display:block; font-size:.62em; }
+  .tip,.warn,.good{ padding:6px 10px; font-size:.86em; }
+  ul,ol{ margin:.2em 0; padding-left:1.1em; }
+  .grid2,.grid3{ gap:12px; }
+  @media(max-width:900px){ .grid3{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ===================== 第 1 頁 封面 ===================== -->
+<section>
+  <div style="margin-top:.4em; text-align:center;">
+    <div style="font-size:3.1em; line-height:1.1;"><span style="color:var(--accent)">AI 模型訓練</span><br>從資料到模型</div>
+    <div style="font-size:1.05em; color:#5A5473; margin-top:.6em;">把<strong>資料</strong>轉換成<strong>可以帶走的知識</strong>，成為一套<strong>面對未來的應對法則。</strong></div>
+    <div style="margin-top:.9em; text-align:center; font-size:.95em; letter-spacing:.08em;">
+      📚 資料 ──➜&nbsp; 🧠 模型 ──➜&nbsp; 🔮 預測
+    </div>
+    <div style="margin-top:1em; font-size:.8em; color:#8A83A0;">
+      Cocoya <code>【AI訓練積木】</code> 參數教學<br>
+    </div>
+  </div>
+  <div class="slide-footer">第 1 頁 · 封面</div>
+</section>
+<!-- ===================== 第 2 頁 調參數 ===================== -->
+<section>
+  <h2>🎛️ 調參數 = 調整學習方式</h2>
+  <div class="card">
+    <p>積木上的每個數字，都是「<strong>電腦怎麼學習這組資料</strong>」的控制開關。</p>
+    <p>預設值就像一份<strong>讀書計畫範本</strong>——對多數人都不錯，但<strong>沒有人的情況完全一樣</strong>。</p>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>📌 為什麼要調？</h3>
+      <p>資料難易不同、圖片多寡不同、目標不同（迴歸？圖像分類？物件偵測？）。
+      調整參數，讓「學習方式」配合你的資料。</p>
+    </div>
+    <div class="card"><h3>🧭 接下來…（章節動線，對照積木欄位順序）</h3>
+      <p>1. <strong>基本設定</strong>：類型、訓練主機、資料集、資料同步、模型存放</p>
+      <p>2. <strong>餵資料的策略</strong>：驗證比、擴增、Dropout</p>
+      <p>3. <strong>電腦怎麼學</strong>：模型 → Loss → 學習率(LR) → Epochs → Batch</p>
+      <p>4. <strong>進階設定</strong>：預訓練、微調、DNN 層、優化器、模型輸出</p>
+    </div>
+  </div>
+  <div class="slide-footer">第 2 頁 · 調參數的意義</div>
+</section>
+<!-- ===================== 第 3 頁 類型與訓練主機 ===================== -->
+<section>
+  <h2>🎯 類型與訓練主機 <span class="thin">Type &amp; Training Host</span>：先決定「做什麼、在哪做」</h2>
+  <div class="grid2">
+    <div class="card"><h3>🎯 類型 (Type)</h3>
+      <ul>
+        <li><strong>分類器</strong>：這張圖是<strong>什麼</strong>？（剪刀石頭布、手勢）</li>
+        <li><strong>偵測器</strong>：東西<strong>在哪裡</strong>？（框出物件位置）</li>
+        <li><strong>循線</strong>：線在左邊還是右邊？（循跡小車）</li>
+        <li><strong>表格</strong>：從表格資料學規律（非圖像）</li>
+      </ul>
+      <div class="tip">💡 類型決定訓練方式與推論引擎，要與後面「初始化模型」積木的類型<strong>一致</strong>。</div>
+    </div>
+    <div class="card"><h3>🖥️ 訓練主機 (Training Host)</h3>
+      <ul>
+        <li><strong>本地</strong>：用自己的電腦訓練。資料少、模型小時最方便，教學預設。</li>
+        <li><strong>遠端</strong>：送到遠端主機訓練。第一次執行會跳出 SSH 設定。</li>
+      </ul>
+      <div class="good">✅ 教學建議：先用「本地 + 分類器」把整個流程跑通；等資料變多、訓練變慢，再考慮遠端。</div>
+    </div>
+  </div>
+  <div class="slide-footer">第 3 頁 · 類型與訓練主機</div>
+</section>
+<!-- ===================== 第 4 頁 資料集 Dataset ===================== -->
+<section>
+  <h2>🎯 <span class="thin">Dataset (資料集)</span></h2>
+  <div class="grid2">
+    <div class="card"><h3>📂 放哪裡、長這樣</h3>
+      <div class="term">專案目錄/dataset/classifier_dataset(資料集名稱)
+<span class="cy">/</span><span class="ok">scissors</span><span class="dim">  剪刀 138 張</span>
+<span class="cy">/</span><span class="ok">rock</span><span class="dim">      石頭 108 張</span>
+<span class="cy">/</span><span class="ok">paper</span><span class="dim">     布   124 張</span>
+<span class="cy">/</span><span class="ok">none</span><span class="dim">      只有背景  32 張</span></div>
+      <p class="thin">每個<strong>子資料夾 = 一個分類</strong>，照片放在對應資料夾。</p>
+    </div>
+    <div class="card"><h3>📖 比喻：教科書</h3>
+      <p>資料集就像「<strong>章節清晰的教科書</strong>」。</p>
+      <p>沒分章節、內容少，很難讀出重點。</p>
+    </div>
+  </div>
+  <div class="warn">⚠️ 每個分類<strong>至少 5 張</strong>，建議 <strong>20–100 張</strong>。<br>若數量不平均（30 vs 500）——這叫<strong>類別不平衡 (class imbalance)</strong>——樣本多的分類會主導Loss(後述)，訓練出來的模型容易偏心。</div>
+  <div class="slide-footer">第 4 頁 · Dataset (資料集)</div>
+</section>
+<!-- ===================== 第 5 頁 資料同步與模型存放 ===================== -->
+<section>
+  <h2>🔄 資料同步與模型存放 <span class="thin">Data Sync &amp; Model Folder</span></h2>
+  <div class="grid2">
+    <div class="card"><h3>🔄 資料同步 (Data Sync)</h3>
+      <p><strong>僅在訓練主機 = 遠端時生效</strong>：決定本地資料集要不要送上遠端主機。</p>
+      <ul>
+        <li><strong>智慧</strong>（預設）：資料有變更才上傳——最快、最省流量</li>
+        <li><strong>每次</strong>：每次訓練都完整上傳——最保險但最慢</li>
+        <li><strong>略過</strong>：不上傳，直接用遠端主機上既有的資料集</li>
+      </ul>
+      <div class="tip">💡 訓練主機 = 本地時，此欄位沒有作用，保持預設即可。</div>
+    </div>
+    <div class="card"><h3>📦 模型存放 (Model Folder)</h3>
+      <ul>
+        <li>訓練好的模型會存到這個資料夾。</li>
+        <li><strong>自動</strong>從資料集名稱帶出（<code>dataset/xxx</code> → <code>model/xxx</code>），<strong>唯讀、不必手改</strong>。</li>
+        <li>之後的推論積木「初始化模型」就是到這裡找模型檔。</li>
+      </ul>
+      <div class="good">✅ 一套流程自動串好：資料集名稱 → 模型資料夾 → 推論載入，全程不用自己輸入路徑。</div>
+    </div>
+  </div>
+  <div class="slide-footer">第 5 頁 · 資料同步與模型存放</div>
+</section>
+<!-- ===================== 第 6 頁 驗證比 Validation Split ===================== -->
+<section>
+  <h2>✂️ 驗證比 <span class="thin">Validation Split (驗證集比例)</span>：留一份「模擬考」</h2>
+  <div class="grid2">
+    <div class="card"><h3>📖 比喻：讀書 ≠ 會考試</h3>
+      <p>不能拿「讀過的題目」考自己——那只是背答案。<br>
+      要留<strong>一部分不曾拿來讀的例題</strong>當<strong>模擬考</strong>，才知道「真的懂了沒」。</p>
+      <p><strong>Validation Split (驗證比)</strong> = 從資料中抽出當作模擬考的比例（預設 20%）。</p>
+    </div>
+    <div class="card"><h3>🧪 實務：分層抽樣</h3>
+      <p>光「隨機抽 20%」有好有壞——若某分類很少，可能被抽光，模擬考就沒考到它。<br>
+      所以 Cocoya 用<strong>分層抽樣 (Stratified Split)</strong>：<strong>每個分類各自</strong>抽出固定比例，保證公平。</p>
+      <div class="term"><span class="dim">找到 4 個分類:</span>
+  <span class="hi">none: 32 張 / paper: 124 張 / rock: 108 張 / scissors: 138 張</span>
+<span class="cy">分層抽樣 (stratified split):</span>
+<span class="ok">  none:     train 26 / val 6</span>
+<span class="ok">  paper:    train 99 / val 25</span>
+<span class="ok">  rock:     train 86 / val 22</span>
+<span class="ok">  scissors: train 110 / val 28</span></div>
+    </div>
+  </div>
+  <div class="warn">💡 調校後果：變大（0.5）= 讀書資料變少、模擬考更嚴；變小（0.1）= 讀書多、但考得不夠。預設 0.2 平衡。</div>
+  <div class="slide-footer">第 6 頁 · Validation Split (驗證比) · 分層抽樣</div>
+</section>
+<!-- ===================== 第 7 頁 Augmentation ===================== -->
+<section>
+  <h2>🪞 擴增 <span class="thin">Augmentation (資料擴增)</span>：把一份資料「舉一反三」</h2>
+  <div class="grid2">
+    <div class="card"><h3>📖 比喻：變體練習</h3>
+      <p>同一張課本圖，練習時<strong>轉一轉、翻一面、放大縮小</strong>——看了「不同版本」的同一題。</p>
+      <p>這讓模型學會：「不管剪刀是橫的、斜的、近的、遠的，都是剪刀。」</p>
+      <p><strong>Augmentation (擴增)</strong> 開啟後，每次餵進去的是<strong>原始資料的輕微變體</strong>，等於免費多了好多張練習題。</p>
+    </div>
+    <div class="card"><h3>⚖️ 調校後果</h3>
+      <table class="params"><tr><th>選項</th><th>後果</th></tr>
+        <tr><td><strong>✔ 開啟（預設）</strong></td><td>資料多樣性↑ → 更強健、不易過擬合，多一點點訓練時間</td></tr>
+        <tr><td><strong>✖ 關閉</strong></td><td>只能重複看原圖，容易背圖；小資料特別容易過擬合</td></tr>
+      </table>
+      <div class="good">✅ 資料很少時<strong>強烈建議開啟</strong>；除非你刻意要原圖訓練，否則保持開啟。</div>
+    </div>
+  </div>
+  <div class="slide-footer">第 7 頁 · Augmentation (資料擴增)</div>
+</section>
+<!-- ===================== 第 8 頁 Dropout ===================== -->
+<section>
+  <h2>🎲 Dropout <span class="thin">隨機遺忘率</span>：強迫「換個思路想」</h2>
+  <div class="grid2">
+    <div class="card"><h3>🧠 問題：死背／過度依賴</h3>
+      <p>模型可能養成<strong>依賴某條路徑</strong>的壞習慣——記得 3 條規律就答對，但要是考的另 1 條就全錯。</p>
+      <p>這就像<strong>只會一種解法</strong>，考試題目換個樣子就卡住。</p>
+    </div>
+    <div class="card"><h3>🎲 解法：Dropout</h3>
+      <p>訓練時<strong>隨機關閉一部分神經元</strong>，逼它<strong>不用原本那條路</strong>、另找路徑解題。</p>
+      <p>比喻：把「代數」看成「幾何」，用<strong>不同的思考方式</strong>獨立得出答案 → 學會備份方案。</p>
+    </div>
+  </div>
+  <div class="card">
+    <h3>⚖️ 調校後果</h3>
+    <table class="params"><tr><th>數值</th><th>後果</th></tr>
+      <tr><td><strong>0（關閉）</strong></td><td>沒有隨機遺忘，小資料易過擬合（專背起來）</td></tr>
+      <tr><td><strong>0.2（預設）</strong></td><td>輕度約束，訓練時斷 2 成神經元 → 多數情況的好平衡</td></tr>
+      <tr><td><strong>太大 (0.9)</strong></td><td>神經元被關太多，<strong>根本學不起來</strong>（廢掉太多路徑）</td></tr>
+    </table>
+    <p class="thin">💡 看到「模擬考好、準確卻停滯」或明顯死背時，可以略增；初學者保持 0.2 即可。</p>
+  </div>
+  <div class="slide-footer">第 8 頁 · Dropout (隨機遺忘率)</div>
+</section>
+<!-- ===================== 第 9 頁 模型是什麼 ===================== -->
+<section>
+  <h2>🔮 模型到底是什麼？</h2>
+  <div class="card">
+    <p>模型 = 網路架構(演算法) + 參數〔<strong>權重 (Weight)</strong> + <strong>偏置 (Bias)</strong>〕，一套<strong>數學應對法則</strong>。</p>
+    <p>訓練 = 從資料裡<strong>找出這組參數</strong>；之後拿它套用在新資料上做<strong>預測 (Prediction)</strong>。</p>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>📈 最簡單的例子：迴歸線</h3>
+      <p>想用 x 預測 y，可假設一條線 <span class="formula">ŷ = w·x + b</span></p>
+      <svg viewBox="0 0 300 150" style="width:100%;">
+        <line x1="0" y1="120" x2="290" y2="120" stroke="#bbb" stroke-width="2"/>
+        <line x1="30" y1="0" x2="30" y2="145" stroke="#bbb" stroke-width="2"/>
+        <line x1="0" y1="145" x2="290" y2="15" stroke="#26A69A" stroke-width="3"/>
+        <g fill="#9C27B0">
+          <circle cx="70"  cy="90" r="5"/><circle cx="120" cy="85" r="5"/>
+          <circle cx="160" cy="92" r="5"/><circle cx="210" cy="34" r="5"/>
+          <circle cx="245" cy="46" r="5"/>
+        </g>
+        <text x="120" y="138" font-size="11" fill="#777">x （輸入）</text>
+        <text x="20"  y="45"  font-size="11" fill="#777">y （輸出）</text>
+        <text x="100" y="12"  font-size="8" fill="#26A69A">w=斜率(Weight)，  b=y截距 (x=0 時的 y 值，Bias)</text>
+      </svg>
+      <p class="thin">w（權重）控制線的<strong>斜率</strong>，b（偏置）控制線的<strong>高度</strong>。<span class="hl">找出好的 w、b = 訓練模型。</span></p>
+    </div>
+    <div class="card"><h3>🧠 比喻：大腦的「應對法則」</h3>
+      <p>辨識「剪刀」不靠死背每一張圖，而是學會一組規則：<em>「兩根細長、交叉」→ 剪刀</em>。</p>
+      <p>這個規則，就是用一組一組的 <strong>w、b 數值</strong>儲存在模型裡——<strong>這就是可以帶走的知識</strong>。</p>
+      <div class="tip">💡 224×224 的圖將每個像素先正規化成 0～1 的數字後，輸入模型，經過層層運算，最後輸出「它是某分類的機率」。</div>
+    </div>
+  </div>
+  <div class="slide-footer">第 9 頁 · 模型：權重、偏置與預測</div>
+</section>
+<!-- ===================== 第 10 頁 損失函數 Loss ===================== -->
+<section>
+  <h2>📉 <span class="thin">Loss Function (損失函數)</span>：與答案「差多少」？</h2>
+  <div class="grid2">
+    <div class="card"><h3>🎯 預測有正中靶心(答案)嗎？</h3>
+      <svg viewBox="0 0 300 300" style="width:100%;">
+        <!-- 靶 -->
+        <circle cx="120" cy="150" r="95" fill="#F0EAE0" stroke="#bbb"/>
+        <circle cx="120" cy="150" r="65" fill="#F5D9A0" stroke="#999"/>
+        <circle cx="120" cy="150" r="35" fill="#F26B38" stroke="#777"/>
+        <circle cx="120" cy="150" r="12" fill="#C0392B"/>
+        <!-- 預測點 -->
+        <g fill="#000000">
+          <circle cx="120" cy="150" r="5"/><circle cx="150" cy="130" r="5"/>
+          <circle cx="80"  cy="190" r="5"/><circle cx="190" cy="120" r="5"/>
+        </g>
+        <text x="120" y="285" text-anchor="middle" font-size="12" fill="#444">每支箭 = 一次預測；離紅心越遠，損失越大</text>
+      </svg>
+    </div>
+    <div class="card"><h3>🧮 損失 = 預測與實際的差距</h3>
+      <p>對每一筆輸入的資料，模型都猜一個答案。預測與答案<strong>差多少</strong>？把它<strong>量化成分數</strong>，就是<strong>Loss (損失)</strong>。</p>
+      <p>常用 <strong>MSE</strong>（Mean Squared Error，均方誤差）計算迴歸的損失：</p>
+      <div class="formula">
+        <span style="font-style:italic;">MSE</span> =
+        <span class="frac"><span class="num">1</span><span class="den">n</span></span>
+        <span class="sum"><span class="s-top">n</span><span class="s-sym">Σ</span><span class="s-bot">i=1</span></span>
+        ( ŷ<sub>i</sub> − y<sub>i</sub> )²
+      </div>
+      <p class="thin">其中 ŷ<sub>i</sub> = 模型預測值、y<sub>i</sub> = 實際值、n = 資料筆數。也就是「平均( 預測值 − 實際值 )²」。</p>
+      <br>
+      <div class="tip">💡 <strong>分類任務</strong>（如剪刀石頭布）的損失用「<strong>交叉熵 (Cross-Entropy)</strong>」，第 10 頁會用簡單的方式說明。</div>
+      <p class="thin">總之：<strong>Loss 越小 = 對目前資料猜得越準</strong>。</p>
+    </div>
+  </div>
+  <div class="slide-footer">第 10 頁 · 損失函數</div>
+</section>
+<!-- ===================== 第 11 頁 二次 Loss 曲線 ===================== -->
+<section>
+  <h2>🪞 MSE 的二次曲線：偏離愈多、罰愈重</h2>
+  <div class="grid2">
+    <div class="card">
+      <p>把 (ŷ − y) 記為 <strong>e (誤差)</strong>，MSE 的每一筆就是 <span class="formula">L = e<sup>2</sup></span> —— 一條開口向上的<strong>拋物線（二次函數）</strong>。</p>
+      <svg viewBox="0 0 340 205" style="width:100%;">
+        <!-- 軸 -->
+        <line x1="170" y1="10" x2="170" y2="172" stroke="#888" stroke-width="1.5"/>
+        <polygon points="170,4 165,14 175,14" fill="#888"/>
+        <text x="180" y="32" font-size="10" fill="#666">L（損失）</text>
+        <line x1="20" y1="172" x2="326" y2="172" stroke="#888" stroke-width="1.5"/>
+        <polygon points="332,172 322,167 322,177" fill="#888"/>
+        <text x="300" y="188" font-size="10" fill="#666">e（誤差）</text>
+        <!-- 加陡的拋物線 L=e²（點數多→圓滑） -->
+        <polyline points="81,25.3 90,49.6 100,73.6 110,94.4 120,112 130,126.4 140,137.6 150,145.6 160,150.4 170,152 180,150.4 190,145.6 200,137.6 210,126.4 220,112 230,94.4 240,73.6 250,49.6 259,25.3" fill="none" stroke="#9C27B0" stroke-width="3" stroke-linejoin="round"/>
+        <!-- 谷底 -->
+        <circle cx="170" cy="152" r="5" fill="#8A6D00"/>
+        <line x1="170" y1="152" x2="170" y2="172" stroke="#8A6D00" stroke-width="1.5" stroke-dasharray="3,3"/>
+        <text x="170" y="201" text-anchor="middle" font-size="9.5" fill="#8A6D00">▼ e=0 完全猜中，L 最低</text>
+        <!-- 小錯：貼近谷底，損失低 -->
+        <circle cx="150" cy="145.6" r="4" fill="#E4572E"/>
+        <line x1="150" y1="145.6" x2="150" y2="172" stroke="#E4572E" stroke-width="1.5" stroke-dasharray="3,3"/>
+        <text x="70" y="150" font-size="9" fill="#E4572E">小錯｜罰一點</text>
+        <!-- 大錯：高翼，損失暴增 -->
+        <circle cx="250" cy="49.6" r="4" fill="#E4572E"/>
+        <line x1="250" y1="49.6" x2="250" y2="172" stroke="#E4572E" stroke-width="1.5" stroke-dasharray="3,3"/>
+        <text x="270" y="50" font-size="9" fill="#E4572E">大錯｜罰很多</text>
+        <!-- 說明：兩條虛線高度差 = 罰罰差距 -->
+        <text x="50" y="42" font-size="11" font-weight="bold" fill="#9C27B0">L = e²</text>
+        <text x="214" y="132" font-size="9" fill="#C2411B">大錯損失高出好多</text>
+      </svg>
+    </div>
+    <div class="card">
+      <h3>🎯 從曲線看三件事</h3>
+      <ul>
+        <li><strong>猜錯是平方級的罰</strong>：差 1 罰 1、差 2 罰 4、差 4 罰 16——偏離越遠，代價暴漲。</li>
+        <li>左圖只是針對單一資料點，事實上我們要考慮 <strong>所有資料的 L 加總平均</strong>，所以曲線會有所變形。</li>
+        <li><strong>谷底 = 曲線上 L 最小的位置</strong>。真實資料有雜訊，通常<strong>不可能每一筆都完全猜中（e = 0）</strong>——訓練要走到的是「<strong>平均損失</strong>」最低的谷底。</li>
+      </ul>
+      <div class="tip">💡 訓練的終極目標：把所有資料的 L 加總平均，沿著這條拋物線（其實是高維的「山谷」，目前先以線性迴歸模型來想像。）一路往最低點走，找到最貼近資料規律的 w、b。</div>
+      <div class="tip">💡 因為 e = (ŷ − y)，而 ŷ = wx + b ，調整 w,b 就可以調整 e ，進而改變 L 。訓練模型的過程，就是想辦法一步步調整 w,b 來讓 L 沿曲線降到谷底(最小值) 。</div>
+    </div>
+  </div>
+  <div class="slide-footer">第 11 頁 · 二次 Loss 曲線</div>
+</section>
+<!-- ===================== 第 12 頁 交叉熵 ===================== -->
+<section>
+  <h2>🎲 <span class="thin">Cross-Entropy (交叉熵，分類任務的損失)</span>：罰「錯得有自信」</h2>
+  <div class="grid2">
+    <div class="card"><h3>🧠 分類任務怎麼給分？</h3>
+      <p>分類任務中，模型不是猜一個數字，而是對每個分類給一個<strong>機率</strong>，合計為 100%。<br>
+      例如輸入一張剪刀照片，模型可能說：</p>
+      <div class="term">剪刀 <span class="ok">72%</span>   石頭 <span class="cy">18%</span>   布 <span class="dim">10%</span>
+答案：剪刀 ✓</div>
+      <p>分類任務的 Loss 使用<strong>交叉熵</strong>的概念：只看<strong>「正確答案那個分類」的機率</strong>有多高，用 <span class="formula">L = −log(p)</span> 換算成分數：</p>
+      <ul>
+        <li>p 愈接近 1（猜對且有自信）→ L 愈接近 <strong>0</strong></li>
+        <li>p 愈接近 0（該猜對的沒把握）→ L 暴增到<strong>非常大</strong></li>
+      </ul>
+    </div>
+    <div class="card"><h3>⚖️ 三種表現，罰多少？</h3>
+      <table class="params"><tr><th>模型的表現</th><th>答案的機率 p</th><th>交叉熵 L = −log(p)</th></tr>
+        <tr><td>猜對，而且很有自信</td><td>0.9</td><td>很小（約 0.11）</td></tr>
+        <tr><td>猜對，但信心不足</td><td>0.4</td><td>中等（約 0.92）</td></tr>
+        <tr><td>猜錯，還錯得很有自信</td><td>0.05</td><td><strong>非常大</strong>（約 3.0）</td></tr>
+      </table>
+      <p class="thin">（在電腦科學上，log 通常以 e 為底）</p>
+      <div class="good">✅ 和 MSE 的精神相通：<strong>MSE 罰「偏得遠」，交叉熵罰「錯得有自信」</strong>。兩者都在教模型「對自己的答案要又準又有把握」。</div>
+    </div>
+  </div>
+  <div class="tip">💡 迴歸任務用 MSE，分類任務用交叉熵。<br>訓練曲線上的 <code>loss</code>，用的就是與任務對應的那一種。</div>
+  <div class="slide-footer">第 12 頁 · 交叉熵 (Cross-Entropy)</div>
+</section>
+<!-- ===================== 第 13 頁 學習率 Learning Rate ===================== -->
+<section>
+  <h2>📏 <span class="thin">Learning Rate (學習率)</span>：依所在位置(斜率)向下修正時的<strong>倍率</strong></h2>
+  <div class="card">
+    <p>還記得大家要「把 Loss 愈推愈低」？做法是<strong>沿著斜坡往下走</strong>（梯度下降 Gradient Descent）。<br>
+    <strong>Learning Rate (學習率, LR)</strong> 就是「<strong>依斜率走一步的倍率</strong>」——實際步長 = LR × 當下斜率：坡陡走大步、近谷底斜率小自動縮步。</p>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>⛰️ 學習率：太大 vs 剛好</h3>
+      <svg viewBox="0 0 640 372" style="width:100%;">
+        <defs>
+          <marker id="arrC" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#E4572E"/>
+          </marker>
+          <marker id="arrG" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#26A69A"/>
+          </marker>
+        </defs>
+        <!-- 左：LR 太大 -->
+        <text x="160" y="26" text-anchor="middle" font-size="13" font-weight="bold" fill="#C2411B">LR 太大 → 搖擺、跨過谷底</text>
+        <line x1="12" y1="288" x2="308" y2="288" stroke="#888" stroke-width="1.5"/>
+        <text x="300" y="302" text-anchor="end" font-size="10" fill="#666">權重 (w) →</text>
+        <polygon points="52,112 47,122 57,122" fill="#888"/>
+        <line x1="52" y1="122" x2="52" y2="156" stroke="#888" stroke-width="1.5"/>
+        <text x="62" y="140" font-size="9.5" fill="#666">Loss：愈往上愈糟</text>
+        <path d="M20,160 C60,214 92,254 120,272 C140,285 148,287.5 160,287.5 C172,287.5 180,285 200,272 C228,254 260,214 300,160" fill="none" stroke="#9C27B0" stroke-width="3"/>
+        <!-- 三步折返：每段獨立路徑，各自帶末端箭頭，方向正確；第二點 cx=273 落在右岸曲線上 -->
+        <path d="M37,172 L265,182" fill="none" stroke="#E4572E" stroke-width="2.5" stroke-dasharray="7,5" marker-end="url(#arrC)"/>
+        <path d="M273,187 L74,205" fill="none" stroke="#E4572E" stroke-width="2.5" stroke-dasharray="7,5" marker-end="url(#arrC)"/>
+        <path d="M66,211 L232,227" fill="none" stroke="#E4572E" stroke-width="2.5" stroke-dasharray="7,5" marker-end="url(#arrC)"/>
+        <g fill="#5B4B8A">
+          <circle cx="37" cy="172" r="7"/>
+          <circle cx="273" cy="184" r="5"/>
+          <circle cx="66" cy="208" r="5"/>
+          <circle cx="240" cy="229" r="5"/>
+        </g>
+        <text x="25" y="155" font-size="9.5" fill="#5B4B8A">起點</text>
+        <g font-size="9.5" fill="#9A3412" text-anchor="middle" font-weight="bold">
+          <text x="152" y="169" font-size="12">第1步</text>
+          <text x="170" y="192" font-size="12">第2步</text>
+          <text x="150" y="215" font-size="12">第3步</text>
+        </g>
+        <rect x="178" y="42" width="124" height="58" rx="8" fill="#fff" opacity="0.93" stroke="#E4572E" stroke-width="1.5"/>
+        <text x="240" y="62" text-anchor="middle" font-size="11" font-weight="bold" fill="#9A3412">步伐太大</text>
+        <text x="240" y="80" text-anchor="middle" font-size="9.5" fill="#7C2D12">來回搖擺</text>
+        <text x="240" y="94" text-anchor="middle" font-size="9.5" fill="#7C2D12">LR再大就可能發散出去</text>
+        <text x="163" y="270" text-anchor="middle" font-size="10" fill="#8A6D00" stroke="#fff" stroke-width="3" paint-order="stroke">▼ 谷底 (Loss 最低)</text>
+        <!-- 右：LR 剛好 -->
+        <text x="480" y="26" text-anchor="middle" font-size="13" font-weight="bold" fill="#15803D">LR 剛好 → 步步逼近谷底</text>
+        <line x1="332" y1="288" x2="628" y2="288" stroke="#888" stroke-width="1.5"/>
+        <text x="620" y="302" text-anchor="end" font-size="10" fill="#666">權重 (w) →</text>
+        <polygon points="372,112 367,122 377,122" fill="#888"/>
+        <line x1="372" y1="122" x2="372" y2="156" stroke="#888" stroke-width="1.5"/>
+        <text x="382" y="140" font-size="9.5" fill="#666">Loss：愈往上愈糟</text>
+        <path d="M340,160 C380,214 412,254 440,272 C460,285 468,287.5 480,287.5 C492,287.5 500,285 520,272 C548,254 580,214 620,160" fill="none" stroke="#9C27B0" stroke-width="3"/>
+        <path d="M374,199 L402,235 L432,261 L464,277 L480,280" fill="none" stroke="#26A69A" stroke-width="2.5" marker-mid="url(#arrG)" marker-end="url(#arrG)"/>
+        <g fill="#5B4B8A">
+          <circle cx="374" cy="199" r="7"/>
+          <circle cx="402" cy="235" r="5"/>
+          <circle cx="432" cy="261" r="5"/>
+          <circle cx="464" cy="277" r="5"/>
+          <circle cx="480" cy="280" r="5"/>
+        </g>
+        <text x="370" y="180" font-size="9.5" fill="#5B4B8A">起點</text>
+        <rect x="522" y="42" width="106" height="58" rx="8" fill="#fff" opacity="0.93" stroke="#15803D" stroke-width="1.5"/>
+        <text x="575" y="62" text-anchor="middle" font-size="11" font-weight="bold" fill="#14532D">步伐剛好</text>
+        <text x="575" y="80" text-anchor="middle" font-size="9.5" fill="#14532D">沿斜坡往下</text>
+        <text x="575" y="94" text-anchor="middle" font-size="9.5" fill="#14532D">逼近谷底</text>
+        <text x="483" y="262" text-anchor="middle" font-size="10" fill="#8A6D00" stroke="#fff" stroke-width="3" paint-order="stroke">▼ 谷底 (Loss 最低)</text>
+        <!-- 圖例 -->
+        <polyline points="40,322 92,322" fill="none" stroke="#E4572E" stroke-width="2.5" stroke-dasharray="7,5"/>
+        <text x="98" y="326" font-size="10" fill="#444">大步更新 (LR 太大)</text>
+        <circle cx="330" cy="322" r="5" fill="#5B4B8A"/>
+        <text x="340" y="326" font-size="10" fill="#444">目前位置 (權重)</text>
+        <line x1="40" y1="344" x2="92" y2="344" stroke="#26A69A" stroke-width="2.5"/>
+        <text x="98" y="348" font-size="10" fill="#444">小步更新 (LR 剛好)</text>
+        <text x="324" y="349" font-size="12" fill="#8A6D00">▼</text>
+        <text x="340" y="348" font-size="10" fill="#444">谷底 (Loss 最低)</text>
+      </svg>
+    </div>
+    <div class="card"><h3>⚖️ 調校後果</h3>
+      <table class="params"><tr><th>數值</th><th>下場</th><th>比喻</th></tr>
+        <tr><td><strong>太大</strong><br>(0.1～1)</td><td>一步跨過谷底，來回<strong>搖擺不穩</strong>：Loss 曲線<strong>震盪劇烈，甚至不降反升</strong></td><td>修正太用力，錯一次改太多</td></tr>
+        <tr><td><strong>剛好</strong><br>(0.001)</td><td>每次穩定修正一點，收斂到低點：Loss 曲線<strong>平滑穩定下降</strong></td><td>看出小考錯在哪，重點修正</td></tr>
+        <tr><td><strong>太小</strong><br>(0.0001)</td><td>收斂極慢，很久才接近谷底：Loss 曲線<strong>降得極慢、幾乎不動</strong></td><td>每個字都讀、速度太慢</td></tr>
+      </table>
+      <div class="good">✅ 預設 0.001，不確定就先不動。<br>
+      🔍 要調時，看 <strong>loss 曲線的走向</strong>決定：<br>
+      ‧ 曲線<strong>震盪劇烈或不降反升</strong> → LR 太大，調小<br>
+      ‧ 曲線<strong>降得極慢、幾乎不動</strong> → LR 太小，調大<br>
+      ‧ 曲線<strong>平滑穩定下降</strong> → LR 剛好，不用動<br>
+      💡 一次只改 LR 一個參數，重跑再看曲線。</div>
+    </div>
+  </div>
+  <div class="slide-footer">第 13 頁 · Learning Rate (學習率)</div>
+</section>
+<!-- ===================== 第 14 頁 Epochs ===================== -->
+<section>
+  <h2>🔄 Epochs <span class="thin">訓練輪數 (Epoch)</span>：整本書重讀幾遍？</h2>
+  <div class="grid2">
+    <div class="card"><h3>📖 定義</h3>
+      <p><strong>Epoch (輪)</strong> = 把<strong>整份訓練資料從頭到尾讀一遍</strong>。</p>
+      <p>Epochs = 讀幾遍（預設 20）。電腦每一次輪，都把所有資料拿去更新權重一次。</p>
+    </div>
+    <div class="card"><h3>⚖️ 讀太少 vs 讀太多</h3>
+      <table class="params"><tr><th>份數</th><th>後果</th><th>比喻</th></tr>
+        <tr><td><strong>太少</strong><br>(1～5)</td><td>還沒學到規律（<strong>欠擬合</strong>），Loss 還是很高</td><td>讀一遍就考試 → 全忘</td></tr>
+        <tr><td><strong>剛好</strong><br>(20)</td><td>學到規律，模擬考也有好表現</td><td>反覆複習到掌握</td></tr>
+        <tr><td><strong>太多</strong><br>(1000)</td><td>把資料「背」起來（<strong>過擬合</strong>），新資料反而變差</td><td>背好答案，考題一變就卡</td></tr>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <p>📺 實際輸出：<code>開始訓練 (20 epochs) → Epoch 1/20 → Epoch 2/20 …</code>每輪結束都會報一次 <code>accuracy</code> 與 <code>loss</code>。</p>
+    <p class="thin">💡 看「模擬考（val）分數」是否還在上升、還是停滯了？停了就代表多讀只是浪費時間。</p>
+  </div>
+  <div class="slide-footer">第 14 頁 · Epochs (訓練輪數)</div>
+</section>
+<!-- ===================== 第 15 頁 Batch Size ===================== -->
+<section>
+  <h2>📦 Batch Size <span class="thin">批次大小</span>：一次「小考」考幾題？</h2>
+  <div class="grid2">
+    <div class="card"><h3>🪜 Epoch 與 Batch 的關係</h3>
+      <p>一整輪資料 = 一本課本。但電腦<strong>不一口氣讀完整本</strong>，而是拆成一小批一小批（<strong>Batch</strong>）。</p>
+      <div class="formula">每一輪 (Epoch) = 分批跑完整份資料<br>Batch 大小 = 每批處理幾張（預設 32）</div>
+      <p><strong>每讀完一個 Batch，就做一次「小考」</strong>：算當下 accuracy、loss，並據此小幅更新權重。</p>
+    </div>
+    <div class="card"><h3>⚖️ 調校後果</h3>
+      <table class="params"><tr><th>大小</th><th>下場</th></tr>
+        <tr><td><strong>小</strong><br>(1～16)</td><td>小考頻率高，修正快但有雜音；每輪迴圈多 → 稍慢</td></tr>
+        <tr><td><strong>中</strong><br>(32) 預設</td><td>穩定與速度平衡</td></tr>
+        <tr><td><strong>大</strong><br>(128～512)</td><td>段考式，穩定但修正遲緩；<strong>需更多記憶體</strong></td></tr>
+      </table>
+      <p class="thin">💡 記憶體不足（Out of Memory）就<strong>調小 Batch</strong>；想更穩就試著調大。</p>
+    </div>
+  </div>
+  <div class="card">
+    <p>📺 一次 Epoch 內部：<code>1/11 → 2/11 → … → 11/11</code>（共 11 個 Batch），每一小段都是一次小考，結尾顯示該輪總成績：</p>
+    <div class="term"><span class="cy">Epoch 1/5</span>
+<span class="dim"> 1/11 ━━━━━━━━━━━━━━━━━━</span> <span class="ok">48s 5s/step</span> - accuracy: 0.0938 - loss: 1.6940
+<span class="dim"> 2/11 ━━━━━━━━━━━━━━━━━━</span> <span class="ok">6s 686ms/step</span> - accuracy: 0.1406 - loss: 1.6701
+<span class="dim">11/11 ━━━━━━━━━━━━━━━━━━</span> <span class="ok">13s 826ms/step</span> - accuracy: 0.4829 - loss: 0.9899 - <span class="hi">val_accuracy: 0.6667 - val_loss: 0.7169</span></div>
+    <p class="thin">看！<code>accuracy</code> 一路從 0.09 → 0.48 爬升，<code>loss</code> 一路下降 —— 每批小考後都在進步。</p>
+  </div>
+  <div class="slide-footer">第 15 頁 · Batch Size (批次大小)</div>
+</section>
+<!-- ===================== 第 16 頁 Backbone ===================== -->
+<section>
+  <h2>🏗️ 預訓練 <span class="thin">Backbone (骨幹網路)</span>：站在巨人肩上</h2>
+  <div class="card">
+    <p><strong>Backbone</strong> = 負責「看圖抓特徵」的網路骨架。它<strong>已用上千萬張圖預先訓練</strong>（預訓練，前備知識），懂得邊緣、形狀、紋理——你只要在它上面「補習」自己的類別。<span class="thin">（積木欄位即顯示為「預訓練:」）</span></p>
+    <p>比喻：<strong>站在巨人肩上</strong>，不用從 0 發明怎麼「看」，只要微調它來認你的東西。</p>
+  </div>
+  <div class="grid3">
+    <div class="card"><h3>MobileNetV2 <span class="pill">預設</span></h3>
+      <p><strong>輕量快速</strong>，體積小、適合入門與 MCU。</p><p class="thin">→ 教學預設首選。</p></div>
+    <div class="card"><h3>EfficientNetB0</h3>
+      <p><strong>效率平衡</strong>，準度與運算量折衷。</p><p class="thin">→ 想更準一點的進階選擇。</p></div>
+    <div class="card"><h3>ResNet50</h3>
+      <p><strong>深而重</strong>，特徵強但慢、耗記憶體。</p><p class="thin">→ 資料多、資源足時使用。</p></div>
+  </div>
+  <div class="warn">⚠️ 圖片固定 224×224，是為了配合 Backbone 的預訓練輸入。換預訓練模型＝換一副「眼睛」，特徵取向不同。</div>
+  <div class="slide-footer">第 16 頁 · Backbone (骨幹網路) · 預訓練</div>
+</section>
+<!-- ===================== 第 17 頁 Fine-tune ===================== -->
+<section>
+  <h2>🔓 微調 <span class="thin">Fine-tune</span>：把「別人的筆記」改成自己的</h2>
+  <div class="grid2">
+    <div class="card"><h3>📖 預設：骨架「凍」著</h3>
+      <p>通常<strong>保持預訓練的「眼睛」不動</strong>，只訓練後面的思考層——又快又穩，資料少也安全。</p>
+      <p>這像「用別人整理好的筆記，只補自己的重點」。</p>
+    </div>
+    <div class="card"><h3>🔓 開啟 Fine-tune</h3>
+      <p><strong>解凍整個骨幹</strong>，也一齊微調它的權重 → 更貼合你的資料。</p>
+      <p>像「把整本筆記重寫成自己的話」。<strong>更準，但需要更多資料</strong>，否則把預訓練知識也搞壞。</p>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>⚖️ 調校後果：</h3>
+      <p>◾ 關閉（預設）：快、穩、資料少也 OK</p>
+      <p>◾ 開啟：準度可能更高，但<strong>易過擬合</strong>、訓練更久</p></div>
+    <div class="warn">⚠️ 資料少（每類 &lt; 20 張）建議<strong>維持預設關閉</strong>；資料多再嘗試開啟。</div>
+  </div>
+  <div class="slide-footer">第 17 頁 · Fine-tune (微調)</div>
+</section>
+<!-- ===================== 第 18 頁 DNN Layers ===================== -->
+<section>
+  <h2>🧠 DNN 層 <span class="thin">DNN Layers (自訂隱藏層)</span>：多幾層「思考」？</h2>
+  <div class="card">
+    <p>在骨幹抓完特徵後，後面可以加幾層「思考層」（隱藏層 Hidden Layers）來做最終判斷。<br>
+    格式是<strong>逗號分隔的神經元數</strong>，如 <code>128,64</code>（兩層）：先 128 顆<strong>廣泛想</strong>，再縮到 64 顆<strong>聚焦結論</strong>。</p>
+  </div>
+  <div class="card" style="text-align:center;">
+    <svg viewBox="0 0 520 150" style="width:100%;">
+      <g fill="#9C27B0">
+        <circle cx="80" cy="40" r="10"/><circle cx="80" cy="75" r="10"/><circle cx="80" cy="110" r="10"/>
+        <circle cx="220" cy="25" r="10"/><circle cx="220" cy="55" r="10"/><circle cx="220" cy="85" r="10"/><circle cx="220" cy="115" r="10"/>
+        <circle cx="360" cy="40" r="10"/><circle cx="360" cy="75" r="10"/><circle cx="360" cy="110" r="10"/>
+        <circle cx="470" cy="75" r="10"/>
+      </g>
+      <g stroke="#B9B0CC" stroke-width="1" fill="none">
+        <line x1="80" y1="40" x2="220" y2="25"/><line x1="80" y1="40" x2="220" y2="55"/><line x1="80" y1="40" x2="220" y2="85"/><line x1="80" y1="40" x2="220" y2="115"/>
+        <line x1="80" y1="110" x2="220" y2="25"/><line x1="80" y1="110" x2="220" y2="55"/><line x1="80" y1="110" x2="220" y2="85"/><line x1="80" y1="110" x2="220" y2="115"/>
+        <line x1="220" y1="25" x2="360" y2="40"/><line x1="220" y1="55" x2="360" y2="40"/><line x1="220" y1="85" x2="360" y2="40"/><line x1="220" y1="115" x2="360" y2="40"/>
+        <line x1="220" y1="25" x2="360" y2="110"/><line x1="220" y1="55" x2="360" y2="110"/><line x1="220" y1="85" x2="360" y2="110"/><line x1="220" y1="115" x2="360" y2="110"/>
+        <line x1="360" y1="40" x2="470" y2="75"/><line x1="360" y1="75" x2="470" y2="75"/><line x1="360" y1="110" x2="470" y2="75"/>
+      </g>
+      <g font-size="12" fill="#5A5473">
+        <text x="48" y="140">輸入特徵</text>
+        <text x="185" y="140">隱藏層 128</text>
+        <text x="335" y="140">隱藏層 64</text>
+        <text x="450" y="140">輸出(分類)</text>
+      </g>
+    </svg>
+    <p class="thin">輸入（骨幹特徵）→ 128 → 64 → 輸出（每個分類的機率）</p>
+  </div>
+  <div class="tip">💡 層越多越能表達複雜規律，但<strong>越易過擬合、越慢</strong>、越吃記憶體。留空 = 跳過思考層直接輸出。初學者用預設 <code>128,64</code> 即可。</div>
+  <div class="slide-footer">第 18 頁 · DNN Layers (自訂隱藏層)</div>
+</section>
+<!-- ===================== 第 19 頁 Optimizer ===================== -->
+<section>
+  <h2>⚙️ 優化器 <span class="thin">Optimizer (優化器)</span>：讀書的策略</h2>
+  <div class="grid2">
+    <div class="card"><h3>🔄 它做什麼？</h3>
+      <p>決定<strong>「這次該修多少」</strong>——怎麼把權重從舊值一步步推到更低的 Loss。</p>
+      <p>基本公式（以 SGD 為例）：</p>
+      <div class="formula">新權重 = 舊權重 − <strong>學習率</strong> × <strong>當下斜率 (Gradient)</strong></div>
+      <p class="thin">注意：<strong>固定的是學習率</strong>。步長 = 學習率 × 當下斜率；斜率大步伐大（陡坡快跑），靠近谷底斜率小步伐自動縮小（精細修正）。</p>
+    </div>
+    <div class="card"><h3>📊 三種策略</h3>
+      <table class="params"><tr><th>優化器</th><th>特性</th></tr>
+        <tr><td><strong>Adam</strong> <span class="pill">預設</span></td><td><strong>記憶過去幾次修正</strong>的方向與幅度，動態調整學習率與步伐 → 聰明、收斂快、普遍好用</td></tr>
+        <tr><td><strong>SGD</strong></td><td>固定學習率，步長全靠當下斜率 → 穩健踏實，但收斂較慢、易卡</td></tr>
+        <tr><td><strong>RMSprop</strong></td><td>對每個權重<strong>個別調整</strong>步伐（除以歷史根均方）→ 對不齊的梯度較友善</td></tr>
+      </table>
+      <div class="good">✅ 初學者用預設 <strong>Adam</strong>，幾乎不用改。</div>
+    </div>
+  </div>
+  <div class="slide-footer">第 19 頁 · Optimizer (優化器)</div>
+</section>
+<!-- ===================== 第 20 頁 模型輸出格式 ===================== -->
+<section>
+  <h2>📦 模型輸出格式 <span class="thin">Model Output</span>：最後交出什麼成品？</h2>
+  <div class="card">
+    <p>訓練結果要「包裝」成什麼形式儲存。預設 <strong>none</strong>＝只觀察成績、先不產模型檔（省下轉換時間）。</p>
+  </div>
+  <table class="params"><tr><th>選項</th><th>成品</th><th>用在哪</th></tr>
+    <tr><td><strong>none</strong> <span class="pill">預設</span></td><td>只跑訓練、看 loss/accuracy</td><td>調參數階段，避免浪費時間</td></tr>
+    <tr><td><strong>int8</strong></td><td>TFLite 量化模型（壓縮、省記憶體）</td><td>MCU / 邊緣裝置</td></tr>
+    <tr><td><strong>f32</strong></td><td>Float32 模型（精準）</td><td>PC 端 Python 推論</td></tr>
+    <tr><td><strong>keras</strong></td><td>原始 Keras 模型檔</td><td>想再繼續訓練/修改</td></tr>
+    <tr><td><strong>int8+f32 / all</strong></td><td>多種格式一次產出</td><td>同時要 PC 與 MCU 用</td></tr>
+  </table>
+  <div class="good">✅ 流程建議：先用 none 調好參數 → 確定 OK 再選格式正式產出模型。</div>
+  <div class="slide-footer">第 20 頁 · 模型輸出格式</div>
+</section>
+<!-- ===================== 第 21 頁 訓練實戰演練 ===================== -->
+<section>
+  <h2>🖥️ 訓練實戰：讀懂終端機訊息</h2>
+  <div class="card">
+    <p>把整條流程串起來：<strong>掃描資料 → 分層抽樣 → 平衡類別 → 迭代訓練</strong>。看到這些訊息，你就能知道電腦在做什麼。</p>
+  </div>
+  <div class="term">找到 4 個分類: ['none','paper','rock','scissors']
+  none: 32 張     paper: 124 張     rock: 108 張     scissors: 138 張
+<span class="cy">分層抽樣 (stratified split):</span>
+<span class="ok">  none:     train 26 / val 6</span>    <span class="dim">← 每類各自按 20% 抽模擬考，公平</span>
+<span class="ok">  paper:    train 99 / val 25</span>
+<span class="ok">  rock:     train 86 / val 22</span>
+<span class="ok">  scissors: train 110 / val 28</span>
+
+<span class="hi">計算 Class Weight（平衡資料不平衡）...</span>
+<span class="cy">Class Weights:</span> <span class="hi">{0: 3.09, 1: 0.81, 2: 0.93, 3: 0.73}</span>  <span class="dim">← none最少→權重最高，補救偏心</span>
+
+<span class="hi">開始訓練 (5 epochs)...</span>
+<span class="cy">Epoch 1/5</span>
+ 1/11 ━━━━━━━━━━━━━━━━━━ 48s 5s/step - <span class="ok">accuracy: 0.0938 - loss: 1.6940</span>
+ 2/11 ━━━━━━━━━━━━━━━━━━ 6s 686ms/step - <span class="ok">accuracy: 0.1406 - loss: 1.6701</span>
+11/11 ━━━━━━━━━━━━━━━━━━ 13s 826ms/step - <span class="ok">accuracy: 0.4829 - loss: 0.9899</span>
+- <span class="hi">val_accuracy: 0.6667 - val_loss: 0.7169</span></div>
+  <div class="tip">💡 判讀重點：<strong>loss 降、accuracy 升</strong> = 在學習；<strong>val（模擬考）</strong>掉隊或暴漲 = 過擬合信號。</div>
+  <div class="slide-footer">第 21 頁 · 訓練實戰演練</div>
+</section>
+<!-- ===================== 第 22 頁 決策樹 ===================== -->
+<section>
+  <h2>🚀 什麼情況，調什麼？<span class="thin">診斷速查表</span></h2>
+  <div class="card">
+    <p>先<strong>看症狀</strong>，再<strong>動手</strong>。一次只改一個參數，改完再看結果。</p>
+  </div>
+  <table class="params"><tr><th>你看到的症狀</th><th>最可能要調</th><th>方向</th></tr>
+    <tr><td>連訓練資料都猜很差（<strong>欠擬合</strong>）</td><td>Epoch 太少 / 模型太小</td><td>增加 Epoch、加 DNN 層</td></tr>
+    <tr><td>訓練好、但模擬考很差（<strong>過擬合</strong>）</td><td>Dropout / Augmentation / 資料</td><td>啟用擴增、增 Dropout、減少 Epoch</td></tr>
+    <tr><td>Loss 搖擺不穩、不降反升</td><td>Learning Rate 太大</td><td>調小 LR（如 0.001→0.0001）</td></tr>
+    <tr><td>收斂太慢、跑很久</td><td>Learning Rate 太小 / Epoch 多</td><td>調大 LR、減少 Epoch</td></tr>
+    <tr><td>記憶體不足 (OOM)</td><td>Batch Size 太大</td><td>調小 Batch（32→16）</td></tr>
+    <tr><td>類別數目不平均（某類很少）</td><td>—（Cocoya 自動平衡）</td><td>確認 Class Weight 有印出；補更多照片</td></tr>
+    <tr><td>想更準且資料充足</td><td>Backbone / Fine-tune</td><td>換 EfficientNetB0 或開啟 Fine-tune</td></tr>
+  </table>
+  <div class="good">✅ 不確定時：<strong>先用預設調好資料量</strong>，資料品質才是決定準度的最大關鍵。</div>
+  <div class="slide-footer">第 22 頁 · 調參數決策樹</div>
+</section>
+<!-- ===================== 第 23 頁 小測驗 1 ===================== -->
+<section>
+  <h2>📝 小測驗（一）<span class="thin">點選你的答案</span></h2>
+  <div class="card">
+    <p><strong>Q1.</strong> 訓練時 Loss 一直搖擺、不降反升，最可能是哪個參數太大？</p>
+    <div class="quiz">
+      <button class="qbtn" data-q="q1" data-correct="0" data-feed="再想想⋯這不會造成搖擺。">增加 Epoch</button>
+      <button class="qbtn" data-q="q1" data-correct="1" data-feed="✅ 對！Learning Rate 太大會一步跨過谷底、兩邊搖擺。">調大 Learning Rate</button>
+      <button class="qbtn" data-q="q1" data-correct="0" data-feed="再想想⋯Batch 主要影響穩定與記憶體。">增大 Batch</button>
+      <button class="qbtn" data-q="q1" data-correct="0" data-feed="再想想⋯Fine-tune 不直接造成搖擺。">開啟 Fine-tune</button>
+    </div>
+    <div class="qfb" id="qfb-q1"></div>
+  </div>
+  <div class="card">
+    <p><strong>Q2.</strong> 訓練成績很好、模擬考（val）也很好，但拿到「新資料」卻變糟——這是？</p>
+    <div class="quiz">
+      <button class="qbtn" data-q="q2" data-correct="0" data-feed="再想想⋯那是連訓練資料都差的情況。">欠擬合</button>
+      <button class="qbtn" data-q="q2" data-correct="1" data-feed="✅ 對！把資料背起來，新題目就卡（過擬合）。">過擬合</button>
+      <button class="qbtn" data-q="q2" data-correct="0" data-feed="再想想⋯不一定，這更像是記憶了資料。">Learning Rate 太小</button>
+      <button class="qbtn" data-q="q2" data-correct="0" data-feed="再想想⋯資料乾淨通常幫助比較多。">資料太乾淨</button>
+    </div>
+    <div class="qfb" id="qfb-q2"></div>
+  </div>
+  <div class="slide-footer">第 23 頁 · 小測驗</div>
+</section>
+<!-- ===================== 第 24 頁 小測驗 2 ===================== -->
+<section>
+  <h2>📝 小測驗（二）</h2>
+  <div class="card">
+    <p><strong>Q3.</strong> 每個 <code>Batch</code> 結束後，電腦會做什麼？</p>
+    <div class="quiz">
+      <button class="qbtn" data-q="q3" data-correct="0" data-feed="再想想⋯還沒結束訓練喔。">結束訓練</button>
+      <button class="qbtn" data-q="q3" data-correct="1" data-feed="✅ 對！算一次 accuracy/loss 的小考，並小幅更新權重。">算一次 accuracy/loss 並小幅更新權重</button>
+      <button class="qbtn" data-q="q3" data-correct="0" data-feed="再想想⋯資料只掃描一次就好。">重新掃描資料集</button>
+      <button class="qbtn" data-q="q3" data-correct="0" data-feed="不會，那是最後才做的。">產出模型檔</button>
+    </div>
+    <div class="qfb" id="qfb-q3"></div>
+  </div>
+  <div class="card">
+    <p><strong>Q4.</strong> 「分層抽樣」最重要的目的是？</p>
+    <div class="quiz">
+      <button class="qbtn" data-q="q4" data-correct="0" data-feed="這不是主要目的。">讓訓練跑更快</button>
+      <button class="qbtn" data-q="q4" data-correct="1" data-feed="✅ 對！每個分類各自抽模擬考，小分類才不會被抽光。">每個分類都有公平的模擬考樣本</button>
+      <button class="qbtn" data-q="q4" data-correct="0" data-feed="與圖片壓縮無關。">壓縮圖片</button>
+      <button class="qbtn" data-q="q4" data-correct="0" data-feed="那是 Learning Rate 的事。">調高 Learning Rate</button>
+    </div>
+    <div class="qfb" id="qfb-q4"></div>
+  </div>
+  <div class="slide-footer">第 24 頁 · 小測驗</div>
+</section>
+<!-- ===================== 第 25 頁 總結 ===================== -->
+<section>
+  <h2>🏁 總結：記住這組口訣</h2>
+  <div class="grid2">
+    <div class="card"><h3>🧠 一句話記住每個參數</h3>
+      <ul>
+        <li><strong>資料集</strong>：課本要整理好</li>
+        <li><strong>模型</strong> = 權重 + 偏置 的應對法則</li>
+        <li><strong>Loss</strong>：離正確答案多遠</li>
+        <li><strong>Learning Rate</strong>：每步修正的<strong>幅度</strong></li>
+        <li><strong>驗證比</strong>：留 20% 模擬考（分層抽樣）</li>
+        <li><strong>Epochs</strong>：整本讀幾遍（20）</li>
+        <li><strong>Batch</strong>：一次小考幾題（32）</li>
+        <li><strong>Dropout</strong>：強迫換思路，防死背（0.2）</li>
+        <li><strong>擴增</strong>：對原資料舉一反三（開）</li>
+        <li><strong>預訓練</strong>：站在巨人肩上（MobileNetV2）</li>
+        <li><strong>優化器</strong>：讀書策略（Adam）</li>
+        <li><strong>DNN 層</strong>：要多幾層思考（128,64）</li>
+        <li><strong>微調</strong>：把別人的筆記改成自己的（關）</li>
+        <li><strong>輸出格式</strong>：要交什麼成品（none 先看）</li>
+      </ul>
+    </div>
+    <div class="card"><h3>🚀 給你的工作流程</h3>
+      <ol>
+        <li>先確定<strong>資料品質</strong>（最多的關鍵！）</li>
+        <li>用「<strong>none</strong>」輸出，先跑預設看成績</li>
+        <li>看 symptoms：欠擬合？過擬合？不穩？慢？ <strong>一次改一個</strong></li>
+        <li>一切 OK → 再選 <strong>int8 / f32</strong> 正式產出模型</li>
+      </ol>
+      <div class="good">✅ 口訣：<strong>「資料要好、步幅要恰（LR）、遍數適中（Epoch）、防死背（Dropout/擴增）、一次只改一個。」</strong></div>
+    </div>
+  </div>
+  <div class="tip">💡 下一步可以學：讀 <code>*_training_curve.png</code> 的 Loss 曲線，練習判讀「該停了沒」。</div>
+  <div class="slide-footer">第 25 頁 · 總結</div>
+</section>
+
+</div>
+</div>
+<script src="lib/reveal/reveal.js"></script>
+<script>
+  Reveal.initialize({ hash:true, slideNumber:false, transition:'fade', width:1280, height:780, margin:0.03, });
+  // 小測驗：選項點擊回饋
+  document.querySelectorAll('.qbtn').forEach(function(b){
+    b.addEventListener('click', function(){
+      var group = b.dataset.q;
+      var qf = document.getElementById('qfb-'+group);
+      var opts = document.querySelectorAll('.qbtn[data-q="'+group+'"]');
+      opts.forEach(function(o){ o.classList.remove('correct'); o.classList.remove('wrong'); });
+      if (b.dataset.correct === '1'){ b.classList.add('correct'); qf.textContent = b.dataset.feed; qf.style.color = '#1E7A28'; }
+      else { b.classList.add('wrong'); qf.textContent = b.dataset.feed; qf.style.color = '#C62828'; }
+    });
+  });
+</script>
+</body>
+</html>

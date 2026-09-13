@@ -10,40 +10,7 @@ Blockly.Blocks['py_ai_train_run'] = {
     this.appendDummyInput()
         .appendField(Blockly.Msg["AI_TRAIN_SECTION_BASIC"]);
 
-    this.appendDummyInput()
-        .appendField(Blockly.Msg["AI_TRAIN_FIELD_DATASET"])
-        .appendField(new Blockly.FieldTextInput("dataset/classifier_dataset", function(newValue) {
-          if (newValue && this.sourceBlock_) {
-            const modelDirField = this.sourceBlock_.getField('MODEL_DIR');
-            if (modelDirField) {
-              const datasetName = newValue.split('/').pop().split('\\').pop();
-              const newModelDir = "model/" + datasetName;
-              modelDirField.setValue(newModelDir);
-            }
-          }
-        }), 'DATASET_DIR');
-
-    this.appendDummyInput()
-        .appendField(Blockly.Msg["AI_TRAIN_FIELD_MODEL"])
-        .appendField(new Blockly.FieldLabel("model/classifier_dataset"), 'MODEL_DIR');
-
-    this.appendDummyInput()
-        .appendField(Blockly.Msg["AI_TRAIN_FIELD_EPOCHS"])
-        .appendField(new Blockly.FieldNumber(20, 1, 1000), 'EPOCHS')
-        .appendField(Blockly.Msg["AI_TRAIN_FIELD_BATCH"])
-        .appendField(new Blockly.FieldNumber(32, 1, 512), 'BATCH_SIZE')
-        .appendField(Blockly.Msg["AI_TRAIN_FIELD_LR"])
-        .appendField(new Blockly.FieldNumber(0.001, 0.0001, 1, 0.0001), 'LEARNING_RATE');
-
-    // 基本區新增 3 個欄位
-    this.appendDummyInput()
-        .appendField(Blockly.Msg["AI_TRAIN_FIELD_VAL_SPLIT"])
-        .appendField(new Blockly.FieldNumber(0.2, 0.1, 0.5, 0.1), 'VALIDATION_SPLIT')
-        .appendField(Blockly.Msg["AI_TRAIN_FIELD_DROPOUT"])
-        .appendField(new Blockly.FieldNumber(0.2, 0.0, 0.9, 0.1), 'DROPOUT')
-        .appendField(Blockly.Msg["AI_TRAIN_FIELD_AUG"])
-        .appendField(new Blockly.FieldCheckbox(true), 'AUGMENTATION');
-
+    // 類型 + 訓練主機
     this.appendDummyInput()
         .appendField(Blockly.Msg["AI_TRAIN_FIELD_TYPE"])
         .appendField(new Blockly.FieldDropdown([
@@ -61,7 +28,21 @@ Blockly.Blocks['py_ai_train_run'] = {
           return newValue === 'auto' ? 'local' : newValue;
         }), 'BACKEND');
 
-    // 資料集同步模式（僅 backend=remote 時生效）
+    // 資料集
+    this.appendDummyInput()
+        .appendField(Blockly.Msg["AI_TRAIN_FIELD_DATASET"])
+        .appendField(new Blockly.FieldTextInput("dataset/classifier_dataset", function(newValue) {
+          if (newValue && this.sourceBlock_) {
+            const modelDirField = this.sourceBlock_.getField('MODEL_DIR');
+            if (modelDirField) {
+              const datasetName = newValue.split('/').pop().split('\\').pop();
+              const newModelDir = "model/" + datasetName;
+              modelDirField.setValue(newModelDir);
+            }
+          }
+        }), 'DATASET_DIR');
+
+    // 資料同步模式（僅訓練主機=遠端時生效）
     this.appendDummyInput()
         .appendField(Blockly.Msg["AI_TRAIN_FIELD_SYNC_MODE"])
         .appendField(new Blockly.FieldDropdown([
@@ -70,10 +51,34 @@ Blockly.Blocks['py_ai_train_run'] = {
           [Blockly.Msg["AI_SYNC_SKIP"], "skip"]
         ]), 'SYNC_MODE');
 
+    // 模型存放（唯讀，自動從資料集名稱帶出）
+    this.appendDummyInput()
+        .appendField(Blockly.Msg["AI_TRAIN_FIELD_MODEL"])
+        .appendField(new Blockly.FieldLabel("model/classifier_dataset"), 'MODEL_DIR');
+
+    // 驗證比 + 擴增 + Dropout（餵資料策略）
+    this.appendDummyInput()
+        .appendField(Blockly.Msg["AI_TRAIN_FIELD_VAL_SPLIT"])
+        .appendField(new Blockly.FieldNumber(0.2, 0.1, 0.5, 0.1), 'VALIDATION_SPLIT')
+        .appendField(Blockly.Msg["AI_TRAIN_FIELD_AUG"])
+        .appendField(new Blockly.FieldCheckbox(true), 'AUGMENTATION')
+        .appendField(Blockly.Msg["AI_TRAIN_FIELD_DROPOUT"])
+        .appendField(new Blockly.FieldNumber(0.2, 0.0, 0.9, 0.1), 'DROPOUT');
+
+    // LR + Epochs + Batch（訓練過程節奏）
+    this.appendDummyInput()
+        .appendField(Blockly.Msg["AI_TRAIN_FIELD_LR"])
+        .appendField(new Blockly.FieldNumber(0.001, 0.0001, 1, 0.0001), 'LEARNING_RATE')
+        .appendField(Blockly.Msg["AI_TRAIN_FIELD_EPOCHS"])
+        .appendField(new Blockly.FieldNumber(20, 1, 1000), 'EPOCHS')
+        .appendField(Blockly.Msg["AI_TRAIN_FIELD_BATCH"])
+        .appendField(new Blockly.FieldNumber(32, 1, 512), 'BATCH_SIZE');
+
     // === 進階設定區（分組顯示）===
     this.appendDummyInput()
         .appendField(Blockly.Msg["AI_TRAIN_SECTION_ADVANCED"]);
 
+    // 預訓練 + 微調
     this.appendDummyInput()
         .appendField(Blockly.Msg["AI_TRAIN_FIELD_BACKBONE"])
         .appendField(new Blockly.FieldDropdown([
@@ -81,18 +86,19 @@ Blockly.Blocks['py_ai_train_run'] = {
           ["EfficientNetB0", "efficientnet"],
           ["ResNet50", "resnet"]
         ]), 'BACKBONE')
+        .appendField(Blockly.Msg["AI_TRAIN_FIELD_FINE_TUNE"])
+        .appendField(new Blockly.FieldCheckbox(false), 'FINE_TUNE');
+
+    // DNN 層 + 優化器
+    this.appendDummyInput()
+        .appendField(Blockly.Msg["AI_TRAIN_FIELD_DNN_LAYERS"])
+        .appendField(new Blockly.FieldTextInput("128,64"), 'DNN_LAYERS')
         .appendField(Blockly.Msg["AI_TRAIN_FIELD_OPTIMIZER"])
         .appendField(new Blockly.FieldDropdown([
           ["Adam", "adam"],
           ["SGD", "sgd"],
           ["RMSprop", "rmsprop"]
         ]), 'OPTIMIZER');
-
-    this.appendDummyInput()
-        .appendField(Blockly.Msg["AI_TRAIN_FIELD_DNN_LAYERS"])
-        .appendField(new Blockly.FieldTextInput("128,64"), 'DNN_LAYERS')
-        .appendField(Blockly.Msg["AI_TRAIN_FIELD_FINE_TUNE"])
-        .appendField(new Blockly.FieldCheckbox(false), 'FINE_TUNE');
 
     // 模型輸出格式（預設「無」，僅觀察訓練結果）
     this.appendDummyInput()
