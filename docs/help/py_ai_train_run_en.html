@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI training - py_ai_train_run Block Help</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 20px; max-width: 800px; margin: 0 auto; }
+  h1 { color: #9C27B0; border-bottom: 2px solid #9C27B0; padding-bottom: 8px; }
+  h2 { color: #7B1FA2; margin-top: 24px; }
+  .section { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .param-table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  .param-table th, .param-table td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+  .param-table th { background: #f3e5f5; color: #7B1FA2; }
+  .note { background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px 14px; margin: 12px 0; border-radius: 0 4px 4px 0; }
+  .tip { background: #e8f5e9; border-left: 4px solid #4caf50; padding: 10px 14px; margin: 12px 0; border-radius: 0 4px 4px 0; }
+</style>
+</head>
+<body>
+  <h1>🦉AI Training Block (py_ai_train_run)</h1>
+
+  <div class="section">
+    <h2>What it does</h2>
+    <p>Trains an AI model from a dataset and produces model files for later inference (prediction).</p>
+    <p>Supports four task types: <strong>image classification</strong>, <strong>object detection</strong>, <strong>line following</strong>, <strong>tabular data</strong>. Training can run locally or on a remote host.</p>
+  </div>
+
+  <div class="section">
+    <h2>Basic settings</h2>
+    <table class="param-table">
+      <tr><th>Field</th><th>Description</th><th>Default</th></tr>
+      <tr><td>Type</td><td>Task type: classifier / detector / line_follower / table. Determines the training template and inference engine; must match the "init model" block type.</td><td>classifier</td></tr>
+      <tr><td>Training host</td><td>Where training runs: <strong>local</strong> (this computer) or <strong>remote</strong> (sent over SSH to a remote host). First remote run shows an SSH setup dialog.</td><td>local</td></tr>
+      <tr><td>Dataset</td><td>Path to the training dataset folder. Each subfolder is one class. Use forward slashes on Windows.</td><td>dataset/classifier_dataset</td></tr>
+      <tr><td>Data Sync</td><td><strong>Only when Training host = remote</strong>: smart (upload if changed) / always (full upload) / skip (use existing remote dataset).</td><td>smart</td></tr>
+      <tr><td>Model folder</td><td>Output folder for trained model files. <strong>Read-only</strong>: auto-derived from the dataset name (dataset/xxx → model/xxx).</td><td>model/&lt;dataset name&gt;</td></tr>
+      <tr><td>Val Split</td><td>Validation set ratio, split with stratified sampling per class.</td><td>0.2 (20%)</td></tr>
+      <tr><td>Aug</td><td>Enable data augmentation (flip/rotate/scale etc.).</td><td>✔ enabled</td></tr>
+      <tr><td>Dropout</td><td>Dropout rate to reduce overfitting; randomly drops neurons during training.</td><td>0.2 (20%)</td></tr>
+      <tr><td>LR (Learning Rate)</td><td>Step size of each update. Read the loss curve: wild oscillation/rising = too large; very slow descent = too small; smooth steady descent = just right.</td><td>0.001</td></tr>
+      <tr><td>Epochs</td><td>Training epochs. More is longer learning, but too many may overfit.</td><td>20</td></tr>
+      <tr><td>Batch</td><td>Batch size: images processed per weight update.</td><td>32</td></tr>
+    </table>
+  </div>
+  <div class="section">
+    <h2>Advanced settings</h2>
+    <table class="param-table">
+      <tr><th>Field</th><th>Description</th><th>Default</th></tr>
+      <tr><td>Pretrained</td><td>Which pretrained backbone to start from: MobileNetV2 (light &amp; fast) / EfficientNetB0 (balanced) / ResNet50 (deep &amp; heavy).</td><td>MobileNetV2</td></tr>
+      <tr><td>Fine-tune</td><td>Unfreeze the pretrained backbone for fine-tuning. Higher accuracy needs more data.</td><td>☐ off</td></tr>
+      <tr><td>DNN Layers</td><td>Custom hidden layers, comma-separated neuron counts, e.g. "128,64" = two layers.<br>The input (GlobalAveragePooling) and output (Softmax) layers are set automatically.</td><td>128,64</td></tr>
+      <tr><td>Optimizer</td><td>Optimizer: Adam / SGD / RMSprop.</td><td>Adam</td></tr>
+      <tr><td>Model output</td><td>Which files to produce after training: <strong>none</strong> (observe training only) / quantized TFLite (int8) / Float32 TFLite / Keras / quantized + Float32 / all. Tip: tune with "none" first, then export formally.</td><td>none</td></tr>
+    </table>
+    <div class="note">💡 Beginners can keep the defaults for good results.</div>
+  </div>
+
+  <div class="section">
+    <h2>Training output files</h2>
+    <p>After training, the model folder contains:</p>
+    <ul>
+      <li><strong>*.tflite</strong> — quantized model (for MCU or Edge TPU)</li>
+      <li><strong>*_f32.tflite</strong> — Float32 model (for PC-side Python inference)</li>
+      <li><strong>*.keras</strong> — Keras native model file</li>
+      <li><strong>*_labels.txt</strong> — class label mapping</li>
+      <li><strong>*_training_report.html</strong> — training report (curves &amp; stats)</li>
+      <li><strong>*_training_history.json</strong> — training history (JSON)</li>
+      <li><strong>*_training_curve.png</strong> — Loss/Accuracy curves</li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>Notes</h2>
+    <div class="tip">✅ Images are fixed at 224×224, matching the ImageNet pretrained input of MobileNetV2.</div>
+    <div class="tip">✅ The validation set doubles as the final evaluation; no separate test set. Educational datasets are small, so a three-way split would starve each set.</div>
+    <div class="note">⚠️ Each class needs at least 5 images; 20–100 images per class is recommended.</div>
+    <div class="note">⚠️ Avoid non-ASCII characters in paths to prevent environment-specific errors.</div>
+  </div>
+</body>
+</html>

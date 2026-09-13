@@ -5,7 +5,7 @@ Blockly.Msg["COLOUR_AI_INFERENCE"] = "#9C27B0";
 
 // Training Blocks
 Blockly.Msg["AI_TRAIN_RUN"] = "AI 訓練";
-Blockly.Msg["AI_TRAIN_RUN_TOOLTIP"] = "開始模型訓練（若開啟遠端模式則使用遠端訓練）\n\n欄位說明：\n• 資料集：圖像資料集資料夾路徑\n  支援相對/絕對路徑，Windows 建議用\n  正斜線如 C:/dataset/images\n• 模型：模型輸出資料夾（自動從資料集名稱提取）\n• Epochs：訓練輪數（1-1000）\n• Batch：批次大小（1-512）\n• LR：學習率（0.0001-1）\n• Val Split：驗證集比例（0.1-0.5）\n• Dropout：隨機丟棄率（0.0-0.9）\n• Aug：是否啟用資料擴增\n• 類型：任務類型（分類器/偵測器/循線/表格）\n• 後端：訓練位置（自動/本地/遠端）\n\n進階設定：\n• Backbone：骨幹網路模型（MobileNetV2/EfficientNet/ResNet）\n• Optimizer：優化器（Adam/SGD/RMSprop）\n• DNN Layers：自訂全連接層（逗號分隔，如 128,64）\n• Fine-tune：是否解凍骨幹網路微調\n\n注意：\n• 未存檔時，模型輸出至 temp_scripts/ 資料夾\n• 已存檔時，模型輸出至工作區根目錄";
+Blockly.Msg["AI_TRAIN_RUN_TOOLTIP"] = "開始模型訓練（訓練主機=遠端時改為遠端訓練）\n\n基本設定：\n• 類型：任務類型（分類器/偵測器/循線/表格）\n• 訓練主機：本地 或 遠端\n• 資料集：圖像資料集資料夾路徑\n  支援相對/絕對路徑，Windows 建議用\n  正斜線如 C:/dataset/images\n• 資料同步：僅訓練主機=遠端時生效\n  （智慧/每次/略過）\n• 模型存放：輸出資料夾（自動從資料集名稱提取）\n• 驗證比：驗證集比例（0.1-0.5）\n• 擴增：是否啟用資料擴增\n• Dropout：隨機丟棄率（0.0-0.9）\n• LR：學習率（0.0001-1）\n• Epochs：訓練輪數（1-1000）\n• Batch：批次大小（1-512）\n\n進階設定：\n• 預訓練：預訓練模型（MobileNetV2/EfficientNet/ResNet）\n• 微調：是否解凍預訓練模型進行微調\n• DNN 層：自訂全連接層（逗號分隔，如 128,64）\n• 優化器：優化器（Adam/SGD/RMSprop）\n• 模型輸出：無/量化 TFLite(int8)/Float32/Keras 等\n\n注意：\n• 未存檔時，模型輸出至 temp_scripts/ 資料夾\n• 已存檔時，模型輸出至工作區根目錄";
 
 // Section labels
 Blockly.Msg["AI_TRAIN_SECTION_BASIC"] = "▸ 基本設定";
@@ -18,11 +18,11 @@ Blockly.Msg["AI_TRAIN_FIELD_EPOCHS"] = "Epochs:";
 Blockly.Msg["AI_TRAIN_FIELD_BATCH"] = "Batch:";
 Blockly.Msg["AI_TRAIN_FIELD_LR"] = "LR:";
 Blockly.Msg["AI_TRAIN_FIELD_TYPE"] = "類型:";
-Blockly.Msg["AI_TRAIN_FIELD_BACKEND"] = "後端:";
+Blockly.Msg["AI_TRAIN_FIELD_BACKEND"] = "訓練主機:";
 Blockly.Msg["AI_TRAIN_FIELD_VAL_SPLIT"] = "驗證比:";
 Blockly.Msg["AI_TRAIN_FIELD_DROPOUT"] = "Dropout:";
 Blockly.Msg["AI_TRAIN_FIELD_AUG"] = "擴增:";
-Blockly.Msg["AI_TRAIN_FIELD_BACKBONE"] = "骨幹:";
+Blockly.Msg["AI_TRAIN_FIELD_BACKBONE"] = "預訓練:";
 Blockly.Msg["AI_TRAIN_FIELD_OPTIMIZER"] = "優化器:";
 Blockly.Msg["AI_TRAIN_FIELD_DNN_LAYERS"] = "DNN 層:";
 Blockly.Msg["AI_TRAIN_FIELD_FINE_TUNE"] = "微調:";

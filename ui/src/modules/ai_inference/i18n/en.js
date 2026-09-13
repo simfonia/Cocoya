@@ -5,7 +5,7 @@ Blockly.Msg["COLOUR_AI_INFERENCE"] = "#9C27B0";
 
 // Training Blocks
 Blockly.Msg["AI_TRAIN_RUN"] = "AI training";
-Blockly.Msg["AI_TRAIN_RUN_TOOLTIP"] = "Start model training (uses remote mode if enabled)\n\nField descriptions:\n• Dataset: Image dataset folder path\n  Supports relative/absolute paths.\n  On Windows, use forward slashes\n  e.g. C:/dataset/images\n• Model: Model output folder (auto-extracted from dataset name)\n• Epochs: Training epochs (1-1000)\n• Batch: Batch size (1-512)\n• LR: Learning rate (0.0001-1)\n• Val Split: Validation set ratio (0.1-0.5)\n• Dropout: Dropout rate (0.0-0.9)\n• Aug: Enable data augmentation\n• Type: Task type (classifier/detector/line_follower/table)\n• Backend: Training location (auto/local/remote)\n\nAdvanced settings:\n• Backbone: Base model (MobileNetV2/EfficientNet/ResNet)\n• Optimizer: Optimizer (Adam/SGD/RMSprop)\n• DNN Layers: Custom FC layers (comma-separated, e.g. 128,64)\n• Fine-tune: Unfreeze backbone for fine-tuning\n\nNotes:\n• When unsaved, models output to temp_scripts/ folder\n• When saved, models output to workspace root";
+Blockly.Msg["AI_TRAIN_RUN_TOOLTIP"] = "Start model training (remote training when Training host = remote)\n\nBasic settings:\n• Type: Task type (classifier/detector/line_follower/table)\n• Training host: local or remote\n• Dataset: Image dataset folder path\n  Supports relative/absolute paths.\n  On Windows, use forward slashes\n  e.g. C:/dataset/images\n• Data Sync: Only when Training host = remote\n  (smart/always/skip)\n• Model folder: Output folder (auto-extracted\n  from dataset name)\n• Val Split: Validation set ratio (0.1-0.5)\n• Aug: Enable data augmentation\n• Dropout: Dropout rate (0.0-0.9)\n• LR: Learning rate (0.0001-1)\n• Epochs: Training epochs (1-1000)\n• Batch: Batch size (1-512)\n\nAdvanced settings:\n• Pretrained: Pretrained backbone (MobileNetV2/EfficientNet/ResNet)\n• Fine-tune: Unfreeze pretrained backbone for fine-tuning\n• DNN Layers: Custom FC layers (comma-separated, e.g. 128,64)\n• Optimizer: Optimizer (Adam/SGD/RMSprop)\n• Output: none / quantized TFLite (int8) / Float32 / Keras etc.\n\nNotes:\n• When unsaved, models output to temp_scripts/ folder\n• When saved, models output to workspace root";
 
 // Section labels
 Blockly.Msg["AI_TRAIN_SECTION_BASIC"] = "▸ Basic Settings";
@@ -13,16 +13,16 @@ Blockly.Msg["AI_TRAIN_SECTION_ADVANCED"] = "▸ Advanced Settings (keep defaults
 
 // Field labels for training block
 Blockly.Msg["AI_TRAIN_FIELD_DATASET"] = "Dataset:";
-Blockly.Msg["AI_TRAIN_FIELD_MODEL"] = "Model:";
+Blockly.Msg["AI_TRAIN_FIELD_MODEL"] = "Model folder:";
 Blockly.Msg["AI_TRAIN_FIELD_EPOCHS"] = "Epochs:";
 Blockly.Msg["AI_TRAIN_FIELD_BATCH"] = "Batch:";
 Blockly.Msg["AI_TRAIN_FIELD_LR"] = "LR:";
 Blockly.Msg["AI_TRAIN_FIELD_TYPE"] = "Type:";
-Blockly.Msg["AI_TRAIN_FIELD_BACKEND"] = "Backend:";
+Blockly.Msg["AI_TRAIN_FIELD_BACKEND"] = "Training host:";
 Blockly.Msg["AI_TRAIN_FIELD_VAL_SPLIT"] = "Val Split:";
 Blockly.Msg["AI_TRAIN_FIELD_DROPOUT"] = "Dropout:";
 Blockly.Msg["AI_TRAIN_FIELD_AUG"] = "Aug:";
-Blockly.Msg["AI_TRAIN_FIELD_BACKBONE"] = "Backbone:";
+Blockly.Msg["AI_TRAIN_FIELD_BACKBONE"] = "Pretrained:";
 Blockly.Msg["AI_TRAIN_FIELD_OPTIMIZER"] = "Optimizer:";
 Blockly.Msg["AI_TRAIN_FIELD_DNN_LAYERS"] = "DNN Layers:";
 Blockly.Msg["AI_TRAIN_FIELD_FINE_TUNE"] = "Fine-tune:";
@@ -50,7 +50,7 @@ Blockly.Msg["AI_BACKEND_LOCAL"] = "local";
 Blockly.Msg["AI_BACKEND_REMOTE"] = "remote";
 
 // Dataset sync mode (remote only)
-Blockly.Msg["AI_TRAIN_FIELD_SYNC_MODE"] = "Dataset Sync:";
+Blockly.Msg["AI_TRAIN_FIELD_SYNC_MODE"] = "Data Sync:";
 Blockly.Msg["AI_SYNC_SMART"] = "smart (upload if changed)";
 Blockly.Msg["AI_SYNC_ALWAYS"] = "always (full upload)";
 Blockly.Msg["AI_SYNC_SKIP"] = "skip (use remote data)";

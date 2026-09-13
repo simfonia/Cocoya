@@ -6,7 +6,8 @@ C:\Workspace\cocoya\
 │   │   ├── hardware_pins_zh-hant.html   # 硬體腳位說明（繁體中文）
 │   │   ├── pico-w_pinout.png            # Raspberry Pi Pico W 腳位圖
 │   │   ├── XIAO-ESP32-S3_pinout.jpg     # XIAO ESP32 S3 腳位圖
-│   │   ├── py_ai_train_run_zh-hant.html     # AI 訓練積木說明
+│   │   ├── py_ai_train_run_zh-hant.html     # AI 訓練積木說明（欄位順序對齊積木）
+│   │   ├── py_ai_train_run_en.html          # [NEW] AI training block help (English)
 │   │   ├── py_ai_model_init_zh-hant.html    # 模型初始化積木說明
 │   │   ├── py_ai_model_predict_zh-hant.html # 推論積木說明
 │   │   ├── py_ai_get_label_zh-hant.html     # 取得標籤積木說明
@@ -16,6 +17,10 @@ C:\Workspace\cocoya\
 │   │   ├── py_ai_pose_calc_angle_zh-hant.html # [NEW] 三點夾角積木說明 (計算內/外/符號角)
 │   │   └── py_ai_pose_calc_angle_en.html     # [NEW] Angle of 3 Points block help
 │   ├── system_spec.html   # 系統規格說明書 (v5.0 雙模架構版)
+│   ├── teaching/          # [NEW] 教學簡報資料夾（每主題一個子資料夾）
+│   │   └── py_ai_train_run/  # [NEW] AI 訓練積木參數教學簡報 (Reveal.js 離線版)
+│   │       ├── index.html   # 25 頁課程：類型/訓練主機/資料同步/驗證比/擴增/Dropout → 模型/Loss/交叉熵 → LR/Epoch/Batch → 預訓練/微調/DNN/優化器/輸出 + 小測驗（頁序對齊積木欄位）
+│   │       └── lib/reveal/  # [NEW] 離線 Reveal.js 資源 (reveal.css/js + beige 主題)
 │   ├── api_manifest.md    # 前端 API SSOT (Source of Truth)
 │   ├── backend_api_manifest.md # [NEW] 後端 Rust API SSOT
 │   ├── mvp_development_guide.md # AI 模組開發規範與踩坑記錄
