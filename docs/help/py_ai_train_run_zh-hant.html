@@ -22,24 +22,25 @@
 
   <div class="section">
     <h2>功能說明</h2>
-    <p>執行 AI 模型訓練。從資料集學習並產出 TFLite 模型檔案，可用於後續的推論（預測）。</p>
-    <p>支援四種任務類型：<strong>圖像分類</strong>、<strong>物件偵測</strong>、<strong>循線偵測</strong>、<strong>表格資料</strong>。</p>
+    <p>執行 AI 模型訓練。從資料集學習並產出模型檔案，可用於後續的推論（預測）。</p>
+    <p>支援四種任務類型：<strong>圖像分類</strong>、<strong>物件偵測</strong>、<strong>循線偵測</strong>、<strong>表格資料</strong>；可在本地或遠端主機訓練。</p>
   </div>
 
   <div class="section">
     <h2>基本參數</h2>
     <table class="param-table">
       <tr><th>欄位</th><th>說明</th><th>預設值</th></tr>
-      <tr><td>資料集 (Dataset)</td><td>訓練資料所在資料夾路徑。每個子資料夾代表一個分類。</td><td>dataset/classifier_dataset</td></tr>
-      <tr><td>模型 (Model)</td><td>訓練完成後模型檔案的輸出資料夾（自動產生）。</td><td>model/資料集名稱</td></tr>
+      <tr><td>類型 (Type)</td><td>任務類型：分類器 / 偵測器 / 循線 / 表格。決定訓練模板與推論引擎，需與「初始化模型」積木的類型一致。</td><td>分類器</td></tr>
+      <tr><td>訓練主機 (Training host)</td><td>訓練在哪裡執行：<strong>本地</strong>（自己的電腦）或<strong>遠端</strong>（透過 SSH 送到遠端主機）。選遠端時第一次執行會跳出 SSH 設定。</td><td>本地</td></tr>
+      <tr><td>資料集 (Dataset)</td><td>訓練資料所在資料夾路徑。每個子資料夾代表一個分類。支援相對/絕對路徑，Windows 建議使用正斜線。</td><td>dataset/classifier_dataset</td></tr>
+      <tr><td>資料同步 (Data sync)</td><td><strong>僅訓練主機=遠端時生效</strong>：智慧（有變更才上傳）/ 每次（全部上傳）/ 略過（使用遠端既有資料集）。</td><td>智慧</td></tr>
+      <tr><td>模型存放 (Model folder)</td><td>模型檔案的輸出資料夾。<strong>唯讀</strong>，自動從資料集名稱帶出（dataset/xxx → model/xxx），不必手改。</td><td>model/資料集名稱</td></tr>
+      <tr><td>驗證比 (Val Split)</td><td>驗證集比例。從資料集中分層抽樣分割多少比例作為驗證用。</td><td>0.2 (20%)</td></tr>
+      <tr><td>擴增 (Aug)</td><td>是否啟用資料擴增。自動對圖片進行翻轉/旋轉/縮放等變換。</td><td>✔ 啟用</td></tr>
+      <tr><td>Dropout</td><td>隨機丟棄率。防止過擬合，訓練時隨機丟棄部分神經元。</td><td>0.2 (20%)</td></tr>
+      <tr><td>LR (Learning Rate)</td><td>學習率。控制每次更新的步長。看 loss 曲線調整：震盪不降反升=太大；降得極慢=太小；平滑穩定下降=剛好。</td><td>0.001</td></tr>
       <tr><td>Epochs</td><td>訓練輪數。越多代表學習越久，但過多可能導致過擬合。</td><td>20</td></tr>
       <tr><td>Batch</td><td>批次大小。每次更新權重時同時處理的圖片張數。</td><td>32</td></tr>
-      <tr><td>LR (Learning Rate)</td><td>學習率。控制每次更新的步長，太大可能無法收斂。</td><td>0.001</td></tr>
-      <tr><td>Val Split</td><td>驗證集比例。從資料集中分割多少比例作為驗證用。</td><td>0.2 (20%)</td></tr>
-      <tr><td>Dropout</td><td>隨機丟棄率。防止過擬合，訓練時隨機丟棄部分神經元。</td><td>0.2 (20%)</td></tr>
-      <tr><td>Aug (Augmentation)</td><td>是否啟用資料擴增。自動對圖片進行翻轉/旋轉/縮放等變換。</td><td>✔ 啟用</td></tr>
-      <tr><td>類型 (Type)</td><td>任務類型：分類器 / 偵測器 / 循線 / 表格</td><td>分類器</td></tr>
-      <tr><td>後端 (Backend)</td><td>訓練位置：自動 / 本地 / 遠端</td><td>自動</td></tr>
     </table>
   </div>
 
@@ -47,10 +48,11 @@
     <h2>進階參數</h2>
     <table class="param-table">
       <tr><th>欄位</th><th>說明</th><th>預設值</th></tr>
-      <tr><td>Backbone</td><td>骨幹網路。選擇 MobileNetV2、EfficientNetB0 或 ResNet50。</td><td>MobileNetV2</td></tr>
-      <tr><td>Optimizer</td><td>優化器。選擇 Adam、SGD 或 RMSprop。</td><td>Adam</td></tr>
-      <tr><td>DNN Layers</td><td>自訂隱藏層。逗號分隔神經元數，如 "128,64" 表示兩層。<br>輸入層（GlobalAveragePooling）與輸出層（Softmax）為自動設定，<br>使用者只需指定中間隱藏層即可。留空則跳過隱藏層直接到輸出。</td><td>128,64</td></tr>
-      <tr><td>Fine-tune</td><td>是否解凍骨幹網路進行微調。可提升準確率但需更多資料。</td><td>☐ 停用</td></tr>
+      <tr><td>預訓練 (Pretrained)</td><td>選用哪個預訓練的骨幹網路（Backbone）：MobileNetV2（輕量快速）/ EfficientNetB0（效率平衡）/ ResNet50（深而重）。</td><td>MobileNetV2</td></tr>
+      <tr><td>微調 (Fine-tune)</td><td>是否解凍預訓練骨幹進行微調。可提升準確率但需更多資料。</td><td>☐ 停用</td></tr>
+      <tr><td>DNN 層 (DNN Layers)</td><td>自訂隱藏層。逗號分隔神經元數，如 "128,64" 表示兩層。<br>輸入層（GlobalAveragePooling）與輸出層（Softmax）為自動設定，<br>使用者只需指定中間隱藏層即可。留空則跳過隱藏層直接到輸出。</td><td>128,64</td></tr>
+      <tr><td>優化器 (Optimizer)</td><td>優化器。選擇 Adam、SGD 或 RMSprop。</td><td>Adam</td></tr>
+      <tr><td>模型輸出 (Model output)</td><td>訓練完成後要產出哪些檔案：<strong>無</strong>（僅觀察訓練成績）/ 量化 TFLite (int8) / Float32 TFLite / Keras / 量化 + Float32 / 全部。建議先用「無」調好參數，再正式產出。</td><td>無</td></tr>
     </table>
     <div class="note">💡 不熟悉這些參數的初學者，保留預設值即可獲得良好訓練結果。</div>
   </div>
