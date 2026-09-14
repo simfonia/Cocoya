@@ -523,8 +523,23 @@ export class BridgeTauri extends BaseBridge {
                 case 'datasetStartCamera':
                     await this._handleDatasetCommand('startCamera', data, (response) => {
                         this._dispatchToFrontend({
-                            command: 'datasetCameraStatus',
-                            success: response.success
+                            command: 'datasetCameraStartResult',
+                            requestId: data.requestId,
+                            success: response.success,
+                            running: response.success,
+                            error: response.error
+                        });
+                    });
+                    break;
+
+                case 'datasetGetCameraStatus':
+                    await this._handleDatasetCommand('getCameraStatus', data, (response) => {
+                        const running = (response.running !== undefined) ? !!response.running : !!response.success;
+                        this._dispatchToFrontend({
+                            command: 'datasetCameraStatusSync',
+                            requestId: data.requestId,
+                            running,
+                            success: running
                         });
                     });
                     break;

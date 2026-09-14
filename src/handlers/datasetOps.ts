@@ -390,7 +390,25 @@ export class DatasetOpsHandler {
     public handleDatasetStartCamera(message: any) {
         this.manager.sidecar.start();
         this.manager.sidecar.send('startCamera', { deviceId: message.deviceId || 0 }, (resp: any) => {
-            this.manager.panel.webview.postMessage({ command: 'datasetCameraStatus', success: resp.success });
+            this.manager.panel.webview.postMessage({
+                command: 'datasetCameraStartResult',
+                requestId: message.requestId,
+                success: resp.success,
+                running: resp.success,
+                error: resp.error
+            });
+        });
+    }
+
+    public handleDatasetGetCameraStatus(message: any) {
+        this.manager.sidecar.send('getCameraStatus', {}, (resp: any) => {
+            const running = (resp.running !== undefined) ? !!resp.running : !!resp.success;
+            this.manager.panel.webview.postMessage({
+                command: 'datasetCameraStatusSync',
+                requestId: message.requestId,
+                running,
+                success: running
+            });
         });
     }
 

@@ -884,7 +884,12 @@ export function refreshDynamicPanels() {
     `;
 
     // 顯示採集視圖（M2 R6：委派 ui/samplerPanel.js；M4：feature 走 featurePanel）
+    // live 面板重建會拋棄舊按鈕閉包＋DOM 真值；先停舊輪詢，避免幽靈對帳寫回新面板
     if (isLive) {
+        Sampler.stopStatusPoll();
+        // Ctrl+R 後前端狀態重置但 sidecar 可能殘留 running；進 live 先對帳一次，
+        // 事件遺失時由 sampler 內部 syncCameraStatus→onStatusChanged→重建校正。
+        Sampler.syncCameraStatus().catch(() => {});
         if (projectType === 'feature') {
             featurePanel.setupFeatureLiveView(modal, modal.querySelector('#dataset-sampler-view'));
         } else {

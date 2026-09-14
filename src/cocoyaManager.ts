@@ -252,6 +252,9 @@ export class CocoyaManager {
                 case 'datasetStopCamera':
                     this.datasetOps.handleDatasetStopCamera();
                     break;
+                case 'datasetGetCameraStatus':
+                    this.datasetOps.handleDatasetGetCameraStatus(message);
+                    break;
                 case 'datasetDeleteImage':
                     this.datasetOps.handleDatasetDeleteImage(message);
                     break;

@@ -97,9 +97,20 @@ class DatasetSidecar:
                     cameras = CameraService.list_cameras()
                     self.send_response(request_id, {"success": True, "cameras": cameras})
                 
+                elif command == "getCameraStatus":
+                    self.send_response(request_id, {
+                        "success": True,
+                        "running": self.camera.is_running(),
+                    })
+
                 elif command == "startCamera":
                     device_id = msg.get("deviceId", 0)
                     success = self.camera.start(device_id)
+                    if success:
+                        # 啟動成功顯式推送一次狀態（不依賴 0.5s monitor 差分），
+                        # 讓前端啟動分支能立即同步；Ctrl+R 後 sidecar 殘留 running
+                        # 時 start() 早退 True，此事件保證前端仍收到明確狀態。
+                        self.send_event("cameraStatus", {"running": True})
                     self.send_response(request_id, {"success": success})
                 
                 elif command == "stopCamera":

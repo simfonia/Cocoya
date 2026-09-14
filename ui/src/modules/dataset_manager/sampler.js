@@ -25,11 +25,22 @@ export const Sampler = {
      */
     init() {
         if (this._offStatus) { this._offStatus(); this._offStatus = null; }
+        if (this._offStatusSync) { this._offStatusSync(); this._offStatusSync = null; }
         this._offStatus = datasetBridge.subscribe('datasetCameraStatus', (message) => {
             const oldStatus = this.state.isCamRunning;
             this.state.isCamRunning = message.success;
             console.log('[Sampler] Camera status updated:', this.state.isCamRunning);
-            
+
+            if (oldStatus !== this.state.isCamRunning && this.state.onStatusChanged) {
+                this.state.onStatusChanged(this.state.isCamRunning);
+            }
+        });
+        // 同步通道（getCameraStatus 輪詢/對帳用，與啟動回覆共用的 datasetCameraStatus
+        // 不同 command，避免 FIFO 誤吃；狀態語意相同）
+        this._offStatusSync = datasetBridge.subscribe('datasetCameraStatusSync', (message) => {
+            const running = (message.running !== undefined) ? !!message.running : !!message.success;
+            const oldStatus = this.state.isCamRunning;
+            this.state.isCamRunning = running;
             if (oldStatus !== this.state.isCamRunning && this.state.onStatusChanged) {
                 this.state.onStatusChanged(this.state.isCamRunning);
             }
@@ -39,7 +50,57 @@ export const Sampler = {
     /** 解除訂閱與連拍（modal 關閉時呼叫，不留幽靈 callback） */
     dispose() {
         if (this._offStatus) { this._offStatus(); this._offStatus = null; }
+        if (this._offStatusSync) { this._offStatusSync(); this._offStatusSync = null; }
+        this.stopStatusPoll();
         this.stopBurst();
+    },
+
+    /**
+     * 向 sidecar 查詢攝影機真值（Ctrl+R 後前端狀態重置、事件遺失時的對帳用）。
+     * 成功時同步 state.isCamRunning 並在變化時觸發 onStatusChanged；失敗回傳現值。
+     */
+    async syncCameraStatus() {
+        const { promise } = datasetBridge.request({
+            command: 'datasetGetCameraStatus',
+            payload: {},
+            resultCommand: 'datasetCameraStatusSync',
+            timeoutMs: 8000
+        });
+        try {
+            const message = await promise;
+            const running = (message.running !== undefined) ? !!message.running : !!message.success;
+            const oldStatus = this.state.isCamRunning;
+            this.state.isCamRunning = running;
+            if (oldStatus !== running && this.state.onStatusChanged) {
+                this.state.onStatusChanged(running);
+            }
+            return running;
+        } catch (e) {
+            console.warn('[Sampler] syncCameraStatus failed:', e.message || e);
+            return this.state.isCamRunning;
+        }
+    },
+
+    /**
+     * 啟動狀態對帳輪詢（X 關窗事件遺失時的兜底；僅在 isCamRunning==true 時查詢）。
+     * 呼叫端（啟動成功分支）啟動；停止/重建面板時由 stopStatusPoll 收尾。
+     */
+    startStatusPoll(intervalMs = 2000) {
+        this.stopStatusPoll();
+        this._statusPollTimer = setInterval(() => {
+            if (!this.state.isCamRunning) {
+                this.stopStatusPoll();
+                return;
+            }
+            this.syncCameraStatus().catch(() => {});
+        }, intervalMs);
+    },
+
+    stopStatusPoll() {
+        if (this._statusPollTimer) {
+            clearInterval(this._statusPollTimer);
+            this._statusPollTimer = null;
+        }
     },
 
     /**
@@ -84,19 +145,30 @@ export const Sampler = {
 
     /**
      * 啟動攝影機 (呼叫 Sidecar)
+     * 回覆走專用 datasetCameraStartResult 通道（帶 requestId 精準配對），
+     * 與背景 cameraStatus 事件（datasetCameraStatus）分離，避免兩者共用
+     * 同一 command 造成 FIFO 誤吃（Ctrl+R 後 X 關窗事件遺失的主因之一）。
      */
     async startCamera(deviceId = 0) {
         console.log('[Sampler] Requesting Sidecar Camera start...');
         try {
-            // 狀態由全域訂閱處理；此處等待啟動回覆（pending 先註冊，無 race）
+            const requestId = 'cam_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
             const { promise } = datasetBridge.request({
                 command: 'datasetStartCamera',
                 payload: { deviceId },
-                resultCommand: 'datasetCameraStatus',
+                resultCommand: 'datasetCameraStartResult',
+                requestId,
                 timeoutMs: 15000
             });
             const message = await promise;
-            return message.success;
+            const running = !!message.success;
+            const oldStatus = this.state.isCamRunning;
+            this.state.isCamRunning = running;
+            if (running) this.startStatusPoll();
+            if (oldStatus !== running && this.state.onStatusChanged) {
+                this.state.onStatusChanged(running);
+            }
+            return running;
         } catch (e) {
             console.error('[Sampler] Camera start failed:', e.message);
             return false;
@@ -114,6 +186,7 @@ export const Sampler = {
         }
         datasetBridge.send('datasetStopCamera', {});
         this.state.isCamRunning = false; // 更新狀態
+        this.stopStatusPoll();
         this.stopBurst();
     },
 
