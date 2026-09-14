@@ -63,7 +63,9 @@
     "DSM_ANNOTATION_MODE_TITLE": "標註 — 物件偵測",
 
     // 採集視圖 (Sampler)
-    "DSM_SAMPLER_PLACEHOLDER": "等待採集影像...",
+    "DSM_SAMPLER_PLACEHOLDER": "最近一次拍攝",
+    "DSM_SAMPLER_PLACEHOLDER_SUB": "即時影像請執行下方【啟動預覽】\n此處僅顯示最近一次拍攝",
+    "DSM_SAMPLER_SCANNING": "⏳ 掃描攝影機中...",
     "DSM_SAMPLER_CAMERA": "📷 攝影機:",
     "DSM_SAMPLER_CAMERA_READY": "已就緒 · 點擊拍攝快照",
     "DSM_SAMPLER_REFRESH_CAMERAS": "重新掃描攝影機",

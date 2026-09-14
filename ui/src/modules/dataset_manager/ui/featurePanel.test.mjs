@@ -8,7 +8,7 @@ import { buildFeatureSchema, landmarksToRow, FEATURE_MEDIAPIPE_MISSING } from '.
 
 function makeElement(id, overrides = {}) {
     const el = {
-        id, value: '', checked: false, disabled: false,
+        id, value: '', checked: false, disabled: true,
         className: '', textContent: '', _html: '',
         style: {}, onclick: null, onchange: null,
         parentElement: { insertAdjacentHTML: () => {} },
@@ -46,7 +46,13 @@ function makeHarness({ labelMap = {} } = {}) {
     const calls = { listed: 0, collected: [], status: [] };
     const Sampler = {
         state: { isCamRunning: false, cameraList: [], selectedDeviceId: 0 },
-        setCameraDevice: () => {}, listCameras: () => { calls.listed++; },
+        setCameraDevice: () => {},
+        listCameras: () => {
+            calls.listed++;
+            Sampler.state.cameraList = [{ id: 0, name: 'Camera 0 (640x480)' }];
+            Sampler.state.selectedDeviceId = 0;
+            return Promise.resolve(Sampler.state.cameraList);
+        },
         startCamera: async () => true, stopCamera: () => {}
     };
     const panel = createFeaturePanel({
@@ -73,7 +79,7 @@ function makeHarness({ labelMap = {} } = {}) {
     return { state, specData, calls, Sampler, panel };
 }
 
-test('setupFeatureLiveView：顯示採集視圖、空相機清單時列舉、渲染 controls', () => {
+test('setupFeatureLiveView：掃描中佔位＋背景列舉後補下拉', async () => {
     const h = makeHarness({ labelMap: { up: 0 } });
     const modal = {};
     const view = makeView();
@@ -82,6 +88,12 @@ test('setupFeatureLiveView：顯示採集視圖、空相機清單時列舉、渲
     assert.equal(h.calls.listed, 1);
     assert.ok(view._html.includes('feature-use-z'));
     assert.ok(view._html.includes('🧬 擷取特徵點'));
+    assert.match(view._html, /掃描攝影機中/);
+    await Promise.resolve();
+    await Promise.resolve();
+    const sel = view.getElement('feature-camera-select');
+    assert.ok(sel.innerHTML.includes('Camera 0'));
+    assert.equal(sel.disabled, false);
 });
 
 test('擷取特徵點：成功時組 row（不含 z＝108 特徵欄）並回調 onFeatureCollected', async () => {

@@ -28,8 +28,10 @@ export function createFeaturePanel({
 }) {
     let currentUseZ = false;
 
-    function buildDom(labels, targetLabel) {
-        const camOptions = Sampler.state.cameraList.map((c) =>
+    function buildDom(labels, targetLabel, cameraScanning) {
+        const camOptions = cameraScanning
+            ? '<option value="" disabled selected>' + escapeHtml(t('SAMPLER_SCANNING', '⏳ 掃描攝影機中...')) + '</option>'
+            : Sampler.state.cameraList.map((c) =>
             '<option value="' + c.id + '"' + (c.id === Sampler.state.selectedDeviceId ? ' selected' : '') + '>'
             + escapeHtml(c.name) + '</option>'
         ).join('');
@@ -235,12 +237,28 @@ export function createFeaturePanel({
         view.style.display = 'block';
         const labels = Object.keys(state.spec.toJSON().schema.label_map || {});
         currentUseZ = false;
-        if (Sampler.state.cameraList.length === 0) {
-            Sampler.listCameras();
-        }
-        view.innerHTML = buildDom(labels, labels.length ? labels[0] : '');
+        view.innerHTML = buildDom(labels, labels.length ? labels[0] : '', Sampler.state.cameraList.length === 0);
         bind(modal, view, labels);
+        if (Sampler.state.cameraList.length === 0) {
+            // 背景列舉完成後只補下拉選單（不重建整面，避免焦點跳動＋閉包失效）
+            refreshCameraSelect(view, Promise.resolve(Sampler.listCameras()));
+        }
     }
 
-    return { setupFeatureLiveView };
+    function refreshCameraSelect(view, camsPromise) {
+        return camsPromise.then((cams) => {
+            const sel = view.querySelector ? view.querySelector('#' + FEATURE_DOM_CAMERA_SELECT) : null;
+            if (!sel) return;
+            sel.innerHTML = (cams || []).map((cm) =>
+                '<option value="' + cm.id + '"'
+                + (cm.id === Sampler.state.selectedDeviceId ? ' selected' : '') + '>'
+                + escapeHtml(cm.name) + '</option>').join('');
+            sel.disabled = false;
+        }).catch(() => {
+            const sel = view.querySelector ? view.querySelector('#' + FEATURE_DOM_CAMERA_SELECT) : null;
+            if (sel) sel.disabled = false;
+        });
+    }
+
+    return { setupFeatureLiveView, refreshCameraSelect };
 }

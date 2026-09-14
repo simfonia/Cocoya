@@ -28,18 +28,42 @@ export function createSamplerPanel({
             onSampleCaptured(blob, savePath);
         };
 
-        // 自動列舉可用攝影機 (但僅在清單為空時)
-        if (Sampler.state.cameraList.length === 0) {
-            Sampler.listCameras();
-        }
-
-        UIComponents.renderSamplerView(samplerView, {
+        const renderOpts = {
             labels,
             onLabelChange: (l) => handleSamplerLabelChange(modal, samplerView, l),
             onSnapshot,
             onBurstToggle,
             onStartCamera,
-            onStopCamera
+            onStopCamera,
+            cameraScanning: Sampler.state.cameraList.length === 0
+        };
+        UIComponents.renderSamplerView(samplerView, renderOpts);
+
+        // 自動列舉可用攝影機：先渲染「掃描中」佔位，背景掃完後只補下拉選單
+        // （listCameras 逐 index 試開需 3~5s，不可阻塞首次渲染；回來後若面板已被重建則放棄補寫）
+        if (Sampler.state.cameraList.length === 0) {
+            // 背景列舉完成後只補下拉選單（不重建整面，避免焦點跳動＋閉包失效）
+            refreshCameraSelect(samplerView, Promise.resolve(Sampler.listCameras()));
+        }
+    }
+
+    function refreshCameraSelect(view, camsPromise) {
+        return camsPromise.then((cams) => {
+            const sel = view.querySelector
+                ? view.querySelector('#dataset-sampler-camera-select')
+                : null;
+            if (!sel) return;
+            sel.innerHTML = (cams || []).map((c) =>
+                '<option value="' + c.id + '"'
+                + (c.id === Sampler.state.selectedDeviceId ? ' selected' : '') + '>'
+                + c.name + '</option>'
+            ).join('');
+            sel.disabled = false;
+        }).catch(() => {
+            const sel = view.querySelector
+                ? view.querySelector('#dataset-sampler-camera-select')
+                : null;
+            if (sel) sel.disabled = false;
         });
     }
 
@@ -74,5 +98,5 @@ export function createSamplerPanel({
         refreshPreview();
     }
 
-    return { setupLiveSamplerView, handleSamplerLabelChange };
+    return { setupLiveSamplerView, handleSamplerLabelChange, refreshCameraSelect };
 }

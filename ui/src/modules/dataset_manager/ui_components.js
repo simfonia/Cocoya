@@ -161,13 +161,15 @@ export const UIComponents = {
         if (!container) return;
 
         const { isCamRunning, lastPreviewUrl, targetLabel, cameraList, selectedDeviceId } = Sampler.state;
+        const cameraScanning = (options.cameraScanning !== undefined) ? !!options.cameraScanning : (cameraList.length === 0);
 
         container.innerHTML = `
             <div class="dataset-sampler-container">
                 <div class="dataset-sampler-video-wrapper">
                     <div id="dataset-sampler-placeholder" class="dataset-sampler-placeholder" style="${lastPreviewUrl ? 'display:none;' : ''}">
                         <div class="dataset-sampler-icon">📷</div>
-                        <div class="dataset-sampler-text">${t('SAMPLER_PLACEHOLDER', '等待採集影像...')}</div>
+                        <div class="dataset-sampler-text">${t('SAMPLER_PLACEHOLDER', '最近一次拍攝')}</div>
+                        <div class="dataset-sampler-sub">${t('SAMPLER_PLACEHOLDER_SUB', '即時影像請看 OpenCV 預覽視窗；此處僅顯示最近一次拍攝')}</div>
                     </div>
                     <img id="dataset-sampler-last-preview" class="dataset-sampler-last-img" 
                          src="${lastPreviewUrl || ''}" 
@@ -183,8 +185,8 @@ export const UIComponents = {
                         <div id="dataset-sampler-camera-group" style="display: flex; align-items: center; gap: 5px; margin-bottom: 6px;">
                             <label style="display: flex; align-items: center; gap: 5px; margin-bottom: 0; font-size: 11px;">
                                 <span>${t('SAMPLER_CAMERA', '📷 攝影機:')}</span>
-                                <select id="dataset-sampler-camera-select" style="font-size: 11px; padding: 2px 4px;">
-                                    ${cameraList.map(c => `<option value="${c.id}" ${c.id === selectedDeviceId ? 'selected' : ''}>${escapeHTML(c.name)}</option>`).join('')}
+                                <select id="dataset-sampler-camera-select" style="font-size: 11px; padding: 2px 4px;" ${cameraScanning ? 'disabled' : ''}>
+                                    ${cameraScanning ? `<option value="" disabled selected>${t('SAMPLER_SCANNING', '⏳ 掃描攝影機中...')}</option>` : cameraList.map(c => `<option value="${c.id}" ${c.id === selectedDeviceId ? 'selected' : ''}>${escapeHTML(c.name)}</option>`).join('')}
                                 </select>
                             </label>
                             <button type="button" id="dataset-sampler-refresh-cameras" class="dataset-icon-btn" title="${t('SAMPLER_REFRESH_CAMERAS', '重新掃描攝影機')}" style="font-size: 14px;">🔄</button>
