@@ -258,6 +258,9 @@ export class CocoyaManager {
                 case 'datasetCaptureImage':
                     this.datasetOps.handleDatasetCaptureImage(message);
                     break;
+                case 'datasetCollectFeature':
+                    this.datasetOps.handleDatasetCollectFeature(message);
+                    break;
                 case 'datasetExport':
                     await this.datasetOps.handleDatasetExport(message);
                     break;

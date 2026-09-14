@@ -23,14 +23,19 @@ function makeUC({ type = 'image' } = {}) {
     return { uc, calls };
 }
 
-test('feature/serial 開發中類型擋下，不呼叫 request', async () => {
-    for (const type of ['feature', 'serial']) {
-        const { uc, calls } = makeUC({ type });
-        await uc.exportDataset();
-        assert.ok(calls.status.some((m) => m.includes(type)), `${type} 應顯示開發中訊息`);
-        assert.deepEqual(calls.progress, [true, false]);
-        assert.equal(calls.sync, 0);
-    }
+test('serial 開發中類型擋下，不呼叫 request', async () => {
+    const { uc, calls } = makeUC({ type: 'serial' });
+    await uc.exportDataset();
+    assert.ok(calls.status.some((m) => m.includes('serial')), 'serial 應顯示開發中訊息');
+    assert.deepEqual(calls.progress, [true, false]);
+    assert.equal(calls.sync, 0);
+});
+
+test('feature 已轉正式：不擋下，前進表格匯出分流（syncSpecFromUI 被呼叫）', async () => {
+    const { uc, calls } = makeUC({ type: 'feature' });
+    await uc.exportDataset();
+    assert.equal(calls.sync, 1);
+    assert.ok(!calls.status.some((m) => m.includes('feature')), 'feature 不應顯示開發中訊息');
 });
 
 test('table（非開發中硬擋）不會在擋下段早退', async () => {

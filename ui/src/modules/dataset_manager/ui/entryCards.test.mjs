@@ -7,7 +7,7 @@ import { TYPE_CATALOG, getTypeEntry, isDevEntry, buildEntryTemplate } from './en
 
 const t = (key, fallback) => fallback || key;
 
-test('目錄含 6 類型；feature/serial 為 dev，其餘 stable', () => {
+test('目錄含 6 類型；feature/serial 標 dev 徽章（M4 實測除錯中，typePolicy 仍 stable），其餘 stable', () => {
     assert.equal(TYPE_CATALOG.length, 6);
     assert.equal(isDevEntry('feature'), true);
     assert.equal(isDevEntry('serial'), true);
@@ -15,9 +15,12 @@ test('目錄含 6 類型；feature/serial 為 dev，其餘 stable', () => {
     assert.equal(isDevEntry('table'), false);
     assert.ok(getTypeEntry('object_detection'));
     assert.equal(getTypeEntry('unknown'), null);
+    const feature = getTypeEntry('feature');
+    assert.deepEqual(feature.modes, ['live', 'file']);
+    assert.equal(isDevEntry('serial'), true);
 });
 
-test('模板輸出 6 張卡＋dev 徽章 2 枚＋無殘留佔位符', () => {
+test('模板輸出 6 張卡＋dev 徽章 2 枚（feature/serial）＋無殘留佔位符', () => {
     const html = buildEntryTemplate({ t });
     assert.equal(typeof html, 'string');
     const cards = html.match(/data-type="/g) || [];

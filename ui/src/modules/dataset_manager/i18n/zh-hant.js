@@ -131,6 +131,7 @@
     "DSM_VALIDATE_NO_LABEL": "尚未指定 Label 欄位。",
     "DSM_VALIDATE_NO_FEATURES": "尚未指定 Feature 欄位。",
     "DSM_VALIDATE_NO_SAMPLES": "尚未匯入任何影像。請選擇影像資料夾，或使用攝影機拍攝。",
+    "DSM_VALIDATE_NO_SAMPLES_FEATURE": "尚未採集任何特徵樣本。請啟動攝影機後點「擷取特徵點」累計樣本。",
 
     // 影像分類標籤校正模式 (Image classification label correction)
     "DSM_CLASSIFY_MODE_TITLE": "標註 — 影像分類校正",
@@ -171,13 +172,29 @@
     "DSM_ENTRY_DESC_OBJECT_DETECTION": "拉框標註物件位置（bbox）",
     "DSM_ENTRY_DESC_LINE_FOLLOWING": "標註線段走向（line）",
     "DSM_ENTRY_DESC_TABLE": "匯入 CSV / JSON 表格資料",
-    "DSM_ENTRY_DESC_FEATURE": "擷取 MediaPipe 特徵點（開發中）",
+    "DSM_ENTRY_DESC_FEATURE": "擷取 MediaPipe 手勢與姿勢特徵點（Hand/Pose）",
     "DSM_ENTRY_DESC_SERIAL": "採集 MCU 感測器序列（開發中）",
     "DSM_DEV_BANNER_FEATURE": "特徵採集開發中，功能未完善：目前僅開放拍照與預覽，特徵點存檔即將推出",
     "DSM_DEV_BANNER_SERIAL": "序列採集開發中，功能未完善：目前尚未支援匯出與訓練",
     "DSM_SOURCE_RENAME_CONFIRM": "來源已變更為「%1」，但目前資料集名稱為「%2」。\n是否自動更新資料集名稱為「%1」？\n\n（若選擇「取消」將維持「%2」，後續標註進度會儲存至 dataset/%2/，可能覆寫既有進度。若要另立新的資料集，建議先自行複製來源資料夾後再匯入。）",
     "DSM_SOURCE_COLLISION_CONFIRM": "不同來源資料夾使用了相同名稱「%1」，標註進度將寫入並可能覆寫 dataset/%1/ 的既有進度。\n仍要繼續嗎？",
     "DSM_IMPORT_CANCELLED": "已取消匯入",
-    "DSM_SOURCE_KEPT_STATUS": "資料集名稱維持「%1」；標註進度將儲存至 dataset/%1/"
+    "DSM_SOURCE_KEPT_STATUS": "資料集名稱維持「%1」；標註進度將儲存至 dataset/%1/",
+
+    // M4 特徵 live 採集
+    "DSM_FEATURE_PANEL_HINT": "啟動攝影機後，點「擷取特徵點」依目前標籤累計一筆樣本（MediaPipe Hand/Pose 關鍵點）",
+    "DSM_FEATURE_USE_Z": "包含 z 座標（維度較高，含深度）",
+    "DSM_FEATURE_COLLECT": "🧬 擷取特徵點",
+    "DSM_FEATURE_CAM_READY": "📷 相機預覽已開啟，可開始擷取特徵點",
+    "DSM_FEATURE_NO_LABEL": "請先新增並選擇一個標籤",
+    "DSM_FEATURE_USEZ_LOCKED": "⚠️ 已採集樣本，無法切換是否含 z；請清除樣本或改用 file 模式匯入",
+    "DSM_FEATURE_MEDIAPIPE_MISSING": "❌ MediaPipe 未安裝，無法啟用 live 特徵採集；請改用 file 匯入或安裝 mediapipe",
+    "DSM_FEATURE_COLLECT_FAILED": "❌ 擷取特徵點失敗: %1",
+    "DSM_FEATURE_HAND": "手部 ✓",
+    "DSM_FEATURE_NO_HAND": "手部 ✕",
+    "DSM_FEATURE_POSE": "姿勢 ✓",
+    "DSM_FEATURE_NO_POSE": "姿勢 ✕",
+    "DSM_FEATURE_COLLECTED": "✅ 已累計 1 筆（%1）",
+    "DSM_FEATURE_ADD_LABEL_PROMPT": "請輸入特徵樣本標籤名稱"
   });
 })(Blockly);

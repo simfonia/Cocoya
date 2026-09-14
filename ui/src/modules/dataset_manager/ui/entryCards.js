@@ -11,7 +11,7 @@ export const TYPE_CATALOG = [
     { id: 'object_detection', status: 'stable', modes: ['live', 'file'] },
     { id: 'line_following', status: 'stable', modes: ['live', 'file'] },
     { id: 'table', status: 'stable', modes: ['file'] },
-    { id: 'feature', status: 'dev', modes: ['file'] },
+    { id: 'feature', status: 'dev', modes: ['live', 'file'] }, // M4 復原徽章：實測問題多，先標回開發中（typePolicy 仍 stable，匯出/訓練可繼續除錯）
     { id: 'serial', status: 'dev', modes: ['file'] }
 ];
 

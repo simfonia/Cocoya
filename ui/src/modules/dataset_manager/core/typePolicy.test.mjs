@@ -25,18 +25,18 @@ test('標註檢查：僅 object_detection/line_following；未分類僅 object_d
     assert.equal(needsUnclassifiedCheck('line_following'), false);
 });
 
-test('分類校正：僅 image；開發中：feature/serial', () => {
+test('分類校正：僅 image；開發中：serial（feature 已轉正式）', () => {
     assert.equal(isClassificationType('image'), true);
     assert.equal(isClassificationType('object_detection'), false);
-    assert.equal(isDevType('feature'), true);
+    assert.equal(isDevType('feature'), false);
     assert.equal(isDevType('serial'), true);
     assert.equal(isDevType('table'), false);
 });
 
-test('allowedModes：影像系 live+file，表格系 file；未知 fallback file', () => {
+test('allowedModes：影像系 live+file，feature live+file，表格系 file；未知 fallback file', () => {
     assert.deepEqual(allowedModes('image'), ['live', 'file']);
     assert.deepEqual(allowedModes('table'), ['file']);
-    assert.deepEqual(allowedModes('feature'), ['file']);
+    assert.deepEqual(allowedModes('feature'), ['live', 'file']);
     assert.deepEqual(allowedModes('serial'), ['file']);
     assert.deepEqual(allowedModes('unknown'), ['file']);
 });

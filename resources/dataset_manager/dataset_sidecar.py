@@ -46,6 +46,17 @@ class DatasetSidecar:
         self.camera = CameraService()
         self.running = True
         self.last_camera_running = False
+        self.feature = None  # MediaPipeService lazy 實例（collectFeature 首次使用才初始化）
+
+    def _get_feature_service(self):
+        """取得（惰性初始化）MediaPipe 特徵服務。回 None 表示缺裝。"""
+        if self.feature is None:
+            try:
+                from media_pipe_service import MediaPipeService
+                self.feature = MediaPipeService()
+            except Exception:
+                self.feature = None
+        return self.feature
 
     def _monitor_camera(self):
         """背景監控攝影機狀態，若手動關閉則主動回報"""
@@ -119,6 +130,56 @@ class DatasetSidecar:
                         print(f"[Sidecar Log] Capture failed", file=sys.stderr)
                         self.send_response(request_id, {"success": False, "error": "Capture failed"})
 
+                elif command == "collectFeature":
+                    # M4：特徵採集——取目前相機幀 → MediaPipe 提取 Hand/Pose landmarks → 回傳
+                    # 前端持有 schema（featureSchema.js）與 row 組裝，sidecar 僅回傳原始 landmark 結構。
+                    label = msg.get("label", "unlabeled")
+                    use_z = bool(msg.get("useZ", False))
+                    print(f"[Sidecar Log] Collecting feature for label: {label} (use_z={use_z})", file=sys.stderr)
+
+                    if not self.camera.is_running():
+                        self.send_response(request_id, {"success": False, "error": "攝影機預覽已關閉"})
+                        continue
+
+                    frame = self.camera.get_current_frame()
+                    if frame is None:
+                        self.send_response(request_id, {"success": False, "error": "尚無可用影像幀"})
+                        continue
+
+                    svc = self._get_feature_service()
+                    if svc is None or not getattr(svc, "enabled", False):
+                        self.send_response(request_id, {
+                            "success": False,
+                            "errorCode": "FEATURE_MEDIAPIPE_MISSING",
+                            "error": "MediaPipe 未安裝或初始化失敗，無法採集特徵"
+                        })
+                        continue
+
+                    try:
+                        result = svc.extract_landmarks(frame, use_z=use_z)
+                    except Exception as e:
+                        print(f"[Sidecar Log] Feature extraction failed: {str(e)}", file=sys.stderr)
+                        self.send_response(request_id, {"success": False, "error": "特徵提取失敗: " + str(e)})
+                        continue
+
+                    if not result.get("available"):
+                        self.send_response(request_id, {
+                            "success": False,
+                            "errorCode": "FEATURE_MEDIAPIPE_MISSING",
+                            "error": "MediaPipe 不可用，無法採集特徵"
+                        })
+                        continue
+
+                    self.send_response(request_id, {
+                        "success": True,
+                        "label": label,
+                        "useZ": use_z,
+                        "hand_detected": result.get("hand_detected", False),
+                        "pose_detected": result.get("pose_detected", False),
+                        "hand": result.get("hand"),
+                        "pose": result.get("pose")
+                    })
+
                 elif command == "exportDataset":
                     source_dir = msg.get("sourceDir")
                     output_zip = msg.get("outputZip")
@@ -182,8 +243,9 @@ class DatasetSidecar:
                                 
                                 print(f"[Sidecar Log] Wrote YOLO labels for {len(samples)} images", file=sys.stderr)
 
-                            elif project_type == "table" and samples:
-                                # M-T1：表格 → data.csv（欄序 = schema.columns 順序，UTF-8）
+                            elif project_type in ("table", "feature") and samples:
+                                # M-T1：表格 → data.csv；M4：feature 同款分流 → data.csv
+                                # （欄序 = schema.columns 順序，UTF-8；truncated 警告沿用）
                                 columns = spec.get("schema", {}).get("columns", [])
                                 col_names = [c.get("name", "") for c in columns if c.get("name")]
                                 csv_path = os.path.join(source_dir, "data.csv")
@@ -844,7 +906,8 @@ class DatasetSidecar:
                                 "classifier": "classifier_train.py",
                                 "detector": "detector_train.py",
                                 "line_follower": "line_follower_train.py",
-                                "table": "table_train.py"
+                                "table": "table_train.py",
+                                "feature": "feature_train.py"
                             }
                             script_name = task_scripts.get(str(task_type).lower(), "classifier_train.py")
                             script_path = os.path.join(os.path.dirname(__file__), "..", "..", "train_templates", task_type, script_name)

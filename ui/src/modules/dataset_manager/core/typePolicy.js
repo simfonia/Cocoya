@@ -6,12 +6,12 @@
  */
 
 const IMAGE_TYPES = ['image', 'object_detection', 'line_following'];
-const DEV_TYPES = ['feature', 'serial'];
-const STABLE_TYPES = ['image', 'object_detection', 'line_following', 'table'];
+const DEV_TYPES = ['serial'];
+const STABLE_TYPES = ['image', 'object_detection', 'line_following', 'table', 'feature'];
 
 const TYPE_TO_MODES_MAP = {
     table: ['file'],
-    feature: ['file'],
+    feature: ['live', 'file'],
     serial: ['file'],
     image: ['live', 'file'],
     object_detection: ['live', 'file'],

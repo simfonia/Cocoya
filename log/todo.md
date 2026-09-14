@@ -29,13 +29,24 @@
   - [x] L-3：`line_follower/line_follower_train.py`（重用 detector Dense(4,sigmoid) 回歸頭，語意為端點；MSE＋報告）
   - [x] 實機：table 分類/回歸訓練跑通＋f32 TFLite＋labels.txt；line 訓練跑通＋f32 TFLite；sidecar exportDataset e2e（`temp_scripts/m3_export_e2e.py`，含逗號 CSV 引號＋未標註跳過）全 PASS
   - [ ] T-5/L-5 殘：table int8 量化本機驗證（命令逾時，背景 job 執行中）；VSIX+Tauri 雙平台 GUI 實機（UI 匯出→訓練維）——使用者 backlog
-- [ ] M4：特徵最小可用（M-F1）；M5：文件＋清理——計畫 `log/plan/DatasetManagerFeatureMinimalM4.md`（Phase 0~5＋風險評估，2026-09-12 定稿）
-  - [ ] 決策待拍板（施工前）：①採集範圍（納入 live 特徵採集 UI Phase 4 與否）②點維度（含 z=162 或僅 xy=108）③訓練檔（新建 feature/feature_train.py 或映射 table/table_train.py）
-  - [ ] Phase 1：sidecar 特徵提取（media_pipe_service.py 重寫）＋collectFeature＋缺裝降級
-  - [ ] Phase 2：匯出分流（feature→data.csv）＋解封 exportUseCases/typePolicy/entryCards
-  - [ ] Phase 3：訓練管線 feature_train.py＋trainLocal/trainRemote 幽靈映射收斂
-  - [ ] Phase 4（選配）：DM 前端 live 採集 panel
-  - [ ] Phase 5：i18n/主題/測試/文件/清理
+- [ ] M4：特徵最小可用（M-F1）；M5：文件＋清理——計畫 `log/plan/DatasetManagerFeatureMinimalM4.md`（Phase 0~5＋風險評估，2026-09-12 定稿；決策 2026-09-14 拍板）
+  - [x] ✅ 決策拍板：①採集=納入完整 Phase 4 live 採集 panel ②點維度=採集時選含 z 與否（動態 schema）③訓練檔=新建 feature/feature_train.py
+  - [x] Phase 1：sidecar 特徵提取（media_pipe_service.py 重寫 extract_landmarks(frame, use_z)）＋collectFeature＋缺裝降級 FEATURE_MEDIAPIPE_MISSING
+  - [x] Phase 2：匯出分流（feature→data.csv）＋解封 exportUseCases/typePolicy/entryCards（feature 轉 stable，modes live+file）
+  - [x] Phase 3：訓練管線 feature_train.py（動態 num_features）＋trainLocal/trainRemote 幽靈映射收斂
+  - [x] Phase 4：DM 前端 live 採集 panel（ui/featurePanel.js＋相機＋特徵擷取＋含 z 開關＋依標籤累計 row）
+  - [x] Phase 5：i18n（DSM_FEATURE_* zh/en parity）/測試 116/116＋vite build＋cargo check＋py_compile／文件（FILE_STRUCTURE/plan §8）
+  - [x] Phase 5 補修：feature live 警示仍顯示 file 模式訊息——spec.js validate() 新增 isFeatureLive 豁免分支＋DSM_VALIDATE_NO_SAMPLES_FEATURE（119/119 PASS）
+  - [ ] 雙平台 GUI 實機（VSIX+Tauri live 採集→匯出→訓練整鏈）＋三主題目視——使用者 backlog
+  - [x] 徽章復原（2026-09-14）：實測問題多，entryCards feature 標回 dev 徽章（typePolicy 維持 stable，匯出/訓練可繼續除錯）；entryCards.test 同步（119/119 PASS）
+- [ ] M4-FEATURE 除錯任務（使用者實測回報，待逐項處理）
+  - [ ] 實測問題盤點：請使用者提供具體問題清單（操作步驟／預期 vs 實際／截圖），逐項登記為子任務
+  - [ ] 已知線索 ①：live 模式警示訊息（已修 isFeatureLive 豁免，需複驗含 z 開關、採集後欄位/統計同步）
+  - [ ] 已知線索 ②：live 採集整鏈實機驗證——相機預覽→擷取特徵點→依標籤累計 row→表格預覽→存讀進度（dataset.json samples/schema 一致性）
+  - [ ] 已知線索 ③：匯出分流——feature spec（動態 columns 108/162 維）→ sidecar exportDataset→data.csv 欄序/UTF-8/truncated 警告
+  - [ ] 已知線索 ④：訓練整鏈——feature_train.py 動態 num_features、分類/回歸分層切分、TFLite 產出
+  - [ ] 已知線索 ⑤：MediaPipe 缺裝降級路徑（FEATURE_MEDIAPIPE_MISSING 提示＋file 模式回退）與相機燈點狀態
+  - [ ] 已知線索 ⑥：file 模式（CSV/JSON 匯入）與 live 混用情境的欄位衝突防護（spec.js 註記：file 匯入表格樣本不與 live 混用）
 
 
 ### tauri-codegen 產生 typed invoke (待辦, 2026-08-19)
