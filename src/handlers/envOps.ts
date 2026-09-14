@@ -33,6 +33,7 @@ export class EnvOpsHandler {
         const checkScript = `
 import importlib.util
 import json
+import platform
 import sys
 
 modules = ${JSON.stringify(modules)}
@@ -42,50 +43,162 @@ for m in modules:
         results[m] = importlib.util.find_spec(m) is not None
     except:
         results[m] = False
-print(json.dumps(results))
+print(json.dumps({
+    "results": results,
+    "pythonResolvedPath": sys.executable,
+    "pythonVersion": platform.python_version()
+}))
         `.trim();
 
         const { execFile } = require('child_process');
-        
-        execFile(pythonPath, ['-c', checkScript], (error: any, stdout: string) => {
+
+        // UTF-8 I/O 鐵律：Windows 下 Python 輸出若為 cp950，父端以 UTF-8 解讀會亂碼
+        execFile(pythonPath, ['-c', checkScript], {
+            env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' },
+            maxBuffer: 1024 * 1024
+        }, (error: any, stdout: string) => {
             let results: any = {};
+            // pythonValid：路徑是否真的指向可用的 Python。
+            // 這修掉「Python 不存在」與「Python 正常但沒裝套件」在 UI 上長得一樣的問題
+            // （兩者都顯示全部未安裝 → 使用者會去按安裝，但 pip 必然也失敗）。
+            let pythonValid = !error;
+            let pythonResolvedPath = '';
+            let pythonVersion = '';
+            let pythonError = '';
             if (!error) {
                 try {
-                    results = JSON.parse(stdout.trim());
+                    const parsed = JSON.parse(stdout.trim());
+                    results = parsed.results || {};
+                    pythonResolvedPath = parsed.pythonResolvedPath || '';
+                    pythonVersion = parsed.pythonVersion || '';
                 } catch (e) {
                     console.error('[Cocoya] Failed to parse environment check output:', e);
                     modules.forEach(m => results[m] = false);
+                    pythonValid = false;
+                    pythonError = 'PARSE_FAILED';
                 }
             } else {
                 modules.forEach(m => results[m] = false);
+                pythonError = String(error.message || error);
             }
-            
+
             // 使用 SSOT JSON 的模組定義
             const moduleDefinitions = moduleDefs.filter(m => modules.includes(m.id));
-            
-            console.log('[Cocoya] Sending environmentStatus:', { 
-                command: 'environmentStatus', 
+
+            console.log('[Cocoya] Sending environmentStatus:', {
+                command: 'environmentStatus',
                 resultsCount: Object.keys(results).length,
-                modulesCount: moduleDefinitions.length 
+                modulesCount: moduleDefinitions.length,
+                pythonValid
             });
-            
-            this.manager.panel.webview.postMessage({ 
-                command: 'environmentStatus', 
+
+            this.manager.panel.webview.postMessage({
+                command: 'environmentStatus',
                 results,
-                modules: moduleDefinitions
+                modules: moduleDefinitions,
+                pythonValid,
+                pythonResolvedPath,
+                pythonVersion,
+                pythonError
             });
         });
     }
 
-    public async handleInstallModule(moduleName: string, pipPackage?: string) {
-        let pythonPath = (this.manager.context.globalState as any).get('pythonPath', 'python') as string;
-        let terminal = vscode.window.terminals.find(t => t.name === 'Cocoya Environment');
-        if (!terminal) terminal = vscode.window.createTerminal('Cocoya Environment');
-        
-        terminal.show();
-        terminal.sendText(`& "${pythonPath}" -m pip install ${pipPackage || moduleName} --user --no-warn-script-location`);
-        
-        setTimeout(() => this.handleCheckEnvironment(), 5000);
+    /**
+     * 安裝單一 Python 套件。
+     *
+     * 舊作法的兩個根本問題（本次修正）：
+     * 1. 輸出送到 VS Code 原生終端機 → 診斷 modal 開著時使用者看不到（pip 進度是 modal 的內容）。
+     * 2. 靠 `setTimeout(handleCheckEnvironment, 5000)` 猜完成時間 → tensorflow 要 1~3 分鐘，
+     *    5 秒後重檢必然還是「未安裝」，狀態更新是假的。
+     *
+     * 新作法：spawn 獨立進程，stdout/stderr 轉為 `installModuleLog` 事件，
+     * 以 `close`（真實結束訊號）發 `installModuleDone` 驅動前端重檢。
+     */
+    public async handleInstallModule(moduleId: string, pipPackage?: string, moduleDisplay?: string) {
+        const post = (msg: any) => this.manager.panel.webview.postMessage(msg);
+        const pipPkg = (pipPackage && pipPackage.trim()) ? pipPackage.trim() : moduleId;
+
+        // 防連點／防並行：同一時間只允許一個 pip 安裝（並行 pip 會互相鎖檔）
+        if (this.manager.installChildProcess) {
+            post({
+                command: 'installModuleDone', moduleId, success: false,
+                exitCode: null, aborted: false, errorCode: 'INSTALL_ALREADY_RUNNING'
+            });
+            return;
+        }
+
+        const pythonPath = this.manager.getPythonPath();
+
+        // --progress-bar off：pip 進度條以 \r 原地刷新，逐行讀取會變破碎行
+        const child: any = spawn(pythonPath, [
+            '-m', 'pip', 'install', pipPkg,
+            '--user',
+            '--no-warn-script-location',
+            '--progress-bar', 'off',
+            '--disable-pip-version-check'
+        ], {
+            // UTF-8 I/O 鐵律
+            env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' }
+        });
+
+        this.manager.installChildProcess = child;
+        let doneEmitted = false;
+
+        post({ command: 'installModuleLog', moduleId, text: `$ pip install ${pipPkg} --user\n`, stream: 'out' });
+
+        const streamLog = (data: Buffer, stream: 'out' | 'err') => {
+            post({ command: 'installModuleLog', moduleId, text: data.toString('utf8'), stream });
+        };
+        if (child.stdout) child.stdout.on('data', (d: Buffer) => streamLog(d, 'out'));
+        if (child.stderr) child.stderr.on('data', (d: Buffer) => streamLog(d, 'err'));
+
+        const finish = (payload: any) => {
+            if (doneEmitted) return;
+            doneEmitted = true;
+            if (this.manager.installChildProcess === child) this.manager.installChildProcess = null;
+            post({ command: 'installModuleDone', moduleId, ...payload });
+        };
+
+        // spawn 本身失敗（如 python 路徑無效）→ Node 以 error 事件非同步回報
+        child.on('error', (err: any) => {
+            finish({ success: false, exitCode: null, aborted: false, errorCode: 'SPAWN_FAILED', error: String((err && err.message) || err) });
+        });
+
+        child.on('close', (code: number | null) => {
+            if (child.__cocoyaAborted) return; // 中止已自行發送 done，避免重複
+            finish({ success: code === 0, exitCode: code, aborted: false });
+        });
+    }
+
+    /**
+     * 中止進行中的安裝（終止子進程）。
+     *
+     * 精準用詞：這是「中止安裝」，**不是**「卸載」（移除已安裝套件）。
+     * pip 安裝不是原子操作，中止不會 rollback；已下載的 wheel 留在 pip 快取（無害，重裝會重用）。
+     * 由於中止後環境狀態未知，前端會強制重檢該套件，不假設其結果。
+     */
+    public handleAbortInstall() {
+        const child: any = this.manager.installChildProcess;
+        if (!child) return;
+        this.manager.installChildProcess = null;
+        child.__cocoyaAborted = true;
+
+        // Windows：pip 會 spawn build backend 子進程，child.kill() 只殺直接子進程。
+        // 必須用 taskkill /T 殺整棵進程樹，否則殘留的子進程會持有檔案鎖導致重試失敗。
+        if (process.platform === 'win32' && child.pid) {
+            try {
+                require('child_process').execFile('taskkill', ['/F', '/T', '/PID', String(child.pid)], () => { /* noop */ });
+            } catch (e) {
+                console.error('[Cocoya] taskkill failed, falling back to kill():', e);
+            }
+        }
+        try { child.kill(); } catch (e) { /* 進程可能已結束 */ }
+
+        this.manager.panel.webview.postMessage({
+            command: 'installModuleDone', moduleId: null, success: false,
+            exitCode: null, aborted: true
+        });
     }
 
     public async handleCheckRemoteEnvironment(message: any) {

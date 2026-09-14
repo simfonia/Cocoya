@@ -59,6 +59,17 @@ pub async fn start_sidecar(
         return Err(format!("Sidecar script not found: {}", script_path.display()));
     }
 
+    // 2.5 Python 直譯器存在性驗證：含路徑分隔符者直接檢查檔案是否存在
+    // （裸指令如 'python' 交由 PATH 解析，spawn 失敗時下方統一回 SIDECAR_START_FAILED 前綴）
+    if python_path.contains('\\') || python_path.contains('/') {
+        if !std::path::Path::new(&python_path).exists() {
+            return Err(format!(
+                "SIDECAR_START_FAILED: Python interpreter not found: {}. 請於硬體頁設定有效的 Python 路徑",
+                python_path
+            ));
+        }
+    }
+
     // 3. 啟動進程
     // Windows: 隱藏 console 視窗（Tauri 為 GUI subsystem，若不設會在遠端訓練時跳出 python 黑視窗）
     let mut cmd = Command::new(&python_path);
@@ -75,7 +86,18 @@ pub async fn start_sidecar(
     }
     let mut child = cmd
         .spawn()
-        .map_err(|e| format!("Failed to start sidecar: {}", e))?;
+        .map_err(|e| format!("SIDECAR_START_FAILED: failed to spawn python '{}': {}", python_path, e))?;
+
+    // 3.5 存活檢查：spawn 成功不代表 sidecar 活著（Python 可執行但缺 opencv-python 時，
+    // dataset_sidecar.py 會在 import cv2 階段立即退出）。等 700ms 後 try_wait，
+    // 已退出即回結構化錯誤，避免前端 write stdin 時才得到難懂的 os error 232（管道正關閉中）。
+    std::thread::sleep(std::time::Duration::from_millis(700));
+    if let Ok(Some(_status)) = child.try_wait() {
+        return Err(
+            "SIDECAR_START_FAILED: sidecar exited immediately. 請確認 Python 路徑有效且已安裝 opencv-python（pip install opencv-python）"
+                .to_string(),
+        );
+    }
 
     let stdin = child.stdin.take().ok_or_else(|| "Failed to open sidecar stdin".to_string())?;
     let stdout = child.stdout.take().ok_or_else(|| "Failed to open sidecar stdout".to_string())?;

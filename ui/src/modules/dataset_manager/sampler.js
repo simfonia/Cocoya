@@ -162,6 +162,12 @@ export const Sampler = {
             });
             const message = await promise;
             const running = !!message.success;
+            if (!running) {
+                // 記錄失敗原因供 ui_layout onStartCamera 顯示友善提示（如 SIDECAR_START_FAILED）
+                this.state.lastCameraError = message.error || (message.errorCode ? String(message.errorCode) : null);
+            } else {
+                this.state.lastCameraError = null;
+            }
             const oldStatus = this.state.isCamRunning;
             this.state.isCamRunning = running;
             if (running) this.startStatusPoll();
@@ -171,6 +177,7 @@ export const Sampler = {
             return running;
         } catch (e) {
             console.error('[Sampler] Camera start failed:', e.message);
+            this.state.lastCameraError = e.message || String(e);
             return false;
         }
     },

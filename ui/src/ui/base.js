@@ -369,8 +369,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             }
         }
         
-        // 綁定設定與功能按鈕
-        bind('btn-set-python-path', 'setPythonPath');
+        // 綁定設定與功能按鈕（Python 路徑 + 套件檢查已整合為單一「Python 環境設定」視窗）
         
         // 綁定捲軸優化插件切換
         const scrollOptionsBtn = document.getElementById('btn-toggle-scroll-options');
@@ -412,6 +411,15 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                     e.stopPropagation();
                     const nextLang = opt.getAttribute('data-lang');
                     if (nextLang === currentLang) return; // 點擊目前語系側不動作
+                    // 逃逸路徑 E2 守門：語系切換會 reloadWebview（頁面真重載），
+                    // 會清空前端安裝狀態而後端 pip 仍在跑 → 進度再也看不到（幽靈安裝），
+                    // 重開 modal 時重檢還會回報「未安裝」而誘發重複安裝。
+                    if (window.CocoyaUI && window.CocoyaUI.isEnvInstallActive && window.CocoyaUI.isEnvInstallActive()) {
+                        const lockMsg = (window.Blockly && Blockly.Msg['DIAG_LOCK_SWITCH'])
+                            || 'Python environment is installing; cannot switch language/theme right now';
+                        if (window.CocoyaBridge && window.CocoyaBridge.alert) window.CocoyaBridge.alert(lockMsg);
+                        return;
+                    }
                     try { localStorage.setItem('cocoya_lang', nextLang); } catch (err) { }
                     if (window.CocoyaApp && window.CocoyaApp.snapshotWorkspaceForReload) window.CocoyaApp.snapshotWorkspaceForReload();
                     if (window.CocoyaBridge && typeof window.CocoyaBridge.send === 'function') {
@@ -757,12 +765,13 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             });
         }
 
-        // 綁定診斷按鈕
-        const diagBtn = document.getElementById('btn-diagnose');
-        if (diagBtn) {
-            diagBtn.onclick = () => {
+        // 綁定 Python 環境設定按鈕（toolbar 設定下拉；原 btn-set-python-path + btn-diagnose 合併）
+        const envBtn = document.getElementById('btn-python-env');
+        if (envBtn) {
+            envBtn.onclick = () => {
+                // showDiagnoseModal 內部即負責送 getPythonPath + checkEnvironment，
+                // 此處不再重複送（否則會檢查兩次並互相覆蓋清單）
                 if (self.showDiagnoseModal) self.showDiagnoseModal();
-                postMessageFunc({ command: 'checkEnvironment' });
             };
         }
 

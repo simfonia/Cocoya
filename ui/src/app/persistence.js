@@ -264,16 +264,14 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         const openBtn = home.querySelector('#startup-open');
         const examplesBtn = home.querySelector('#startup-examples');
         const summary = home.querySelector('#startup-settings-panel summary');
-        const setPythonBtn = home.querySelector('#startup-set-python-path');
-        const diagnoseBtn = home.querySelector('#startup-diagnose');
+        const envBtn = home.querySelector('#startup-python-env');
         const themeSelect = home.querySelector('#startup-theme');
         const newOptions = home.querySelectorAll('.startup-new-option');
         if (newBtn) newBtn.textContent = (Blockly.Msg['BKY_STARTUP_NEW'] || '開新專案');
         if (openBtn) openBtn.textContent = (Blockly.Msg['BKY_STARTUP_OPEN'] || '開啟專案');
         if (examplesBtn) examplesBtn.textContent = (Blockly.Msg['BKY_STARTUP_EXAMPLES'] || '開啟範例');
         if (summary) summary.textContent = (Blockly.Msg['BKY_STARTUP_SETTINGS'] || '⚙ 快速設定');
-        if (setPythonBtn) setPythonBtn.textContent = (Blockly.Msg['BKY_STARTUP_PYTHON_PATH'] || '設定 Python 路徑');
-        if (diagnoseBtn) diagnoseBtn.textContent = (Blockly.Msg['BKY_STARTUP_DIAGNOSE'] || '檢查 Python 套件');
+        if (envBtn) envBtn.textContent = (Blockly.Msg['BKY_STARTUP_PYTHON_ENV'] || '設定 Python 環境');
         for (const opt of newOptions) {
             const platform = opt.getAttribute('data-platform');
             if (platform === 'PC') opt.textContent = (Blockly.Msg['TLB_MODE_PC'] || '💻 Python (PC)');
@@ -311,6 +309,19 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             }
         }
         this._bindStartupHome();
+        // 首次執行：尚未完成過 Python 環境設定 → 自動彈出環境設定視窗（僅一次；關閉視窗即寫入完成旗標）
+        let envSetupDone = false;
+        try { envSetupDone = localStorage.getItem('cocoya_env_setup_done') === 'true'; } catch (e) { }
+        if (!envSetupDone) {
+            setTimeout(() => {
+                // 首頁仍顯示中才彈出（使用者若已先開新/開啟專案離開首頁則略過）
+                const homeNow = document.getElementById('startup-home');
+                if (homeNow && homeNow.style.display !== 'none' && window.CocoyaUI && window.CocoyaUI.showDiagnoseModal) {
+                    // showDiagnoseModal 內部即送 getPythonPath + checkEnvironment，此處不重複送
+                    window.CocoyaUI.showDiagnoseModal();
+                }
+            }, 900);
+        }
         home.style.display = 'flex';
     },
 
@@ -330,6 +341,16 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
      * 由使用者明確「開新/開啟」重建一致性狀態。
      */
     handleReloadRequest: async function() {
+        // 逃逸路徑 E1 守門：重新載入會 resetWorkspace + 回首頁，
+        // 前端安裝狀態雖在同一頁記憶體中保留，但 resetWorkspace 會讓使用者離開
+        // 正在設定的環境上下文；且安裝中不該被其他流程打斷。
+        // 安裝中直接擋下並提示（唯一出口是「中止安裝」）。
+        if (window.CocoyaUI && window.CocoyaUI.isEnvInstallActive && window.CocoyaUI.isEnvInstallActive()) {
+            const lockMsg = (Blockly.Msg['DIAG_LOCK_RELOAD'])
+                || 'Python environment is installing; cannot reload right now';
+            if (window.CocoyaBridge && window.CocoyaBridge.alert) window.CocoyaBridge.alert(lockMsg);
+            return;
+        }
         if (this.isDirty) {
             const discard = await window.CocoyaBridge.confirm(
                 (Blockly.Msg['MSG_RELOAD_HOME_CONFIRM'] || '重新載入將回到啟動首頁，目前未儲存的變更將遺失。確定嗎？')
@@ -366,12 +387,10 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         openBtn.onclick = () => this.startOpenProjectFromHome();
         const examplesBtn = document.getElementById('startup-examples');
         if (examplesBtn) examplesBtn.onclick = () => window.CocoyaBridge.send('openExamples', { includeXml: true });
-        const setPythonBtn = document.getElementById('startup-set-python-path');
-        if (setPythonBtn) setPythonBtn.onclick = () => window.CocoyaBridge.send('setPythonPath');
-        const diagnoseBtn = document.getElementById('startup-diagnose');
-        if (diagnoseBtn) diagnoseBtn.onclick = () => {
+        const startupEnvBtn = document.getElementById('startup-python-env');
+        if (startupEnvBtn) startupEnvBtn.onclick = () => {
+            // showDiagnoseModal 內部即負責送 getPythonPath + checkEnvironment，此處不重複送
             if (window.CocoyaUI && window.CocoyaUI.showDiagnoseModal) window.CocoyaUI.showDiagnoseModal();
-            window.CocoyaBridge.send('checkEnvironment');
         };
         // 語系膠囊開關（右上角）：點擊任一側 → 存偏好 → 重載 webview（VSIX 需由 host 重建 HTML，避免白屏）
         const langSwitch = document.getElementById('startup-lang-switch');
@@ -383,6 +402,14 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
                     e.stopPropagation();
                     const nextLang = opt.getAttribute('data-lang');
                     if (nextLang === currentLang) return; // 點擊目前語系側不動作
+                    // 逃逸路徑 E2 守門：語系切換會 reloadWebview（頁面真重載），
+                    // 清空前端安裝狀態而後端 pip 仍在跑 → 形成看不到進度的幽靈安裝
+                    if (window.CocoyaUI && window.CocoyaUI.isEnvInstallActive && window.CocoyaUI.isEnvInstallActive()) {
+                        const lockMsg = (window.Blockly && Blockly.Msg['DIAG_LOCK_SWITCH'])
+                            || 'Python environment is installing; cannot switch language/theme right now';
+                        if (window.CocoyaBridge && window.CocoyaBridge.alert) window.CocoyaBridge.alert(lockMsg);
+                        return;
+                    }
                     try { localStorage.setItem('cocoya_lang', nextLang); } catch (err) { }
                     if (window.CocoyaApp && window.CocoyaApp.snapshotWorkspaceForReload) window.CocoyaApp.snapshotWorkspaceForReload();
                     if (window.CocoyaBridge && typeof window.CocoyaBridge.send === 'function') {

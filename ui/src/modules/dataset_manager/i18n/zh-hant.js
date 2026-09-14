@@ -112,6 +112,8 @@
     "DSM_ERROR_IMPORT_EMPTY": "檔案內容為空或格式不符",
     "DSM_ERROR_EXPORT_FAILED": "❌ 匯出失敗: %1",
     "DSM_ERROR_CAPTURE_FAILED": "❌ 採集失敗: %1",
+    "DSM_SIDECAR_START_FAILED": "❌ 無法啟動資料集服務：請於硬體頁設定有效的 Python 路徑，並確認該 Python 已安裝 opencv-python（pip install opencv-python）",
+    "DSM_SAMPLER_START_FAILED": "❌ 攝影機啟動失敗，請確認裝置後重試",
     "DSM_ERROR_EXPORT_VALIDATE": "資料集規格驗證失敗: %1",
     "DSM_ERROR_EXPORT_DEV_UNAVAILABLE": "❌ 此類型（%1）開發中，尚未支援匯出，請使用完整類型的新資料集。",
 

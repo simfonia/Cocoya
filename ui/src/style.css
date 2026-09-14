@@ -155,9 +155,9 @@ body.cocoya-dark-mode #file-breadcrumb {
     background-color: var(--cocoya-hover, #f0f0f0);
 }
 
-/* === 主題 CSS 變數（Theme Manager 套用；預設淺色，body.cocoya-dark-mode 覆寫） === */
+/* 主題 CSS 變數（Theme Manager 套用；預設淺色，body.cocoya-dark-mode 覆寫） */
 body {
-    --cocoya-overlay: rgba(255,255,255,0.97);
+    --cocoya-overlay: #ffffff;
     --cocoya-surface: #ffffff;
     --cocoya-fg: #555555;
     --cocoya-border: #dddddd;
@@ -470,16 +470,14 @@ body.cocoya-dark-mode .dropdown-item:hover img {
 #startup-home #startup-new,
 #startup-home #startup-open,
 #startup-home #startup-examples,
-#startup-home #startup-set-python-path,
-#startup-home #startup-diagnose {
+#startup-home #startup-python-env {
     transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
 
 #startup-home #startup-new:hover,
 #startup-home #startup-open:hover,
 #startup-home #startup-examples:hover,
-#startup-home #startup-set-python-path:hover,
-#startup-home #startup-diagnose:hover {
+#startup-home #startup-python-env:hover {
     background: #FE2F89 !important;
     border-color: #FE2F89;
     color: #fff !important;
@@ -1075,6 +1073,312 @@ body.cocoya-dark-mode #panel-resizer.is-dragging {
 
 .btn-install:hover {
     background: #d81b60;
+}
+
+.btn-install:disabled {
+    background: #e0a3bd;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* 確認對話框必須高於 #diagnose-modal (10050)。
+   否則「診斷 modal 開著 + 未存變更 → 按視窗 X」時，儲存確認框會被診斷 modal 蓋住：
+   使用者看不到任何提示、按鈕也點不到，而 _handleCloseDialog 的 _isClosing latch
+   會因為 promise 永不 resolve 而永久卡住 → 視窗再也關不掉（既有 bug）。 */
+#save-confirm-modal {
+    z-index: 10060;
+}
+
+/* === Python 環境設定視窗 === */
+/* 需容納 pip 輸出與進度資訊，比一般 .modal-content (400px) 寬；僅此視窗局部覆寫 */
+#diagnose-modal .modal-content {
+    width: 90%;
+    max-width: 640px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#python-path-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid #eee;
+    flex-shrink: 0;
+}
+
+.diag-path-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.diag-path-label {
+    font-size: 13px;
+    color: #666;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.diag-path-col {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.diag-path-col code {
+    font-size: 12px;
+    color: #333;
+    background: var(--cocoya-surface, #f6f6f6);
+    border: 1px solid var(--cocoya-border, #ddd);
+    border-radius: 4px;
+    padding: 4px 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 「python → C:\...\python.exe (3.11.6)」解析結果：讓使用者知道 PATH 實際解析到哪個直譯器 */
+.diag-path-resolved {
+    font-size: 11px;
+    color: #888;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-height: 14px;
+}
+
+.diag-path-select {
+    padding: 6px 14px;
+    font-size: 13px;
+    border: 1px solid var(--cocoya-border, #ccc);
+    border-radius: 4px;
+    background: var(--cocoya-surface, #f0f0f0);
+    color: var(--cocoya-text, #333);
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.diag-path-select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 路徑無效警示（預設隱藏；由 updatePythonPathDisplay 控制） */
+.diag-warning {
+    display: none;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #c62828;
+    background: #fdecea;
+    border: 1px solid #f5c6cb;
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin-top: 10px;
+    flex-shrink: 0;
+}
+
+/* 安裝進度橫幅（預設隱藏；安裝中才顯示） */
+.diag-progress {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    font-size: 12px;
+    color: #1565c0;
+    background: #e8f1fb;
+    border: 1px solid #c5dcf3;
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin-top: 10px;
+    flex-shrink: 0;
+}
+
+.diag-progress #install-progress-text {
+    flex: 1;
+    min-width: 0;
+    /* 長 pip 行（如 Downloading ...whl (589 MB)）單行省略：避免換行使 modal 高度連動閃爍 */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 停滯警告（超過 N 秒無輸出）：以橘色區分「正常慢」與「可能卡住」 */
+.diag-progress.stalled {
+    color: #e65100;
+    background: #fff4e5;
+    border-color: #ffcc80;
+}
+
+.diag-loading-text {
+    font-size: 13px;
+    color: #666;
+}
+
+.diag-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* 一鍵安裝靠左，其餘靠右 */
+.diag-footer #btn-install-all-missing {
+    margin-right: auto;
+}
+
+/* 停用狀態的統一樣式（環境安裝中的鎖定：關閉／重新檢查／一鍵安裝） */
+#diagnose-modal button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* 套件清單可捲動，標題/路徑列/頁尾固定（modal 限高 85vh 時仍可操作） */
+#diagnose-body {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+    padding: 4px 0;
+}
+
+/* 該列目前 pip 的最後一行輸出：不必展開詳細輸出就知道「有在動」 */
+.module-lastline {
+    font-family: Consolas, Monaco, monospace;
+    font-size: 11px;
+    color: #888;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 380px;
+    margin-top: 2px;
+}
+
+.module-item-main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+/* 安裝中 / 安裝失敗 狀態色（沿用既有 .status-ok / .status-missing 命名慣例） */
+.status-installing {
+    color: #1565c0;
+}
+
+.status-failed {
+    color: #e65100;
+}
+
+/* 執行中轉圈（純 CSS，無圖片相依） */
+.diag-spinner {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    margin-right: 4px;
+    border: 2px solid currentColor;
+    border-top-color: transparent;
+    border-radius: 50%;
+    vertical-align: middle;
+    animation: diag-spin 0.8s linear infinite;
+}
+
+@keyframes diag-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* === 詳細安裝輸出（預設收合）=== */
+.diag-log-wrap {
+    display: none;
+    flex-shrink: 0;
+    margin-top: 8px;
+}
+
+.diag-log-toggle {
+    background: none;
+    border: none;
+    padding: 2px 0;
+    font-size: 12px;
+    color: #1565c0;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.diagnose-install-log {
+    display: none;
+    font-family: Consolas, Monaco, monospace;
+    font-size: 11px;
+    line-height: 1.45;
+    color: #d4d4d4;
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 8px;
+    margin: 6px 0 0 0;
+    max-height: 180px;
+    overflow-y: auto;
+    /* 長 URL（pip 下載連結）不斷行會撐破 modal */
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+/* 錯誤行以紅色標示，方便在大量輸出中定位失敗原因 */
+.diagnose-install-log .log-err {
+    color: #f48771;
+}
+
+/* === 深色主題變體 === */
+body.cocoya-dark-mode #diagnose-modal .modal-header,
+body.vscode-dark #diagnose-modal .modal-header,
+body.vscode-high-contrast #diagnose-modal .modal-header {
+    color: #FE2F89;
+}
+
+body.cocoya-dark-mode #python-path-bar,
+body.vscode-dark #python-path-bar,
+body.vscode-high-contrast #python-path-bar {
+    border-bottom-color: #444;
+}
+
+body.cocoya-dark-mode .diag-path-label,
+body.vscode-dark .diag-path-label {
+    color: #aaa;
+}
+
+body.cocoya-dark-mode .diag-path-col code,
+body.vscode-dark .diag-path-col code {
+    color: #e0e0e0;
+    background: #1e1e1e;
+    border-color: #444;
+}
+
+body.cocoya-dark-mode .diag-warning,
+body.vscode-dark .diag-warning {
+    color: #f48771;
+    background: #3a2020;
+    border-color: #6b3030;
+}
+
+body.cocoya-dark-mode .diag-progress,
+body.vscode-dark .diag-progress {
+    color: #9ecbf5;
+    background: #1c2b3a;
+    border-color: #35506e;
+}
+
+body.cocoya-dark-mode .diag-progress.stalled,
+body.vscode-dark .diag-progress.stalled {
+    color: #ffb74d;
+    background: #3a2c15;
+    border-color: #6b5220;
+}
+
+body.cocoya-dark-mode .diag-loading-text,
+body.vscode-dark .diag-loading-text {
+    color: #aaa;
 }
 
 .modal-footer {

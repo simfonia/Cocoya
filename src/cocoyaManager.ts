@@ -37,6 +37,12 @@ export class CocoyaManager {
     public remoteWorkspaceRoot: string | undefined;
     public uploadBuffers: Map<string, Buffer[]> = new Map();
     public currentChildProcess: any = null; // Pseudoterminal 模式的 child process（供 stopCode 終止）
+    /**
+     * pip 安裝的 child process（供 handleAbortInstall 終止）。
+     * 必須與 currentChildProcess 分開：runCode 的停止流程會 kill currentChildProcess，
+     * 若共用會造成「執行/停止程式」誤殺進行中的套件安裝（反之亦然）。
+     */
+    public installChildProcess: any = null;
 
     // Handler 實例
     public trainingOps: TrainingOpsHandler;
@@ -194,6 +200,13 @@ export class CocoyaManager {
                 case 'setPythonPath':
                     await this.serialOps.handleSetPythonPath();
                     break;
+                case 'getPythonPath':
+                    // 環境設定視窗路徑列：回報 host globalState 中的 pythonPath
+                    this.panel.webview.postMessage({
+                        command: 'pythonPathData',
+                        pythonPath: this.getPythonPath()
+                    });
+                    break;
                 case 'runCode':
                     await this.envOps.handleRunCode(message);
                     break;
@@ -215,7 +228,10 @@ export class CocoyaManager {
                     await this.envOps.handleCheckEnvironment();
                     break;
                 case 'installModule':
-                    await this.envOps.handleInstallModule(message.module, message.pipPackage);
+                    await this.envOps.handleInstallModule(message.module, message.pipPackage, message.moduleDisplay);
+                    break;
+                case 'abortInstall':
+                    this.envOps.handleAbortInstall();
                     break;
                 case 'pickMcuModel':
                     await this.firmwareOps.handlePickMcuModel(message);

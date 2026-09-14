@@ -82,7 +82,9 @@ Notation: `key?` = Optional. **Rule: changing a Rust signature -> immediately up
 | python | sidecar_send   | command: String, payload: String | {command, payload} | Result<String, String> |
 | python | stop_sidecar   | -- | {} | Result<(), String> |
 | python | export_dataset | spec_json, source_folder_path, python_path: String | {specJson, sourceFolderPath, pythonPath} | Result<String, String> |
-| python | check_environment | python_path: String | {pythonPath} | Result<serde_json::Value, String> |
+| python | check_environment | python_path: String | {pythonPath} | Result<serde_json::Value, String>（新增欄位：results, modules, pythonValid: bool, pythonResolvedPath: String, pythonVersion: String；路徑無效時回 Ok 帶 pythonValid:false，**不再回 Err**） |
+| python | install_python_module | python_path: String, module_id: String, pip_package: String | {pythonPath, moduleId, pipPackage} | Result<(), String>（執行 `python -m pip install <pkg> --user --no-warn-script-location --progress-bar off`；事件 `install-module-log` {moduleId,text,stream} / `install-module-done` {moduleId,success,exitCode,aborted}；同視窗已有安裝進行中回 Err("INSTALL_ALREADY_RUNNING")） |
+| python | abort_install_module | -- | {} | Result<(), String>（kill 進程樹；發 `install-module-done` 帶 aborted:true；無進行中安裝時靜默回 Ok） |
 | mcu | get_serial_ports    | -- | {} | Result<Vec<SerialPortResult>, String>（欄位 camelCase：port/label/vid/pid/boardId；boardId 對應 board_defs.json，未知板空字串） |
 | mcu | setup_stable_mode   | port: String, lang: String | {port, lang} | Result<(), String> |
 | mcu | deploy_mcu          | python_path, port, code, serial_upload_only: bool, lang | {pythonPath, port, code, serialUploadOnly, lang} | Result<(), String> |

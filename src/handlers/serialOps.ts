@@ -136,6 +136,9 @@ export class SerialOpsHandler {
             const newPath = uris[0].fsPath;
             await this.manager.context.globalState.update('pythonPath', newPath);
             vscode.window.showInformationMessage(this.manager.t('MSG_PYTHON_UPDATED', newPath));
+            // 回報新路徑給環境設定視窗並自動重新檢查套件
+            this.manager.panel.webview.postMessage({ command: 'pythonPathData', pythonPath: newPath });
+            await this.manager.envOps.handleCheckEnvironment();
         }
     }
 }

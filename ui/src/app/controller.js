@@ -49,6 +49,10 @@ class AppController {
         this.handlers.set('serialPortsData', (m) => { if (this.ui.updateSerialPorts) this.ui.updateSerialPorts(m.ports); });
         this.handlers.set('serialMonitorActive', (m) => { if (this.ui.setSerialMonitorActive) this.ui.setSerialMonitorActive(m.active); });
         this.handlers.set('environmentStatus', (m) => { if (this.ui.updateEnvironmentStatus) this.ui.updateEnvironmentStatus(m); });
+        this.handlers.set('pythonPathData', (m) => { if (this.ui.updatePythonPathDisplay) this.ui.updatePythonPathDisplay(m.pythonPath); });
+        // Python 套件安裝（雙平台統一事件契約，見 hardware.js 的 _envInstall 狀態機）
+        this.handlers.set('installModuleLog', (m) => { if (this.ui.appendInstallLog) this.ui.appendInstallLog(m); });
+        this.handlers.set('installModuleDone', (m) => { if (this.ui.onInstallDone) this.ui.onInstallDone(m); });
     }
 
     /**

@@ -56,13 +56,9 @@
                             <img src="src/icons/gear-outline.png">
                         </div>
                         <div class="dropdown-content">
-                            <div class="dropdown-item" id="btn-set-python-path">
+                            <div class="dropdown-item" id="btn-python-env" title="%{BKY_TLB_SETTINGS_PYTHON_ENV}">
                                 <img src="src/icons/python.png" style="width: 16px; height: 16px; margin-right: 8px;">
-                                <span>%{BKY_TLB_SETTINGS_PYTHON_PATH}</span>
-                            </div>
-                            <div class="dropdown-item" id="btn-diagnose">
-                                <img src="src/icons/module-puzzle-1.png" style="width: 16px; height: 16px; margin-right: 8px;">
-                                <span>%{BKY_TLB_DIAGNOSE}</span>
+                                <span>%{BKY_TLB_SETTINGS_PYTHON_ENV}</span>
                             </div>
                             <div class="dropdown-item" id="btn-toggle-scroll-options">
                                 <span id="scroll-options-check" style="width: 16px; margin-right: 8px; display: inline-block;"></span>
@@ -244,20 +240,42 @@
         </div>
     </div>
 
-    <!-- 環境診斷視窗 -->
+    <!-- Python 環境設定視窗（路徑 + 套件檢查 + 安裝進度） -->
     <div id="diagnose-modal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
                 <span>%{BKY_DIAG_TITLE}</span>
             </div>
+            <div id="python-path-bar">
+                <img src="src/icons/python.png" class="diag-path-icon">
+                <span id="python-path-label" class="diag-path-label">%{BKY_DIAG_PYTHON_PATH}</span>
+                <div class="diag-path-col">
+                    <code id="python-path-value">python</code>
+                    <div id="python-path-resolved" class="diag-path-resolved"></div>
+                </div>
+                <button type="button" id="btn-python-path-select" class="btn-secondary diag-path-select">%{BKY_DIAG_PATH_SELECT}</button>
+            </div>
+            <div id="python-path-warning" class="diag-warning"></div>
+            <!-- 安裝進度橫幅：安裝中常駐（佇列進度 + 目前套件 + 已耗時 + 中止鈕） -->
+            <div id="install-progress-bar" class="diag-progress">
+                <span id="install-progress-text"></span>
+                <button type="button" id="btn-abort-install" class="btn-install">%{BKY_DIAG_STOP_INSTALL}</button>
+            </div>
             <div id="diagnose-body">
-                <p style="font-size: 13px; color: #666;">%{BKY_DIAG_LOADING}</p>
+                <p class="diag-loading-text">%{BKY_DIAG_LOADING}</p>
                 <ul class="module-list" id="module-list">
                     <!-- 動態插入 -->
                 </ul>
             </div>
-            <div class="modal-footer">
-                <button class="btn-close" onclick="document.getElementById('diagnose-modal').style.display='none'">%{BKY_MSG_CLOSE}</button>
+            <!-- 詳細安裝輸出：預設收合（pip 對 tensorflow 可吐數百行，全展開會撐爆 modal） -->
+            <div id="diagnose-install-log-wrap" class="diag-log-wrap">
+                <button type="button" id="btn-install-log-toggle" class="diag-log-toggle">%{BKY_DIAG_INSTALL_LOG_SHOW}</button>
+                <pre id="diagnose-install-log" class="diagnose-install-log"></pre>
+            </div>
+            <div class="modal-footer diag-footer">
+                <button type="button" id="btn-install-all-missing" class="btn-install">%{BKY_DIAG_INSTALL_ALL}</button>
+                <button type="button" id="btn-recheck-env" class="btn-secondary">%{BKY_DIAG_RECHECK}</button>
+                <button class="btn-close" id="btn-diag-close" onclick="(window.CocoyaUI && window.CocoyaUI.closeDiagnoseModal) ? window.CocoyaUI.closeDiagnoseModal() : (document.getElementById('diagnose-modal').style.display='none')">%{BKY_MSG_CLOSE}</button>
             </div>
         </div>
     </div>
@@ -323,7 +341,7 @@
     <script type="module" src="src/modules/dataset_manager/index.js"></script>
     <script type="module" src="src/main.js"></script>
     <!-- 啟動首頁（未錨定時顯示，兩平台共用） -->
-    <div id="startup-home" class="modal-overlay" style="display: none; z-index: 10002; align-items: center; justify-content: center; text-align: center; background: var(--cocoya-overlay, rgba(255,255,255,0.97));">
+    <div id="startup-home" class="modal-overlay" style="display: none; z-index: 10002; align-items: center; justify-content: center; text-align: center; background: var(--cocoya-overlay, #ffffff);">
         <!-- 語系開關：更新按鈕左方（膠囊 UI，與設定選單同一 .lang-switch 樣式） -->
         <span class="lang-switch" id="startup-lang-switch" role="switch" aria-label="%{BKY_STARTUP_LANG}" title="%{BKY_STARTUP_LANG}" style="z-index: 1;">
             <span class="lang-switch-opt" data-lang="zh-hant">中文</span>
@@ -351,8 +369,7 @@
                 <details>
                     <summary style="cursor: pointer; font-size: 14px; color: var(--cocoya-fg, #555); user-select: none;">%{BKY_STARTUP_SETTINGS}</summary>
                     <div style="display: flex; gap: 12px; margin-top: 12px;">
-                        <button type="button" id="startup-set-python-path" style="flex: 1; padding: 10px 12px; font-size: 13px; border: 1px solid var(--cocoya-border, #ddd); border-radius: 8px; background: var(--cocoya-surface, #fff); color: var(--cocoya-fg, #555); cursor: pointer;">設定 Python 路徑</button>
-                        <button type="button" id="startup-diagnose" style="flex: 1; padding: 10px 12px; font-size: 13px; border: 1px solid var(--cocoya-border, #ddd); border-radius: 8px; background: var(--cocoya-surface, #fff); color: var(--cocoya-fg, #555); cursor: pointer;">檢查 Python 套件</button>
+                        <button type="button" id="startup-python-env" style="flex: 1; padding: 10px 12px; font-size: 13px; border: 1px solid var(--cocoya-border, #ddd); border-radius: 8px; background: var(--cocoya-surface, #fff); color: var(--cocoya-fg, #555); cursor: pointer;">設定 Python 環境</button>
                     </div>
                     <div style="display: flex; gap: 12px; margin-top: 12px;">
                         <label style="flex: 1; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--cocoya-fg, #555);">

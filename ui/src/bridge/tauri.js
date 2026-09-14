@@ -102,10 +102,22 @@ export class BridgeTauri extends BaseBridge {
                             localStorage.setItem('pythonPath', newPath);
                             const msg = (window.Blockly?.Msg['MSG_PYTHON_UPDATED'] || 'Python path updated to: %1').replace('%1', newPath);
                             this.alert(msg);
+                            // 回報新路徑給環境設定視窗並自動重新檢查套件
+                            this._dispatchToFrontend({ command: 'pythonPathData', pythonPath: newPath });
+                            const checkData = await this.tauriInvoke('check_environment', { pythonPath: newPath });
+                            this._dispatchToFrontend({ command: 'environmentStatus', ...checkData });
                         }
                     } catch (e) {
                         if (e !== 'Canceled') console.error('[Bridge] Failed to pick python path:', e);
                     }
+                    break;
+
+                case 'getPythonPath':
+                    // 環境設定視窗路徑列：回報目前 pythonPath（Tauri 權威來源 = localStorage）
+                    this._dispatchToFrontend({
+                        command: 'pythonPathData',
+                        pythonPath: localStorage.getItem('pythonPath') || 'python'
+                    });
                     break;
 
                 case 'runCode':
@@ -942,22 +954,57 @@ export class BridgeTauri extends BaseBridge {
                         this._dispatchToFrontend({ command: 'environmentStatus', ...data });
                     } catch (e) {
                         console.error('[Bridge] Check environment failed:', e);
+                        // 明確回報「無效」而非靜默：否則 modal 會永遠停在「正在偵測…」
+                        this._dispatchToFrontend({
+                            command: 'environmentStatus',
+                            results: {}, modules: [],
+                            pythonValid: false, pythonResolvedPath: '', pythonVersion: '',
+                            pythonError: String(e)
+                        });
                     }
                     break;
 
                 case 'installModule':
+                    // 走專用 command，而非 run_python。理由：
+                    // 1. run_python 開頭會 stop_python → 會殺掉使用者正在執行的程式，
+                    //    並釋放該視窗的串列埠監看（在專案中裝套件時會誤殺）。
+                    // 2. run_python 不回報 exit code → 前端無法得知安裝完成/失敗。
+                    // 輸出改由 install-module-log / install-module-done 事件回報，
+                    // 直接顯示在環境設定視窗內（不再送往底部終端機，避免被 modal 遮住）。
                     try {
                         const pythonPath = localStorage.getItem('pythonPath') || 'python';
-                        if (window.CocoyaUI) {
-                            window.CocoyaUI.toggleTerminal(true);
-                            window.CocoyaUI.appendTerminal(`--- Installing module: ${data.moduleDisplay || data.module} ---`, 'info');
-                        }
-                        this.tauriInvoke('run_python', { 
-                            code: `import subprocess; import sys; subprocess.run(["${pythonPath}", "-m", "pip", "install", "${data.pipPackage || data.module}", "--user", "--no-warn-script-location"])`,
-                            pythonPath: pythonPath 
+                        await this.tauriInvoke('install_python_module', {
+                            pythonPath: pythonPath,
+                            moduleId: data.module,
+                            pipPackage: data.pipPackage || data.module
                         });
                     } catch (e) {
                         console.error('[Bridge] Failed to start installation:', e);
+                        // 讓前端狀態機收斂（否則列會永遠停在「安裝中…」）
+                        this._dispatchToFrontend({
+                            command: 'installModuleDone',
+                            moduleId: data.module,
+                            success: false,
+                            exitCode: null,
+                            aborted: false,
+                            errorCode: (e === 'INSTALL_ALREADY_RUNNING') ? 'INSTALL_ALREADY_RUNNING' : 'SPAWN_FAILED'
+                        });
+                    }
+                    break;
+
+                case 'abortInstall':
+                    try {
+                        await this.tauriInvoke('abort_install_module');
+                    } catch (e) {
+                        console.error('[Bridge] Failed to abort installation:', e);
+                        // 後端未能中止時仍讓前端收斂，避免 modal 卡在鎖定狀態無法關閉
+                        this._dispatchToFrontend({
+                            command: 'installModuleDone',
+                            moduleId: null,
+                            success: false,
+                            exitCode: null,
+                            aborted: true
+                        });
                     }
                     break;
 
@@ -1046,6 +1093,18 @@ export class BridgeTauri extends BaseBridge {
                 if (window.CocoyaUI) window.CocoyaUI.appendTerminal(event.payload, 'err');
             });
 
+            // Python 套件安裝輸出（Rust 以 emit_to 精準單播，僅本視窗）
+            // 刻意不送往底部終端機：環境設定 modal 是 z-index 10050 的全幕遮罩，
+            // 會把終端機面板完全蓋住——這正是「看不到安裝進度」的根因之一。
+            await appWindow.listen('install-module-log', (event) => {
+                this._dispatchToFrontend({ command: 'installModuleLog', ...(event.payload || {}) });
+            });
+
+            // 安裝結束（真實結束訊號，取代舊版前端「猜 5 秒」）
+            await appWindow.listen('install-module-done', (event) => {
+                this._dispatchToFrontend({ command: 'installModuleDone', ...(event.payload || {}) });
+            });
+
             // 序列埠熱插拔輪詢：埠清單變化（全域事實）→ 走既有 serialPortsData 流程
             // （updateSerialPorts 會自動選埠/切板；偵測到埠即顯示，無需手動按偵測）
             await appWindow.listen('serial-ports-changed', (event) => {
@@ -1090,13 +1149,36 @@ export class BridgeTauri extends BaseBridge {
     }
 
     async _handleCloseDialog(appWindow) {
-        if (this._isClosing) return;
+        if (this._isClosing) {
+            // 保險絲（E4-B）：萬一前一次關閉流程卡住（對話框 promise 永不 resolve、
+            // 或確認框被更高 z-index 的 modal 覆蓋導致按鈕點不到），_isClosing 會永久為 true
+            // → 之後每次按視窗 X 都被這行吃掉，視窗再也關不掉（只能工作管理員）。
+            // 超過 30 秒視為卡死，強制放行繼續走關閉流程。
+            const stuckMs = Date.now() - (this._closingSince || 0);
+            if (stuckMs < 30000) return;
+            console.warn('[Bridge] Close dialog latched for', stuckMs, 'ms; forcing close.');
+        }
         this._isClosing = true;
+        this._closingSince = Date.now();
 
         try {
             const app = window.CocoyaApp;
             const confirmMsg = (window.Blockly && Blockly.Msg['MSG_SAVE_CONFIRM']) || 'Do you want to save changes?';
-            
+
+            // 安裝進行中 → 讓使用者知道「關閉視窗 = 中止安裝」。
+            // 註：Rust 端只在 dirty 時才 prevent_close 並發 closeRequested，因此
+            // 這條提示僅涵蓋 dirty 情境；非 dirty 時視窗會直接關閉（後端會一併
+            // 終止 pip 子進程，不留孤兒），此為 E4-B 刻意接受的取捨——
+            // 以換取「視窗永遠關得掉」這個更重要的保證。
+            if (window.CocoyaUI && window.CocoyaUI.isEnvInstallActive && window.CocoyaUI.isEnvInstallActive()) {
+                const detailEl = document.getElementById('save-confirm-detail');
+                if (detailEl) {
+                    this._savedConfirmDetail = detailEl.textContent;
+                    detailEl.textContent = (window.Blockly && Blockly.Msg['DIAG_CLOSE_WARN_INSTALLING'])
+                        || 'Python environment installation is in progress. Closing the window will stop the install.';
+                }
+            }
+
             if (window.CocoyaUI && window.CocoyaUI.showSaveConfirm) {
                 const choice = await window.CocoyaUI.showSaveConfirm(confirmMsg);
 
@@ -1158,6 +1240,12 @@ export class BridgeTauri extends BaseBridge {
             console.error('[Bridge] Error in _handleCloseDialog:', err);
             await this.tauriInvoke('close_window');
         } finally {
+            // 還原確認框的說明文字（安裝中曾暫時改寫為警示）
+            if (this._savedConfirmDetail !== null && this._savedConfirmDetail !== undefined) {
+                const detailEl = document.getElementById('save-confirm-detail');
+                if (detailEl) detailEl.textContent = this._savedConfirmDetail;
+                this._savedConfirmDetail = null;
+            }
             this._isClosing = false;
         }
     }
@@ -1168,7 +1256,12 @@ export class BridgeTauri extends BaseBridge {
             const pythonPath = localStorage.getItem('pythonPath') || 'python';
             let sidecarReady = false;
 
-            // 快取狀態：若已知 sidecar 啟動中，先嘗試 ping（輕量，不遍歷攝影機）
+            // 啟動失敗統一回結構化錯誤碼，讓面板能以 i18n 文案提示使用者
+            // （典型情境：Python 路徑未設定／無效，或缺 opencv-python 導致 sidecar 秒死）
+            const startFailure = (e) => {
+                if (callback) callback({ success: false, errorCode: 'SIDECAR_START_FAILED', error: String(e) });
+            };
+
             try {
                 await this.tauriInvoke('sidecar_send', {
                     command: 'ping',
@@ -1178,10 +1271,24 @@ export class BridgeTauri extends BaseBridge {
             } catch (e) {
                 // sidecar 未啟動或已死，啟動它
                 console.log('[Bridge] Sidecar not running, starting...');
-                await this.tauriInvoke('start_sidecar', { pythonPath });
-                // 等待 sidecar 啟動
+                try {
+                    await this.tauriInvoke('start_sidecar', { pythonPath });
+                } catch (startErr) {
+                    console.error('[Bridge] Sidecar start failed:', startErr);
+                    startFailure(startErr);
+                    return;
+                }
+                // 等待 sidecar 啟動後 re-ping：spawn 成功仍可能 import 失敗秒死，
+                // 未驗證就當成功會讓錯誤延後到下一次 stdin write（os error 232）
                 await new Promise(r => setTimeout(r, 1000));
-                sidecarReady = true;
+                try {
+                    await this.tauriInvoke('sidecar_send', { command: 'ping', payload: '{}' });
+                    sidecarReady = true;
+                } catch (pingErr) {
+                    console.error('[Bridge] Sidecar not alive after start:', pingErr);
+                    startFailure(pingErr);
+                    return;
+                }
             }
 
             if (!sidecarReady) {
