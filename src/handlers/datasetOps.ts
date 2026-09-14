@@ -465,6 +465,23 @@ export class DatasetOpsHandler {
             this.manager.panel.webview.postMessage(Object.assign({ command: 'datasetCaptureResult' }, resp));
         });
     }
+
+    /**
+     * M4：特徵採集——讀取目前相機幀 → sidecar collectFeature 提取 Hand/Pose landmarks。
+     * 前端持有 schema（featureSchema.js）與 row 組裝，後端僅轉發原始 landmarks。
+     */
+    public handleDatasetCollectFeature(message: any) {
+        const { label, useZ, requestId } = message;
+        console.log(`[Host] Requesting collectFeature (ID: ${requestId})`);
+        this.manager.sidecar.send('collectFeature', {
+            label: label || 'unlabeled',
+            useZ: !!useZ,
+            requestId
+        }, (resp: any) => {
+            console.log(`[Host] CollectFeature result received for ID: ${resp.requestId}`);
+            this.manager.panel.webview.postMessage(Object.assign({ command: 'datasetCollectFeatureResult' }, resp));
+        });
+    }
 /**
      * 儲存資料集標註進度（等級一存讀）
      * 寫入「專案根/dataset/<專案>/dataset.json」（內含 spec + annotations）

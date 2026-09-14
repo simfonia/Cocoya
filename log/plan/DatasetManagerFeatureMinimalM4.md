@@ -9,8 +9,9 @@
 
 `feature` 類型＝**以攝影機經 MediaPipe 提取關鍵點（landmark）→ 組表格樣本（schema.columns）→ 匯出 CSV → 複用 M3 表格管線（table_dataset.py / table_train.py）訓練**。
 
-- **21 點**＝MediaPipe Hands；**33 點**＝MediaPipe Pose。每點含 `x,y,z` 歸一化座標 → 特徵維度 Hand=63、Pose=99（或僅 `x,y`＝42＋66）。
-- **缺裝降級**＝MediaPipe 未安裝時不可採集，退回純 file 匯入＋明確提示。
+- **21 點**＝MediaPipe Hands；**33 點**＝MediaPipe Pose。每點含 `x,y,z` 歸一化座標 → 特徵維度 Hand=63、Pose=99；採集時可選不含 z→Hand=42、Pose=66。
+- **動態 schema 契約**：特徵欄位命名 `hand_<i>_x/y(/z)`（i=0..20）、`pose_<i>_x/y(/z)`（i=0..32）＋`label` 欄；欄位集合依 `useZ` 開關決定（決策 2，2026-09-14）。前端 SSOT：`ui/src/modules/dataset_manager/core/featureSchema.js`。
+- **缺裝降級**＝MediaPipe 未安裝時不可採集，退回純 file 匯入＋明確提示（`FEATURE_MEDIAPIPE_MISSING`，前端 i18n）。
 
 ## 2. 現況錨點盤點（關鍵發現）
 
@@ -70,10 +71,19 @@
 ## 5. 驗證計畫
 - sidecar exportDataset e2e（feature 專案→ZIP 含 data.csv）；`feature_train` 分類/回歸各一訓練＋TFLite＋報告；`py_compile`；`node --test` 全綠；`cargo check`；i18n parity；雙平台實機（VSIX+Tauri 卡→徽章移除→匯出→訓練整鏈）＋三主題目視。
 
-## 6. 待拍板決策（施工前必須定）
-1. **採集範圍**：M4 是否納入「DM 內 live 鏡頭特徵採集 UI」（Phase 4），或只做「file 匯入→CSV→訓練」主鏈（採集留 backlog）？
-2. **點維度**：含 `z`（162 維）或僅 `x,y`（108 維）？
-3. **訓練檔案**：新建 `feature/feature_train.py`（語意清楚、未來可共用 serial）或直接映射到 `table/table_train.py`（代碼最少）？
+## 6. 決策（2026-09-14 已拍板）
+1. **採集範圍**：✅ **納入完整 Phase 4 live 採集 panel**（相機＋特徵擷取＋依標籤累計 row→表格），做成可用閉環。
+2. **點維度**：✅ **採集時由使用者選擇是否含 z（動態 schema）**——含 z＝Hand 63＋Pose 99（162 維）；不含 z＝Hand 42＋Pose 66（108 維）。`useZ` 選項納入：live panel 開關、sidecar `collectFeature` 請求、`core/featureSchema.js`（前端 SSOT）動態建 columns/row。
+3. **訓練檔案**：✅ **新建 `feature/feature_train.py`**（影分身 `table/table_train.py`，複用 `table_dataset.py`＋動態 `num_features`；未來可共用 serial）。
 
 ## 7. 施工鐵律（沿襲 DatasetManagerTypeLockedWorkflow §9）
 每步：先備份至 `backup/`（yyyyMMdd_HHmmss）→ 小步改 → `node --check`（新 JS 時）＋`cargo check`（Rust 動到時）＋ Python `python -m py_compile` 新腳本 → 雙平台實機 → 當日 `log/work/` 追加＋`log/todo.md` 更新（禁刪歷史）。
+
+## 8. 施工紀錄（2026-09-14 完工）
+- ✅ Phase 0：`core/featureSchema.js`＋測試（useZ 動態 columns/row；108/162 維）。
+- ✅ Phase 1：`media_pipe_service.py` 重寫（`extract_landmarks(frame, use_z)` Hand/Pose）＋sidecar `collectFeature`（use_z 參數）＋缺裝降級 `FEATURE_MEDIAPIPE_MISSING`。
+- ✅ Phase 2：typePolicy/entryCards feature 轉 stable（modes live+file）＋exportUseCases 匯出解封（feature→data.csv 分流）；測試同步更新。
+- ✅ Phase 3：`train_templates/feature/feature_train.py`（影分身 table_train.py，動態 num_features）＋trainLocal/trainRemote 映射收斂；py_compile PASS。
+- ✅ Phase 4：`ui/featurePanel.js`（委派 samplerPanel 模式）＋ui_layout 掛載＋bridge（tauri.js/vsix.js/datasetOps.ts）collectFeature 通道；featurePanel.test 3 測。
+- ✅ Phase 5：`DSM_FEATURE_*` i18n（zh/en parity）＋116/116 node --test＋vite build＋cargo check PASS。
+- ⏳ 雙平台 GUI 實機（VSIX+Tauri live 採集→匯出→訓練整鏈）＋三主題目視——使用者 backlog。

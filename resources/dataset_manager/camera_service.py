@@ -98,6 +98,13 @@ class CameraService:
     def is_running(self):
         return self.running
 
+    def get_current_frame(self):
+        """回傳目前最新幀的副本；未啟動/尚無幀回 None（供特徵提取用，不存取不複製）。"""
+        with self.lock:
+            if self.frame is None:
+                return None
+            return self.frame.copy()
+
     def _run(self):
         cv2.namedWindow(self.window_name, cv2.WINDOW_AUTOSIZE)
         try:

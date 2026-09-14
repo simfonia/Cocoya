@@ -132,6 +132,7 @@
     "DSM_VALIDATE_NO_LABEL": "No label column is assigned yet.",
     "DSM_VALIDATE_NO_FEATURES": "No feature columns are assigned yet.",
     "DSM_VALIDATE_NO_SAMPLES": "No images imported yet. Select an image folder or capture photos with the camera.",
+    "DSM_VALIDATE_NO_SAMPLES_FEATURE": "No feature samples captured yet. Start the camera and click ‘Capture Feature’ to collect samples.",
 
     // Classification review mode (image classification label correction)
     "DSM_CLASSIFY_MODE_TITLE": "Annotation — Image Classification",
@@ -172,13 +173,29 @@
     "DSM_ENTRY_DESC_OBJECT_DETECTION": "Draw boxes around objects (bbox)",
     "DSM_ENTRY_DESC_LINE_FOLLOWING": "Annotate line direction (line)",
     "DSM_ENTRY_DESC_TABLE": "Import CSV / JSON tables",
-    "DSM_ENTRY_DESC_FEATURE": "Capture MediaPipe landmarks (in development)",
+    "DSM_ENTRY_DESC_FEATURE": "Capture MediaPipe hand & pose landmarks (Hand/Pose)",
     "DSM_ENTRY_DESC_SERIAL": "Collect MCU sensor streams (in development)",
     "DSM_DEV_BANNER_FEATURE": "Feature capture is in development and incomplete: capture and preview only for now",
     "DSM_DEV_BANNER_SERIAL": "Serial capture is in development and incomplete: export and training not supported yet",
     "DSM_SOURCE_RENAME_CONFIRM": "Source changed to \"%1\", but the current dataset name is \"%2\".\nUpdate the dataset name to \"%1\"?\n\n(Choosing \"Cancel\" keeps \"%2\"; progress will be saved to dataset/%2/ and may overwrite existing progress. To create a new dataset, copy the source folder and re-import it.)",
     "DSM_SOURCE_COLLISION_CONFIRM": "A different source folder uses the same name \"%1\". Progress will be written to and may overwrite dataset/%1/. Continue?",
     "DSM_IMPORT_CANCELLED": "Import cancelled",
-    "DSM_SOURCE_KEPT_STATUS": "Keeping dataset name \"%1\"; progress will be saved to dataset/%1/"
+    "DSM_SOURCE_KEPT_STATUS": "Keeping dataset name \"%1\"; progress will be saved to dataset/%1/",
+
+    // M4 Feature live collection
+    "DSM_FEATURE_PANEL_HINT": "Start the camera, then click Capture Feature to append one sample to the current label (MediaPipe Hand/Pose landmarks)",
+    "DSM_FEATURE_USE_Z": "Include z coordinate (higher dimension, contains depth)",
+    "DSM_FEATURE_COLLECT": "🧬 Capture Feature",
+    "DSM_FEATURE_CAM_READY": "📷 Camera preview is on; you can start capturing features",
+    "DSM_FEATURE_NO_LABEL": "Add and select a label first",
+    "DSM_FEATURE_USEZ_LOCKED": "⚠️ Samples already collected; cannot switch include-z. Clear samples or use file import",
+    "DSM_FEATURE_MEDIAPIPE_MISSING": "❌ MediaPipe not installed; live feature capture unavailable. Use file import or install mediapipe",
+    "DSM_FEATURE_COLLECT_FAILED": "❌ Feature capture failed: %1",
+    "DSM_FEATURE_HAND": "Hand ✓",
+    "DSM_FEATURE_NO_HAND": "Hand ✕",
+    "DSM_FEATURE_POSE": "Pose ✓",
+    "DSM_FEATURE_NO_POSE": "Pose ✕",
+    "DSM_FEATURE_COLLECTED": "✅ 1 sample appended (%1)",
+    "DSM_FEATURE_ADD_LABEL_PROMPT": "Enter a name for the feature-sample label"
   });
 })(Blockly);

@@ -25,15 +25,17 @@ import { createAnnotationController } from './ui/annotation.js';
 import { createPanelsPresenter } from './ui/panels.js';
 import { createLabelManager } from './ui/labelManager.js';
 import { createSamplerPanel } from './ui/samplerPanel.js';
+import { createFeaturePanel } from './ui/featurePanel.js';
 import { buildEntryTemplate } from './ui/entryCards.js';
 import { allowedModes, isDevType } from './core/typePolicy.js';
 import { createSessionManager } from './application/sessionManager.js';
+import { buildFeatureSchema, landmarksToRow, FEATURE_MEDIAPIPE_MISSING } from './core/featureSchema.js';
 
 const MODAL_ID = 'dataset-manager-modal';
 
 const TYPE_TO_MODES_MAP = {
     'table': ['file'],
-    'feature': ['file'],
+    'feature': ['live', 'file'],
     'serial': ['file'],
     'image': ['live', 'file'],
     'object_detection': ['live', 'file'],
@@ -119,6 +121,20 @@ const samplerPanel = createSamplerPanel({
     nextLabelId: (map) => nextLabelId(map)
 });
 
+// M4 Phase 4：feature 類型 live 特徵採集面板（組 row → 依標籤累計 tableRows）
+const featurePanel = createFeaturePanel({
+    state, datasetBridge, t,
+    showStatusMessage: (msg) => showStatusMessage(msg),
+    Sampler, UIComponents,
+    escapeHtml: (v) => escapeHtml(v),
+    FEATURE_MEDIAPIPE_MISSING,
+    buildFeatureSchema,
+    landmarksToRow,
+    nextLabelId: (map) => nextLabelId(map),
+    onFeatureCollected: (data) => addFeatureRow(data),
+    renderTablePreview: (container, rows) => renderTablePreview(container, rows)
+});
+
 // Stage 4 切片 7：欄位列/驗證/表格預覽等面板呈現移至 ui/panels.js（依賴注入；下方函式宣告已提升，可安全參照）
 const panelsPresenter = createPanelsPresenter({
     state,
@@ -188,8 +204,9 @@ function syncSpecFromUI(includeSamples = true) {
     const isImage = projectType === 'image' || projectType === 'object_detection' || projectType === 'line_following';
 
     let columns = getColumnsFromUI();
-    // 影像模式下，如果 UI 上沒有欄位列表（因為切換到了統計視圖），保留現有的 Spec 欄位定義
-    if (isImage && columns.length === 0 && state.spec.toJSON().schema.columns.length > 0) {
+    // 影像模式下，如果 UI 上沒有欄位列表（因為切換到了統計視圖），保留現有的 Spec 欄位定義。
+    // M4：feature 亦然——live 採集時 UI 顯示標籤+統計（無欄位列），欄位由 featureSchema 動態建立。
+    if ((isImage || projectType === 'feature') && columns.length === 0 && state.spec.toJSON().schema.columns.length > 0) {
         columns = state.spec.toJSON().schema.columns;
     }
 
@@ -866,15 +883,19 @@ export function refreshDynamicPanels() {
         <pre id="dataset-json-preview"></pre>
     `;
 
-    // 顯示採集視圖（M2 R6：委派 ui/samplerPanel.js）
+    // 顯示採集視圖（M2 R6：委派 ui/samplerPanel.js；M4：feature 走 featurePanel）
     if (isLive) {
-        samplerPanel.setupLiveSamplerView(modal, modal.querySelector('#dataset-sampler-view'));
+        if (projectType === 'feature') {
+            featurePanel.setupFeatureLiveView(modal, modal.querySelector('#dataset-sampler-view'));
+        } else {
+            samplerPanel.setupLiveSamplerView(modal, modal.querySelector('#dataset-sampler-view'));
+        }
     } else {
         Sampler.stopCamera(true);
     }
 
-    // 顯示影像或表格預覽（保留 scrollTop 避免回到列表或刪除時縮圖捲回最上方）
-    if (isImage || isLive) {
+    // 顯示影像或表格預覽（feature 一律顯示表格預覽：live 累計的是表格樣本）
+    if (isImage) {
         const imagePreview = modal.querySelector('#dataset-image-preview');
         imagePreview.style.display = state.images.length ? 'block' : 'none';
         UIComponents.renderImageGrid(imagePreview, state.images, {
@@ -1129,6 +1150,50 @@ function updateStatsFromImages() {
 
     // 即時同步所有可見的統計面板（列表/檢視/標註模式皆涵蓋；容器不存在時為 no-op）
     renderStatsPanels();
+}
+
+/**
+ * M4 Phase 4：feature live 採集到一列後的回調——累計進 state.tableRows、
+ * 依 featureSchema 動態建 schema.columns、重算 label_counts/sample_count、刷新表格預覽與統計。
+ */
+function addFeatureRow({ row, useZ, schema }) {
+    const curSpec = state.spec.toJSON();
+    const labelMap = curSpec.schema.label_map || {};
+
+    // live 採集由 featureSchema 動態建立欄位（蓋過既有；file 匯入的表格樣本不與 live 混用）
+    state.tableRows.push(row);
+
+    // 依實際 row 的 label 值統計（表格系無 state.images，無法走 calculateStats）
+    const counts = {};
+    state.tableRows.forEach((r) => {
+        const l = String(r.label || '');
+        if (l) counts[l] = (counts[l] || 0) + 1;
+    });
+
+    state.spec = new DatasetSpec({
+        project: curSpec.project,
+        data_source: curSpec.data_source,
+        schema: {
+            columns: schema.columns,
+            features: schema.features,
+            label: schema.label,
+            label_map: labelMap
+        },
+        stats: {
+            sample_count: state.tableRows.length,
+            label_counts: counts,
+            samples_truncated: state.tableRows.length > TABLE_SAMPLES_PERSIST_LIMIT
+        }
+    });
+
+    // 刷新表格預覽與統計
+    const modal = getModal();
+    if (modal) {
+        const tablePreview = modal.querySelector('#dataset-table-preview');
+        renderTablePreview(tablePreview, state.tableRows);
+    }
+    renderStatsPanels();
+    refreshPreview();
 }
 
 /** 重繪統計容器：優先 #view-label-stats（image/od 列表模式，與 label manager 並存），

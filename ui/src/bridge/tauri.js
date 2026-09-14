@@ -578,6 +578,25 @@ export class BridgeTauri extends BaseBridge {
                     });
                     break;
 
+                case 'datasetCollectFeature':
+                    // M4：特徵採集——轉發到 sidecar collectFeature；回應帶原始 landmarks（前端持 schema）
+                    await this._handleDatasetCommand('collectFeature', data, (response) => {
+                        this._dispatchToFrontend({
+                            command: 'datasetCollectFeatureResult',
+                            requestId: data.requestId,
+                            success: response.success,
+                            label: response.label || data.label,
+                            useZ: response.useZ,
+                            handDetected: response.hand_detected,
+                            poseDetected: response.pose_detected,
+                            hand: response.hand,
+                            pose: response.pose,
+                            errorCode: response.errorCode,
+                            error: response.error
+                        });
+                    });
+                    break;
+
                 case 'datasetDeleteImage':
                     try {
                         await this.tauriInvoke('delete_file', { path: data.filePath });

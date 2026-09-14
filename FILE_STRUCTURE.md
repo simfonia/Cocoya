@@ -292,6 +292,8 @@ C:\Workspace\cocoya\
 │   │       └── detector_train.py      # [NEW] 物件偵測訓練腳本（單一目標，MSE loss）
 │   │   ├── table/
 │   │   │   └── table_train.py         # [M3] 表格訓練（MLP；分類 softmax／回歸 linear＋報告）
+│   │   ├── feature/
+│   │   │   └── feature_train.py       # [M4] 特徵訓練（table 影分身；動態 num_features 依 use_z 108/162 維）
 │   │   └── line_follower/
 │   │       └── line_follower_train.py # [M3] 循線訓練（線段端點回歸，重用 detector 回歸頭＋報告）
 │   ├── dataset_manager/   # Dataset Manager 模組
@@ -304,7 +306,7 @@ C:\Workspace\cocoya\
 │   ├── _local_convert_tflite.py # 遠端 keras 本地轉 TFLite（_sanitize_keras_config 剝除跨版本 Keras 3 不相容層參數）
 │   ├── camera_service.py    # OpenCV 攝影機預覽與擷取服務
 │   ├── dataset_io.py        # 資料集檔案存取與打包工具
-│   └── media_pipe_service.py # AI 特徵提取服務 (MediaPipe)
+│   └── media_pipe_service.py # AI 特徵提取服務 (MediaPipe)；[M4] extract_landmarks(frame, use_z) Hand/Pose 關鍵點供 collectFeature
 ├── temp_scripts/          # 執行期間暫存目錄
 ├── package.json           # 根目錄設定
 └── tsconfig.json          # TS 編譯設定
