@@ -69,6 +69,17 @@
          */
         setMode: async function(mode) {
             var app = window.CocoyaApp;
+
+            // 逃逸路徑 E3 守門：主題切換「一律」reloadWebview + 800ms fallback location.reload()，
+            // 是註定重載的路徑 → 前端安裝狀態必然全失，而後端 pip 仍在跑（幽靈安裝）。
+            // 安裝中直接擋下並提示（唯一出口是「中止安裝」）。
+            if (window.CocoyaUI && window.CocoyaUI.isEnvInstallActive && window.CocoyaUI.isEnvInstallActive()) {
+                var lockMsg = (window.Blockly && Blockly.Msg && Blockly.Msg['DIAG_LOCK_SWITCH'])
+                    || 'Python environment is installing; cannot switch language/theme right now';
+                if (window.CocoyaBridge && window.CocoyaBridge.alert) window.CocoyaBridge.alert(lockMsg);
+                return;
+            }
+
             // 一律直接保留：快照後 reload（dirty 保留未存修改；乾淨時快照=當前內容，無副作用）
             if (app && app.snapshotWorkspaceForReload) app.snapshotWorkspaceForReload();
 

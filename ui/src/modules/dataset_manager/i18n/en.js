@@ -113,6 +113,8 @@
     "DSM_ERROR_IMPORT_EMPTY": "File is empty or format is invalid",
     "DSM_ERROR_EXPORT_FAILED": "❌ Export failed: %1",
     "DSM_ERROR_CAPTURE_FAILED": "❌ Capture failed: %1",
+    "DSM_SIDECAR_START_FAILED": "❌ Failed to start the dataset service: set a valid Python path on the Hardware page and make sure opencv-python is installed (pip install opencv-python)",
+    "DSM_SAMPLER_START_FAILED": "❌ Camera failed to start, please check the device and try again",
     "DSM_ERROR_EXPORT_VALIDATE": "Dataset spec validation failed: %1",
     "DSM_ERROR_EXPORT_DEV_UNAVAILABLE": "❌ This type (%1) is in development and does not support export yet. Please use a completed type dataset.",
 

@@ -33,6 +33,10 @@ pub struct SerialMonitorWant {
 
 pub struct AppState {
     pub python_processes: Arc<Mutex<HashMap<String, Child>>>,
+    /// Window Label -> 進行中的 pip 安裝子進程。
+    /// 必須獨立於 `python_processes`：pip 安裝不應走 `run_python`（其開頭會 `stop_python`，
+    /// 會誤殺使用者正在執行的程式並誤釋放該視窗的串列埠監看）。
+    pub install_processes: Arc<Mutex<HashMap<String, Child>>>,
     pub current_paths: Arc<Mutex<HashMap<String, PathBuf>>>,
     pub file_locks: Arc<Mutex<HashMap<PathBuf, String>>>, // Path -> Window Label
     pub dirty_states: Arc<Mutex<HashMap<String, bool>>>, // Window Label -> isDirty

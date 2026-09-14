@@ -13,7 +13,7 @@
         hideGrid: false,
         blockly: { base: 'classic' },
         cssVars: {
-            '--cocoya-overlay': 'rgba(255,255,255,0.97)',
+            '--cocoya-overlay': '#ffffff',
             '--cocoya-surface': '#ffffff',
             '--cocoya-fg': '#555555',
             '--cocoya-border': '#dddddd',

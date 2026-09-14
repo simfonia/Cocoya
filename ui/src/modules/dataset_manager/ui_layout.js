@@ -115,7 +115,21 @@ const samplerPanel = createSamplerPanel({
     refreshPreview: () => refreshPreview(),
     onSnapshot: () => handleSamplerSnapshot(),
     onBurstToggle: () => handleSamplerBurstToggle(),
-    onStartCamera: () => Sampler.startCamera(Sampler.state.selectedDeviceId),
+    onStartCamera: async () => {
+        const ok = await Sampler.startCamera(Sampler.state.selectedDeviceId);
+        if (!ok) {
+            // sidecar 啟動失敗（Python 路徑未設／無效或缺 opencv-python）給出可執行的提示
+            const err = Sampler.state.lastCameraError || '';
+            showStatusMessage(
+                err.indexOf('SIDECAR_START_FAILED') !== -1
+                    ? t('DSM_SIDECAR_START_FAILED', '❌ 無法啟動資料集服務：請於硬體頁設定有效的 Python 路徑，並確認該 Python 已安裝 opencv-python（pip install opencv-python）')
+                    : t('DSM_SAMPLER_START_FAILED', '❌ 攝影機啟動失敗，請確認裝置後重試')
+            , { duration: 0 });
+        } else {
+            Sampler.state.lastCameraError = null;
+        }
+        return ok;
+    },
     onStopCamera: () => Sampler.stopCamera(true),
     onSampleCaptured: (blob, savePath) => addSampleFromSampler(blob, savePath),
     nextLabelId: (map) => nextLabelId(map)

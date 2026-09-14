@@ -15,6 +15,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .manage(AppState {
             python_processes: Arc::new(Mutex::new(HashMap::new())),
+            install_processes: Arc::new(Mutex::new(HashMap::new())),
             current_paths: Arc::new(Mutex::new(HashMap::new())),
             file_locks: Arc::new(Mutex::new(HashMap::new())),
             dirty_states: Arc::new(Mutex::new(HashMap::new())),
@@ -46,6 +47,8 @@ pub fn run() {
             commands::pick_python_path,
             commands::get_version,
             commands::check_environment,
+            commands::install_python_module,
+            commands::abort_install_module,
             commands::set_dirty,
             commands::close_window,
             commands::check_startup_backup,
@@ -125,6 +128,17 @@ pub fn run() {
                         if let Some(mut child) = procs.remove(&label) {
                             let _: std::process::Child = child;
                             let _ = child.kill();
+                        }
+                    }
+                    {
+                        // 關窗即中止安裝（E4-B）：避免 pip 子進程成為孤兒（視窗關了還在裝）。
+                        // 僅在此分支（視窗確定關閉）執行；dirty 分支只做 prevent_close，
+                        // 使用者可能取消關閉，此時不應中止安裝。
+                        // 使用 kill_tree：Windows 下 pip 會 spawn build backend 子進程，
+                        // Child::kill() 只殺直接子進程，會留下殘留。
+                        let mut installs = state.install_processes.lock().unwrap();
+                        if let Some(mut child) = installs.remove(&label) {
+                            crate::commands::python::kill_tree(&mut child);
                         }
                     }
                     {

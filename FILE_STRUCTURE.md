@@ -98,7 +98,7 @@ C:\Workspace\cocoya\
 │   │   ├── ui/          # UI 功能子模組
 │   │   │   ├── terminal.js # 終端機邏輯
 │   │   │   ├── renderer.js # 渲染與佈局邏輯
-│   │   │   ├── hardware.js # 序列埠與韌體邏輯
+│   │   │   ├── hardware.js # 序列埠、韌體邏輯與 Python 環境設定狀態機（_envInstall）
 │   │   │   ├── dialogs.js  # 對話框與視覺反饋
 │   │   │   └── base.js     # 基礎狀態與工具列事件
 │   │   ├── app/         # 應用程式核心子模組
@@ -212,7 +212,7 @@ C:\Workspace\cocoya\
 │       ├── firmwareOps.ts   # 韌體：resetFirmware, eraseFilesystem, setupStableMode
 │       ├── datasetOps.ts    # 資料集：capture/export/upload/scan/pickFolder/pickDataFile + SaveProgress/LoadProgress 存讀 [NEW]
 │       ├── serialOps.ts     # 序列埠：refreshPorts, serialMonitor, setPythonPath
-│       └── envOps.ts        # 環境：checkEnvironment, installModule, runCode, checkUpdate
+│       └── envOps.ts        # 環境：checkEnvironment, installModule(spawn+事件), abortInstall, runCode, checkUpdate
 ├── src-tauri/             # Tauri 後端專案 (Rust)
 │   ├── Cargo.toml         # Rust 專案配置
 │   ├── tauri.conf.json    # Tauri 應用配置 (含安裝與資源設定)
@@ -224,7 +224,7 @@ C:\Workspace\cocoya\
 │       ├── utils.rs       # [NEW] 路徑與資源解析工具
 │       └── commands/      # [NEW] 分類指令處理器
 │           ├── mod.rs       # 指令集匯出
-│           ├── python.rs    # Python 執行與環境診斷（注入 UTF-8 編碼與 COCOYA_TRAIN_TEMPLATES 環境變數）
+│           ├── python.rs    # Python 執行與環境診斷（注入 UTF-8 編碼與 COCOYA_TRAIN_TEMPLATES 環境變數）；install_python_module/abort_install_module 為套件安裝專用命令（獨立進程 + install-module-* 事件 + kill_tree）
 │           ├── file.rs      # 檔案讀寫、備份與鎖定 (+ dataset_save_progress/dataset_load_progress 進度存讀 [NEW] + 內建範例唯讀保護：Release 開啟時確認後複製範例專案到 Documents\Cocoya\Projects)
 │           ├── mcu.rs       # 硬體通訊、韌體與序列埠
 │           ├── app.rs       # 視窗控制與系統資訊

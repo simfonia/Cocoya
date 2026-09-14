@@ -1,4 +1,0 @@
-<xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
-  <block type="py_definition_zone" x="100" y="20"></block>
-  <block type="py_main" x="100" y="140"></block>
-</xml>

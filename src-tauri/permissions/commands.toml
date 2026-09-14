@@ -22,6 +22,8 @@ commands.allow = [
   "pick_python_path",
   "get_version",
   "check_environment",
+  "install_python_module",
+  "abort_install_module",
   "set_dirty",
   "close_window",
   "check_startup_backup",
