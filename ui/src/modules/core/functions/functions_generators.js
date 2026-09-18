@@ -9,7 +9,19 @@ Blockly.Python.forBlock['py_function_def'] = function(block, generator) {
     params.push(block.getFieldValue('PRM' + i));
   }
   
-  var branch = generator.statementToCode(block, 'DO') || generator.INDENT + 'pass\n';
+  var branch = generator.statementToCode(block, 'DO');
+  // 縮排還原為基準 4 空白：statementToCode 輸出的縮排已套用當前 generator.INDENT，
+  // 但 definitions_ 的內容會被 finish 的 Global Indent Scaler 以「基準 4 空白」等比縮放。
+  // 若不先還原，2 空格設定下函式內巢狀積木（如 if 主體）會被二次縮放而塌陷（同層）。
+  var ind = generator.INDENT || '    ';
+  if (branch) {
+    branch = branch.replace(
+      new RegExp('^(?:' + ind.replace(/ /g, ' ') + ')+', 'gm'),
+      function(m) { return '    '.repeat(m.length / ind.length); }
+    );
+  } else {
+    branch = '    pass\n';
+  }
   var code = 'def ' + name + '(' + params.join(', ') + '):\n' + branch;
   
   // 修正：將函式定義移至 definitions_ 區塊，確保其產出於主程式之前，不受積木高度影響

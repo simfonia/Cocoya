@@ -10,6 +10,11 @@ import time
 import os
 from .base import BaseDeployer, get_msg
 
+# === 輸出編碼修復：Windows 管線下預設 cp950，強制 UTF-8 避免 Tauri 終端機亂碼（對齊 PC 訓練模板） ===
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 
 class MicroPythonDeployer(BaseDeployer):
     """MicroPython Raw REPL 部署器"""

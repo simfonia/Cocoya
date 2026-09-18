@@ -74,7 +74,8 @@ function makeHarness({ labelMap = {} } = {}) {
         buildFeatureSchema, landmarksToRow,
         nextLabelId: (map) => Object.keys(map).length,
         onFeatureCollected: (data) => { calls.collected.push(data); },
-        renderTablePreview: () => {}
+        renderTablePreview: () => {},
+        refreshStructurePanel: () => { calls.structure = (calls.structure || 0) + 1; }
     });
     return { state, specData, calls, Sampler, panel };
 }

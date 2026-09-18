@@ -455,6 +455,77 @@ export class DatasetOpsHandler {
         }
     }
 
+    /**
+     * 標籤改名磁碟同步（2026-09-16 Part B，對齊 Tauri dataset_rename_label）
+     * 僅作用於 canonical <projectRoot>/dataset/<專案>/<label>/ 落盤區：
+     * 1. <oldLabel> 目錄存在 → 改名 <newLabel>（目標已存在 → LABEL_DIR_CONFLICT）
+     * 2. 目錄內前綴 <oldLabel>_ 的檔案 → 前綴改 <newLabel>_
+     * 回傳 renames: [{oldPath, newPath}] 供前端對帳 img.path / img.diskPath。
+     */
+    public handleDatasetRenameLabel(message: any) {
+        const { projectName, oldLabel, newLabel } = message;
+        const post = (payload: any) => this.manager.panel.webview.postMessage(Object.assign({ command: 'datasetRenameLabelResult' }, payload));
+        const validSegment = (v: any) => typeof v === 'string' && v.trim() !== '' && v.trim() !== '.' && v.trim() !== '..' && /^[A-Za-z0-9_-]+$/.test(v.trim());
+        if (!validSegment(oldLabel) || !validSegment(newLabel)) {
+            post({ success: false, errorCode: 'LABEL_NAME_INVALID', error: `invalid label: ${oldLabel} -> ${newLabel}` });
+            return;
+        }
+        if (oldLabel.trim() === newLabel.trim()) {
+            post({ success: true, renames: [] });
+            return;
+        }
+        // 依「專案根 SSOT」決定位置（與 handleDatasetSaveProgress 同策略）
+        const projectRoot = this.manager.currentFilePath
+            ? path.dirname(this.manager.currentFilePath)
+            : ((vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)
+                ? vscode.workspace.workspaceFolders[0].uri.fsPath
+                : undefined);
+        if (!projectRoot) {
+            post({ success: false, errorCode: 'PROJECT_ROOT_REQUIRED', error: '未錨定專案，無法同步磁碟資料夾' });
+            return;
+        }
+        const safeName = String(projectName || 'dataset').trim();
+        if (!safeName || safeName === '.' || safeName === '..' || !/^[A-Za-z0-9_-]+$/.test(safeName)) {
+            post({ success: false, errorCode: 'PROJECT_NAME_INVALID', error: `專案名稱不可用於路徑: ${projectName}` });
+            return;
+        }
+        const datasetDir = path.join(projectRoot, 'dataset', safeName);
+        const srcDir = path.join(datasetDir, oldLabel.trim());
+        const dstDir = path.join(datasetDir, newLabel.trim());
+        try {
+            if (!fs.existsSync(srcDir)) {
+                post({ success: true, renames: [] }); // 無落盤資料夾 → no-op 成功
+                return;
+            }
+            if (fs.existsSync(dstDir)) {
+                post({ success: false, errorCode: 'LABEL_DIR_CONFLICT', error: `target label dir already exists: ${dstDir}` });
+                return;
+            }
+            fs.renameSync(srcDir, dstDir);
+            const renames: Array<{ oldPath: string; newPath: string }> = [];
+            const oldPrefix = `${oldLabel.trim()}_`;
+            const newPrefix = `${newLabel.trim()}_`;
+            for (const name of fs.readdirSync(dstDir)) {
+                const filePath = path.join(dstDir, name);
+                if (!fs.statSync(filePath).isFile()) continue;
+                if (name.startsWith(oldPrefix)) {
+                    const newPath = path.join(dstDir, newPrefix + name.slice(oldPrefix.length));
+                    try {
+                        fs.renameSync(filePath, newPath);
+                        renames.push({ oldPath: filePath.replace(/\\/g, '/'), newPath: newPath.replace(/\\/g, '/') });
+                    } catch (e: any) {
+                        console.error(`[Host] label file rename failed: ${filePath} -> ${newPath}`, e);
+                    }
+                }
+            }
+            console.log(`[Host] Label disk rename: ${oldLabel} -> ${newLabel} (${renames.length} files)`);
+            post({ success: true, renames });
+        } catch (e: any) {
+            console.error(`[Host] Failed to rename label dir: ${srcDir} -> ${dstDir}`, e);
+            post({ success: false, errorCode: 'IO_ERROR', error: e.message });
+        }
+    }
+
     public handleDatasetCaptureImage(message: any) {
         // 依「專案根 SSOT」決定 live 拍照落盤位置：xml 專案所在資料夾優先；
         // 其次工作區根；再降級 temp_scripts（未錨定）。

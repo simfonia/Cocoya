@@ -1,6 +1,6 @@
 {
   "productName": "Cocoya",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "identifier": "com.cocoya.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -30,7 +30,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": "all",
+    "targets": ["msi"],
     "windows": {
       "wix": {
         "language": ["zh-TW"]

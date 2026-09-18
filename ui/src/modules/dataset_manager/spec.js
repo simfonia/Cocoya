@@ -232,11 +232,21 @@ export class DatasetSpec {
         if (spec.schema.label && !columnNames.has(spec.schema.label)) {
             errors.push(t('VALIDATE_LABEL_NOT_FOUND', 'Label column "%1" does not exist in schema.columns.', spec.schema.label));
         }
-        // Label 檢查：影像類若尚未有任何樣本，不重複發出 NO_LABEL 警告；feature live 同採豁免（由樣本引導訊息涵蓋）
-        if (!spec.schema.label && spec.project.type !== 'table' && spec.project.type !== 'line_following') {
-            if (!(isImageType && sampleCount === 0) && !isFeatureLive) {
-                warnings.push(t('VALIDATE_NO_LABEL', 'No label column is assigned yet.'));
+        // Label 檢查（2026-09-16 重構）：
+        // - 影像類：標籤存於每張樣本（live 分類的 image.label / 標註的 class_id），
+        //   schema.label 欄位不適用，不再發出誤導性的「尚未指定 Label 欄位」；
+        //   改為真實反應樣本標籤覆蓋率（stats.label_counts['unlabeled']）。
+        if (isImageType) {
+            if (spec.project.type === 'image' && sampleCount > 0) {
+                const labelCounts = isPlainObject(spec.stats.label_counts) ? spec.stats.label_counts : {};
+                const unlabeled = Number(labelCounts['unlabeled']) || 0;
+                if (unlabeled > 0) {
+                    warnings.push(t('VALIDATE_UNLABELED_SAMPLES', 'Captured %1 photos, %2 of them have no label yet.', sampleCount, unlabeled));
+                }
             }
+        } else if (!isFeatureLive && !spec.schema.label
+            && spec.project.type !== 'table' && spec.project.type !== 'line_following') {
+            warnings.push(t('VALIDATE_NO_LABEL', 'No label column is assigned yet.'));
         }
         // Features 檢查：補上 object_detection 豁免；僅在有欄位但未指定 role=feature 時提醒，避免與無欄位的 COLUMN_REQUIRED 重複
         if (spec.schema.features.length === 0 && !isImageType && !isFeatureLive && spec.schema.columns.length > 0) {

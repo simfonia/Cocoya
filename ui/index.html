@@ -10,6 +10,7 @@
     <script src="src/python.min.js"></script>
     
     <!-- 樣式表 (Vite 會處理) -->
+    <link rel="stylesheet" href="/src/font_scale.css">
     <link rel="stylesheet" href="/src/style.css">
     <link rel="stylesheet" href="/src/modules/dataset_manager/dataset_manager.css">
 </head>
@@ -50,60 +51,8 @@
                     <div class="toolbar-btn" id="btn-save-as" title="%{BKY_TLB_SAVE_AS}">
                         <img src="src/icons/save-as.png">
                     </div>
-                    <div class="toolbar-separator"></div>
-                    <div class="toolbar-dropdown">
-                        <div class="toolbar-btn" id="btn-settings-root" title="%{BKY_TLB_SETTINGS}">
-                            <img src="src/icons/gear-outline.png">
-                        </div>
-                        <div class="dropdown-content">
-                            <div class="dropdown-item" id="btn-python-env" title="%{BKY_TLB_SETTINGS_PYTHON_ENV}">
-                                <img src="src/icons/python.png" style="width: 16px; height: 16px; margin-right: 8px;">
-                                <span>%{BKY_TLB_SETTINGS_PYTHON_ENV}</span>
-                            </div>
-                            <div class="dropdown-item" id="btn-toggle-scroll-options">
-                                <span id="scroll-options-check" style="width: 16px; margin-right: 8px; display: inline-block;"></span>
-                                <span>%{BKY_TLB_SETTINGS_SCROLL_OPTIONS}</span>
-                            </div>
-                            <div class="dropdown-item" id="btn-toggle-language" title="%{BKY_STARTUP_LANG}">
-                                <img src="src/icons/language.png" style="width: 16px; height: 16px; margin-right: 8px;">
-                                <span class="lang-switch" id="language-toggle-switch" role="switch" aria-label="%{BKY_STARTUP_LANG}">
-                                    <span class="lang-switch-opt" data-lang="zh-hant">中文</span>
-                                    <span class="lang-switch-arrow">⇄</span>
-                                    <span class="lang-switch-opt" data-lang="en">English</span>
-                                </span>
-                            </div>
-                            <div class="dropdown-submenu" id="group-theme-settings">
-                                <div class="dropdown-item submenu-title">
-                                    <img src="src/icons/color-brush-1.png" style="width: 16px; height: 16px; margin-right: 8px;">
-                                    <span id="theme-menu-title">%{BKY_STARTUP_THEME}</span>
-                                    <span style="margin-left: auto; font-size: 10px;">▶</span>
-                                </div>
-                                <!-- 選項由 ThemeManager registry 動態生成 (base.js)，此處僅保留容器 -->
-                                <div class="submenu-content" id="theme-menu-items"></div>
-                            </div>
-                            <div class="dropdown-separator"></div>
-                            <div class="dropdown-submenu" id="group-firmware-settings">
-                                <div class="dropdown-item submenu-title">
-                                    <img src="src/icons/hardware-chip-outline.png" style="width: 16px; height: 16px; margin-right: 8px;">
-                                    <span>%{BKY_TLB_SETTINGS_FIRMWARE_GROUP}</span>
-                                    <span style="margin-left: auto; font-size: 10px;">▶</span>
-                                </div>
-                                <div class="submenu-content">
-                                    <div class="dropdown-item" id="btn-erase-filesystem" title="%{BKY_TLB_SETTINGS_ERASE_FS_TOOLTIP}">
-                                        <img src="src/icons/remove-from-trash.png" style="width: 16px; height: 16px; margin-right: 8px;">
-                                        <span>%{BKY_TLB_SETTINGS_ERASE_FS}</span>
-                                    </div>
-                                    <div class="dropdown-item" id="btn-reset-firmware">
-                                        <img src="src/icons/reset.png" style="width: 16px; height: 16px; margin-right: 8px;">
-                                        <span>%{BKY_TLB_SETTINGS_RESET_FIRMWARE}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                 </div>
-
-                <div class="toolbar-flex-spacer"></div>
+                <div class="toolbar-separator"></div>
 
                 <!-- 右側群組：Serial 與 執行 -->
                 <div class="toolbar-group">
@@ -146,6 +95,58 @@
                     <div class="toolbar-btn" id="btn-serial-monitor" title="%{BKY_TLB_SERIAL_MONITOR}">
                         <img src="src/icons/usb-bold.png">
                     </div>
+                    
+                    <div class="toolbar-separator"></div>
+                    <div class="toolbar-dropdown" id="settings-dropdown">
+                        <div class="toolbar-btn" id="btn-settings-root" title="%{BKY_TLB_SETTINGS}">
+                            <img src="src/icons/gear-outline.png">
+                        </div>
+                        <div class="dropdown-content">
+                            <div class="dropdown-item" id="btn-python-env" title="%{BKY_TLB_SETTINGS_PYTHON_ENV}">
+                                <img src="src/icons/python.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                <span>%{BKY_TLB_SETTINGS_PYTHON_ENV}</span>
+                            </div>
+                            <div class="dropdown-item" id="btn-toggle-scroll-options">
+                                <span id="scroll-options-check" style="width: 16px; margin-right: 8px; display: inline-block;"></span>
+                                <span>%{BKY_TLB_SETTINGS_SCROLL_OPTIONS}</span>
+                            </div>
+                            <div class="dropdown-item" id="btn-toggle-language" title="%{BKY_STARTUP_LANG}">
+                                <img src="src/icons/language.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                <span class="lang-switch" id="language-toggle-switch" role="switch" aria-label="%{BKY_STARTUP_LANG}">
+                                    <span class="lang-switch-opt" data-lang="zh-hant">中文</span>
+                                    <span class="lang-switch-arrow">⇄</span>
+                                    <span class="lang-switch-opt" data-lang="en">English</span>
+                                </span>
+                            </div>
+                            <div class="dropdown-submenu" id="group-theme-settings">
+                                <div class="dropdown-item submenu-title">
+                                    <img src="src/icons/color-brush-1.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                    <span id="theme-menu-title">%{BKY_STARTUP_THEME}</span>
+                                    <span style="margin-left: auto; font-size: calc(10px * var(--fs-e));">▶</span>
+                                </div>
+                                <!-- 選項由 ThemeManager registry 動態生成 (base.js)，此處僅保留容器 -->
+                                <div class="submenu-content" id="theme-menu-items"></div>
+                            </div>
+                            <div class="dropdown-separator"></div>
+                            <div class="dropdown-submenu" id="group-firmware-settings">
+                                <div class="dropdown-item submenu-title">
+                                    <img src="src/icons/hardware-chip-outline.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                    <span>%{BKY_TLB_SETTINGS_FIRMWARE_GROUP}</span>
+                                    <span style="margin-left: auto; font-size: calc(10px * var(--fs-e));">▶</span>
+                                </div>
+                                <div class="submenu-content">
+                                    <div class="dropdown-item" id="btn-erase-filesystem" title="%{BKY_TLB_SETTINGS_ERASE_FS_TOOLTIP}">
+                                        <img src="src/icons/remove-from-trash.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                        <span>%{BKY_TLB_SETTINGS_ERASE_FS}</span>
+                                    </div>
+                                    <div class="dropdown-item" id="btn-reset-firmware">
+                                        <img src="src/icons/reset.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                        <span>%{BKY_TLB_SETTINGS_RESET_FIRMWARE}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="toolbar-btn" id="btn-close" title="%{BKY_TLB_CLOSE_EDITOR}" style="display: none;">
                         <img src="src/icons/close-octagon.png">
                     </div>
@@ -178,7 +179,7 @@
                             <img src="src/icons/brush-3-ai-line_FE2F89.png" style="width: 16px; height: 16px;">
                         </button>
                         <button class="terminal-tool-btn" id="btn-close-terminal" title="%{BKY_TLB_CLOSE_PANEL}">
-                            <span style="font-size: 16px; font-weight: bold;">×</span>
+                            <span style="font-size: calc(16px * var(--fs-e)); font-weight: bold;">×</span>
                         </button>
                     </div>
                 </div>
@@ -193,7 +194,7 @@
             <div id="codeHeader">
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <div class="toolbar-btn" id="btn-close-code" title="%{BKY_TLB_CLOSE_PANEL}" style="width: 20px; height: 20px; margin-right: 4px;">
-                        <span style="font-size: 16px; font-weight: bold;">×</span>
+                        <span style="font-size: calc(16px * var(--fs-e)); font-weight: bold;">×</span>
                     </div>
                     <span>%{BKY_TLB_PYTHON_PREVIEW}</span>
                 </div>
@@ -205,7 +206,7 @@
                         <img src="src/icons/python.png" style="width: 18px; height: 18px;">
                     </div>
                     <div class="toolbar-separator" style="height: 16px; margin: 0;"></div>
-                    <span style="font-size: 10px;">%{BKY_TLB_INDENT}</span>
+                    <span style="font-size: calc(10px * var(--fs-e));">%{BKY_TLB_INDENT}</span>
                     <div class="indent-dropdown" id="indent-selector">
                         <button type="button" class="indent-dropdown-trigger" aria-haspopup="listbox" aria-expanded="false">
                             <span class="indent-dropdown-label">4 空格</span>
@@ -217,7 +218,7 @@
                     </div>
                 </div>
             </div>
-            <div id="block-type-info" style="display: none; padding: 4px 12px; font-size: 11px; color: #FE2F89; background: #FFF0F5; border-bottom: 1px solid #FDE0E8; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+            <div id="block-type-info" style="display: none; padding: 4px 12px; font-size: calc(11px * var(--fs-e)); color: #FE2F89; background: #FFF0F5; border-bottom: 1px solid #FDE0E8; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
             <div id="codeContent"></div>
         </div>
     </div>
@@ -349,33 +350,33 @@
             <span class="lang-switch-opt" data-lang="en">English</span>
         </span>
         <!-- 版本檢查：固定右上角，不自動隱藏 -->
-        <div class="toolbar-btn startup-update-btn" id="btn-update" title="%{BKY_TLB_UPDATE}" style="position: absolute; top: 14px; right: 22px; display: flex; align-items: center; gap: 6px; padding: 1px 1px; font-size: 14px; border: 1px solid var(--cocoya-border, #ddd); border-radius: 8px; background: var(--cocoya-surface, #fff); color: var(--cocoya-fg, #555); cursor: pointer;">
+        <div class="toolbar-btn startup-update-btn" id="btn-update" title="%{BKY_TLB_UPDATE}" style="position: absolute; top: 14px; right: 22px; display: flex; align-items: center; gap: 6px; padding: 1px 1px; font-size: calc(14px * var(--fs-h)); border: 1px solid var(--cocoya-border, #ddd); border-radius: 8px; background: var(--cocoya-surface, #fff); color: var(--cocoya-fg, #555); cursor: pointer;">
             <img src="src/icons/published_with_changes_24dp_1F1F1F.png" class="update-icon" style="width: 20px; height: 20px;">
         </div>
         <div style="max-width: 560px; padding: 48px 32px; width: 100%;">
             <img src="src/icons/cocoya-1.png" id="startup-home-logo" style="display: block; margin: 0 auto 18px auto; width: 360px; height: auto;">
             <div style="display: flex; gap: 16px; justify-content: center;">
                 <div class="startup-new-dropdown" id="startup-new-wrap">
-                    <button type="button" id="startup-new" style="padding: 14px 30px; font-size: 15px; border: 1px solid var(--cocoya-border, #ddd); border-radius: 8px; background: var(--cocoya-surface, #fff); color: var(--cocoya-fg, #555); cursor: pointer;">開新專案</button>
+                    <button type="button" id="startup-new" style="padding: 14px 30px; font-size: calc(15px * var(--fs-h)); border: 1px solid var(--cocoya-border, #ddd); border-radius: 8px; background: var(--cocoya-surface, #fff); color: var(--cocoya-fg, #555); cursor: pointer;">開新專案</button>
                     <div class="startup-new-menu">
                         <button type="button" class="startup-new-option" data-platform="PC">💻 Python (PC)</button>
                         <button type="button" class="startup-new-option" data-platform="MicroPython">📟 MicroPython (MCU)</button>
                     </div>
                 </div>
-                <button type="button" id="startup-open" style="padding: 14px 30px; font-size: 15px; border: 1px solid var(--cocoya-border, #ddd); border-radius: 8px; background: var(--cocoya-surface, #fff); color: var(--cocoya-fg, #555); cursor: pointer;">開啟專案</button>
-                <button type="button" id="startup-examples" style="padding: 12px 26px; font-size: 14px; border: 1px solid var(--cocoya-border, #ddd); border-radius: 8px; background: var(--cocoya-surface, #fff); color: var(--cocoya-fg, #555); cursor: pointer;">開啟範例</button>
+                <button type="button" id="startup-open" style="padding: 14px 30px; font-size: calc(15px * var(--fs-h)); border: 1px solid var(--cocoya-border, #ddd); border-radius: 8px; background: var(--cocoya-surface, #fff); color: var(--cocoya-fg, #555); cursor: pointer;">開啟專案</button>
+                <button type="button" id="startup-examples" style="padding: 12px 26px; font-size: calc(14px * var(--fs-h)); border: 1px solid var(--cocoya-border, #ddd); border-radius: 8px; background: var(--cocoya-surface, #fff); color: var(--cocoya-fg, #555); cursor: pointer;">開啟範例</button>
             </div>
             <div id="startup-settings-panel" style="margin-top: 28px; text-align: left;">
                 <details>
-                    <summary style="cursor: pointer; font-size: 14px; color: var(--cocoya-fg, #555); user-select: none;">%{BKY_STARTUP_SETTINGS}</summary>
+                    <summary style="cursor: pointer; font-size: calc(14px * var(--fs-h)); color: var(--cocoya-fg, #555); user-select: none;">%{BKY_STARTUP_SETTINGS}</summary>
                     <div style="display: flex; gap: 12px; margin-top: 12px;">
-                        <button type="button" id="startup-python-env" style="flex: 1; padding: 10px 12px; font-size: 13px; border: 1px solid var(--cocoya-border, #ddd); border-radius: 8px; background: var(--cocoya-surface, #fff); color: var(--cocoya-fg, #555); cursor: pointer;">設定 Python 環境</button>
+                        <button type="button" id="startup-python-env" style="flex: 1; padding: 10px 12px; font-size: calc(13px * var(--fs-h)); border: 1px solid var(--cocoya-border, #ddd); border-radius: 8px; background: var(--cocoya-surface, #fff); color: var(--cocoya-fg, #555); cursor: pointer;">設定 Python 環境</button>
                     </div>
                     <div style="display: flex; gap: 12px; margin-top: 12px;">
-                        <label style="flex: 1; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--cocoya-fg, #555);">
+                        <label style="flex: 1; display: flex; align-items: center; gap: 8px; font-size: calc(13px * var(--fs-h)); color: var(--cocoya-fg, #555);">
                             <span id="startup-theme-label">%{BKY_STARTUP_THEME}</span>
                             <!-- 選項由 ThemeManager registry 動態生成（persistence.js），此處僅保留 auto -->
-                            <select id="startup-theme" style="flex: 1; padding: 8px; font-size: 13px; border: 1px solid var(--cocoya-border, #ddd); border-radius: 8px; background: var(--cocoya-surface, #fff); color: var(--cocoya-fg, #555); cursor: pointer;">
+                            <select id="startup-theme" style="flex: 1; padding: 8px; font-size: calc(13px * var(--fs-h)); border: 1px solid var(--cocoya-border, #ddd); border-radius: 8px; background: var(--cocoya-surface, #fff); color: var(--cocoya-fg, #555); cursor: pointer;">
                                 <option value="auto">%{BKY_THEME_AUTO}</option>
                             </select>
                         </label>

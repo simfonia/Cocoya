@@ -13,6 +13,7 @@ export function createLabelManager({
     state, t, escapeHtml, UIComponents, UICanvas, getFormValue,
     syncLabelMap, updateStatsFromImages, scheduleAutoSave, refreshPreview,
     renderClassificationControls, renderAnnotationControls, updateThumbnailHighlight,
+    onLabelMapChanged, onLabelRenamed,
     bridge, getDocument = () => globalThis.document
 }) {
     function doc() {
@@ -60,6 +61,8 @@ export function createLabelManager({
             }
             scheduleAutoSave();
             refreshPreview();
+            // P2：label_map 變更後同步右欄 live 採集面板的標籤下拉（ui_layout 經 onLabelMapChanged 注入）
+            if (typeof onLabelMapChanged === 'function') onLabelMapChanged();
         };
         const freshContainer = () => (container.id ? (doc().getElementById(container.id) || container) : container);
 
@@ -100,6 +103,8 @@ export function createLabelManager({
                 syncLabelMap();
                 updateStatsFromImages();
                 reRender();
+                // Part B（2026-09-16）：磁碟同步——live 落盤區資料夾/檔名隨標籤改名（非阻塞；來源資料夾不碰）
+                if (typeof onLabelRenamed === 'function') onLabelRenamed(entry[0], trimmed);
             }
         };
 

@@ -88,7 +88,10 @@ export function createExportUseCases(deps) {
 
             exportPromise.then((msg) => {
                 showExportProgress(false);
-                if (msg.success) {
+                if (msg.errorCode === 'CANCELED') {
+                    // 使用者取消存檔對話框：靜默收掉進度條與訊息，不顯示錯誤
+                    showStatusMessage('');
+                } else if (msg.success) {
                     showStatusMessage(t('SUCCESS_EXPORT', '✅ 資料集匯出成功'));
                 } else {
                     showStatusMessage(t('ERROR_EXPORT_FAILED', '❌ 匯出失敗: %1').replace('%1', msg.error));

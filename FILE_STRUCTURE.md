@@ -136,7 +136,8 @@ C:\Workspace\cocoya\
 │   │   │   └── dataset_manager/ # Dataset Spec 與資料集管理器應用層模組
 │   │   │       ├── core/      # 純資料規則層，禁止依賴 DOM、Bridge、window 與 i18n
 │   │   │       │   ├── labelMap.js # label map 清理、建立與下一個類別 id
-│   │   │       │   ├── projectNaming.js # 專案名稱純函式清理與比較
+│   │   │       │   ├── projectNaming.js # 資料集名稱規則（sanitize/isEqual）＋[2026-09-17] 改名漂移偵測 detectDatasetNameDrift（由 img.diskPath／sourceFolderPath 反推磁碟命名空間，無 IO）
+│   │   │       │   ├── projectNaming.test.mjs # [2026-09-17] 名稱規則與漂移偵測契約測試（12 測試）
 │   │   │       │   ├── pathPolicy.js # 專案名稱與路徑安全規則（canonical path 組裝、containment、traversal 防護）
 │   │   │       │   ├── pathPolicy.test.mjs # path contract Node 測試（node --test 執行，不打包）
 │   │   │       │   ├── typePolicy.js # [M1 R3] 專案類型政策 SSOT（isImageType/needsAnnotationCheck/allowedModes/isDevType；純邏輯禁文案）
@@ -157,6 +158,8 @@ C:\Workspace\cocoya\
 │   │   │       │   ├── sessionManager.js # [M1 R1] 類型鎖定會話狀態機（openSession/backToEntry/requestSwitchType；DI 可測）
 │   │   │       │   ├── sessionManager.test.mjs # 會話鎖定契約測試（3 測試）
 │   │   │       │   ├── annotationMutations.js # [Stage 3] 標註/分類 mutation 純函式（計數、class_id 過濾、label→unlabeled、刪除索引解析）
+│   │   │       │   ├── labelRenameReconcile.js # [2026-09-17] 標籤改名後影像路徑對帳純函式（reconcileRenamedPaths：路徑經 core/pathPolicy.normalizePath 比對＋檔名唯一兜底；修 spec image_path 檔名不更新與縮圖 tooltip 停留舊值）
+│   │   │       │   ├── labelRenameReconcile.test.mjs # 對帳契約測試（7 測試：Windows 反斜線回歸／正斜線／未命中僅改目錄段／檔名兜底／不唯一不兜底／no-op／label 未同步）
 │   │   │       │   └── annotationMutations.test.mjs # annotationMutations Node 測試（node --test 執行）
 │   │   │       ├── ui/
 │   │   │       │   ├── entryCards.js # [M1 R2] 卡片入口純模板＋TYPE_CATALOG 目錄 SSOT（6 類型＋dev 徽章；轉義經 core/html.js）
@@ -179,13 +182,13 @@ C:\Workspace\cocoya\
 │   │   │       │   ├── modal.test.mjs # buildModalTemplate Node 測試（node --test 執行）
 │   │   │       │   ├── statusMessage.js # [Stage 4 切片 1] 集中式狀態訊息 Presenter（createStatusMessageUI→{showStatusMessage,dispose}；計時器重置/dispose 語意自 ui_layout 抽出，契約不變）
 │   │   │       │   └── statusMessage.test.mjs # statusMessage 行為契約 Node 測試（node --test 執行）
-│   │   │       ├── dataset_manager.css # Dataset Manager Modal、縮圖牆與標註畫布樣式 (含 3 欄標註模式、.dataset-name-warning 名稱衝突警示)
+│   │   │       ├── dataset_manager.css # Dataset Manager Modal、縮圖牆與標註畫布樣式 (含 3 欄標註模式、.dataset-name-warning 名稱衝突警示；檔尾 P1/P2/P3 字級映射；43 處 font-size 皆 calc(Npx * var(--dsm-font-scale)))
 │   │   │       ├── i18n.js # [NEW] 共享 i18n t() 函式庫 (支援佔位符替換)
 │   │   │       ├── index.js # 靜態 ESM 入口與 window.CocoyaDataset API 掛載（loadI18n 以 in-flight promise 防 locale race，Stage 5 收尾）
 │   │   │       ├── spec.js  # DatasetSpec 類別、Schema 偵測、強健型 CSV 解析與驗證邏輯 (i18n 化)（R7：buildTableSamples 表格落盤組裝＋TABLE_SAMPLES_PERSIST_LIMIT＋stats.samples_truncated 契約）
 │   │   │       ├── spec.test.mjs # [R7] spec 契約測試（buildTableSamples 截斷/total、samples_truncated round-trip；6 測試）
 │   │   │       ├── sampler.js # [Stage 2 重構] 攝影機採集核心、連拍邏輯（通訊改經 io/bridge.js：request correlation + timeout + dispose）
-│   │   │       ├── ui_layout.js # 協調層（Stage 4＋M1 類型鎖定 entry/session/typePolicy＋P1/P2/P3 導航；轉義/路徑改吃 core/html.js 與 pathPolicy SSOT）
+│   │   │       ├── ui_layout.js # 協調層（Stage 4＋M1 類型鎖定 entry/session/typePolicy＋P1/P2/P3 導航；轉義/路徑改吃 core/html.js 與 pathPolicy SSOT；[2026-09-17] 拍照/刪圖不再覆寫結構面板 innerHTML、renderStatsPanels 加管理器保護、改名對帳走 labelRenameReconcile＋重繪縮圖、資料集名稱漂移提示 applyDatasetNameDriftHint）
 │   │   │       ├── ui_components.js # 動態視圖組件 (影像網格、字典序標籤統計、標註縮圖欄、getLabelColor FNV-1a+黃金角色相；轉義經 core/html.js，前損壞實作已刪)
 │   │   │       ├── ui_canvas.js # 標註互動畫布 (物件偵測拉框與自駕循線畫線，支援座標限幅防護、bbox 高亮與雙模互動)
 │   │   │       └── i18n/      # 語系檔目錄
@@ -196,6 +199,8 @@ C:\Workspace\cocoya\
 │   │   ├── utils.js       # [REFACTORED] 入口與命名空間初始化
 │   │   ├── zh-hant.js     # 核心語系檔
 │   │   ├── en.js          # 核心語系檔
+│   │   ├── style.css      # 全域樣式（各畫面字級一律 calc(Npx * var(--fs-x))）
+│   │   ├── font_scale.css # [NEW] 字體縮放 SSOT：--fs-h/--fs-e/--fs-p1/--fs-p2/--fs-p3（預設 1，畫面各一；含 toolbox 分類列同步縮放）
 │   │   ├── vs.min.css     # 本地化 Highlight.js 樣式
 │   │   ├── highlight.min.js # 本地化 Highlight.js 核心
 │   │   ├── python.min.js  # 本地化 Python 語法解析
@@ -221,11 +226,11 @@ C:\Workspace\cocoya\
 │       ├── main.rs        # 應用程式入口
 │       ├── lib.rs         # [REFACTORED] 瘦身後的生命週期管理
 │       ├── state.rs       # [NEW] AppState 定義 (進程/鎖定狀態)
-│       ├── utils.rs       # [NEW] 路徑與資源解析工具
+│       ├── utils.rs       # [NEW] 路徑與資源解析工具（含 examples AppData 播種 ensure_examples_seeded/copy_dir_merge）
 │       └── commands/      # [NEW] 分類指令處理器
 │           ├── mod.rs       # 指令集匯出
 │           ├── python.rs    # Python 執行與環境診斷（注入 UTF-8 編碼與 COCOYA_TRAIN_TEMPLATES 環境變數）；install_python_module/abort_install_module 為套件安裝專用命令（獨立進程 + install-module-* 事件 + kill_tree）
-│           ├── file.rs      # 檔案讀寫、備份與鎖定 (+ dataset_save_progress/dataset_load_progress 進度存讀 [NEW] + 內建範例唯讀保護：Release 開啟時確認後複製範例專案到 Documents\Cocoya\Projects)
+│           ├── file.rs      # 檔案讀寫、備份與鎖定 (+ dataset_save_progress/dataset_load_progress 進度存讀 [NEW] + 內建範例唯讀保護：Release 開啟時確認後複製範例專案到 桌面\Cocoya\Projects；2026-09-16 由文件改為桌面)
 │           ├── mcu.rs       # 硬體通訊、韌體與序列埠
 │           ├── app.rs       # 視窗控制與系統資訊
 │           ├── dataset.rs   # [NEW] Sidecar 通訊 (start/send/stop)

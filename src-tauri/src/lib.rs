@@ -57,6 +57,7 @@ pub fn run() {
             commands::stop_sidecar,
             commands::dataset_upload_chunk,
             commands::delete_file,
+            commands::dataset_rename_label,
             commands::pick_folder,
             commands::pick_data_file,
             commands::export_dataset,
@@ -71,6 +72,14 @@ pub fn run() {
             commands::set_window_focus
         ])
         .setup(|app| {
+            // examples 播種（首次啟動／升級時補缺檔到 AppData 可寫目錄）：
+            // 同步執行（examples 體積小）；dev 模式內部直接跳過；失敗不擋啟動（get_examples_path 會 fallback 回 Resource）
+            let seed_handle = app.handle().clone();
+            let seeded = crate::utils::ensure_examples_seeded(&seed_handle);
+            if !seeded {
+                eprintln!("[examples-seed] skipped or failed (dev mode / resolve error / IO error)");
+            }
+
             // 序列埠熱插拔輪詢（全程序單一共用執行緒，多視窗共享一份 diff 快照）：
             // 只列舉不開埠；有變化才逐一 emit_to 各視窗 serial-ports-changed（廣播全域事實，非視窗專屬資料）
             let handle = app.handle().clone();

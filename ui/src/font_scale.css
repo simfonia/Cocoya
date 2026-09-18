@@ -1,0 +1,38 @@
+/*
+ * 字體大小縮放 SSOT（Font Scale — Single Source of Truth）
+ * ---------------------------------------------------------------------------
+ * 每個畫面一個變數，預設 1 = 原始大小。實測時只改這個檔案，存檔後重新載入即生效。
+ *
+ *   --fs-h  : H  首頁            #startup-home（含首頁「設定」面板）
+ *   --fs-e  : E  主編輯區        toolbar / #codeArea / #terminalArea / Blockly toolbox 分類文字
+ *   --fs-p1 : P1 DM 入口         #dataset-entry-view（類型卡片頁）
+ *   --fs-p2 : P2 DM 資料集管理
+ *   --fs-p3 : P3 DM 標註         .dataset-manager-overlay.dataset-annotation-fullscreen
+ *
+ * 規則：
+ *   1. 各畫面元件 CSS 一律寫 calc(Npx * var(--fs-x))，不得再出現裸 px 字級。
+ *   2. 積木本體字級由 Blockly 內建 +- 控制項調整，不在此範圍。
+ *   3. 未來 UI 化：由 JS 覆寫這 5 個變數即可（不需動任何元件 CSS）。
+ * ---------------------------------------------------------------------------
+ */
+:root {
+    --fs-h: 1.2;
+    --fs-e: 1.4;
+    --fs-p1: 1.4;
+    --fs-p2: 1.4;
+    --fs-p3: 1.2;
+}
+
+/* ===== E：Blockly toolbox 分類文字 =====
+ * Blockly 12 基準：label 為 `font: 16px sans-serif`、分類列 .blocklyToolboxCategory 高 22px。
+ * 兩者必須一起縮放，否則文字放大後會被固定列高裁切；列高同步縮放即可維持垂直置中。
+ * 以 .blocklyToolboxDiv 提高特異度，覆蓋 Blockly 執行期注入的 CSS（不依賴載入順序）。
+ */
+.blocklyToolboxDiv .blocklyToolboxCategoryLabel {
+    font-size: calc(16px * var(--fs-e));
+}
+
+.blocklyToolboxDiv .blocklyToolboxCategory {
+    height: calc(22px * var(--fs-e));
+    line-height: calc(22px * var(--fs-e));
+}

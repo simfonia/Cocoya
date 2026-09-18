@@ -153,6 +153,10 @@ Canonical save path（**已決策，2026-08-26**）：
 | 2026-09-01 | Stage 6 切片 1（D6-3 靜態清理 + D6-1/D6-2 文件核對）：ui_layout.js 刪 5 個零呼叫未 export 死 wrapper；direct Bridge/全域 emit/legacy DOM id/未使用 export 掃描全數 0 或合法；DatasetManager.html 公開 API 表補齊（無 breaking change）、遠端節標記前端移除後端保留、Importer 更正 importUseCases；FILE_STRUCTURE 同步 | node --check PASS；node --test 80/80；vite build PASS。掃描證據與保留原因詳 log/work/2026-09-01.md |
 | 2026-09-01 | Stage 6 切片 2（D6-1 深度核對）：backend manifest Dataset 段逐項對照 Rust 簽名（lib.rs invoke_handler + file.rs/dataset.rs）與 VSIX datasetOps.ts——兩端一致、無 breaking change；get_project_anchor 去重複列並補 camelCase 鐵律；AGENTS.md 落成訊息責任定義（UI/VSIX Host/Tauri/Sidecar 四層）；建立 DatasetManager_DevGuide.html（開發 SOP） | node --check PASS；vite build PASS。B0-1 API 清單實機對照登錄 backlog |
 
+| 2026-09-17 | #task[DM P2 標籤管理UI消失] 兩修：①拍照/刪圖的管理器消失——`ui_layout.js` `addSampleFromSampler()`/`handleDeleteImage()` 移除「renderLabelStats 覆寫 `#dataset-structure-content`」舊寫法（P2 病根漏改兩處）；`renderStatsPanels()` 加守門（`#view-label-class-manager` 在但 `#view-label-stats` 不在 → `renderStructurePanel()` 重建，不覆寫父容器）。②改名對帳——新增 `application/labelRenameReconcile.js` 純函式 `reconcileRenamedPaths()`（比對一律經 `core/pathPolicy.normalizePath`，修「後端回傳正斜線 vs img.diskPath 反斜線」miss 導致 spec image_path 檔名不更新；檔名唯一 basename 兜底）＋`handleLabelRenamedOnDisk()` 對帳後補 `refreshThumbnailBadges()`（hover tooltip 立即更新） | `node --check`×2 PASS；DM 全套 **129/129 PASS**（+7 新測試 `labelRenameReconcile.test.mjs`）；`npm run build --prefix ui` PASS；後端零改動（backend manifest/契約不變）。實機驗收待使用者（雙平台） |
+
+| 2026-09-17 | DM「資料集名稱 vs 磁碟資料夾」政策（方案 A，純前端）：`core/projectNaming.js` 新增 `detectDatasetNameDrift`（證據＝`img.diskPath` 尾段反推＋`sourceFolderPath` canonical 段；無 IO、零後端指令）＋`ui_layout.js` `applyDatasetNameDriftHint`（標紅＋`NAME_DRIFT_TIP`；同組漂移只提示一次）＋i18n zh/en parity 172/172。政策：未落盤可自由改名（不建立空目錄）／已落盤不搬移但必須提示；B 案（`dataset_rename_dataset_dir`）列 backlog | `node --check`×2；DM **141/141 PASS**（+12 新測試 `core/projectNaming.test.mjs`）；`i18n_parity_scan.cjs` only-zh=[] only-en=[]；`vite build` PASS；後端零改動 |
+
 ## 7. Agent update protocol
 
 每個 agent 完成一個 command 或 event 後，必須：

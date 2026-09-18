@@ -195,7 +195,7 @@
 - 拆解 `ui_layout.js`（108KB/60+ 函式）為 `core/io/ui/application` 四層，Phase 0-6 全完成（見 todo Archive A）。
 - **唯一 Bridge Port**：`ui/src/modules/dataset_manager/io/bridge.js`——所有 DSM 通訊一律經此（request correlation / timeout / cancel / unsubscribe）；UI 層嚴禁 direct `window.CocoyaBridge`。
 - **訊息責任邊界（AGENTS.md「Dataset Manager 訊息責任定義」）**：錯誤「碼」後端定義（如 `PROGRESS_NOT_FOUND`），人類文案前端 i18n（`DSM_*`）；core/application 層禁 hard-code 中文。
-- **狀態訊息**：一律 `showStatusMessage(msg, {duration})` 顯示於 `#dataset-manager-message`（預設 8s 自動清除），禁手寫 `#dataset-import-status`。
+- **狀態訊息**：一律 `showStatusMessage(msg, {duration})` 顯示於 `#dataset-manager-message`（常駐列、靠左、visibility 保留空間；預設 5s 自動隱藏），禁手寫 `#dataset-import-status`。
 - **style token 化**：DSM 色彩以 `--dsm-*` CSS 變數統一（vscode/vscode-dark/cocoya_dark 三主題各自定義），深色確認框改用 token 化自訂對話框取代 native confirm（i18n 需求）。
 - 開發 SOP 見 `log/mappings/DatasetManager_DevGuide.html`；色彩盤點見 `log/plan/DatasetManagerStyleTokens.md`。
 

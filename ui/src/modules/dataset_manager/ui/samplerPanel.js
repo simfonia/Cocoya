@@ -4,11 +4,13 @@
  * 職責：預設選取首標籤、綁定 onSampleCaptured、列舉攝影機、
  * renderSamplerView（含 onLabelChange 手動補 label_map＋統計＋dropdown 重建＋預覽刷新）。
  * 相機開關語意（DOM 真值＋stopCamera(true)）由 renderSamplerView 持有，本模組不碰。
+ * P2：結構面板重繪委派 refreshStructurePanel（ui_layout 注入），不再覆寫 innerHTML
+ *      以免沖掉中欄統一標籤管理器；採集面板僅保留標籤「選取」下拉。
  * 依賴全注入，無模組級全域耦合，Node 可測。
  */
 export function createSamplerPanel({
     state, Sampler, UIComponents,
-    updateStatsFromImages, refreshPreview,
+    updateStatsFromImages, refreshPreview, refreshStructurePanel,
     onSnapshot, onBurstToggle, onStartCamera, onStopCamera, onSampleCaptured,
     nextLabelId
 }) {
@@ -71,18 +73,22 @@ export function createSamplerPanel({
         Sampler.setTargetLabel(l);
 
         // [關鍵修正] 如果是新標籤且尚未存在於 spec 中，手動加入 label_map
+        // （正常流程下只會選到既有標籤；保留以相容外部呼叫）
         const spec = state.spec.toJSON();
         const labelMap = spec.schema.label_map || {};
+        let added = false;
         if (labelMap[l] === undefined) {
             labelMap[l] = nextLabelId(labelMap);
             state.spec.updateSchema({ label_map: labelMap });
+            added = true;
         }
 
-        // 重新以 label_map 為權威計算統計，確保新標籤/改名即時反映
-        updateStatsFromImages();
-        const structureContent = modal?.querySelector?.('#dataset-structure-content') || null;
-        if (structureContent) {
-            UIComponents.renderLabelStats(structureContent, state.spec.toJSON().stats);
+        if (added) {
+            // 重新以 label_map 為權威計算統計，確保新標籤/改名即時反映
+            updateStatsFromImages();
+            // P2：重建結構面板（統一標籤管理器＋統計），取代「renderLabelStats 覆寫
+            // structureContent innerHTML」舊行為（會沖掉中欄統一標籤管理器 DOM）
+            if (typeof refreshStructurePanel === 'function') refreshStructurePanel();
         }
 
         // 更新採集面板的 dropdown 選項清單（新增標籤後讓新標籤出現在下拉選單）

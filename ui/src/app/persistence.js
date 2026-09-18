@@ -48,7 +48,9 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
                 xml,
                 filename,
                 platform: this.currentPlatform || 'PC',
-                isReadOnly: this.isReadOnly
+                isReadOnly: this.isReadOnly,
+                // 忠實記錄切換前髒狀態：還原時照舊，避免「首頁未命名乾淨專案」被誤標髒（2026-09-16）
+                isDirty: !!this.isDirty
             }));
         } catch (e) {
             try { sessionStorage.removeItem(this.SNAPSHOT_KEY); } catch (_) {}

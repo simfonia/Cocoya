@@ -104,6 +104,7 @@ Notation: `key?` = Optional. **Rule: changing a Rust signature -> immediately up
 | file | clear_backup       | -- | {} | Result<(), String> |
 | file | reject_recovery    | -- | {} | Result<(), String> |
 | file | delete_file        | path: String | {path} | Result<(), String>；檔案不存在 → Err(`FILE_NOT_FOUND: ...`)（非靜默成功，前端據此仍移除縮圖並提示）；刪除失敗 → Err(IO 錯誤字串) |
+| file | dataset_rename_label | dataset_dir: String, old_label: String, new_label: String | {datasetDir, oldLabel, newLabel} | Result<Vec<RenamedPath>, String>（RenamedPath { oldPath, newPath }，serde camelCase）；`<dataset_dir>/<old_label>` 不存在 → Ok([])（no-op）；目標目錄已存在 → Err(`LABEL_DIR_CONFLICT: ...`)；標籤段不合法（非 `[A-Za-z0-9_-]+`）→ Err(`LABEL_NAME_INVALID: ...`)；IO 失敗 → Err(`IO_ERROR: ...`)。作用：目錄整體改名＋目錄內 `<old>_` 前綴檔改名，回傳成功清單供前端對帳（2026-09-16 Part B；VSIX 對等 handler `handleDatasetRenameLabel`） |
 | file | pick_folder        | default_path: Option<String> | {defaultPath} | Result<PickFolderResult, String>；default_path 為對話框起始目錄（XML 專案根），僅作起始位置不限制選取 |
 | file | pick_data_file     | default_path: Option<String> | {defaultPath} | Result<PickDataFileResult, String>；PickDataFileResult { path, content }（content 為 UTF-8 檔案內容）；CSV/JSON 資料檔匯入 |
 | file | dataset_save_progress | folder_path, project_name, spec_json: String | {folderPath, projectName, specJson} | Result<String, String>（Err 以 `CODE: message` 前綴回傳：`PROJECT_NAME_INVALID` / `IO_ERROR`） |

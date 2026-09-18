@@ -186,12 +186,14 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             setTimeout(() => {
                 this.setupWorkspaceListeners();
                 this.isInitializing = false;
-                // 主題切換 reload 時快照還原 dirty（2026-09-01）：還原內容即維持髒，可繼續存回原檔；
-                // 否則視為全新乾淨工作區（原本行為）。
+                // 主題/語系切換 reload 後快照還原：髒狀態**忠實還原**切換前的 isDirty
+                //（2026-09-16 修正：原本無條件 setDirty(true)，導致首頁未命名乾淨專案切換設定後被誤標髒，
+                //  之後開檔被存檔警告攔截。編輯中 dirty 專案仍會正確維持髒、可存回原檔）。
                 if (restoredSnapshot) {
-                    this.isDirty = true;
-                    if (window.CocoyaUI) window.CocoyaUI.setDirty(true);
-                    this.setDirty(true);
+                    const dirty = !!restoredSnapshot.isDirty;
+                    this.isDirty = dirty;
+                    if (window.CocoyaUI) window.CocoyaUI.setDirty(dirty);
+                    this.setDirty(dirty);
                 } else {
                     this.isDirty = false;
                     this.setDirty(false);
@@ -316,9 +318,9 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
      * 快照由 persistence.snapshotWorkspaceForReload 產生（sessionStorage）。
      */
     _restoreReloadSnapshot: function() {
-        if (!window.CocoyaApp || typeof window.CocoyaApp.consumeReloadSnapshot !== 'function' || !this.workspace) return false;
+        if (!window.CocoyaApp || typeof window.CocoyaApp.consumeReloadSnapshot !== 'function' || !this.workspace) return null;
         const snap = window.CocoyaApp.consumeReloadSnapshot();
-        if (!snap) return false;
+        if (!snap) return null;
 
         try {
             Blockly.Events.disable();
@@ -340,10 +342,12 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             if (window.CocoyaApp && typeof window.CocoyaApp.refreshMinimap === 'function') {
                 window.CocoyaApp.refreshMinimap();
             }
-            return true;
+            // 回傳 snap 物件（含 isDirty），呼叫端據此忠實還原髒狀態（2026-09-16：原先誤回 true 布林，
+            // 導致 true.isDirty === undefined → dirty 恆為 false，編輯中切語系/主題後星號消失）
+            return snap;
         } catch (e) {
             console.error('[App] reload snapshot restore failed:', e);
-            return false;
+            return null;
         }
     }
 });

@@ -6,6 +6,8 @@
  * - 鐵律：token 化不改視覺值；本切片僅品牌粉 + disabled；灰階待切片 3 與 dark 區塊收斂
  */
 :root {
+    /* 字級縮放（下游唯讀；上游 SSOT 為 ui/src/font_scale.css 的 --fs-p1/p2/p3，映射規則見檔尾） */
+    --dsm-font-scale: var(--fs-p2, 1);
     /* 品牌 */
     --dsm-brand: #FE2F89;
     --dsm-brand-soft: rgba(254, 47, 137, 0.15);   /* focus ring / 淡陰影（原 0.12/0.15/0.25 收斂）*/
@@ -141,7 +143,7 @@ body.vscode-high-contrast {
 
 .dataset-manager-header h2 {
     margin: 0;
-    font-size: 17px;
+    font-size: calc(17px * var(--dsm-font-scale));
     color: var(--dsm-brand);
     letter-spacing: 0;
 }
@@ -149,7 +151,7 @@ body.vscode-high-contrast {
 .dataset-manager-header span {
     display: block;
     margin-top: 2px;
-    font-size: 11px;
+    font-size: calc(11px * var(--dsm-font-scale));
     color: #777777;
 }
 
@@ -171,7 +173,7 @@ body.vscode-high-contrast {
 
 .dataset-panel h3 {
     margin: 0 0 12px;
-    font-size: 13px;
+    font-size: calc(13px * var(--dsm-font-scale));
     color: var(--dsm-text-secondary);
     letter-spacing: 0;
 }
@@ -196,7 +198,7 @@ body.vscode-high-contrast {
 .dataset-source-panel label span {
     display: block;
     margin-bottom: 4px;
-    font-size: 11px;
+    font-size: calc(11px * var(--dsm-font-scale));
     color: #666666;
 }
 
@@ -214,7 +216,7 @@ body.vscode-high-contrast {
     color: var(--dsm-text);
     padding: 5px 7px;
     font: inherit;
-    font-size: 12px;
+    font-size: calc(12px * var(--dsm-font-scale));
     outline: none;
 }
 
@@ -272,7 +274,7 @@ body.vscode-high-contrast .dataset-column-row select:focus {
 .dataset-column-head {
     margin-bottom: 6px;
     color: #777777;
-    font-size: 11px;
+    font-size: calc(11px * var(--dsm-font-scale));
 }
 
 .dataset-column-list {
@@ -288,7 +290,7 @@ body.vscode-high-contrast .dataset-column-row select:focus {
     border-radius: 4px;
     background: transparent;
     color: #666666;
-    font-size: 18px;
+    font-size: calc(18px * var(--dsm-font-scale));
     line-height: 1;
     cursor: pointer;
 }
@@ -311,7 +313,7 @@ body.vscode-high-contrast .dataset-icon-btn:hover {
     background: var(--dsm-btn-bg);
     color: var(--dsm-text);
     cursor: pointer;
-    font-size: 12px;
+    font-size: calc(12px * var(--dsm-font-scale));
     min-height: 30px;
     padding: 5px 10px;
 }
@@ -336,7 +338,7 @@ body.vscode-high-contrast .dataset-secondary-btn:hover {
     border: 1px solid var(--dsm-border-light);
     border-radius: 6px;
     padding: 10px;
-    font-size: 12px;
+    font-size: calc(12px * var(--dsm-font-scale));
     margin-bottom: 10px;
     background: var(--dsm-surface-alt);
 }
@@ -345,6 +347,11 @@ body.vscode-high-contrast .dataset-secondary-btn:hover {
     border-color: #b7dfbd;
     background: #f1f8f2;
     color: #226b2b;
+}
+
+.dataset-validation.warn {
+    border-color: #e6c26a;
+    background: #fdf6e3;
 }
 
 .dataset-validation.error {
@@ -392,7 +399,7 @@ body.vscode-high-contrast .dataset-validation .dataset-warnings {
     background: var(--dsm-code-bg);
     color: var(--dsm-text);
     font-family: Consolas, Monaco, "Courier New", monospace;
-    font-size: 11px;
+    font-size: calc(11px * var(--dsm-font-scale));
     line-height: 1.45;
     white-space: pre;
     opacity: 0.8;
@@ -526,7 +533,7 @@ body.vscode-high-contrast .dataset-image-item.annotated {
     position: absolute;
     top: 2px;
     left: 2px;
-    font-size: 11px;
+    font-size: calc(11px * var(--dsm-font-scale));
     color: #4CAF50;
     background: rgba(255, 255, 255, 0.85);
     border-radius: 50%;
@@ -545,7 +552,7 @@ body.vscode-high-contrast .dataset-image-check {
 
 /* 自動儲存已開啟指示（低噪音） */
 .dataset-autosave-indicator {
-    font-size: 11px;
+    font-size: calc(11px * var(--dsm-font-scale));
     color: #4CAF50;
     margin-left: 8px;
     vertical-align: middle;
@@ -566,7 +573,7 @@ body.vscode-high-contrast .dataset-autosave-indicator {
     padding: 6px 12px;
     background: var(--dsm-success-bg);
     border-bottom: 1px solid var(--dsm-success-border);
-    font-size: 11px;
+    font-size: calc(11px * var(--dsm-font-scale));
 }
 
 .dataset-export-progress-bar {
@@ -615,28 +622,35 @@ body.vscode-high-contrast .dataset-export-progress-bar {
     background: #444444;
 }
 
-/* 集中式狀態訊息（modal 頂部中央，所有模式皆可見） */
+/* 集中式狀態訊息（modal 頂部常駐列，寬度同 modal 內容、文字靠左）。
+   隱藏時 visibility 保留排版空間，且底色/邊框透明——空著時等同原背景色，
+   僅在 is-visible（有訊息）時浮現粉底，視覺上與初始狀態一致。 */
 .dataset-manager-message {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     margin: 0 14px;
     min-height: 34px;
     box-sizing: border-box;
     padding: 8px 12px;
     border-radius: 6px;
-    background: var(--dsm-message-bg);
-    border: 1px solid var(--dsm-message-border);
+    background: transparent;
+    border: 1px solid transparent;
     color: var(--dsm-message-text);
-    font-size: 12px;
-    text-align: center;
+    font-size: calc(12px * var(--dsm-font-scale));
+    text-align: left;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-body.vscode-dark .dataset-manager-message,
-body.vscode-high-contrast .dataset-manager-message {
+.dataset-manager-message.is-visible {
+    background: var(--dsm-message-bg);
+    border-color: var(--dsm-message-border);
+}
+
+body.vscode-dark .dataset-manager-message.is-visible,
+body.vscode-high-contrast .dataset-manager-message.is-visible {
     background: #3a2b32;
     border-color: #6b4455;
     color: #ff8fb3;
@@ -666,7 +680,7 @@ body.vscode-high-contrast .dataset-name-warning {
 .dataset-annotation-toolbar .dataset-annotation-export-status {
     flex: 1 1 auto;
     text-align: right;
-    font-size: 11px;
+    font-size: calc(11px * var(--dsm-font-scale));
     color: var(--dsm-brand);
     min-height: 15px;
     margin-right: 8px;
@@ -691,7 +705,7 @@ body.vscode-high-contrast .dataset-annotation-toolbar .dataset-annotation-export
     border-radius: 50%;
     background: rgba(0, 0, 0, 0.6);
     color: #fff;
-    font-size: 14px;
+    font-size: calc(14px * var(--dsm-font-scale));
     line-height: 1;
     cursor: pointer;
     display: none;
@@ -734,7 +748,7 @@ body.vscode-high-contrast .dataset-image-thumb {
 
 .dataset-image-info {
     margin-top: 4px;
-    font-size: 10px;
+    font-size: calc(10px * var(--dsm-font-scale));
     text-align: center;
     white-space: nowrap;
     overflow: hidden;
@@ -760,7 +774,7 @@ body.vscode-high-contrast .dataset-image-thumb {
     grid-template-columns: minmax(110px, 1fr) 80px 32px;
     gap: 8px;
     align-items: center;
-    font-size: 12px;
+    font-size: calc(12px * var(--dsm-font-scale));
     padding: 4px 8px;
     border-radius: 4px;
     background: var(--dsm-surface-alt);
@@ -788,7 +802,7 @@ body.vscode-high-contrast .dataset-label-color {
     text-align: center;
     color: var(--dsm-text-muted);
     font-style: italic;
-    font-size: 13px;
+    font-size: calc(13px * var(--dsm-font-scale));
 }
 
 body.vscode-dark .dataset-empty-state,
@@ -836,7 +850,7 @@ body.vscode-high-contrast .dataset-annotation-sidebar {
     margin-bottom: 4px;
     padding: 4px 8px;
     border-radius: 3px;
-    font-size: 11px;
+    font-size: calc(11px * var(--dsm-font-scale));
 }
 
 body.vscode-dark .dataset-annotation-item,
@@ -849,7 +863,7 @@ body.vscode-high-contrast .dataset-annotation-item {
     border: none;
     color: var(--dsm-text-muted);
     cursor: pointer;
-    font-size: 14px;
+    font-size: calc(14px * var(--dsm-font-scale));
 }
 
 .dataset-annotation-item button:hover {
@@ -868,7 +882,7 @@ body.vscode-high-contrast .dataset-annotation-item button:hover {
     gap: 8px;
     margin-bottom: 6px;
     color: #777777;
-    font-size: 11px;
+    font-size: calc(11px * var(--dsm-font-scale));
     padding: 0 8px;
 }
 
@@ -913,7 +927,7 @@ body.vscode-high-contrast .dataset-label-head {
 .dataset-preview-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 11px;
+    font-size: calc(11px * var(--dsm-font-scale));
 }
 .dataset-preview-table th {
     position: sticky;
@@ -1016,11 +1030,11 @@ body.vscode-high-contrast .dataset-sampler-controls {
 .dataset-sampler-actions button {
     flex: 1;
     min-height: 36px;
-    font-size: 13px;
+    font-size: calc(13px * var(--dsm-font-scale));
 }
 
 .dataset-sampler-settings {
-    font-size: 11px;
+    font-size: calc(11px * var(--dsm-font-scale));
     color: #777;
     display: flex;
     align-items: center;
@@ -1041,7 +1055,7 @@ body.vscode-high-contrast .dataset-sampler-settings {
     color: rgba(255, 255, 255, 0.9);
     padding: 3px 12px;
     border-radius: 12px;
-    font-size: 10px;
+    font-size: calc(10px * var(--dsm-font-scale));
     font-weight: normal;
     pointer-events: none;
     z-index: 10;
@@ -1068,7 +1082,7 @@ body.vscode-high-contrast .dataset-sampler-controls {
 }
 
 .dataset-sampler-settings {
-    font-size: 11px;
+    font-size: calc(11px * var(--dsm-font-scale));
     color: #666;
     margin-top: 8px;
     text-align: right;
@@ -1107,7 +1121,7 @@ body.vscode-high-contrast #dataset-sampler-view {
 
 .dataset-sampler-sub {
     margin-top: 6px;
-    font-size: 11px;
+    font-size: calc(11px * var(--dsm-font-scale));
     line-height: 1.5;
     color: rgba(255, 255, 255, 0.65);
     max-width: 240px;
@@ -1260,7 +1274,7 @@ body.vscode-high-contrast .dataset-annotation-thumb-item:hover .dataset-image-de
     position: absolute;
     top: 2px;
     right: 2px;
-    font-size: 10px;
+    font-size: calc(10px * var(--dsm-font-scale));
     color: #4CAF50;
     background: rgba(255, 255, 255, 0.85);
     border-radius: 50%;
@@ -1282,7 +1296,7 @@ body.vscode-high-contrast .dataset-annotation-thumb-item.annotated::after {
     bottom: 2px;
     left: 2px;
     right: 2px;
-    font-size: 9px;
+    font-size: calc(9px * var(--dsm-font-scale));
     line-height: 1.3;
     color: #fff;
     background: rgba(34, 34, 34, 0.75);
@@ -1297,7 +1311,7 @@ body.vscode-high-contrast .dataset-annotation-thumb-item.annotated::after {
 /* 分類標籤校正模式的右側檔案資訊行 */
 .dataset-annotation-info {
     margin-top: 8px;
-    font-size: 12px;
+    font-size: calc(12px * var(--dsm-font-scale));
     color: #777;
     line-height: 1.4;
     word-break: break-all;
@@ -1314,11 +1328,11 @@ body.vscode-high-contrast .dataset-annotation-info {
 }
 .dataset-entry-title {
     margin: 0 0 4px;
-    font-size: 16px;
+    font-size: calc(16px * var(--dsm-font-scale));
 }
 .dataset-entry-subtitle {
     margin: 0 0 14px;
-    font-size: 12px;
+    font-size: calc(12px * var(--dsm-font-scale));
     color: var(--dsm-text-muted);
 }
 .dataset-entry-grid {
@@ -1342,11 +1356,11 @@ body.vscode-high-contrast .dataset-annotation-info {
     border-color: var(--dsm-card-hover-border);
 }
 .dataset-entry-card-title {
-    font-size: 14px;
+    font-size: calc(14px * var(--dsm-font-scale));
     font-weight: 600;
 }
 .dataset-entry-card-desc {
-    font-size: 11px;
+    font-size: calc(11px * var(--dsm-font-scale));
     color: var(--dsm-text-muted);
     line-height: 1.5;
 }
@@ -1354,7 +1368,7 @@ body.vscode-high-contrast .dataset-annotation-info {
     border-style: dashed;
 }
 .dataset-entry-dev-badge {
-    font-size: 10px;
+    font-size: calc(10px * var(--dsm-font-scale));
     font-weight: 600;
     padding: 2px 8px;
     border-radius: 10px;
@@ -1364,7 +1378,7 @@ body.vscode-high-contrast .dataset-annotation-info {
 .dataset-dev-banner {
     margin: 0 0 10px;
     padding: 8px 12px;
-    font-size: 12px;
+    font-size: calc(12px * var(--dsm-font-scale));
     border-radius: 6px;
     background: var(--dsm-dev-badge-bg);
     color: var(--dsm-dev-badge-text);
@@ -1375,7 +1389,7 @@ body.vscode-high-contrast .dataset-annotation-info {
     gap: 8px;
     margin-bottom: 10px;
     padding: 6px 10px;
-    font-size: 12px;
+    font-size: calc(12px * var(--dsm-font-scale));
     border-radius: 6px;
     background: var(--dsm-type-badge-bg);
 }
@@ -1399,7 +1413,7 @@ body.vscode-high-contrast .dataset-annotation-info {
     padding: 6px 12px;
     border-bottom: 1px solid #eee;
     background: var(--dsm-surface-alt);
-    font-size: 11px;
+    font-size: calc(11px * var(--dsm-font-scale));
 }
 
 body.vscode-dark .dataset-annotation-toolbar,
@@ -1415,7 +1429,7 @@ body.vscode-high-contrast .dataset-annotation-toolbar {
 
 .dataset-annotation-shortcuts-hint {
     color: var(--dsm-text-muted);
-    font-size: 10px;
+    font-size: calc(10px * var(--dsm-font-scale));
 }
 
 body.vscode-dark .dataset-annotation-shortcuts-hint,
@@ -1464,7 +1478,7 @@ body.vscode-high-contrast .dataset-annotation-controls {
 }
 
 .dataset-annotation-section-title {
-    font-size: 11px;
+    font-size: calc(11px * var(--dsm-font-scale));
     font-weight: bold;
     color: var(--dsm-text-secondary);
     margin-bottom: 6px;
@@ -1485,7 +1499,7 @@ body.vscode-high-contrast .dataset-annotation-section-title {
     flex: 1;
     min-width: 0;
     max-width: 20ch;
-    font-size: 11px;
+    font-size: calc(11px * var(--dsm-font-scale));
     padding: 4px 6px;
     border: 1px solid var(--dsm-border-strong);
     border-radius: 3px;
@@ -1519,7 +1533,7 @@ body.vscode-high-contrast .dataset-annotation-item.selected {
 
 /* 標註列表中的類別下拉選單 */
 .dataset-annotation-item .dataset-annotation-item-class {
-    font-size: 10px;
+    font-size: calc(10px * var(--dsm-font-scale));
     padding: 1px 4px;
     border: 1px solid var(--dsm-border-strong);
     border-radius: 3px;
@@ -1550,4 +1564,25 @@ body.vscode-high-contrast .dataset-annotation-item .dataset-annotation-item-clas
         width: 48px;
         height: 48px;
     }
+}
+
+/* ===========================================================================
+ * 字體縮放映射（2026-09-16）— P1/P2/P3 各自的字級上游
+ * SSOT：ui/src/font_scale.css（--fs-p1 / --fs-p2 / --fs-p3，預設 1 = 原始大小）
+ * 作法：下游 --dsm-font-scale 由 overlay 依「當前模式」重新綁定上游；全檔
+ *       calc(Npx * var(--dsm-font-scale)) 不需改動，切換模式即自動換算。
+ *   P1 入口（#dataset-entry-view 卡片頁）→ .dataset-entry-phase（ui_layout.js showEntryPhase 加上）
+ *   P2 資料集管理（預設）              → overlay 基準
+ *   P3 標註（3 欄全寬）                → .dataset-annotation-fullscreen（annotation.js / classification.js 加上）
+ * =========================================================================== */
+.dataset-manager-overlay {
+    --dsm-font-scale: var(--fs-p2, 1);
+}
+
+.dataset-manager-overlay.dataset-entry-phase {
+    --dsm-font-scale: var(--fs-p1, 1);
+}
+
+.dataset-manager-overlay.dataset-annotation-fullscreen {
+    --dsm-font-scale: var(--fs-p3, 1);
 }

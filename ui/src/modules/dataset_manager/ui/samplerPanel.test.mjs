@@ -37,6 +37,7 @@ function makeHarness({ labelMap = {}, targetLabel = '' } = {}) {
         state, Sampler, UIComponents,
         updateStatsFromImages: () => { calls.stats++; },
         refreshPreview: () => { calls.preview++; },
+        refreshStructurePanel: () => { calls.structure = (calls.structure || 0) + 1; },
         onSnapshot: () => {}, onBurstToggle: () => {},
         onStartCamera: () => {}, onStopCamera: () => {},
         onSampleCaptured: () => { calls.captured++; },
@@ -84,12 +85,24 @@ test('有標籤時預選首標籤', () => {
     assert.equal(h.Sampler.state.targetLabel, 'dog');
 });
 
-test('onLabelChange 新標籤補 label_map 並刷新', () => {
+test('onLabelChange 新標籤補 label_map 並以 refreshStructurePanel 重建中欄面板（不覆寫 innerHTML）', () => {
     const h = makeHarness({ labelMap: {} });
     const modal = { querySelector: () => null };
     const view = makeView();
     h.panel.handleSamplerLabelChange(modal, view, 'bird');
     assert.equal(h.specData.schema.label_map.bird, 0);
     assert.equal(h.calls.stats, 1);
+    assert.equal(h.calls.structure, 1);
+    assert.equal(h.calls.preview, 1);
+});
+
+test('onLabelChange 既有標籤：僅選取，不重建結構面板', () => {
+    const h = makeHarness({ labelMap: { dog: 0 } });
+    const modal = { querySelector: () => null };
+    const view = makeView();
+    h.panel.handleSamplerLabelChange(modal, view, 'dog');
+    assert.equal(h.Sampler.state.targetLabel, 'dog');
+    assert.equal(h.calls.stats || 0, 0);
+    assert.equal(h.calls.structure || 0, 0);
     assert.equal(h.calls.preview, 1);
 });

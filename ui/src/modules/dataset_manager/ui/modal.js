@@ -26,8 +26,9 @@ export function buildModalTemplate({ t, optionList, projectTypes, sourceModes })
                     <span id="dataset-manager-subtitle">${t('SUBTITLE', 'Dataset Spec')}</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 8px;">
-                    <button type="button" id="dataset-header-entry" class="dataset-secondary-btn" style="display: none; padding: 4px 8px; font-size: 11px; margin: 0; line-height: 1.2;" title="${t('TYPE_LOCKED_TIP', '類型已鎖定；換類型請回入口另開新資料集')}">${t('ENTRY_BACK', '重新選擇類型')}</button>
-                    <button type="button" id="dataset-manager-clear" class="dataset-secondary-btn" style="padding: 4px 8px; font-size: 11px; margin: 0; line-height: 1.2; display: flex; align-items: center; justify-content: center;" title="${t('CLEAR_DATA_TOOLTIP', '清空所有暫存資料記錄並重置')}">${t('CLEAR_DATA', '清除資料')}</button>
+                    <button type="button" id="dataset-header-entry" class="dataset-secondary-btn" style="display: none; padding: 4px 8px; font-size: calc(11px * var(--dsm-font-scale, 1)); margin: 0; line-height: 1.2;" title="${t('TYPE_LOCKED_TIP', '類型已鎖定；換類型請回入口另開新資料集')}">${t('ENTRY_BACK', '重新選擇類型')}</button>
+                    <button type="button" id="dataset-manager-export" class="dataset-secondary-btn" style="padding: 4px 8px; font-size: calc(11px * var(--dsm-font-scale, 1)); margin: 0; line-height: 1.2; display: flex; align-items: center; justify-content: center;" title="${t('EXPORT', '匯出資料集')}">${t('EXPORT', '匯出資料集')}</button>
+                    <button type="button" id="dataset-manager-clear" class="dataset-secondary-btn" style="padding: 4px 8px; font-size: calc(11px * var(--dsm-font-scale, 1)); margin: 0; line-height: 1.2; display: flex; align-items: center; justify-content: center;" title="${t('CLEAR_DATA_TOOLTIP', '清空所有暫存資料記錄並重置')}">${t('CLEAR_DATA', '清除資料')}</button>
                     <button type="button" id="dataset-manager-close" class="dataset-icon-btn" title="${t('CLOSE', '關閉')}">×</button>
                 </div>
             </header>
@@ -37,7 +38,7 @@ export function buildModalTemplate({ t, optionList, projectTypes, sourceModes })
                 <span class="dataset-export-progress-label">${t('EXPORT_IN_PROGRESS', '正在打包 ZIP 並產生 dataset.json...')}</span>
             </div>
 
-            <div id="dataset-manager-message" class="dataset-manager-message" style="display: none;"></div>
+            <div id="dataset-manager-message" class="dataset-manager-message"></div>
 
             <div class="dataset-manager-body">
                 <section class="dataset-panel dataset-source-panel">
@@ -57,7 +58,7 @@ export function buildModalTemplate({ t, optionList, projectTypes, sourceModes })
                     <label>
                         <span>${t('PROJECT_NAME', '資料集名稱')}</span>
                         <input name="projectName" value="dataset" placeholder="${t('PROJECT_NAME_PLACEHOLDER', '僅限英數與下劃線')}">
-                        <span style="font-size: 10px; color: #999; margin-top: 2px; display: block;">${t('PROJECT_NAME_HINT', '* 僅限英文、數字與下劃線 (用於雲端路徑)')}</span>
+                        <span style="font-size: calc(10px * var(--dsm-font-scale, 1)); color: #999; margin-top: 2px; display: block;">${t('PROJECT_NAME_HINT', '* 僅限英文、數字與下劃線 (用於雲端路徑)')}</span>
                     </label>
                     
                     <label>
@@ -103,7 +104,6 @@ export function buildModalTemplate({ t, optionList, projectTypes, sourceModes })
                         <div>
                             <button type="button" id="dataset-manager-validate" class="dataset-small-btn">${t('VALIDATE', '驗證')}</button>
                             <span class="dataset-autosave-indicator" title="${t('AUTOSAVE_ON_TOOLTIP', '標註/分類/新增/刪除後自動寫入 dataset.json')}">🛡 ${t('AUTOSAVE_ON', '自動儲存已開啟')}</span>
-                            <button type="button" id="dataset-manager-export" class="dataset-small-btn" style="background: #FE2F89; color: white; border: none;">${t('EXPORT', '匯出資料集')}</button>
                         </div>
                     </div>
                     <div id="dataset-validation"></div>

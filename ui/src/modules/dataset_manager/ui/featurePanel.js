@@ -24,7 +24,8 @@ export function createFeaturePanel({
     buildFeatureSchema, landmarksToRow,
     nextLabelId,
     onFeatureCollected,
-    renderTablePreview
+    renderTablePreview,
+    refreshStructurePanel
 }) {
     let currentUseZ = false;
 
@@ -46,12 +47,12 @@ export function createFeaturePanel({
             + '</div>'
             + '<div class="dataset-sampler-controls">'
             + '<div class="dataset-sampler-row">'
-            + '<label style="display:flex;align-items:center;gap:5px;margin-bottom:0;font-size:11px;">'
+            + '<label style="display:flex;align-items:center;gap:5px;margin-bottom:0;font-size: calc(11px * var(--dsm-font-scale, 1));">'
             + '<span>' + t('SAMPLER_CAMERA', '📷 攝影機:') + '</span>'
-            + '<select id="' + FEATURE_DOM_CAMERA_SELECT + '" style="font-size:11px;padding:2px 4px;">' + camOptions + '</select>'
+            + '<select id="' + FEATURE_DOM_CAMERA_SELECT + '" style="font-size: calc(11px * var(--dsm-font-scale, 1));padding:2px 4px;">' + camOptions + '</select>'
             + '</label>'
             + '<button type="button" id="feature-refresh-cameras" class="dataset-icon-btn" title="'
-            + escapeHtml(t('SAMPLER_REFRESH_CAMERAS', '重新掃描攝影機')) + '" style="font-size:14px;">🔄</button>'
+            + escapeHtml(t('SAMPLER_REFRESH_CAMERAS', '重新掃描攝影機')) + '" style="font-size: calc(14px * var(--dsm-font-scale, 1));">🔄</button>'
             + '</div>'
             + '<div class="dataset-sampler-row">'
             + '<button type="button" id="' + FEATURE_DOM_TOGGLE_CAM + '" class="dataset-primary-btn">'
@@ -66,7 +67,7 @@ export function createFeaturePanel({
             + '</label>'
             + '</div>'
             + '<div class="dataset-sampler-row">'
-            + '<label style="display:flex;align-items:center;gap:5px;margin-bottom:0;font-size:11px;">'
+            + '<label style="display:flex;align-items:center;gap:5px;margin-bottom:0;font-size: calc(11px * var(--dsm-font-scale, 1));">'
             + '<input type="checkbox" id="' + FEATURE_DOM_USE_Z + '"> '
             + '<span>' + t('FEATURE_USE_Z', '包含 z 座標（維度較高，含深度）') + '</span>'
             + '</label>'
@@ -132,21 +133,8 @@ export function createFeaturePanel({
             };
         }
 
-        if (labelSelect && labels.length === 0) {
-            labelSelect.parentElement.insertAdjacentHTML('beforeend',
-                '<button type="button" id="feature-add-label" class="dataset-icon-btn" title="'
-                + escapeHtml(t('SAMPLER_ADD_LABEL', '新增標籤')) + '">+</button>');
-            const addBtn = view.querySelector('#feature-add-label');
-            if (addBtn) {
-                addBtn.onclick = async () => {
-                    const val = await datasetBridge.prompt(t('FEATURE_ADD_LABEL_PROMPT', '請輸入特徵樣本標籤名稱'), '');
-                    const trimmed = (val || '').trim();
-                    if (!trimmed) return;
-                    addLabelToMap(modal, trimmed);
-                    refreshLabelSelect(view, Object.keys(state.spec.toJSON().schema.label_map || {}), trimmed);
-                };
-            }
-        }
+        // P2：新增/改名/刪除標籤收斂至中欄統一標籤管理器；此處僅保留標籤「選取」下拉，
+        // 無標籤時下拉為「請先於【標籤與樣本統計】面板新增標籤」佔位（見 buildDom）。
 
         if (collectBtn) {
             collectBtn.onclick = () => collect(modal, view, labelSelect, useZCheck, statusEl, collectBtn);
@@ -168,10 +156,9 @@ export function createFeaturePanel({
 
     function rebuildLabelMap(modal, label) {
         addLabelToMap(modal, label);
-        if (UIComponents && UIComponents.renderLabelStats) {
-            const structure = modal && modal.querySelector ? modal.querySelector('#dataset-structure-content') : null;
-            if (structure) UIComponents.renderLabelStats(structure, state.spec.toJSON().stats);
-        }
+        // P2：重建結構面板（統一標籤管理器＋統計），取代「renderLabelStats 覆寫
+        // structure innerHTML」舊行為（會沖掉中欄統一標籤管理器 DOM）
+        if (typeof refreshStructurePanel === 'function') refreshStructurePanel();
     }
 
     function refreshLabelSelect(view, updatedLabels, selected) {

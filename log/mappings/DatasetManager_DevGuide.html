@@ -47,5 +47,14 @@ td, th { border: 1px solid #ccc; padding: 4px 8px; }
 <li>錯誤碼契約：<code>PROGRESS_NOT_FOUND</code>、<code>PROJECT_NAME_INVALID</code>、<code>IO_ERROR</code>（save 另有 <code>CODE: message</code> 前綴）。</li>
 <li>測試：Node 測試放 <code>*.test.mjs</code>（<code>node --test</code>，不打包）；每層檔案位置見 FILE_STRUCTURE.md。</li>
 </ul>
+  <h2>5. 結構面板與縮圖同步契約（2026-09-17 補登）</h2>
+  <p>兩條契約違反會直接重現「拍照後標籤管理 UI 消失」與「改名後 hover tooltip／spec 檔名不同步」（2026-09-17 事故，蒸餾自 <code>log/work/2026-09-17.md</code>）。</p>
+  <ul>
+    <li><code>#dataset-structure-content</code> 是<strong>複合容器</strong>：P2（2026-09-16）起，影像系與所有 live 類型的內容為 <code>#view-label-class-manager</code>（統一標籤管理器）＋ <code>#view-label-stats</code>（統計），由 <code>ui_layout.js</code> 的 <code>renderStructurePanel()</code> 建立。</li>
+    <li>統計更新 → <strong>只寫 <code>#view-label-stats</code></strong>（<code>renderStatsPanels()</code> 優先路徑；守門條件：管理器在、統計容器不在 → 自動 <code>renderStructurePanel()</code> 重建）。需要重建整面板 → <code>renderStructurePanel()</code>（或各模組注入的 <code>refreshStructurePanel</code>）。<strong>嚴禁</strong> <code>UIComponents.renderLabelStats(#dataset-structure-content, ...)</code>——會把管理器整塊蓋掉（歷史事故：P2 的 sampler／feature；2026-09-17 的 <code>addSampleFromSampler</code>／<code>handleDeleteImage</code>）。</li>
+    <li>任何流程改動 <code>img.path / img.label / img.diskPath</code> 後，必須呼叫 <code>refreshThumbnailBadges()</code> 重繪縮圖（徽章＋hover tooltip 的 <code>title</code> 吃 <code>img.path</code>）。<code>refreshPreview()</code> 只做 spec sync／驗證／JSON 預覽／autosave，<strong>不碰縮圖 DOM</strong>。</li>
+    <li>標籤改名的磁碟對帳 → <code>application/labelRenameReconcile.js</code> 的 <code>reconcileRenamedPaths(images, renames, {oldLabel,newLabel})</code>：路徑一律經 <code>core/pathPolicy.normalizePath</code> 比對（後端 <code>renames</code> 已正規化為正斜線，<code>img.diskPath</code>＝capture <code>savePath</code> 可能為反斜線），檔名唯一時以 basename 兜底，未命中僅同步 <code>img.path</code> 的目錄段。</li>
+    <li>測試：<code>application/labelRenameReconcile.test.mjs</code>（7 測）；DM 全套 <code>node --test "src/modules/dataset_manager/*.test.mjs" "src/modules/dataset_manager/**/*.test.mjs"</code>（2026-09-17：129/129 PASS）。<strong>注意</strong>：<code>node --test &lt;目錄&gt;</code> 會誤把 <code>index.js</code>（依賴 window）當測試入口，勿用目錄模式。</li>
+  </ul>
 </body>
 </html>

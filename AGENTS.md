@@ -62,8 +62,8 @@ Dataset Manager 的狀態/錯誤/結果訊息一律透過集中式函式 `showSt
 
 - **定義位置**：`ui/src/modules/dataset_manager/ui/statusMessage.js`（`createStatusMessageUI()` 回傳 `{ showStatusMessage, dispose }`；`ui_layout.js` 於模組頂部初始化並以 `showStatusMessage` 常數暴露，供模組內各函式與 use-case 注入使用）。
 - **行為**：
-  - 顯示於 `#dataset-manager-message`（header 下方中央，flex 置中顯示）。
-  - **預設 8 秒後自動清除**；可用 `{ duration }` 覆寫（`0` = 不自動清除）。
+  - 顯示於 `#dataset-manager-message`（header 下方**常駐列**：寬度同 modal 內容、文字靠左；顯示/隱藏以 `visibility` 切換、保留排版空間，版面零位移）。
+  - **預設 5 秒後自動隱藏**；可用 `{ duration }` 覆寫（`0` = 不自動清除）。
   - 顯示前會重置全域 `statusMessageTimer`，避免多筆訊息交錯時被舊計時器提前隱藏（例：上傳進度的連續更新以最後一筆起算 8 秒）。
   - 傳入空字串/`undefined` 立即隱藏。
 - **用法**：
@@ -161,6 +161,7 @@ Cocoya 是混合架構（VSIX + Tauri），資源路徑的解析方式因平台�
 #### 關鍵原則
 1. **開發模式優先使用原始檔案**：Tauri 開發時應直接指向 repo 內的原始路徑，而非 `target/debug/` 下的副本，這樣修改才能即時生效
 2. **生產模式使用 Resource**：Release build 時所有資源透過 `bundle.resources` 打包，執行期透過 `BaseDirectory::Resource` 解析
+   - **examples 播種 (Seeding, 2026-09-17)**：examples 需可寫場景（升級補檔、未來還原範例）不依賴安裝目錄可寫性。`setup` 呼叫 `utils::ensure_examples_seeded()`：首次啟動/升級時以 `copy_dir_merge`（**只補缺檔、不覆寫**）把 Resource examples 播種到 `app_data_dir()/examples`（`%AppData%\com.cocoya.app\examples`）＋寫入 `.seeded_version` 版本戳記。`get_examples_path()` 生產分支優先回傳已播種目錄（以戳記判定），fallback 回 Resource。Dev 模式（`is_dev_examples_dir()`）跳過，仍用 repo 原始檔。**唯讀保護流程不變**：examples 內開啟仍走「複製並開啟」（`resolve_example_open_path`）
 3. **VSIX 無需區分模式**：`context.extensionPath` 在開發和生產行為一致
 4. **路徑保護**：內建範例目錄（examples）應設為唯讀保護，防止使用者意外覆蓋。VSIX 在 `fileOps.ts` 檢查路徑前綴，Tauri 在 `file.rs` 的 `save_file` 中檢查 `path.starts_with(&examples_dir)`
 
@@ -181,6 +182,21 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
 - **Tauri（Rust commands）**：command 回傳一律 serde camelCase；視窗專屬事件用 `emit_to`；路徑 confinement（examples 唯讀、canonical dataset 閘）由後端權威執行。
 - **Sidecar（`resources/dataset_manager/dataset_sidecar.py`）**：影像掃描、相機、匯出打包；stdout JSON 單一回應；永不直接與 UI 對話（經 Host/Rust 轉發）。
 - **鐵律**：錯誤「碼」在後端定義（如 `PROGRESS_NOT_FOUND`、`PROJECT_NAME_INVALID`），人類可讀文案由前端 i18n（`DSM_*`）負責；後端禁止輸出展示用文案。
+
+### Dataset Manager 結構面板與縮圖同步契約 (Structure Panel & Thumbnail Sync, 2026-09-17)
+兩條新契約（bug 修復蒸餾；違反會直接重現「拍照後標籤管理 UI 消失」與「改名後 hover tip／spec 檔名不同步」）：
+- **`#dataset-structure-content` 是複合容器 → 嚴禁覆寫其 innerHTML**：P2（2026-09-16）起，影像系與所有 live 類型的結構面板內容為 `#view-label-class-manager`（統一標籤管理器）＋ `#view-label-stats`（統計），由 `ui_layout.js` 的 `renderStructurePanel()` 建立。
+  - 統計更新 → **只寫 `#view-label-stats`**（`renderStatsPanels()` 優先路徑；內含守門：管理器在、統計容器不在 → 自動 `renderStructurePanel()` 重建，不覆寫父容器）。
+  - 需要重建整面板 → 呼叫 `renderStructurePanel()`（或各模組注入的 `refreshStructurePanel`）。
+  - **禁止** `UIComponents.renderLabelStats(structureContainer, ...)` 指向 `#dataset-structure-content`——會把管理器整塊蓋掉（事故紀錄：P2 的 sampler/feature、2026-09-17 的 `addSampleFromSampler`/`handleDeleteImage`）。
+- **改動 `img.path / img.label / img.diskPath` 後必須重繪縮圖**：`refreshPreview()` 只做 spec sync／驗證／JSON 預覽／autosave，**不碰縮圖 DOM**；縮圖徽章與 hover tooltip（`title` 吃 `img.path`）必須呼叫 `refreshThumbnailBadges()`（`ui_layout.js`；標註模式重繪 `#annotation-thumbnails`、列表模式重繪 `#dataset-image-preview` 並保留捲動位置）。
+  - 標籤改名的磁碟對帳一律走 `application/labelRenameReconcile.js::reconcileRenamedPaths()`：兩端路徑經 `core/pathPolicy.normalizePath` 比對（後端 `renames` 已正規化為正斜線，`img.diskPath`＝capture `savePath` 可能為反斜線 → 不正規化必 miss，導致 spec `image_path` 只更新目錄段、檔名停留舊值）；檔名唯一時以 basename 兜底。
+  - 測試 SSOT：`node --test "src/modules/dataset_manager/*.test.mjs" "src/modules/dataset_manager/**/*.test.mjs"`（2026-09-17 為 141/141）；`node --test <目錄>` 目錄模式會誤把 `index.js` 當入口，勿使用。
+- **「資料集名稱」＝落盤命名空間（`dataset/<名稱>/`），不是可自由改的顯示名**（2026-09-17 政策）：
+  - 名稱同時餵給 5 條路徑契約：autosave（`progressUseCases.js`）、live 拍照 savePath（`datasetOps.ts`/`tauri.js`）、標籤改名磁碟同步（`datasetRenameLabel`）、匯入閘門 canonical、匯出 staging（VSIX 用 `spec.project.name`；Tauri 只複製 `sourceFolderPath`）。
+  - **未落盤可自由改名**：`dataset/<名稱>/` 由後端在第一次落盤時 `create_dir_all` 建立，無落盤時改名零副作用（不得為了改名預先建立空目錄）。
+  - **已落盤改名不會搬移既有檔案**（B 案未實作）→ 前端以 `core/projectNaming.detectDatasetNameDrift()` 偵測（證據僅取既有 state：`img.diskPath` 反推、`sourceFolderPath`）並標紅＋`NAME_DRIFT_TIP` 提示；取不到證據一律視為無漂移（保守，不誤報）。
+  - B 案（`dataset_rename_dataset_dir`：舊目錄不存在→no-op 不建立；存在→整目錄搬家＋對帳 `img.diskPath`/`base_dir`）列 backlog，見 `log/todo.md` 與 `log/plan/DatasetManagerTypeLockedWorkflow.md` §12。
 
 ## 重要路徑
 - **模組路徑**：`ui/src/modules/` (雙模共用內建模組 SSOT)。
