@@ -1,4 +1,4 @@
-﻿<category name="%{BKY_CAT_AI_INFERENCE}" colour="%{BKY_COLOUR_AI_INFERENCE}">
+<category name="%{BKY_CAT_AI_INFERENCE}" colour="%{BKY_COLOUR_AI_INFERENCE}">
     <!-- 訓練相關積木 -->
     <block type="py_ai_train_run">
         <field name="DATASET_DIR">dataset/classifier_dataset</field>

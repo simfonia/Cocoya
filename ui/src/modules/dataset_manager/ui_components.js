@@ -183,13 +183,13 @@ export const UIComponents = {
                 <div class="dataset-sampler-controls">
                     <div class="dataset-sampler-row">
                         <div id="dataset-sampler-camera-group" style="display: flex; align-items: center; gap: 5px; margin-bottom: 6px;">
-                            <label style="display: flex; align-items: center; gap: 5px; margin-bottom: 0; font-size: 11px;">
+                            <label style="display: flex; align-items: center; gap: 5px; margin-bottom: 0; font-size: calc(11px * var(--dsm-font-scale, 1));">
                                 <span>${t('SAMPLER_CAMERA', '📷 攝影機:')}</span>
-                                <select id="dataset-sampler-camera-select" style="font-size: 11px; padding: 2px 4px;" ${cameraScanning ? 'disabled' : ''}>
+                                <select id="dataset-sampler-camera-select" style="font-size: calc(11px * var(--dsm-font-scale, 1)); padding: 2px 4px;" ${cameraScanning ? 'disabled' : ''}>
                                     ${cameraScanning ? `<option value="" disabled selected>${t('SAMPLER_SCANNING', '⏳ 掃描攝影機中...')}</option>` : cameraList.map(c => `<option value="${c.id}" ${c.id === selectedDeviceId ? 'selected' : ''}>${escapeHTML(c.name)}</option>`).join('')}
                                 </select>
                             </label>
-                            <button type="button" id="dataset-sampler-refresh-cameras" class="dataset-icon-btn" title="${t('SAMPLER_REFRESH_CAMERAS', '重新掃描攝影機')}" style="font-size: 14px;">🔄</button>
+                            <button type="button" id="dataset-sampler-refresh-cameras" class="dataset-icon-btn" title="${t('SAMPLER_REFRESH_CAMERAS', '重新掃描攝影機')}" style="font-size: calc(14px * var(--dsm-font-scale, 1));">🔄</button>
                         </div>
                     </div>
                     <div class="dataset-sampler-row">
@@ -198,19 +198,15 @@ export const UIComponents = {
                                 <span>${t('SAMPLER_LABEL', '標籤:')}</span>
                                 <select id="dataset-sampler-label-select" style="flex: 1;">
                                     ${options.labels.map(l => `<option value="${escapeHTML(l)}" ${l === targetLabel ? 'selected' : ''}>${escapeHTML(l)}</option>`).join('')}
-                                    ${options.labels.length === 0 ? '<option value="" disabled selected>' + t('SAMPLER_NO_LABEL', '請先新增標籤') + '</option>' : ''}
+                                    ${options.labels.length === 0 ? '<option value="" disabled selected>' + t('SAMPLER_NO_LABEL', '請先於【標籤與樣本統計】面板新增標籤') + '</option>' : ''}
                                 </select>
                             </label>
-                            <button type="button" id="dataset-sampler-add-label-btn" class="dataset-icon-btn" title="${t('SAMPLER_ADD_LABEL', '新增標籤')}" style="margin-left: 5px; font-size: 18px;">+</button>
                         </div>
+                    </div>
 
-                        <div id="dataset-sampler-new-label-group" style="display: none; align-items: center; flex: 1; gap: 5px;">
-                            <input type="text" id="dataset-sampler-new-label-input" placeholder="${t('SAMPLER_NEW_LABEL_PLACEHOLDER', '輸入新標籤名稱')}" style="flex: 1;">
-                            <button type="button" id="dataset-sampler-new-label-confirm" class="dataset-icon-btn" style="color: #4CAF50;" title="${t('SAMPLER_CONFIRM', '確認')}">✔</button>
-                            <button type="button" id="dataset-sampler-new-label-cancel" class="dataset-icon-btn" style="color: #F44336;" title="${t('SAMPLER_CANCEL', '取消')}">✘</button>
-                        </div>
-
-                        <button type="button" id="dataset-sampler-toggle-cam" class="${isCamRunning ? 'dataset-danger-btn' : 'dataset-primary-btn'}" style="margin-left: 8px;">
+                    <!-- P2：啟動預覽按鈕獨立一行，避免字體放大後與標籤列擠壓出界 -->
+                    <div class="dataset-sampler-row">
+                        <button type="button" id="dataset-sampler-toggle-cam" class="${isCamRunning ? 'dataset-danger-btn' : 'dataset-primary-btn'}" style="width: 100%;">
                             ${isCamRunning ? t('SAMPLER_STOP_CAM', '停止攝影機') : t('SAMPLER_START_CAM', '啟動預覽')}
                         </button>
                     </div>
@@ -234,14 +230,8 @@ export const UIComponents = {
         `;
 
         // 綁定內部事件
-        const labelGroup = container.querySelector('#dataset-sampler-label-group');
+        // P2：新增/改名/刪除標籤已收斂至中欄統一標籤管理器（labelManager），此處僅保留標籤「選取」下拉
         const labelSelect = container.querySelector('#dataset-sampler-label-select');
-        const addLabelBtn = container.querySelector('#dataset-sampler-add-label-btn');
-        
-        const newLabelGroup = container.querySelector('#dataset-sampler-new-label-group');
-        const newLabelInput = container.querySelector('#dataset-sampler-new-label-input');
-        const confirmBtn = container.querySelector('#dataset-sampler-new-label-confirm');
-        const cancelBtn = container.querySelector('#dataset-sampler-new-label-cancel');
 
         const toggleCamBtn = container.querySelector('#dataset-sampler-toggle-cam');
         const mainActions = container.querySelector('#dataset-sampler-main-actions');
@@ -275,47 +265,6 @@ export const UIComponents = {
                 refreshCamerasBtn.textContent = '🔄';
             };
         }
-
-        // 儲存進入新增模式前的標籤值，以便取消時還原
-        let previousLabel = targetLabel;
-
-        // 切換模式函式
-        const setAddMode = (isAdd) => {
-            labelGroup.style.display = isAdd ? 'none' : 'flex';
-            newLabelGroup.style.display = isAdd ? 'flex' : 'none';
-            if (isAdd) {
-                // 進入新增模式時，記錄當前選擇的標籤
-                previousLabel = labelSelect ? labelSelect.value : targetLabel;
-                newLabelInput.value = '';
-                newLabelInput.focus();
-            } else {
-                // 取消新增時，恢復到原來的標籤
-                if (previousLabel && options.labels.indexOf(previousLabel) >= 0) {
-                    labelSelect.value = previousLabel;
-                    if (options.onLabelChange) options.onLabelChange(previousLabel);
-                }
-            }
-        };
-
-        addLabelBtn.onclick = () => setAddMode(true);
-        cancelBtn.onclick = () => setAddMode(false);
-
-        const handleAdd = () => {
-            const val = newLabelInput.value.trim();
-            if (val) {
-                if (options.onLabelChange) options.onLabelChange(val);
-                setAddMode(false);
-            }
-        };
-
-        confirmBtn.onclick = handleAdd;
-        newLabelInput.onkeydown = (e) => {
-            if (e.key === 'Enter') handleAdd();
-            if (e.key === 'Escape') {
-                e.stopPropagation(); // 阻止冒泡到 modal 的全域 Escape 關閉
-                setAddMode(false);
-            }
-        };
 
         toggleCamBtn.onclick = async () => {
             // 以 DOM 實際狀態（mainActions 可見性）判斷開關，而非 Sampler.state.isCamRunning，
@@ -356,10 +305,8 @@ export const UIComponents = {
             if (options.onLabelChange) options.onLabelChange(labelSelect.value);
         };
 
-        // [關鍵修正] 如果標籤清單為空，自動進入新增模式
-        if (options.labels.length === 0) {
-            setAddMode(true);
-        }
+        // P2：標籤為空時不再進入內建新增模式（該 UI 已移除）；改由中欄統一標籤管理器新增，
+        // 新增後經 onLabelMapChanged 同步右欄下拉，屆時可由使用者自行選取。
 
         if (options.onSnapshot) {
             const snapshotBtn = container.querySelector('#dataset-sampler-snapshot');

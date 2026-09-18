@@ -641,6 +641,47 @@ export class BridgeTauri extends BaseBridge {
                     }
                     break;
 
+                case 'datasetRenameLabel': {
+                    // 標籤改名磁碟同步（2026-09-16 Part B）：canonical <projectRoot>/dataset/<專案>/ 落盤區
+                    try {
+                        let projectRoot = this._anchor && this._anchor.projectRoot;
+                        if (!projectRoot) {
+                            try {
+                                const anchor = this._normalizeAnchor(await this.tauriInvoke('get_project_anchor'));
+                                projectRoot = anchor && anchor.projectRoot;
+                                this._anchor = anchor;
+                            } catch (e) { projectRoot = null; }
+                        }
+                        if (!projectRoot) {
+                            this._dispatchToFrontend({
+                                command: 'datasetRenameLabelResult',
+                                success: false,
+                                errorCode: 'PROJECT_ROOT_REQUIRED',
+                                error: '未錨定專案，無法同步磁碟資料夾'
+                            });
+                            break;
+                        }
+                        const datasetDir = `${projectRoot}/dataset/${data.projectName || 'dataset'}`;
+                        const renames = await this.tauriInvoke('dataset_rename_label', {
+                            datasetDir,
+                            oldLabel: data.oldLabel,
+                            newLabel: data.newLabel
+                        });
+                        this._dispatchToFrontend({ command: 'datasetRenameLabelResult', success: true, renames: renames || [] });
+                    } catch (e) {
+                        console.error('[Bridge] Label disk rename failed:', e);
+                        const errStr = String(e || '');
+                        const codeMatch = errStr.match(/^([A-Z][A-Z0-9_]*):/);
+                        this._dispatchToFrontend({
+                            command: 'datasetRenameLabelResult',
+                            success: false,
+                            errorCode: codeMatch ? codeMatch[1] : 'IO_ERROR',
+                            error: errStr
+                        });
+                    }
+                    break;
+                }
+
                 case 'pickFolder':
                     try {
                         const result = await this.tauriInvoke('pick_folder', { defaultPath: data.defaultPath || null });
@@ -719,7 +760,14 @@ export class BridgeTauri extends BaseBridge {
                         });
                     } catch (e) {
                         if (e === 'Canceled') {
-                            // 使用者取消存檔對話框，靜默處理
+                            // 使用者取消存檔對話框：仍需回傳 result，否則 DSM 的
+                            // exportPromise 會等到 120s timeout，綠色進度條遲遲不消失。
+                            this._dispatchToFrontend({
+                                command: 'datasetExportResult',
+                                success: false,
+                                error: 'Canceled',
+                                errorCode: 'CANCELED'
+                            });
                         } else {
                             console.error('[Bridge] Export dataset failed:', e);
                             this._dispatchToFrontend({

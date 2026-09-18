@@ -2,7 +2,7 @@ use std::fs;
 use tauri::{AppHandle, State, Window, Manager};
 use tauri_plugin_dialog::DialogExt;
 use crate::state::AppState;
-use crate::utils::{get_resource_path, get_examples_path};
+use crate::utils::{get_resource_path, get_examples_path, copy_dir_merge};
 
 #[derive(serde::Serialize)]
 pub struct OpenFileResult {
@@ -60,8 +60,15 @@ fn resolve_example_open_path(window: &Window, handle: &AppHandle, path: std::pat
         return Ok(path);
     }
 
+    // 已播種的 AppData examples 副本為「可寫工作副本」（seeding 2026-09-17）：
+    // 直接開啟，不再要求複製到桌面。唯讀保護僅針對 Resource（Program Files）內的範例。
+    let seed_dir = crate::utils::get_examples_seed_dir(handle);
+    if path.starts_with(&seed_dir) {
+        return Ok(path);
+    }
+
     let confirmed = handle.dialog()
-        .message("此為內建唯讀範例，是否複製到使用者工作區（文件\\Cocoya\\Projects）？\nThis built-in example is read-only. Copy it to your user workspace?")
+        .message("此為內建唯讀範例，是否複製到使用者工作區（桌面\\Cocoya\\Projects）？\nThis built-in example is read-only. Copy it to your user workspace?")
         .title("Cocoya")
         .parent(window)
         .buttons(tauri_plugin_dialog::MessageDialogButtons::OkCancelCustom(
@@ -79,8 +86,9 @@ fn resolve_example_open_path(window: &Window, handle: &AppHandle, path: std::pat
         .to_string();
     let src_dir = path.parent().ok_or_else(|| "Invalid example path".to_string())?.to_path_buf();
 
-    let docs = handle.path().document_dir().map_err(|e| e.to_string())?;
-    let projects_root = docs.join("Cocoya").join("Projects");
+    // 2026-09-16：複製目的地由「文件」改為「桌面」（使用者指示）
+    let desktop = handle.path().desktop_dir().map_err(|e| e.to_string())?;
+    let projects_root = desktop.join("Cocoya").join("Projects");
     fs::create_dir_all(&projects_root).map_err(|e| e.to_string())?;
 
     // 複製粒度判斷：
@@ -274,8 +282,12 @@ pub async fn save_file(window: Window, handle: AppHandle, state: State<'_, AppSt
         }
 
         // --- 檢查是否為 examples 目錄 ---
+        // 已播種的 AppData examples 副本（seeding 2026-09-17）為可寫工作副本，可直接存檔；
+        // 唯讀保護僅針對 Resource（Program Files）內的範例（seeding 失敗時的 fallback）。
         let examples_dir = get_examples_path(&handle);
-        if path.starts_with(&examples_dir) {
+        let in_examples = path.starts_with(&examples_dir)
+            && !path.starts_with(crate::utils::get_examples_seed_dir(&handle));
+        if in_examples {
             if !allow_examples {
                 if save_as {
                     if let Some(ref current) = current_path {
@@ -440,6 +452,74 @@ pub fn delete_file(path: String) -> Result<(), String> {
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct RenamedPath {
+    pub old_path: String,
+    pub new_path: String,
+}
+
+/// 標籤段名稱驗證（對齊 core/pathPolicy 契約：[A-Za-z0-9_-]+，拒絕 . / .. / traversal）
+fn validate_label_segment(label: &str) -> Result<(), String> {
+    let l = label.trim();
+    if l.is_empty() || l == "." || l == ".."
+        || !l.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+    {
+        return Err(format!("LABEL_NAME_INVALID: invalid label segment: {}", label));
+    }
+    Ok(())
+}
+
+/// 標籤改名磁碟同步（供 datasetRenameLabel 使用，2026-09-16 Part B）
+/// 僅作用於 canonical dataset/<專案>/<label>/ 落盤區（來源資料夾由前端隔離，不會傳入此處）：
+/// 1. `<dataset_dir>/<old_label>` 目錄存在 → 整個目錄改名為 `<new_label>`（目標已存在 → LABEL_DIR_CONFLICT）
+/// 2. 目錄內前綴 `<old_label>_` 的檔案 → 檔名前綴改為 `<new_label>_`
+/// 回傳逐一改名的 (oldPath, newPath) 清單（serde camelCase），供前端對帳 img.path / img.diskPath。
+#[tauri::command]
+pub fn dataset_rename_label(dataset_dir: String, old_label: String, new_label: String) -> Result<Vec<RenamedPath>, String> {
+    validate_label_segment(&old_label)?;
+    validate_label_segment(&new_label)?;
+    if old_label == new_label {
+        return Ok(Vec::new());
+    }
+    let src_dir = std::path::Path::new(&dataset_dir).join(&old_label);
+    if !src_dir.is_dir() {
+        // 無落盤資料夾（例如 file 匯入未落盤、或從未 live 採集該標籤）→ no-op 成功
+        return Ok(Vec::new());
+    }
+    let dst_dir = std::path::Path::new(&dataset_dir).join(&new_label);
+    if dst_dir.exists() {
+        return Err(format!("LABEL_DIR_CONFLICT: target label dir already exists: {}", dst_dir.display()));
+    }
+    fs::rename(&src_dir, &dst_dir).map_err(|e| format!("IO_ERROR: failed to rename label dir: {}", e))?;
+
+    let mut renamed: Vec<RenamedPath> = Vec::new();
+    let old_prefix = format!("{}_", old_label);
+    let new_prefix = format!("{}_", new_label);
+    let entries = fs::read_dir(&dst_dir).map_err(|e| format!("IO_ERROR: failed to read renamed dir: {}", e))?;
+    for entry in entries.flatten() {
+        let p = entry.path();
+        if !p.is_file() { continue; }
+        if let Some(name) = p.file_name().and_then(|n| n.to_str()) {
+            if let Some(rest) = name.strip_prefix(&old_prefix) {
+                let new_name = format!("{}{}", new_prefix, rest);
+                let new_p = p.with_file_name(&new_name);
+                if let Err(e) = fs::rename(&p, &new_p) {
+                    // 單檔失敗不中斷（目錄已改名，不回滾）；記錄並繼續，前端對帳以成功清單為準
+                    eprintln!("[dataset_rename_label] file rename failed: {} -> {}: {}",
+                        p.display(), new_p.display(), e);
+                    continue;
+                }
+                renamed.push(RenamedPath {
+                    old_path: p.to_string_lossy().replace('\\', "/"),
+                    new_path: new_p.to_string_lossy().replace('\\', "/"),
+                });
+            }
+        }
+    }
+    Ok(renamed)
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ScanedImage {
     pub name: String,
     pub path: String,
@@ -586,23 +666,7 @@ fn walk_folder(
     }
 }
 
-/// 遞迴合併複製：將 src 內容複製到 dst，已存在的檔案跳過（不覆寫），回傳複製的檔案數。
-fn copy_dir_merge(src: &std::path::Path, dst: &std::path::Path) -> Result<u64, String> {
-    fs::create_dir_all(dst).map_err(|e| format!("IO_ERROR: Failed to create dir {}: {}", dst.display(), e))?;
-    let mut copied: u64 = 0;
-    let entries = fs::read_dir(src).map_err(|e| format!("IO_ERROR: Failed to read {}: {}", src.display(), e))?;
-    for entry in entries.flatten() {
-        let target = dst.join(entry.file_name());
-        if entry.path().is_dir() {
-            copied += copy_dir_merge(&entry.path(), &target)?;
-        } else if !target.exists() {
-            fs::copy(entry.path(), &target)
-                .map_err(|e| format!("IO_ERROR: Failed to copy {}: {}", entry.path().display(), e))?;
-            copied += 1;
-        }
-    }
-    Ok(copied)
-}
+// copy_dir_merge 已移至 utils.rs（2026-09-17，examples seeding 共用），改由上方 import 使用。
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]

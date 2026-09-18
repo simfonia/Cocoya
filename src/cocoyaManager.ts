@@ -147,6 +147,10 @@ export class CocoyaManager {
                 case 'openExternal':
                     vscode.env.openExternal(vscode.Uri.parse(message.url));
                     break;
+                case 'openFolder':
+                    // 以系統檔案總管開啟資料夾（toolbar 專案名標籤點擊等）
+                    vscode.env.openExternal(vscode.Uri.file(message.data?.path || message.path || ''));
+                    break;
                 case 'getManifest':
                     this.handleGetManifest();
                     break;
@@ -273,6 +277,9 @@ export class CocoyaManager {
                     break;
                 case 'datasetDeleteImage':
                     this.datasetOps.handleDatasetDeleteImage(message);
+                    break;
+                case 'datasetRenameLabel':
+                    this.datasetOps.handleDatasetRenameLabel(message);
                     break;
                 case 'datasetCaptureImage':
                     this.datasetOps.handleDatasetCaptureImage(message);

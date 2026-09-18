@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>Cocoya 字體縮放 (Font Scale) 對照表</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 20px; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; border-left: 5px solid #FE2F89; }
+        h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 40px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 6px 10px; text-align: left; font-size: 0.95em; }
+        th { background: #f9f2f5; }
+    </style>
+</head>
+<body>
+    <h1>Cocoya 字體縮放 (Font Scale) 對照表</h1>
+    <p>SSOT：<code>ui/src/font_scale.css</code>（唯一要改的檔案；index.html L13 以 link 載入）<br>
+    實作日誌：<code>log/work/2026-09-16.md</code>　相關：<code>log/mappings/ThemeManager.html</code>（配色）</p>
+
+    <h2>1. 五個畫面變數（預設 1 = 原始大小）</h2>
+    <table>
+        <tr><th>變數</th><th>畫面</th><th>對應 DOM</th><th>涵蓋範圍</th></tr>
+        <tr><td><code>--fs-h</code></td><td>H 首頁</td><td><code>#startup-home</code></td><td>Logo、開新/開啟/範例按鈕、首頁設定面板（Python 環境/主題）、首頁語系膠囊</td></tr>
+        <tr><td><code>--fs-e</code></td><td>E 主編輯區</td><td><code>#blocklyArea</code> / <code>#codeArea</code> / <code>#terminalArea</code></td><td>toolbar（檔名膠囊、serial、dropdown、語系、雲端 AI 標籤）、codeHeader/codeContent/縮排下拉、terminal 標題與內容、minimap 鈕、積木搜尋框、<b>toolbox 分類文字</b>。積木本體字級<b>不在此範圍</b>（用 Blockly 內建 +/-）</td></tr>
+        <tr><td><code>--fs-p1</code></td><td>P1 DM 入口</td><td><code>.dataset-manager-overlay.dataset-entry-phase</code></td><td>類型卡片頁（標題/副標/卡片/開發中徽章）＋ DM header（此時 header 也跟 P1）</td></tr>
+        <tr><td><code>--fs-p2</code></td><td>P2 DM 資料集管理</td><td><code>.dataset-manager-overlay</code>（預設）</td><td>表單、面板、攝影機列、縮圖牆、訊息列（43 處 calc 全涵蓋）</td></tr>
+        <tr><td><code>--fs-p3</code></td><td>P3 DM 標註</td><td><code>.dataset-manager-overlay.dataset-annotation-fullscreen</code></td><td>3 欄全寬標註（toolbar/右側控制欄/縮圖欄/類別下拉/檔案資訊）</td></tr>
+    </table>
+
+    <h2>2. 三條鐵則</h2>
+    <pre>
+1) 元件 CSS 一律 calc(Npx * var(--fs-x)) —— 不得再出現裸 px 字級（T 範圍尚未納入者除外）。
+2) 放大字級若造成裁切/溢出，正解是「把該容器 height/min-height/padding/line-height 綁同一個變數」，不是把字級調回去。
+3) --dsm-font-scale 是下游唯讀變數（dataset_manager.css）：要改字級請改上游 --fs-p1/p2/p3。
+    </pre>
+
+    <h2>3. DM：變數重綁定映射（43 處 font-size 皆已 calc 化）</h2>
+    <pre>
+.dataset-manager-overlay                               { --dsm-font-scale: var(--fs-p2, 1); }
+.dataset-manager-overlay.dataset-entry-phase           { --dsm-font-scale: var(--fs-p1, 1); }
+.dataset-manager-overlay.dataset-annotation-fullscreen { --dsm-font-scale: var(--fs-p3, 1); }
+    </pre>
+    <p><b>前置條件（2026-09-16 追加查證）</b>：DM 的 43 處 <code>font-size</code> 必須是 <code>calc(Npx * var(--dsm-font-scale))</code>，映射才會生效——昨日的 calc 版曾在當日被退回成裸 px，本日已補回（見 <code>log/work/2026-09-16.md</code> 追加修正）。</p>
+    <p>自訂屬性隨 DOM 繼承，modal 子樹自動換算。模式 class 由 <code>ui_layout.js</code> 切換：
+    <code>showEntryPhase()</code> 加 <code>dataset-entry-phase</code>、<code>enterWorkspace()</code> 移除；P3 的 <code>dataset-annotation-fullscreen</code> 由 <code>annotation.js</code> / <code>classification.js</code> 加、<code>exitAnnotationMode()</code> 移除。</p>
+
+    <h2>4. E：Blockly 12.3.1 toolbox 分類文字（唯一需要動 Blockly 內部的地方）</h2>
+    <table>
+        <tr><th>項目</th><th>值 / 來源</th></tr>
+        <tr><td>DOM class chain</td><td><code>.blocklyToolboxDiv</code> 內 <code>.blocklyToolboxCategoryContainer</code> 內 <code>.blocklyToolboxCategory</code>（列）＋ <code>.blocklyToolboxCategoryLabel</code>（文字）</td></tr>
+        <tr><td>Blockly 內建 CSS（runtime 注入）</td><td><code>.blocklyToolboxCategoryLabel { font: 16px sans-serif }</code>、<code>.blocklyToolboxCategory { height: 22px; line-height: 22px }</code></td></tr>
+        <tr><td>覆寫手法</td><td><code>.blocklyToolboxDiv .blocklyToolboxCategoryLabel</code>（0,2,0 勝 0,1,0），不依賴載入順序</td></tr>
+        <tr><td>必配套</td><td>列高 <code>height</code> / <code>line-height</code> 必須與 label 同源 <code>calc(22px * var(--fs-e))</code>，否則放大被裁切</td></tr>
+        <tr><td>積木本體字級</td><td><code>Blockly.Theme</code> 的 fontSize（內建 +/- 控制項）；<b>CSS 不能縮放</b>（SVG 渲染）</td></tr>
+    </table>
+
+    <h2>5. 容器也要跟著字級成長（實例：toolbar 下拉選單）</h2>
+    <p>字級放大後若「文字換行／被裁切」，先查該文字所在容器是否為固定寬高（<code>min-width</code>/<code>width</code>/<code>height</code>/<code>line-height</code>）。正解是讓容器跟著內容成長，<b>不是</b>把字級調回去。</p>
+    <table>
+        <tr><th>症狀</th><th>根因</th><th>修法</th></tr>
+        <tr><td>設定下拉／子選單文字被擠成兩行</td><td><code>.dropdown-content</code>／<code>.submenu-content</code> 為 <code>position:absolute</code> 且只有 <code>min-width</code>（160/220px）；父層 <code>.toolbar-dropdown</code> 僅 32px 寬 → shrink-to-fit 被釘死在 min-width</td><td><code>width: max-content</code> + <code>max-width: calc(100vw - 24px)</code> + <code>.dropdown-item { white-space: nowrap }</code>（2026-09-16 已修，含 #ai-dropdown）</td></tr>
+        <tr><td>toolbox 分類文字被裁切</td><td>Blockly 固定列高 22px</td><td>label 與 <code>height/line-height</code> 同源 <code>calc(22px * var(--fs-e))</code></td></tr>
+    </table>
+
+    <h2>6. 未來 UI 化（規劃）</h2>
+    <pre>
+設定面板 (slider/select) -> localStorage('cocoya_font_scale') -> JS: document.documentElement.style.setProperty('--fs-h', v)
+零架構改動：元件 CSS 與映射規則皆不需修改（因為全部吃 var）。
+注意：E 的 toolbox 需 reload 後量測才正確（Blockly 於載入時量測 toolbox 寬度決定 flyout 位置）。
+    </pre>
+</body>
+</html>

@@ -48,12 +48,18 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             fileLabel.title = (hasFile && root)
                 ? (root + '/' + this.currentFilename)
                 : displayName;
+            // 記錄專案根（點擊 label 開啟檔案總管用）
+            this.currentProjectRoot = root;
+            fileLabel.classList.toggle('has-path', !!(hasFile && root));
 
             // capabilities 快照可能過期（開檔/存檔後），以後端權威錨定非同步校正
             if (hasFile && window.CocoyaBridge && window.CocoyaBridge.getProjectAnchor) {
                 window.CocoyaBridge.getProjectAnchor().then((anchor) => {
                     if (anchor && anchor.projectRoot && this.currentFilename) {
-                        fileLabel.title = String(anchor.projectRoot).replace(/\\/g, '/').replace(/\/+$/, '') + '/' + this.currentFilename;
+                        const authorityRoot = String(anchor.projectRoot).replace(/\\/g, '/').replace(/\/+$/, '');
+                        fileLabel.title = authorityRoot + '/' + this.currentFilename;
+                        this.currentProjectRoot = authorityRoot;
+                        fileLabel.classList.toggle('has-path', !!authorityRoot);
                     }
                 }).catch(() => {});
             }
@@ -186,6 +192,16 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         }
 
         // 雲端訓練全域開關已移除（見 log/plan/RemoteTrainingRefactor.md D1）；遠端交由 py_ai_train_run backend=remote 於執行當下觸發 SSH 精靈。
+
+        // 專案名標籤：點擊以系統檔案總管開啟專案目錄（未錨定/未命名時不動作）
+        const fileLabelEl = document.getElementById('current-filename');
+        if (fileLabelEl) {
+            fileLabelEl.addEventListener('click', () => {
+                if (self.currentProjectRoot && self.currentFilename) {
+                    postMessageFunc({ command: 'openFolder', path: self.currentProjectRoot });
+                }
+            });
+        }
 
         /**
          * 綁定按鈕點擊事件的內部輔助函式
@@ -684,6 +700,37 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                 });
             });
         }
+
+        // --- 設定選單子選單：依可用空間自動決定展開方向 ---
+        // 背景：toolbar 會隨視窗寬度／字級折行，設定鈕不一定落在最右側；固定向左展開會被視窗左緣裁掉。
+        // 策略：滑入子選單時量測左右可用空間——左側夠就向左（設定鈕在最右側的常態），否則改向右。
+        (function initSubmenuFlip() {
+            const settingsDropdown = document.getElementById('settings-dropdown');
+            if (!settingsDropdown) return;
+
+            const positionSubmenu = (submenu) => {
+                const title = submenu.querySelector('.submenu-title');
+                const content = submenu.querySelector('.submenu-content');
+                if (!title || !content) return;
+                // mouseenter 時 :hover 已生效（display:block），可直接量測內容寬度
+                const contentWidth = content.offsetWidth;
+                const rect = title.getBoundingClientRect();
+                const roomLeft = rect.left;
+                const roomRight = window.innerWidth - rect.right;
+                const canOpenLeft = roomLeft >= contentWidth + 8;
+                const canOpenRight = roomRight >= contentWidth + 8;
+                // 預設向左；左側不足時改向右（兩側都不足時選空間較大的一邊）
+                const openRight = (!canOpenLeft && canOpenRight)
+                    || (!canOpenLeft && !canOpenRight && roomRight > roomLeft);
+                submenu.classList.toggle('submenu-open-right', openRight);
+            };
+
+            settingsDropdown.querySelectorAll('.dropdown-submenu').forEach((submenu) => {
+                submenu.addEventListener('mouseenter', () => positionSubmenu(submenu));
+                const title = submenu.querySelector('.submenu-title');
+                if (title) title.addEventListener('focus', () => positionSubmenu(submenu));
+            });
+        })();
 
         // --- 資料集管理按鈕（AI 下拉選單）---
         const datasetManagerBtn = document.getElementById('btn-dataset-manager-dropdown');

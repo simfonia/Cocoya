@@ -66,7 +66,7 @@ body {
     padding: 4px 12px;
     border-radius: 15px;
     border: 1px solid #eee;
-    font-size: 11px;
+    font-size: calc(11px * var(--fs-e));
     color: #666;
     max-width: 250px;
     overflow: hidden;
@@ -79,6 +79,11 @@ body {
     overflow: hidden;
     text-overflow: ellipsis;
     font-weight: 500;
+}
+
+/* 有專案根時（已錨定）可點擊開啟檔案總管 */
+#current-filename.has-path {
+    cursor: pointer;
 }
 
 /* 深色模式下的檔名標籤 */
@@ -96,7 +101,7 @@ body.cocoya-dark-mode #file-breadcrumb {
     border: 1px solid #ddd;
     border-radius: 4px;
     padding: 2px 8px;
-    font-size: 12px;
+    font-size: calc(12px * var(--fs-e));
     color: #333;
     cursor: pointer;
     outline: none;
@@ -111,7 +116,7 @@ body.cocoya-dark-mode #file-breadcrumb {
     border: 1px solid #ddd;
     border-radius: 4px;
     padding: 2px 10px;
-    font-size: 12px;
+    font-size: calc(12px * var(--fs-e));
     color: #333;
     height: 28px;
     white-space: nowrap;
@@ -143,7 +148,7 @@ body.cocoya-dark-mode #file-breadcrumb {
     display: block;
     width: 100%;
     padding: 10px 16px;
-    font-size: 14px;
+    font-size: calc(14px * var(--fs-h));
     border: none;
     border-radius: 6px;
     background: var(--cocoya-surface, #fff);
@@ -179,7 +184,7 @@ body.cocoya-dark-mode {
     border: 1px solid #ddd;
     border-radius: 4px;
     padding: 2px 4px;
-    font-size: 11px;
+    font-size: calc(11px * var(--fs-e));
     color: #333;
     cursor: pointer;
     outline: none;
@@ -204,7 +209,7 @@ body.cocoya-dark-mode {
     border: 1px solid #ddd;
     border-radius: 4px;
     padding: 4px 22px 4px 6px;
-    font-size: 11px;
+    font-size: calc(11px * var(--fs-e));
     color: #333;
     cursor: pointer;
     outline: none;
@@ -251,7 +256,7 @@ body.cocoya-dark-mode {
 }
 .serial-dropdown-item {
     padding: 5px 10px;
-    font-size: 12px;
+    font-size: calc(12px * var(--fs-e));
     color: #333;
     cursor: pointer;
     border-radius: 4px;
@@ -367,6 +372,8 @@ body.cocoya-dark-mode {
     left: 0;
     background-color: #ffffff;
     min-width: 160px;
+    width: max-content;
+    max-width: calc(100vw - 24px);
     box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
     z-index: 1000;
     border: 1px solid #ddd;
@@ -387,11 +394,12 @@ body.cocoya-dark-mode {
 
 .dropdown-item {
     padding: 8px 12px;
-    font-size: 13px;
+    font-size: calc(13px * var(--fs-e));
     color: #333;
     cursor: pointer;
     display: flex;
     align-items: center;
+    white-space: nowrap;  /* 字級放大時不換行（容器寬度改由 max-content 決定） */
     transition: background-color 0.2s;
 }
 
@@ -427,7 +435,7 @@ body.cocoya-dark-mode .dropdown-item:hover img {
 }
 
 .lang-switch-opt {
-    font-size: 10px;
+    font-size: calc(10px * var(--fs-e));
     line-height: 1;
     padding: 3px 8px;
     border-radius: 999px;
@@ -448,7 +456,7 @@ body.cocoya-dark-mode .dropdown-item:hover img {
 }
 
 .lang-switch-arrow {
-    font-size: 11px;
+    font-size: calc(11px * var(--fs-e));
     color: var(--cocoya-fg, #999);
     opacity: 0.7;
 }
@@ -461,7 +469,7 @@ body.cocoya-dark-mode .dropdown-item:hover img {
 }
 
 #startup-home #startup-lang-switch .lang-switch-opt {
-    font-size: 12px;
+    font-size: calc(12px * var(--fs-h));
     padding: 5px 10px;
 }
 
@@ -495,6 +503,8 @@ body.cocoya-dark-mode .dropdown-item:hover img {
     top: -4px;
     background-color: #ffffff;
     min-width: 220px;
+    width: max-content;
+    max-width: calc(100vw - 24px);
     box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.15);
     border: 1px solid #ddd;
     border-radius: 4px;
@@ -519,6 +529,41 @@ body.cocoya-dark-mode .dropdown-item:hover img {
 
 .toolbar-dropdown:hover .dropdown-content {
     display: block;
+}
+
+/* 設定選單移至 toolbar 最右（關閉鈕之前）：主選單與子選單改向左展開，避免溢出視窗 */
+#settings-dropdown .dropdown-content {
+    left: auto;
+    right: 0;
+}
+
+#settings-dropdown .dropdown-submenu .submenu-content {
+    left: auto;
+    right: 100%;
+    box-shadow: -4px 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+#settings-dropdown .dropdown-submenu .submenu-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: -10px;
+    width: 10px;
+    height: 100%;
+    background: transparent;
+}
+
+/* toolbar 折行（窄視窗／大字級）時設定鈕可能落到偏左位置，固定向左展開會被視窗左緣裁掉：
+   由 base.js initSubmenuFlip() 量測左右可用空間後掛上此 class，改為向右展開。 */
+#settings-dropdown .dropdown-submenu.submenu-open-right .submenu-content {
+    left: 100%;
+    right: auto;
+    box-shadow: 4px 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+#settings-dropdown .dropdown-submenu.submenu-open-right .submenu-content::before {
+    left: -10px;
+    right: auto;
 }
 
 /* 所有 toolbar-btn（除了 run/stop）hover 時 img 變 #FE2F89 色（排除 AI owl 彩色圖示） */
@@ -649,7 +694,7 @@ body.resizing-panel #codeArea {
     cursor: pointer;
     z-index: 101;
     color: #FE2F89;
-    font-size: 10px;
+    font-size: calc(10px * var(--fs-e));
 }
 
 #codeArea.collapsed #code-toggle {
@@ -686,7 +731,7 @@ body.cocoya-dark-mode #panel-resizer.is-dragging {
     padding: 0 12px;
     background-color: var(--code-header-bg, #f3f3f3);
     color: var(--text-secondary, #666);
-    font-size: 12px;
+    font-size: calc(12px * var(--fs-e));
     font-weight: bold;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -712,7 +757,7 @@ body.cocoya-dark-mode #panel-resizer.is-dragging {
     background: #ffffff;
     border: 1px solid #ccc;
     border-radius: 3px;
-    font-size: 10px;
+    font-size: calc(10px * var(--fs-e));
     color: #666;
     cursor: pointer;
     outline: none;
@@ -756,7 +801,7 @@ body.cocoya-dark-mode #panel-resizer.is-dragging {
 
 .indent-dropdown-item {
     padding: 5px 10px;
-    font-size: 12px;
+    font-size: calc(12px * var(--fs-e));
     color: #333;
     cursor: pointer;
     border-radius: 4px;
@@ -777,7 +822,7 @@ body.cocoya-dark-mode #panel-resizer.is-dragging {
     padding: 0;
     overflow: auto;
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    font-size: 13px;
+    font-size: calc(13px * var(--fs-e));
     line-height: 1.5;
     counter-reset: line;
     background-color: var(--code-bg, #fff);
@@ -922,7 +967,7 @@ body.cocoya-dark-mode #panel-resizer.is-dragging {
     align-items: center;
     cursor: pointer;
     z-index: 101;
-    font-size: 14px;
+    font-size: calc(14px * var(--fs-e));
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     transition: transform 0.3s, background-color 0.2s;
 }
@@ -966,7 +1011,7 @@ body.cocoya-dark-mode #panel-resizer.is-dragging {
     padding: 0 24px 0 8px !important;
     border: 1px solid #ddd !important;
     border-radius: 12px !important;
-    font-size: 11px !important;
+    font-size: calc(11px * var(--fs-e)) !important;
     outline: none !important;
     background: #ffd0fc !important;
     box-sizing: border-box !important;
@@ -1498,7 +1543,7 @@ body.cocoya-dark-mode .btn-close {
 }
 
 #terminalTitle {
-    font-size: 11px;
+    font-size: calc(11px * var(--fs-e));
     font-weight: bold;
     letter-spacing: 0.5px;
 }
@@ -1540,7 +1585,7 @@ body.cocoya-dark-mode .btn-close {
     overflow-y: auto;
     padding: 8px 12px;
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    font-size: 12px;
+    font-size: calc(12px * var(--fs-e));
     line-height: 1.4;
     white-space: pre-wrap;
     word-break: break-all;
@@ -1603,7 +1648,7 @@ body.cocoya-dark-mode .btn-close {
     cursor: pointer;
     z-index: 101;
     color: #FE2F89;
-    font-size: 10px;
+    font-size: calc(10px * var(--fs-e));
     user-select: none;
 }
 
@@ -1655,7 +1700,7 @@ body.resizing-terminal {
 }
 
 .cloud-ai-label {
-    font-size: 10px;
+    font-size: calc(10px * var(--fs-e));
     font-weight: bold;
     color: #FE2F89;
     letter-spacing: 0.5px;

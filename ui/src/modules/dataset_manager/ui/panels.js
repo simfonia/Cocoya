@@ -49,8 +49,12 @@ export function createPanelsPresenter({
     function renderValidation(result) {
         const errors = result.errors.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
         const warnings = result.warnings.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
-        const statusClass = result.ok ? 'ok' : 'error';
-        const statusText = result.ok ? t('SPEC_OK', 'Spec 可用') : t('SPEC_NEED_FIX', '需要修正');
+        // 2026-09-16：ok 但存在警告時改顯「可用，尚有提醒」，避免「Spec 可用」配警告的矛盾
+        const hasWarnings = Array.isArray(result.warnings) && result.warnings.length > 0;
+        const statusClass = !result.ok ? 'error' : (hasWarnings ? 'warn' : 'ok');
+        const statusText = !result.ok
+            ? t('SPEC_NEED_FIX', '需要修正')
+            : (hasWarnings ? t('SPEC_WARN', '可用，尚有提醒') : t('SPEC_OK', 'Spec 可用'));
 
         return `
             <div class="dataset-validation ${statusClass}">

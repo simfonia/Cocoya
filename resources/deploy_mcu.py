@@ -16,6 +16,11 @@ if __name__ == "__main__":
 from deploy import get_deployer
 from deploy.base import detect_board
 
+# === 輸出編碼修復：Windows 管線下預設 cp950，強制 UTF-8 避免 Tauri 終端機亂碼（對齊 PC 訓練模板） ===
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 
 def main():
     parser = argparse.ArgumentParser(description="Cocoya MCU Deployer")

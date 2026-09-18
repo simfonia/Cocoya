@@ -116,3 +116,80 @@ DM 開啟 → Step 0 卡片入口（新增 `ui/entryCards.js`）：4 正式卡�
 ### 10.4 施工鐵律（沿襲 §9）
 每步：先備份至 `backup/`（yyyyMMdd_HHmmss）→ 小步改 → `node --check`（新 JS 時）＋ `cargo check`（Rust 動到時）＋ Python 直接 `python -m py_compile` 新腳本 → 雙平台實機 → `log/work/2026-09-11.md` 追加＋`log/todo.md` 更新（禁刪歷史）。
 
+
+## 11. M5 前哨：ui_layout.js 精簡切片計畫（2026-09-17 定案，**暫緩施工 PAUSED**）
+
+> 使用者拍板（2026-09-17）：本輪只做「契約補登」（AGENTS.md＋DevGuide §5），**精簡切片與 M5 文件清理暫緩**，待 todo「M4-FEATURE 除錯任務」線索 ①~⑥ 收斂後再啟動。
+> 本節為動工前的切片順序 SSOT；開工時直接照抄，不需重新盤點。
+
+### 11.1 現況基線（2026-09-17 實測）
+- `ui/src/modules/dataset_manager/ui_layout.js` = **1823 行**（空白 209＋註解 304 → 程式行約 1310）。
+- 單行委派 wrapper：**23 條**；型別分支（`projectType ===` / `isImage ||` / `isLive`）：**11 處**。
+- 對照 §1（2026-09-10：約 1470 行、「10+ 處 if」）：行數增加來自 P2（標籤管理收斂）與 M4（feature live 採集）等新功能，**非上帝邏輯復辟**。
+
+### 11.2 為什麼不必等「重構完成」
+- Stage 0~6 的「可安全抽離」模組已抽完（core/io/ui/application 四層齊備）；Stage 4 Gate / Stage 6 Gate 未簽核屬**文件與簽核議題**，不是精簡的前置條件。
+- 剩餘分兩類：(a) 設計上就該留的協調層（`refreshDynamicPanels` / `openDatasetManager` / `bindModalEvents` / `closeDatasetManager`）→ 目標是「薄」，不是搬光；(b) 仍可抽離者 → 見 §11.3。
+
+### 11.3 切片順序（低風險 → 中風險；每片依 M2 施工鐵律：備份＋小步改＋測試＋實機）
+
+| 切片 | 目標檔案 | 搬移內容 | 預估減行 | 風險 | 必要驗證 |
+|---|---|---|---|---|---|
+| S1 | `application/specSync.js` | `syncSpecFromUI`（＋`buildLabelMap` 讀取） | ~70 | 低 | 補 specSync 測試；R7 表格 samples 契約不變 |
+| S2 | `application/progressApply.js` | `applyLoadedProgress` | ~75 | 低 | 新測試 4~6（目前零測試）；載入進度套回標註 |
+| S3 | `ui/navigation.js` | P1/P2/P3 導航（showEntryPhase/setHeaderButtons/setPageSubtitle/enterWorkspace/renderDevBanner/backToEntry/requestCloseDM） | ~200 | 中 | P1/P2/P3 手動案例（header 按鈕顯隱、關閉確認流程） |
+| S4 | `ui/modalEvents.js` | `bindModalEvents`（188 行 → 綁定 30 行＋具名 handler 群） | ~150 | 中 | 清除/匯出/驗證/關閉四流程各一測 |
+| S5 | `application/imageSamples.js` | `handleDeleteImage`（先）→ `addSampleFromSampler`（後） | ~180 | 中偏高 | 刪圖/拍照/縮圖刷新/exitAnnotationMode；DI 較多務必拆兩步 |
+
+- 預估：S1~S4 ≈ 削 495 行 → 約 1330 行；含 S5 ≈ 1150 行。若要壓到 800~900 需第二層（`bindModalEvents` 再拆、委派 facade 化）。
+- **明確不做**：硬拆 `refreshDynamicPanels`（跨 6 子系統編排，拆了變隱式耦合）；刪除仍被呼叫的 wrapper（Stage 6 切片 1 已清過一輪）。
+- **時機**：S1/S2 屬純函式可與 M4 除錯並行；S3/S4/S5 建議等 M4-FEATURE 除錯清單收斂後再一輪做，避免「同檔大搬遷＋功能修改」交錯。
+
+### 11.4 動工前置（開工第一件事）
+1. 契約凍結（**已於 2026-09-17 完成補登**）：`#dataset-structure-content` 禁覆寫 innerHTML（統計只寫 `#view-label-stats`）；改動 `img.path / img.label / img.diskPath` 後必呼叫 `refreshThumbnailBadges()`；改名磁碟對帳走 `application/labelRenameReconcile.js`。出處：`AGENTS.md`「Dataset Manager 結構面板與縮圖同步契約」＋`log/mappings/DatasetManager_DevGuide.html` §5。
+2. 備份 `ui_layout.js` → `backup/ui_layout_pre_S1_<yyyyMMdd_HHmmss>.bak`。
+3. 每片動完：`node --check` ×N ＋ DM 測試（`node --test "src/modules/dataset_manager/*.test.mjs" "src/modules/dataset_manager/**/*.test.mjs"`）＋ `vite build`。
+4. 收尾一併結案 Stage 4 Gate / Stage 6 Gate 簽核（M5 文件＋清理）＋更新 FILE_STRUCTURE.md 與本節狀態（PAUSED → DONE）。
+
+## 12. 資料集名稱與磁碟命名空間政策（方案 A 已實作 2026-09-17；B 待辦）
+
+> 觸發問題（使用者）：在 DM P2 改「資料集名稱」是否需要同步改磁碟資料夾？但未落盤前可能沒有這個資料夾。
+
+### 12.1 事實（程式碼證據）
+- 「資料集名稱」＝表單 `projectName`＝`dataset/` 下的子資料夾名，餵給 5 條路徑契約：
+
+| 用途 | 位置 |
+|---|---|
+| autosave 寫 `dataset/<名>/dataset.json` | `application/progressUseCases.js` L35 |
+| live 拍照 savePath `.../dataset/<名>/<標籤>/<名>_<ts>.jpg` | VSIX `src/handlers/datasetOps.ts` L544；Tauri `ui/src/bridge/tauri.js` L587 |
+| 標籤改名磁碟同步（`datasetRenameLabel`） | `datasetOps.ts` L492；`tauri.js` L664 |
+| 匯入閘門 canonical `<根>/dataset/<名>` | `dataset_import_from_folder`＋`application/importUseCases.js` L132 |
+| 匯出 staging | VSIX 用 `spec.project.name`（`datasetOps.ts` L238/L245）；**Tauri 只複製 `sourceFolderPath`（`src-tauri/src/commands/dataset.rs` L264-268）** |
+
+- 目錄建立時機＝第一次落盤（Rust `file.rs` L815／VSIX `datasetOps.ts` L623-625 的 `create_dir_all`）→ **未落盤前該資料夾不存在是正常現象**。
+
+### 12.2 政策（2026-09-17 使用者拍板）
+1. **未落盤**：名稱可自由變更，零副作用；**不得**為了改名預先建立空目錄。
+2. **已落盤改名**：目前不搬移既有檔案（B 案範圍），但**必須提示**風險（方案 A）。
+3. 「同步改資料夾名」的正解（B 案）＝只搬既有內容；**舊目錄不存在 → no-op，不建立**。
+
+### 12.3 方案 A（已實作：純前端、零後端改動）
+
+| 層 | 異動 |
+|---|---|
+| `core/projectNaming.js` | 新增 `detectDatasetNameDrift(state, newName)`＋`datasetNameFromImagePath`／`datasetNameFromFolderPath`（無 IO；證據＝`img.diskPath` 尾段反推、`sourceFolderPath` canonical 段；三段式判定，取不到一律回 '＝不誤報） |
+| `ui_layout.js` | `applyDatasetNameDriftHint(nameInput)`（標紅 `dataset-name-warning`＋`NAME_DRIFT_TIP` 一次性提示；模組級 `nameDriftWarnKey` 去重，`enterWorkspace` 重設）＋掛入 `nameInput.oninput` |
+| i18n | `DSM_NAME_DRIFT_TIP`（zh/en parity 172/172） |
+| 測試 | `core/projectNaming.test.mjs` 12 測（正/反斜線、名稱即 dataset、專案根內也有 dataset 目錄、非 canonical 不猜測、live/import 證據優先序、無證據不漂移、空名稱＝fallback dataset） |
+
+- 驗證：`node --check`×2／DM **141/141**／`i18n_parity_scan.cjs` only-zh=[] only-en=[]／`vite build` PASS。
+- 已知限制：feature/table 的 live 僅落盤 dataset.json，無上述證據 → 不提示（影響僅多一份 dataset.json）。
+
+### 12.4 方案 B（backlog，未實作）：`dataset_rename_dataset_dir`
+- 舊目錄不存在 → `Ok([])` no-op（**不建立**）；存在且目標不存在 → `fs::rename` 整目錄＋回傳 renames → 前端對帳 `img.diskPath` 前綴、`spec.data_source.base_dir`、`refreshThumbnailBadges()`；目標已存在 → `DATASET_DIR_CONFLICT`（提示改名或先合併，**禁止覆蓋**）。
+- 需雙平台（Rust `file.rs`＋VSIX `datasetOps.ts`）＋`permissions/commands.toml`＋`docs/backend_api_manifest.md`＋測試＋實機；工程量與 §11 S5 同級。
+- **動工前必須拍板**：同名「另存／合併」語意（教學場景常見：兩個資料集同名時要拒絕、合併還是另存？）。
+
+### 12.5 順帶發現（既有、與改名無關，列驗證 backlog）
+- Tauri `export_dataset`（`dataset.rs` L264-268）只從 `sourceFolderPath` 複製；live 模式該值為 `null`（僅 file 匯入會設，`importUseCases.js` L164）→ **live 匯出的 ZIP 疑似只有 dataset.json、沒有照片**。
+- VSIX `handleDatasetExport`（`datasetOps.ts` L241-245）用 `workspaceFolders[0]` 而非專案根組 `dataset/<名>` → xml 在子資料夾時可能取錯目錄。

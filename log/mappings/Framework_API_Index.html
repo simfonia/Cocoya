@@ -126,6 +126,29 @@ console.log(spec.toJSON());
       <li><strong>Return</strong>：Rust 回傳型別。</li>
     </ul>
     <p>同步規則：<code>#[tauri::command]</code> 簽名增改 -> 立即更新本 manifest + <code>ui/src/bridge/{tauri,vsix}.js</code> 呼叫端 (詳見 AGENTS.md 「Tauri 跨語言 Invoke 簽名同步規範」)。長期：引入 <code>tauri-codegen</code> 自動生成 typed invoke() (log/todo.md 待辦)。</p>
- 
+     <h2>6. Blockly DOM / CSS 參照（12.3.1）</h2>
+    <p>來源：<code>ui/blockly/core/blockly.js</code>（runtime 以 <code>register</code> 注入 CSS；以下為實測抓出的關鍵 class 與原值）。字級應用見 <code>log/mappings/FontScale.html</code>。</p>
+    <pre>
+/* toolbox 分類列（DOM 元素，不是 SVG） */
+.blocklyToolboxDiv                     /* toolbox 容器（style.css 覆寫 z-index: 140） */
+  .blocklyToolboxCategoryContainer     /* 分類項容器（margin: 1px 5px 1px 0） */
+    .blocklyToolboxCategory            /* 分類列原值 height: 22px; line-height: 22px */
+      .blocklyToolboxCategoryIcon      /* 16x16 sprites.png 圖示 */
+      .blocklyToolboxCategoryLabel     /* 分類文字原值 font: 16px sans-serif */
+
+/* 覆寫字級的正確寫法：提高特異度（0,2,0 勝 0,1,0），不依賴載入順序 */
+.blocklyToolboxDiv .blocklyToolboxCategoryLabel { font-size: calc(16px * var(--fs-e)); }
+.blocklyToolboxDiv .blocklyToolboxCategory {
+    height: calc(22px * var(--fs-e));
+    line-height: calc(22px * var(--fs-e));
+}
+    </pre>
+    <p><b>三個已驗證的坑</b>：</p>
+    <ul>
+      <li>積木本體（block 內文字）在 <b>SVG 內渲染</b>，CSS <code>font-size</code> 無效；只能用 <code>Blockly.Theme</code> 的 fontSize（Cocoya 已內建 +/- 控制項）。</li>
+      <li>Blockly 用 <code>font</code> 簡寫設定文字（連帶 font-size/family/weight）→ 覆寫時<b>只寫 <code>font-size</code></b>，用 <code>font</code> 簡寫會把 sans-serif family 一起改掉。</li>
+      <li><code>.blocklyTreeLabel</code> 為 <b>舊版相容命名</b>：Blockly 12.3.1 內建 CSS/DOM <b>完全沒有此 class</b>（grep 命中 0 次）；主題檔沿用它是無害的防禦寫法，新規則請以 <code>.blocklyToolboxCategoryLabel</code> 為準。</li>
+    </ul>
+    <p>其他：toolbox 寬度由 Blockly 於<b>載入時量測</b>決定 flyout 位置 → 字級改動需 reload 後量測才正確。</p>
 </body>
 </html>

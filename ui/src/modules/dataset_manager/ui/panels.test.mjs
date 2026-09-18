@@ -53,10 +53,15 @@ describe('ui/panels.js (Stage 4 切片 7)', () => {
     test('renderValidation：ok/error class 與 errors/warnings 清單', () => {
         const { deps } = makeDeps();
         const p = createPanelsPresenter(deps);
+        // 2026-09-16：ok+warnings 新語意 → warn class 與「可用，尚有提醒」；純 ok → ok class
         const ok = p.renderValidation({ ok: true, errors: [], warnings: ['w1'] });
-        assert.ok(ok.includes('dataset-validation ok'));
+        assert.ok(ok.includes('dataset-validation warn'), 'ok+warnings 應為 warn class');
+        assert.ok(ok.includes('可用，尚有提醒'));
         assert.ok(ok.includes('w1'));
         assert.ok(ok.includes('dataset-warnings'));
+        const clean = p.renderValidation({ ok: true, errors: [], warnings: [] });
+        assert.ok(clean.includes('dataset-validation ok'));
+        assert.ok(clean.includes('Spec 可用'));
         const bad = p.renderValidation({ ok: false, errors: ['e<1'], warnings: [] });
         assert.ok(bad.includes('dataset-validation error'));
         assert.ok(bad.includes('e&lt;1'));

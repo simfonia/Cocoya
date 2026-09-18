@@ -6,13 +6,14 @@ import { t } from './i18n.js';
 import { buildLabelMap as buildCoreLabelMap, nextLabelId as getNextLabelId } from './core/labelMap.js';
 import { calculateStats } from './core/stats.js';
 import { createInitialDatasetState, DatasetStore } from './core/state.js';
-import { sanitizeProjectName } from './core/projectNaming.js';
+import { sanitizeProjectName, detectDatasetNameDrift } from './core/projectNaming.js';
 import { validateDeletableImagePath, validateDeletableDiskPath, normalizePath } from './core/pathPolicy.js';
 import { escapeHtml } from './core/html.js';
 import { datasetBridge } from './io/bridge.js';
 import { createProgressUseCases } from './application/progressUseCases.js';
 import { createImportUseCases } from './application/importUseCases.js';
 import { createExportUseCases } from './application/exportUseCases.js';
+import { reconcileRenamedPaths } from './application/labelRenameReconcile.js';
 import {
     countUnclassifiedBoxes
 } from './application/annotationMutations.js';
@@ -69,6 +70,10 @@ const labelManager = createLabelManager({
     renderClassificationControls: () => renderClassificationControls(),
     renderAnnotationControls: () => renderAnnotationControls(),
     updateThumbnailHighlight: () => updateThumbnailHighlight(),
+    // P2：中欄管理器增/改/刪標籤後，同步右欄 live 採集面板的標籤下拉＋縮圖徽章
+    onLabelMapChanged: () => { refreshLiveLabelOptions(); refreshThumbnailBadges(); },
+    // Part B：改名後同步磁碟資料夾/檔名（live 落盤區；非阻塞）
+    onLabelRenamed: (oldName, newName) => handleLabelRenamedOnDisk(oldName, newName),
     bridge: datasetBridge
 });
 
@@ -132,6 +137,8 @@ const samplerPanel = createSamplerPanel({
     },
     onStopCamera: () => Sampler.stopCamera(true),
     onSampleCaptured: (blob, savePath) => addSampleFromSampler(blob, savePath),
+    // P2：結構面板重繪回呼（重建中欄統一標籤管理器＋統計，不再覆寫 innerHTML）
+    refreshStructurePanel: () => renderStructurePanel(),
     nextLabelId: (map) => nextLabelId(map)
 });
 
@@ -146,7 +153,9 @@ const featurePanel = createFeaturePanel({
     landmarksToRow,
     nextLabelId: (map) => nextLabelId(map),
     onFeatureCollected: (data) => addFeatureRow(data),
-    renderTablePreview: (container, rows) => renderTablePreview(container, rows)
+    renderTablePreview: (container, rows) => renderTablePreview(container, rows),
+    // P2：結構面板重繪回呼（重建中欄統一標籤管理器＋統計，不再覆寫 innerHTML）
+    refreshStructurePanel: () => renderStructurePanel()
 });
 
 // Stage 4 切片 7：欄位列/驗證/表格預覽等面板呈現移至 ui/panels.js（依賴注入；下方函式宣告已提升，可安全參照）
@@ -456,6 +465,33 @@ function setNameWarning(on) {
 }
 
 /**
+ * 方案 A（2026-09-17）：資料集名稱＝落盤命名空間（`dataset/<名稱>/`）。
+ * 名稱變更時不搬移磁碟既有資料（B 案未實作），故於「已有落盤證據」時提示並標紅；
+ * 未落盤（無 diskPath、無 sourceFolderPath）→ 不提示，名稱可自由變更。
+ * 判定為純函式 `core/projectNaming.detectDatasetNameDrift`（無 IO）；同一組漂移只提示一次。
+ */
+let nameDriftWarnKey = null;
+function applyDatasetNameDriftHint(nameInput) {
+    if (!nameInput) return;
+    const drift = detectDatasetNameDrift(state, nameInput.value);
+    if (!drift.drifted) {
+        nameInput.classList.remove('dataset-name-warning');
+        nameDriftWarnKey = null;
+        return;
+    }
+    nameInput.classList.add('dataset-name-warning');
+    const key = drift.diskName + '->' + (nameInput.value || 'dataset');
+    if (key === nameDriftWarnKey) return; // 同一組漂移不重複提示（避免每次按鍵都跳）
+    nameDriftWarnKey = key;
+    showStatusMessage(
+        t('NAME_DRIFT_TIP', '⚠️ 磁碟既有資料仍在 dataset/%1/；改名不會搬移既有檔案（匯出與標籤改名將以新名稱 dataset/%2/ 為準）')
+            .replace('%1', drift.diskName)
+            .replace('%2', nameInput.value || 'dataset'),
+        { duration: 8000 }
+    );
+}
+
+/**
  * 名稱/來源對齊決策（方案 A）：防止來源切換時「沒注意」而靜默覆寫既有 dataset 進度。
  * @param {string} derivedName 由來源（資料夾名/檔名）推導出的名稱。
  * @param {string|null} sourcePath 新來源路徑（資料夾匯入傳入；檔案匯入傳 null，不觸發碰撞檢查）。
@@ -580,13 +616,14 @@ function showExportProgress(active) {
 }
 
 /**
- * 進入/退出標註模式時，隱藏/還原預覽面板 header 的「驗證/匯出/自動儲存指示」，
- * 避免這些列表導向的操作在標註模式重複或突兀（標註工具列自行提供匯出）。
+ * 進入/退出標註模式時，隱藏/還原預覽面板 header 的「驗證/自動儲存指示」，
+ * 避免這些列表導向的操作在標註模式重複或突兀（標註工具列自行提供匯出；
+ * 主 header 的匯出/清除改由 setHeaderButtons 依 P1/P2/P3 控制）。
  */
 function setAnnotationHeaderActions(hidden) {
     const modal = getModal();
     if (!modal) return;
-    ['#dataset-manager-validate', '#dataset-manager-export', '.dataset-autosave-indicator'].forEach((sel) => {
+    ['#dataset-manager-validate', '.dataset-autosave-indicator'].forEach((sel) => {
         const el = modal.querySelector(sel);
         if (el) el.style.display = hidden ? 'none' : '';
     });
@@ -825,7 +862,7 @@ async function exitAnnotationMode(skipUnannotatedCheck = false) {
     if (sourcePanel) sourcePanel.style.display = '';
     if (schemaPanel) schemaPanel.style.display = '';
 
-    // 還原預覽 header 的驗證/匯出/自動儲存指示
+    // 還原預覽 header 的驗證/自動儲存指示
     setAnnotationHeaderActions(false);
 
     // 重置標註模式狀態
@@ -855,38 +892,8 @@ export function refreshDynamicPanels() {
     const structureActions = modal.querySelector('#dataset-schema-actions');
     const structureContent = modal.querySelector('#dataset-structure-content');
 
-    // 2. 更新欄位/標籤面板
-    if (isImage || isLive) {
-        structureTitle.textContent = t('LABEL_STATS_TITLE', '標籤與樣本統計');
-        structureActions.style.display = 'none';
-        if (projectType === 'image' || projectType === 'object_detection') {
-            // 統一標籤管理器（新增/改名/刪除）+ 統計，與標註模式一致
-            structureContent.innerHTML = `
-                <div id="view-label-class-manager"></div>
-                <div id="view-label-stats"></div>
-            `;
-            createLabelMapManager(
-                document.getElementById('view-label-class-manager'),
-                document.getElementById('view-label-stats')
-            );
-            UIComponents.renderLabelStats(document.getElementById('view-label-stats'), state.spec.toJSON().stats);
-        } else {
-            UIComponents.renderLabelStats(structureContent, state.spec.toJSON().stats);
-        }
-    } else {
-        structureTitle.textContent = t('STRUCTURE_TITLE', '欄位與標籤');
-        structureActions.style.display = 'block';
-        structureContent.innerHTML = `
-            <div class="dataset-column-head">
-                <span>${t('COLUMN_NAME', '名稱')}</span>
-                <span>${t('COLUMN_TYPE', '型別')}</span>
-                <span>${t('COLUMN_ROLE', '角色')}</span>
-                <span></span>
-            </div>
-            <div id="dataset-column-list" class="dataset-column-list"></div>
-        `;
-        renderAllColumns();
-    }
+    // 2. 更新欄位/標籤面板（P2：抽為 renderStructurePanel；sampler/feature 經 refreshStructurePanel 重用）
+    renderStructurePanel(structureTitle, structureActions, structureContent);
 
     // 3. 更新預覽面板
     const previewContent = modal.querySelector('#dataset-preview-content');
@@ -929,6 +936,166 @@ export function refreshDynamicPanels() {
         renderPreviewTable(tablePreview, state.tableRows);
     }
     refreshPreview();
+}
+
+/**
+ * P2：中欄結構面板（標籤/欄位）重建——自 refreshDynamicPanels §2 抽出，
+ * 供 refreshDynamicPanels 與 sampler/feature 的 refreshStructurePanel 共用 SSOT。
+ * 影像系與所有 live 類型一律使用「統一標籤管理器（增/改/刪）＋統計」；
+ * 僅非影像＋非 live（表格 file 匯入）顯示欄位（Feature/Label）編輯。
+ * @param {HTMLElement} [structureTitle] #dataset-structure-title（省略時自行由 modal 定位）
+ * @param {HTMLElement} [structureActions] #dataset-schema-actions（省略時自行由 modal 定位）
+ * @param {HTMLElement} [structureContent] #dataset-structure-content（省略時自行由 modal 定位）
+ */
+function renderStructurePanel(structureTitle, structureActions, structureContent) {
+    const modal = getModal();
+    if (!modal) return;
+    if (!structureTitle) structureTitle = modal.querySelector('#dataset-structure-title');
+    if (!structureActions) structureActions = modal.querySelector('#dataset-schema-actions');
+    if (!structureContent) structureContent = modal.querySelector('#dataset-structure-content');
+    if (!structureTitle || !structureActions || !structureContent) return;
+
+    const projectType = getFormValue('projectType');
+    const sourceMode = getFormValue('sourceMode');
+    const isImage = projectType === 'image' || projectType === 'object_detection' || projectType === 'line_following';
+    const isLive = sourceMode === 'live';
+
+    if (isImage || isLive) {
+        structureTitle.textContent = t('LABEL_STATS_TITLE', '標籤與樣本統計');
+        structureActions.style.display = 'none';
+        // 統一標籤管理器（新增/改名/刪除）+ 統計，與標註模式一致
+        // （P2：line_following / feature 的 live 亦涵蓋，不再是純統計）
+        structureContent.innerHTML = `
+            <div id="view-label-class-manager"></div>
+            <div id="view-label-stats"></div>
+        `;
+        createLabelMapManager(
+            document.getElementById('view-label-class-manager'),
+            document.getElementById('view-label-stats')
+        );
+        UIComponents.renderLabelStats(document.getElementById('view-label-stats'), state.spec.toJSON().stats);
+    } else {
+        structureTitle.textContent = t('STRUCTURE_TITLE', '欄位與標籤');
+        structureActions.style.display = 'block';
+        structureContent.innerHTML = `
+            <div class="dataset-column-head">
+                <span>${t('COLUMN_NAME', '名稱')}</span>
+                <span>${t('COLUMN_TYPE', '型別')}</span>
+                <span>${t('COLUMN_ROLE', '角色')}</span>
+                <span></span>
+            </div>
+            <div id="dataset-column-list" class="dataset-column-list"></div>
+        `;
+        renderAllColumns();
+    }
+}
+
+/**
+ * Part B（2026-09-16）：標籤改名後同步磁碟——
+ * 對 canonical dataset/<專案>/ 落盤區發 datasetRenameLabel（資料夾整體改名＋<old>_ 檔名前綴改 <new>_），
+ * 成功後以回傳 renames 對帳 img.diskPath/img.name/img.path，再經 refreshPreview 重同步 spec samples。
+ * 來源資料夾（使用者 import 的 sourceFolderPath）不碰；失敗僅提示，不回滾 label_map 改名。
+ */
+async function handleLabelRenamedOnDisk(oldName, newName) {
+    if (!state.images.length) return;
+    const projectName = getFormValue('projectName') || 'dataset';
+    try {
+        const { promise } = datasetBridge.request({
+            command: 'datasetRenameLabel',
+            payload: { projectName, oldLabel: oldName, newLabel: newName },
+            resultCommand: 'datasetRenameLabelResult',
+            timeoutMs: 30000
+        });
+        const result = await promise;
+        if (result && result.success === false) {
+            showStatusMessage(t('LABEL_DISK_RENAME_FAILED', '⚠️ 標籤已改名，但磁碟資料夾同步失敗: %1')
+                .replace('%1', result.errorCode || result.error || 'unknown'));
+            return;
+        }
+        const renames = (result && result.renames) || [];
+        if (!renames.length) return;
+        // [2026-09-17 修] 對帳抽為 application/labelRenameReconcile.js 純函式（Node 可測）：
+        // 路徑一律經 core/pathPolicy.normalizePath 比對——後端回傳已正規化（反斜線→正斜線），
+        // 但 img.diskPath 是 capture 的 savePath（VSIX path.join＝反斜線；Tauri 專案根亦帶反斜線），
+        // 不正規化會 miss，落到「只改 path 目錄段」分支，造成 spec image_path 資料夾新／檔名舊。
+        reconcileRenamedPaths(state.images, renames, { oldLabel: oldName, newLabel: newName });
+        // [2026-09-17 修] 對帳後必須重繪縮圖（hover tooltip 的 title 吃 img.path），否則顯示舊檔名
+        refreshThumbnailBadges();
+        refreshPreview(); // 重同步 spec samples/image_path（防抖後自動落盤 dataset.json）
+        showStatusMessage(t('LABEL_DISK_RENAMED', '✅ 標籤改名完成，磁碟資料夾/檔名已同步（%1 個檔案）')
+            .replace('%1', renames.length));
+    } catch (e) {
+        showStatusMessage(t('LABEL_DISK_RENAME_FAILED', '⚠️ 標籤已改名，但磁碟資料夾同步失敗: %1')
+            .replace('%1', e.message || e));
+    }
+}
+
+/**
+ * 2026-09-16：label_map 改名/增刪後刷新縮圖徽章——
+ * 標註模式重繪縮圖列（badge 吃 img.label）；列表模式重繪右欄縮圖牆（dataset-image-label 徽章）。
+ * 兩者皆保留捲動位置；不改動 state.images（改名邏輯已在 labelManager 處理）。
+ */
+function refreshThumbnailBadges() {
+    const modal = getModal();
+    if (!modal) return;
+    if (state.annotationMode && state.annotationMode.isActive) {
+        const am = state.annotationMode;
+        const strip = modal.querySelector('#annotation-thumbnails');
+        if (strip) {
+            UIComponents.renderAnnotationThumbnails(strip, state.images, am.currentIndex, {
+                mode: am.mode === 'classification' ? 'classification' : undefined,
+                onThumbnailClick: (newIndex) => navigateToImage(newIndex),
+                onDeleteImage: (delIndex) => handleDeleteImage(delIndex)
+            });
+            updateThumbnailHighlight();
+        }
+        return;
+    }
+    const imagePreview = modal.querySelector('#dataset-image-preview');
+    if (imagePreview && state.images.length) {
+        UIComponents.renderImageGrid(imagePreview, state.images, {
+            onImageClick: (img, idx) => enterAnnotationMode(img, idx),
+            onDeleteImage: (idx) => handleDeleteImage(idx)
+        });
+        restoreGridScroll();
+    }
+}
+
+/**
+ * P2：label_map 變更（中欄管理器增/改/刪）後，同步右欄 live 採集面板的標籤下拉。
+ * 同時修正 Sampler.state.targetLabel 指向已不存在（改名/刪除）的標籤時，退回首標籤。
+ */
+function refreshLiveLabelOptions() {
+    const modal = getModal();
+    const view = modal ? modal.querySelector('#dataset-sampler-view') : null;
+    if (!view) return;
+    const labels = Object.keys(state.spec.toJSON().schema.label_map || {});
+
+    // 影像採集下拉（sampler）
+    const labelSelect = view.querySelector('#dataset-sampler-label-select');
+    if (labelSelect) {
+        let target = Sampler.state.targetLabel;
+        if (!labels.includes(target)) {
+            target = labels.length ? labels[0] : '';
+            Sampler.setTargetLabel(target);
+        }
+        labelSelect.innerHTML = labels.map((lb) =>
+            '<option value="' + escapeHtml(lb) + '"' + (lb === target ? ' selected' : '') + '>'
+            + escapeHtml(lb) + '</option>'
+        ).join('');
+    }
+
+    // 特徵採集下拉（feature；目前選取值以 DOM 為準）
+    const featureSelect = view.querySelector('#feature-label-select');
+    if (featureSelect) {
+        let cur = featureSelect.value;
+        if (!labels.includes(cur)) cur = labels.length ? labels[0] : '';
+        featureSelect.innerHTML = labels.map((lb) =>
+            '<option value="' + escapeHtml(lb) + '"' + (lb === cur ? ' selected' : '') + '>'
+            + escapeHtml(lb) + '</option>'
+        ).join('');
+        if (cur) Sampler.setTargetLabel(cur);
+    }
 }
 
 async function handleSamplerSnapshot() {
@@ -1008,10 +1175,8 @@ async function handleDeleteImage(index) {
     // 刷新 UI（保留 scrollTop 避免刪除後縮圖捲回最上方）
     const modal = getModal();
     if (modal) {
-        const structureContent = modal.querySelector('#dataset-structure-content');
-        if (structureContent) {
-            UIComponents.renderLabelStats(structureContent, state.spec.toJSON().stats);
-        }
+        // [2026-09-17 修] 統計由上方 updateStatsFromImages()→renderStatsPanels 就地更新；
+        // 不再覆寫 #dataset-structure-content innerHTML（會沖掉中欄統一標籤管理器）。
 
         const imagePreview = modal.querySelector('#dataset-image-preview');
         if (imagePreview) {
@@ -1114,11 +1279,10 @@ function addSampleFromSampler(blob, savePath = null) {
     // 刷新 UI
     const modal = getModal();
     if (modal) {
-        // 更新左側的標籤統計數字
-        const structureContent = modal.querySelector('#dataset-structure-content');
-        if (structureContent) {
-            UIComponents.renderLabelStats(structureContent, state.spec.toJSON().stats);
-        }
+        // [2026-09-17 修] 統計已由上方 updateStatsFromImages()→renderStatsPanels 就地更新。
+        // 嚴禁再以 renderLabelStats 覆寫 #dataset-structure-content innerHTML——
+        // 該容器裝的是中欄統一標籤管理器（#view-label-class-manager）＋統計，
+        // 覆寫會讓「拍照後標籤管理 UI 消失」（同 P2 sampler/feature 病根，僅此路徑漏改）。
 
         // 更新右側的影像網格
         const imagePreview = modal.querySelector('#dataset-image-preview');
@@ -1215,8 +1379,9 @@ function addFeatureRow({ row, useZ, schema }) {
     refreshPreview();
 }
 
-/** 重繪統計容器：優先 #view-label-stats（image/od 列表模式，與 label manager 並存），
- *  否則退回 #dataset-structure-content（line_following 純統計） */
+/** 重繪統計容器：優先 #view-label-stats（影像系/live 與 label manager 並存，P2 已全 live 涵蓋），
+ *  其次：統一管理器存在但統計容器缺失 → 重建整個結構面板（嚴禁覆寫 innerHTML 沖掉管理器）；
+ *  最後才退回 #dataset-structure-content（表格 file 模式，該模式無統一管理器） */
 function renderStatsPanels() {
     const modal = getModal();
     if (!modal) return;
@@ -1224,6 +1389,11 @@ function renderStatsPanels() {
     const viewStats = document.getElementById('view-label-stats');
     if (viewStats) {
         UIComponents.renderLabelStats(viewStats, stats);
+        return;
+    }
+    // [2026-09-17 修] 管理器在、統計容器不在 → 走 SSOT 重建，避免直接覆寫管理器的父容器
+    if (document.getElementById('view-label-class-manager')) {
+        renderStructurePanel();
         return;
     }
     const structureContent = modal.querySelector('#dataset-structure-content');
@@ -1234,7 +1404,17 @@ function renderStatsPanels() {
 
 function bindModalEvents(modal) {
     modal.querySelector('#dataset-manager-close').onclick = requestCloseDM;
-    modal.querySelector('#dataset-manager-validate').onclick = refreshPreview;
+    // 2026-09-16：驗證按鈕即時回饋——取消防抖、立即驗證並以訊息框顯示結果摘要
+    modal.querySelector('#dataset-manager-validate').onclick = () => {
+        if (refreshTimeout) { clearTimeout(refreshTimeout); refreshTimeout = null; }
+        syncSpecFromUI(true);
+        const result = state.spec.validate();
+        const validation = modal.querySelector('#dataset-validation');
+        if (validation) validation.innerHTML = renderValidation(result);
+        showStatusMessage(result.ok
+            ? t('VALIDATE_OK_STATUS', '✅ 驗證通過：Spec 可用')
+            : t('VALIDATE_FAIL_STATUS', '❌ 驗證發現 %1 個錯誤，請查看右欄訊息框').replace('%1', result.errors.length));
+    };
     const headerEntryBtn = modal.querySelector('#dataset-header-entry');
     if (headerEntryBtn) headerEntryBtn.onclick = backToEntry;
 
@@ -1392,6 +1572,8 @@ function bindModalEvents(modal) {
                 // 嘗試保持光標位置
                 nameInput.setSelectionRange(pos, pos);
             }
+            // 方案 A（2026-09-17）：已有落盤資料時，名稱變更不會搬移磁碟內容 → 標紅＋提示
+            applyDatasetNameDriftHint(nameInput);
             refreshPreview();
         };
     }
@@ -1504,6 +1686,7 @@ function showEntryPhase(modal) {
         modal.querySelector('.dataset-manager-dialog')?.appendChild(entry);
     }
     if (body) body.style.display = 'none';
+    modal.classList.add('dataset-entry-phase'); // P1 字級上游（font_scale.css --fs-p1）
     entry.style.display = 'block';
     entry.innerHTML = buildEntryTemplate({ t });
     entry.querySelectorAll('.dataset-entry-card').forEach((card) => {
@@ -1514,12 +1697,14 @@ function showEntryPhase(modal) {
     if (subtitle) subtitle.textContent = t('PAGE_NEW_DATASET', '建立新資料集');
 }
 
-/** 頁面級 header 按鈕顯隱（P1：全隱 / P2：清除資料＋重新選擇類型 / P3：全隱） */
+/** 頁面級 header 按鈕顯隱（P1：全隱 / P2：匯出資料集＋清除資料＋重新選擇類型 / P3：全隱） */
 function setHeaderButtons(showClear, showEntry) {
     const modal = getModal();
     if (!modal) return;
+    const exportBtn = modal.querySelector('#dataset-manager-export');
     const clearBtn = modal.querySelector('#dataset-manager-clear');
     const entryBtn = modal.querySelector('#dataset-header-entry');
+    if (exportBtn) exportBtn.style.display = showClear ? 'flex' : 'none';
     if (clearBtn) clearBtn.style.display = showClear ? 'flex' : 'none';
     if (entryBtn) entryBtn.style.display = showEntry ? 'inline-block' : 'none';
 }
@@ -1542,6 +1727,7 @@ function enterWorkspace(type) {
     state.tableRows = [];
     state.sourceFolderPath = null;
     setNameWarning(false);
+    nameDriftWarnKey = null; // 方案 A：新會話無既有落盤證據，重設提示去重鍵
     // 鎖定下拉顯示＋連動 modes
     const typeSelect = modal.querySelector('[name="projectType"]');
     if (typeSelect) {
@@ -1555,6 +1741,7 @@ function enterWorkspace(type) {
     renderDevBanner(modal, type);
     const entry = modal.querySelector('#dataset-entry-view');
     if (entry) entry.style.display = 'none';
+    modal.classList.remove('dataset-entry-phase'); // 進 P2 工作區，字級上游改回 --fs-p2
     const body = modal.querySelector('.dataset-manager-body');
     if (body) body.style.display = '';
     setHeaderButtons(true, true);

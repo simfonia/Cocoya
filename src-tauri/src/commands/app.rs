@@ -44,8 +44,10 @@ pub fn open_folder(path: String) -> Result<(), String> {
     }
     #[cfg(target_os = "windows")]
     {
+        // explorer.exe 無法辨識含正斜線的路徑參數（會回退開啟「文件」），統一轉為反斜線
+        let win_path = path.replace('/', "\\");
         std::process::Command::new("explorer")
-            .arg(&path)
+            .arg(&win_path)
             .spawn()
             .map_err(|e| e.to_string())?;
         Ok(())

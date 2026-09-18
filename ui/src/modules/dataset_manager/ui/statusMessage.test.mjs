@@ -10,7 +10,8 @@ import { createStatusMessageUI } from './statusMessage.js';
 function makeFakeDocument() {
     const el = {
         textContent: '',
-        style: { display: 'none' }
+        style: { display: 'none' },
+        classList: { _set: new Set(), toggle(cls, on) { on ? this._set.add(cls) : this._set.delete(cls); }, contains(cls) { return this._set.has(cls); } }
     };
     const documentRef = {
         getElementById(id) {
@@ -22,21 +23,21 @@ function makeFakeDocument() {
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-test('顯示訊息：設定 textContent 與 display flex', () => {
+test('顯示訊息：設定 textContent 與 visibility visible', () => {
     const { el, documentRef } = makeFakeDocument();
     const { showStatusMessage } = createStatusMessageUI(documentRef);
     showStatusMessage('hello');
     assert.equal(el.textContent, 'hello');
-    assert.equal(el.style.display, 'flex');
+    assert.equal(el.style.visibility, 'visible');
 });
 
-test('空訊息：立即隱藏並清空文字', () => {
+test('空訊息：visibility hidden 清空文字（常駐列保留空間）', () => {
     const { el, documentRef } = makeFakeDocument();
     const { showStatusMessage } = createStatusMessageUI(documentRef);
     showStatusMessage('hello');
     showStatusMessage('');
     assert.equal(el.textContent, '');
-    assert.equal(el.style.display, 'none');
+    assert.equal(el.style.visibility, 'hidden');
 });
 
 test('duration 0：不自動清除', async () => {
@@ -44,7 +45,7 @@ test('duration 0：不自動清除', async () => {
     const { showStatusMessage } = createStatusMessageUI(documentRef);
     showStatusMessage('persist', { duration: 0 });
     await sleep(30);
-    assert.equal(el.style.display, 'flex');
+    assert.equal(el.style.visibility, 'visible');
     assert.equal(el.textContent, 'persist');
 });
 
@@ -52,9 +53,9 @@ test('預設 duration：時間到自動清除', async () => {
     const { el, documentRef } = makeFakeDocument();
     const { showStatusMessage } = createStatusMessageUI(documentRef);
     showStatusMessage('auto-clear', { duration: 20 });
-    assert.equal(el.style.display, 'flex');
+    assert.equal(el.style.visibility, 'visible');
     await sleep(60);
-    assert.equal(el.style.display, 'none');
+    assert.equal(el.style.visibility, 'hidden');
     assert.equal(el.textContent, '');
 });
 
@@ -68,11 +69,11 @@ test('新訊息取代舊計時器：舊計時器不會提前隱藏新訊息', as
     // 第一筆的 duration 已過，但第二筆應仍顯示
     await sleep(70);
     assert.equal(el.textContent, 'second');
-    assert.equal(el.style.display, 'flex');
+    assert.equal(el.style.visibility, 'visible');
 
     // 第二筆 duration 也過了之後才清除
     await sleep(80);
-    assert.equal(el.style.display, 'none');
+    assert.equal(el.style.visibility, 'hidden');
 });
 
 test('dispose：取消進行中的計時器（無殘留回呼）', async () => {
@@ -82,7 +83,7 @@ test('dispose：取消進行中的計時器（無殘留回呼）', async () => {
     dispose();
     await sleep(70);
     // dispose 已取消計時器，訊息不被自動清除（避免 DOM 銷毀後回呼）
-    assert.equal(el.style.display, 'flex');
+    assert.equal(el.style.visibility, 'visible');
     assert.equal(el.textContent, 'pending');
 });
 

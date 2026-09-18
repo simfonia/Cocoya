@@ -429,7 +429,7 @@
   </div>
   <div class="grid2">
     <div class="card"><h3>⛰️ 學習率：太大 vs 剛好</h3>
-      <svg viewBox="0 0 640 372" style="width:100%;">
+      <svg viewBox="0 0 640 380" style="width:100%;">
         <defs>
           <marker id="arrC" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0 0 L10 5 L0 10 z" fill="#E4572E"/>
@@ -439,12 +439,12 @@
           </marker>
         </defs>
         <!-- 左：LR 太大 -->
-        <text x="160" y="26" text-anchor="middle" font-size="13" font-weight="bold" fill="#C2411B">LR 太大 → 搖擺、跨過谷底</text>
+        <text x="160" y="26" text-anchor="middle" font-size="16.5" font-weight="bold" fill="#C2411B">LR 太大 → 搖擺、跨過谷底</text>
         <line x1="12" y1="288" x2="308" y2="288" stroke="#888" stroke-width="1.5"/>
-        <text x="300" y="302" text-anchor="end" font-size="10" fill="#666">權重 (w) →</text>
+        <text x="300" y="302" text-anchor="end" font-size="12.5" fill="#666">權重 (w) →</text>
         <polygon points="52,112 47,122 57,122" fill="#888"/>
         <line x1="52" y1="122" x2="52" y2="156" stroke="#888" stroke-width="1.5"/>
-        <text x="62" y="140" font-size="9.5" fill="#666">Loss：愈往上愈糟</text>
+        <text x="62" y="140" font-size="12" fill="#666">Loss：愈往上愈糟</text>
         <path d="M20,160 C60,214 92,254 120,272 C140,285 148,287.5 160,287.5 C172,287.5 180,285 200,272 C228,254 260,214 300,160" fill="none" stroke="#9C27B0" stroke-width="3"/>
         <!-- 三步折返：每段獨立路徑，各自帶末端箭頭，方向正確；第二點 cx=273 落在右岸曲線上 -->
         <path d="M37,172 L265,182" fill="none" stroke="#E4572E" stroke-width="2.5" stroke-dasharray="7,5" marker-end="url(#arrC)"/>
@@ -456,24 +456,24 @@
           <circle cx="66" cy="208" r="5"/>
           <circle cx="240" cy="229" r="5"/>
         </g>
-        <text x="25" y="155" font-size="9.5" fill="#5B4B8A">起點</text>
-        <g font-size="9.5" fill="#9A3412" text-anchor="middle" font-weight="bold">
+        <text x="25" y="155" font-size="12" fill="#5B4B8A">起點</text>
+        <g font-size="12" fill="#9A3412" text-anchor="middle" font-weight="bold">
           <text x="152" y="169" font-size="12">第1步</text>
           <text x="170" y="192" font-size="12">第2步</text>
           <text x="150" y="215" font-size="12">第3步</text>
         </g>
-        <rect x="178" y="42" width="124" height="58" rx="8" fill="#fff" opacity="0.93" stroke="#E4572E" stroke-width="1.5"/>
-        <text x="240" y="62" text-anchor="middle" font-size="11" font-weight="bold" fill="#9A3412">步伐太大</text>
-        <text x="240" y="80" text-anchor="middle" font-size="9.5" fill="#7C2D12">來回搖擺</text>
-        <text x="240" y="94" text-anchor="middle" font-size="9.5" fill="#7C2D12">LR再大就可能發散出去</text>
-        <text x="163" y="270" text-anchor="middle" font-size="10" fill="#8A6D00" stroke="#fff" stroke-width="3" paint-order="stroke">▼ 谷底 (Loss 最低)</text>
+        <rect x="168" y="42" width="144" height="64" rx="8" fill="#fff" opacity="0.93" stroke="#E4572E" stroke-width="1.5"/>
+        <text x="240" y="62" text-anchor="middle" font-size="14" font-weight="bold" fill="#9A3412">步伐太大</text>
+        <text x="240" y="80" text-anchor="middle" font-size="12" fill="#7C2D12">來回搖擺</text>
+        <text x="240" y="94" text-anchor="middle" font-size="12" fill="#7C2D12">LR再大就可能發散出去</text>
+        <text x="163" y="270" text-anchor="middle" font-size="12.5" fill="#8A6D00" stroke="#fff" stroke-width="3" paint-order="stroke">▼ 谷底 (Loss 最低)</text>
         <!-- 右：LR 剛好 -->
-        <text x="480" y="26" text-anchor="middle" font-size="13" font-weight="bold" fill="#15803D">LR 剛好 → 步步逼近谷底</text>
+        <text x="480" y="26" text-anchor="middle" font-size="16.5" font-weight="bold" fill="#15803D">LR 剛好 → 步步逼近谷底</text>
         <line x1="332" y1="288" x2="628" y2="288" stroke="#888" stroke-width="1.5"/>
-        <text x="620" y="302" text-anchor="end" font-size="10" fill="#666">權重 (w) →</text>
+        <text x="620" y="302" text-anchor="end" font-size="12.5" fill="#666">權重 (w) →</text>
         <polygon points="372,112 367,122 377,122" fill="#888"/>
         <line x1="372" y1="122" x2="372" y2="156" stroke="#888" stroke-width="1.5"/>
-        <text x="382" y="140" font-size="9.5" fill="#666">Loss：愈往上愈糟</text>
+        <text x="382" y="140" font-size="12" fill="#666">Loss：愈往上愈糟</text>
         <path d="M340,160 C380,214 412,254 440,272 C460,285 468,287.5 480,287.5 C492,287.5 500,285 520,272 C548,254 580,214 620,160" fill="none" stroke="#9C27B0" stroke-width="3"/>
         <path d="M374,199 L402,235 L432,261 L464,277 L480,280" fill="none" stroke="#26A69A" stroke-width="2.5" marker-mid="url(#arrG)" marker-end="url(#arrG)"/>
         <g fill="#5B4B8A">
@@ -483,21 +483,21 @@
           <circle cx="464" cy="277" r="5"/>
           <circle cx="480" cy="280" r="5"/>
         </g>
-        <text x="370" y="180" font-size="9.5" fill="#5B4B8A">起點</text>
-        <rect x="522" y="42" width="106" height="58" rx="8" fill="#fff" opacity="0.93" stroke="#15803D" stroke-width="1.5"/>
-        <text x="575" y="62" text-anchor="middle" font-size="11" font-weight="bold" fill="#14532D">步伐剛好</text>
-        <text x="575" y="80" text-anchor="middle" font-size="9.5" fill="#14532D">沿斜坡往下</text>
-        <text x="575" y="94" text-anchor="middle" font-size="9.5" fill="#14532D">逼近谷底</text>
-        <text x="483" y="262" text-anchor="middle" font-size="10" fill="#8A6D00" stroke="#fff" stroke-width="3" paint-order="stroke">▼ 谷底 (Loss 最低)</text>
+        <text x="370" y="180" font-size="12" fill="#5B4B8A">起點</text>
+        <rect x="514" y="42" width="122" height="64" rx="8" fill="#fff" opacity="0.93" stroke="#15803D" stroke-width="1.5"/>
+        <text x="575" y="62" text-anchor="middle" font-size="14" font-weight="bold" fill="#14532D">步伐剛好</text>
+        <text x="575" y="80" text-anchor="middle" font-size="12" fill="#14532D">沿斜坡往下</text>
+        <text x="575" y="94" text-anchor="middle" font-size="12" fill="#14532D">逼近谷底</text>
+        <text x="483" y="262" text-anchor="middle" font-size="12.5" fill="#8A6D00" stroke="#fff" stroke-width="3" paint-order="stroke">▼ 谷底 (Loss 最低)</text>
         <!-- 圖例 -->
         <polyline points="40,322 92,322" fill="none" stroke="#E4572E" stroke-width="2.5" stroke-dasharray="7,5"/>
-        <text x="98" y="326" font-size="10" fill="#444">大步更新 (LR 太大)</text>
+        <text x="98" y="326" font-size="12.5" fill="#444">大步更新 (LR 太大)</text>
         <circle cx="330" cy="322" r="5" fill="#5B4B8A"/>
-        <text x="340" y="326" font-size="10" fill="#444">目前位置 (權重)</text>
+        <text x="340" y="326" font-size="12.5" fill="#444">目前位置 (權重)</text>
         <line x1="40" y1="344" x2="92" y2="344" stroke="#26A69A" stroke-width="2.5"/>
-        <text x="98" y="348" font-size="10" fill="#444">小步更新 (LR 剛好)</text>
-        <text x="324" y="349" font-size="12" fill="#8A6D00">▼</text>
-        <text x="340" y="348" font-size="10" fill="#444">谷底 (Loss 最低)</text>
+        <text x="98" y="348" font-size="12.5" fill="#444">小步更新 (LR 剛好)</text>
+        <text x="324" y="349" font-size="15" fill="#8A6D00">▼</text>
+        <text x="340" y="348" font-size="12.5" fill="#444">谷底 (Loss 最低)</text>
       </svg>
     </div>
     <div class="card"><h3>⚖️ 調校效果</h3>

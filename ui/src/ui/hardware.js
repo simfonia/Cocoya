@@ -10,6 +10,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
     updateSerialPorts: function(ports) {
         const root = document.getElementById('serial-selector');
         if (!root) return;
+        this._restorePreferredPort(); // 還原上次使用者選過的偏好埠（跨 reload）
         const trigger = root.querySelector('.serial-dropdown-trigger');
         const menu = root.querySelector('.serial-dropdown-menu');
         if (!trigger || !menu) return;
@@ -61,18 +62,42 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                 addItem(portValue, portLabel);
             });
             const values = ports.map(p => (typeof p === 'string' ? p : p.port));
-            // 目前選取的埠已消失（拔線/換板）或尚未選取 → 自動選第一個偵測到的埠並切板
-            // （解決「拔掉 A 板插 B 板後仍卡舊埠、硬體不更新」的問題）
+            // 目前選取的埠已消失（拔線/換板）或尚未選取：
+            // ① 偏好埠（使用者曾明確選擇）若有出現 → 直接跳回（小車頻繁插拔免重選）
+            //    ★ 含「拔線後自動選到其他埠（如 COM1）」情境：重插時 COM1 仍是合法選項，
+            //      必須在此也檢查偏好埠，否則永遠卡在 COM1
+            // ② 否則退回自動選第一埠並切板
+            const preferred = this._preferredSerialPort;
+            const preferredAvailable = preferred && values.includes(preferred);
             if (ports.length > 0 && (!currentVal || !values.includes(currentVal))) {
-                const first = ports[0];
-                const firstVal = typeof first === 'string' ? first : first.port;
-                const firstLabel = typeof first === 'string' ? first : first.label;
-                root.setAttribute('data-value', firstVal);
-                root.__lastLabel = firstLabel; // 記錄完整 label，供偵測不到時重現
-                this._applyBoardFromPort(root); // 自動切板（boardIdMap 已含該埠）
+                if (preferredAvailable) {
+                    const pref = ports.find(p => (typeof p === 'string' ? p : p.port) === preferred);
+                    const prefVal = typeof pref === 'string' ? pref : pref.port;
+                    const prefLabel = typeof pref === 'string' ? pref : pref.label;
+                    root.setAttribute('data-value', prefVal);
+                    root.__lastLabel = prefLabel;
+                    this._applyBoardFromPort(root);
+                } else {
+                    const first = ports[0];
+                    const firstVal = typeof first === 'string' ? first : first.port;
+                    const firstLabel = typeof first === 'string' ? first : first.label;
+                    root.setAttribute('data-value', firstVal);
+                    root.__lastLabel = firstLabel; // 記錄完整 label，供偵測不到時重現
+                    this._applyBoardFromPort(root); // 自動切板（boardIdMap 已含該埠）
+                }
             } else if (currentVal && values.includes(currentVal)) {
-                // 保留上次選取（埠仍在）
-                root.setAttribute('data-value', currentVal);
+                if (preferredAvailable && currentVal !== preferred) {
+                    // 偏好埠重新出現且目前停在別的埠（如拔線期間自動選的 COM1）→ 跳回
+                    const pref = ports.find(p => (typeof p === 'string' ? p : p.port) === preferred);
+                    const prefVal = typeof pref === 'string' ? pref : pref.port;
+                    const prefLabel = typeof pref === 'string' ? pref : pref.label;
+                    root.setAttribute('data-value', prefVal);
+                    root.__lastLabel = prefLabel;
+                    this._applyBoardFromPort(root);
+                } else {
+                    // 保留上次選取（埠仍在）
+                    root.setAttribute('data-value', currentVal);
+                }
             }
         }
 
@@ -121,6 +146,22 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         }
     },
 
+    /** 偏好序列埠（使用者明確選擇過者；拔線重插時自動跳回）。
+     *  僅在使用者手動點選下拉時更新——autoSelect 選第一埠不覆寫，
+     *  避免拔線期間自動選到的其他埠（如 COM1）蓋掉偏好。跨 reload 以 localStorage 保留。 */
+    _preferredSerialPort: '',
+
+    _rememberPreferredPort: function(port) {
+        if (!port) return;
+        this._preferredSerialPort = port;
+        try { localStorage.setItem('cocoya_serial_preferred_port', port); } catch (e) {}
+    },
+
+    _restorePreferredPort: function() {
+        if (this._preferredSerialPort) return;
+        try { this._preferredSerialPort = localStorage.getItem('cocoya_serial_preferred_port') || ''; } catch (e) {}
+    },
+
     /** 序列監看鈕狀態（toggle 亮燈；由 bridge 收到結果/結束事件時呼叫） */
     _serialMonitorActive: false,
     setSerialMonitorActive: function(on) {
@@ -150,6 +191,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             if (val === '') return; // 忽略「無連接埠」
             root.setAttribute('data-value', val);
             root.__lastLabel = item.textContent; // 記錄完整 label，供偵測不到時重現
+            this._rememberPreferredPort(val); // 使用者明確選擇 → 記住偏好埠（重插自動跳回）
             this.setSerialPortLabel(root);
             this._applyBoardFromPort(root);
             close();

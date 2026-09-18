@@ -7,6 +7,40 @@ use crate::state::AppState;
 use crate::utils::{get_deployer_path, get_firmware_dir};
 use crate::commands::python::stop_python;
 
+/// UTF-8 chunk 邊界保護：回傳 buf 尾端不完整多位元組序列的位元組數（0 表完整）。
+/// 背景：deploy/monitor 以 1024-byte chunk 直通＋from_utf8_lossy 逐塊解碼，
+/// 中文字（3 bytes）若被切在邊界會變 �。此函式偵測尾端殘缺序列，呼叫端將其
+/// 留到下一批合併後再解碼（對齊 PC run_python 的行式 read_until 完整性）。
+fn utf8_incomplete_tail_len(buf: &[u8]) -> usize {
+    if buf.is_empty() {
+        return 0;
+    }
+    let mut cont: usize = 0;
+    for &b in buf.iter().rev().take(4) {
+        if (b & 0xC0) == 0x80 {
+            cont += 1;
+        } else {
+            let expected = if b < 0x80 {
+                1
+            } else if (b & 0xE0) == 0xC0 {
+                2
+            } else if (b & 0xF0) == 0xE0 {
+                3
+            } else if (b & 0xF8) == 0xF0 {
+                4
+            } else {
+                1
+            };
+            if cont + 1 < expected {
+                return cont + 1;
+            } else {
+                return 0;
+            }
+        }
+    }
+    cont
+}
+
 #[derive(serde::Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SerialPortResult {
@@ -133,7 +167,13 @@ pub async fn setup_stable_mode(handle: AppHandle, port: String, lang: String) ->
     let python_path = "python"; 
     let script_path = get_deployer_path(&handle);
 
-    Command::new(python_path)
+    let mut ss_cmd = Command::new(python_path);
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        ss_cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW：隱藏 python console 黑窗（對齊 python.rs run_python）
+    }
+    ss_cmd
         .arg(script_path)
         .arg(port)
         .arg("--setup-stable")
@@ -171,6 +211,10 @@ pub async fn deploy_mcu(
     let board_type = detect_board_type_by_port(&port);
 
     let mut cmd = Command::new(&python_path);
+    // 編碼修復（對齊 PC run_python）：Windows pipe 下 Python 預設輸出 cp950，
+    // 使 deploy_mcu.py 的中文訊息（MESSAGES zh-hant）以 UTF-8 輸出，Rust 端 from_utf8_lossy 解讀才不會亂碼
+    cmd.env("PYTHONIOENCODING", "utf-8")
+        .env("PYTHONUTF8", "1");
     cmd.arg("-u")
         .arg(&deployer_path)
         .arg(&port)
@@ -183,6 +227,12 @@ pub async fn deploy_mcu(
 
     if serial_upload_only {
         cmd.arg("--no-monitor");
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW：隱藏 python console 黑窗（對齊 python.rs run_python）
     }
 
     let mut child = cmd.stdout(Stdio::piped())
@@ -208,10 +258,22 @@ pub async fn deploy_mcu(
         // chunk 直通：原樣送出 stdout 每塊，換行/空行之控制統一交由 deploy/base.py 於源頭完成
         // （含「OK 後補空行」與資料行壓平）；此處不另行整行切分，避免把 base 已產好的
         // 空白行（\n\n）拆成獨立 payload，在前端 pre-wrap 渲染成多餘空行。
+        // UTF-8 邊界保護：中文字 3 bytes 若被切在 1024 邊界，尾端殘缺序列留待下一批合併再解碼
         let mut buffer = [0; 1024];
+        let mut pending: Vec<u8> = Vec::new();
         while let Ok(n) = stdout.read(&mut buffer) {
             if n == 0 { break; }
-            let s = String::from_utf8_lossy(&buffer[..n]).to_string();
+            pending.extend_from_slice(&buffer[..n]);
+            let tail = utf8_incomplete_tail_len(&pending);
+            let split = pending.len() - tail;
+            if split > 0 {
+                let s = String::from_utf8_lossy(&pending[..split]).to_string();
+                let _ = window_clone.emit_to(&deploy_stdout_label, "python-log", s);
+                pending.drain(..split);
+            }
+        }
+        if !pending.is_empty() {
+            let s = String::from_utf8_lossy(&pending).to_string();
             let _ = window_clone.emit_to(&deploy_stdout_label, "python-log", s);
         }
     });
@@ -222,9 +284,20 @@ pub async fn deploy_mcu(
     std::thread::spawn(move || {
         use std::io::Read;
         let mut buffer = [0; 1024];
+        let mut pending: Vec<u8> = Vec::new();
         while let Ok(n) = stderr.read(&mut buffer) {
             if n == 0 { break; }
-            let s = String::from_utf8_lossy(&buffer[..n]).to_string();
+            pending.extend_from_slice(&buffer[..n]);
+            let tail = utf8_incomplete_tail_len(&pending);
+            let split = pending.len() - tail;
+            if split > 0 {
+                let s = String::from_utf8_lossy(&pending[..split]).to_string();
+                let _ = window_clone_err.emit_to(&deploy_stderr_label, "python-error", s);
+                pending.drain(..split);
+            }
+        }
+        if !pending.is_empty() {
+            let s = String::from_utf8_lossy(&pending).to_string();
             let _ = window_clone_err.emit_to(&deploy_stderr_label, "python-error", s);
         }
     });
@@ -279,7 +352,16 @@ fn spawn_serial_monitor(
 
     let script_path = get_deployer_path(&handle);
 
-    let mut child = Command::new(&python_path)
+    let mut cmd = Command::new(&python_path);
+    // 編碼修復（對齊 deploy_mcu）：monitor 轉發 MCU 回傳的中文 print，Host 端必須同樣強制 UTF-8
+    cmd.env("PYTHONIOENCODING", "utf-8")
+        .env("PYTHONUTF8", "1");
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW：隱藏 python console 黑窗（對齊 python.rs run_python）
+    }
+    let mut child = cmd
         .arg("-u")
         .arg(&script_path)
         .arg(&port)
@@ -308,10 +390,21 @@ fn spawn_serial_monitor(
         // 避免在此整行切分把 base 產的 \n\n 拆成獨立 payload 於前端渲染成多餘空行
         use std::io::Read;
         let mut buffer = [0; 1024];
+        let mut pending: Vec<u8> = Vec::new();
         while let Ok(n) = stdout.read(&mut buffer) {
             if n == 0 { break; }
-            let s = String::from_utf8_lossy(&buffer[..n]).to_string();
-            // 精準單播：只發給本視窗，避免多視窗終端機互相污染
+            pending.extend_from_slice(&buffer[..n]);
+            let tail = utf8_incomplete_tail_len(&pending);
+            let split = pending.len() - tail;
+            if split > 0 {
+                let s = String::from_utf8_lossy(&pending[..split]).to_string();
+                // 精準單播：只發給本視窗，避免多視窗終端機互相污染
+                let _ = window_clone.emit_to(&monitor_stdout_label, "python-log", s);
+                pending.drain(..split);
+            }
+        }
+        if !pending.is_empty() {
+            let s = String::from_utf8_lossy(&pending).to_string();
             let _ = window_clone.emit_to(&monitor_stdout_label, "python-log", s);
         }
         // monitor 行程結束（被 stop/toggle 或自行退出）→ 通知前端熄滅監看鈕狀態
@@ -324,9 +417,20 @@ fn spawn_serial_monitor(
     std::thread::spawn(move || {
         use std::io::Read;
         let mut buffer = [0; 1024];
+        let mut pending: Vec<u8> = Vec::new();
         while let Ok(n) = stderr.read(&mut buffer) {
             if n == 0 { break; }
-            let s = String::from_utf8_lossy(&buffer[..n]).to_string();
+            pending.extend_from_slice(&buffer[..n]);
+            let tail = utf8_incomplete_tail_len(&pending);
+            let split = pending.len() - tail;
+            if split > 0 {
+                let s = String::from_utf8_lossy(&pending[..split]).to_string();
+                let _ = window_clone_err.emit_to(&monitor_stderr_label, "python-error", s);
+                pending.drain(..split);
+            }
+        }
+        if !pending.is_empty() {
+            let s = String::from_utf8_lossy(&pending).to_string();
             let _ = window_clone_err.emit_to(&monitor_stderr_label, "python-error", s);
         }
     });
@@ -425,7 +529,16 @@ pub async fn erase_filesystem(
         return Err(format!("Deployer script not found at {:?}", script_path));
     }
 
-    let mut child = Command::new(&python_path)
+    let mut erase_cmd = Command::new(&python_path);
+    // 編碼修復（對齊 deploy_mcu）：--erase-filesystem 同樣經 deploy_mcu.py 輸出中文，強制 UTF-8
+    erase_cmd.env("PYTHONIOENCODING", "utf-8")
+        .env("PYTHONUTF8", "1");
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        erase_cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW：隱藏 python console 黑窗（對齊 python.rs run_python）
+    }
+    let mut child = erase_cmd
         .arg("-u") 
         .arg(&script_path)
         .arg(&port)
@@ -575,6 +688,9 @@ pub async fn reset_firmware(
         let chip = if model.contains("ESP32_S3") { "esp32s3" } else { "auto" };
 
         let mut cmd = Command::new("python");
+        // 編碼修復（對齊 PC run_python）：esptool 輸出經 Rust from_utf8_lossy 解讀，強制 UTF-8 避免 cp950 亂碼
+        cmd.env("PYTHONIOENCODING", "utf-8")
+            .env("PYTHONUTF8", "1");
         cmd.arg("-m")
             .arg("esptool")
             .arg("--chip")
@@ -595,6 +711,12 @@ pub async fn reset_firmware(
             .arg("80m")
             .arg("--flash-size")
             .arg("8MB");
+
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW：隱藏 esptool console 黑窗（對齊 python.rs run_python）
+        }
 
         // 加入所有片段
         for (addr, path) in flash_segments {

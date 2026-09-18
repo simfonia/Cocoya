@@ -33,6 +33,7 @@ commands.allow = [
   "stop_sidecar",
   "dataset_upload_chunk",
   "delete_file",
+  "dataset_rename_label",
   "pick_folder",
   "pick_data_file",
   "export_dataset",
