@@ -166,6 +166,17 @@ export class FileOpsHandler {
         if (await this.checkDirtyAndConfirm(message)) this.manager.panel.dispose();
     }
 
+    /**
+     * 回首頁（backToHome）：前端已完成 dirty 三選與 resetWorkspace，
+     * 此處僅清 host 端 session 狀態（currentFilePath / 備份 / 標題）。
+     */
+    public handleBackToHome() {
+        this.manager.currentFilePath = undefined;
+        this.manager.lastDirtyState = false;
+        this.handleClearBackup();
+        this.manager.updateTitle();
+    }
+
     public handleAutoBackup(xml: string) {
         try {
             let backupPath: string;

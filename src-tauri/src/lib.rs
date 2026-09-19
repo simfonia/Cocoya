@@ -69,7 +69,8 @@ pub fn run() {
             commands::dataset_import_from_folder,
             commands::open_folder,
             commands::open_help,
-            commands::set_window_focus
+            commands::set_window_focus,
+            commands::release_session
         ])
         .setup(|app| {
             // examples 播種（首次啟動／升級時補缺檔到 AppData 可寫目錄）：

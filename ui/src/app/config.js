@@ -15,7 +15,6 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             return 'MicroPython'; 
         }
     })(),
-    useScrollPlugin: localStorage.getItem('cocoya_use_scroll_plugin') === 'true',
     currentLang: 'zh-hant',
 
     /**
@@ -105,6 +104,9 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         if (this.currentPlatform === 'MicroPython') {
             label.textContent = (Blockly.Msg['TLB_MODE_MCU'] || '📟 MicroPython (MCU)');
         }
+        // 回首頁入口 tooltip（語系切換 reload 後隨 applyI18n 重設）
+        label.title = (Blockly.Msg['TLB_BACK_HOME'] || 'Back to Home');
+        label.classList.add('clickable');
     },
 
     /**

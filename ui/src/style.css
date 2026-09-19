@@ -84,6 +84,17 @@ body {
 /* 有專案根時（已錨定）可點擊開啟檔案總管 */
 #current-filename.has-path {
     cursor: pointer;
+    transition: color 0.15s;
+}
+
+/* 專案名標籤 hover：整顆膠囊高亮（#current-filename.has-path 存在時）；
+   不支援 :has 的環境僅文字變色，效果降級不破版 */
+#file-breadcrumb:has(#current-filename.has-path):hover {
+    background-color: #fdf2f7;
+    border-color: #FE2F89;
+}
+#current-filename.has-path:hover {
+    color: #FE2F89;
 }
 
 /* 深色模式下的檔名標籤 */
@@ -94,6 +105,39 @@ body.cocoya-dark-mode #file-breadcrumb {
     background-color: #333;
     border-color: #444;
     color: #bbb;
+}
+
+/* 深色模式 hover：專案名標籤與模式 label 統一粉色高亮 */
+body.vscode-dark #file-breadcrumb:has(#current-filename.has-path):hover,
+body.cocoya-dark-mode #file-breadcrumb:has(#current-filename.has-path):hover,
+body.vscode-high-contrast #file-breadcrumb:has(#current-filename.has-path):hover,
+body.cocoya-dark-mode #file-breadcrumb:has(#current-filename.has-path):hover {
+    background-color: #3a2b32;
+    border-color: #FE2F89;
+}
+body.vscode-dark #current-filename.has-path:hover,
+body.cocoya-dark-mode #current-filename.has-path:hover,
+body.vscode-high-contrast #current-filename.has-path:hover,
+body.cocoya-dark-mode #current-filename.has-path:hover {
+    color: #FE2F89;
+}
+
+/* 模式 label（backToHome 入口）hover */
+.platform-badge.clickable {
+    transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+}
+.platform-badge.clickable:hover {
+    background-color: #fdf2f7;
+    border-color: #FE2F89;
+    color: #FE2F89;
+}
+body.vscode-dark .platform-badge.clickable:hover,
+body.cocoya-dark-mode .platform-badge.clickable:hover,
+body.vscode-high-contrast .platform-badge.clickable:hover,
+body.cocoya-dark-mode .platform-badge.clickable:hover {
+    background-color: #3a2b32;
+    border-color: #FE2F89;
+    color: #FE2F89;
 }
 
 .platform-select {
@@ -120,6 +164,11 @@ body.cocoya-dark-mode #file-breadcrumb {
     color: #333;
     height: 28px;
     white-space: nowrap;
+}
+
+/* 模式 label 可點（backToHome 入口）：cursor 提示 */
+.platform-badge.clickable {
+    cursor: pointer;
 }
 
 /* Startup Home「開新專案」hover 平台選單 */

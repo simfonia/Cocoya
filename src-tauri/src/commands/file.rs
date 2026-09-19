@@ -543,6 +543,27 @@ pub struct PickDataFileResult {
     pub content: String,
 }
 
+#[tauri::command]
+pub fn release_session(window: Window, state: State<'_, AppState>) -> Result<(), String> {
+    // 回首頁（backToHome）：釋放本視窗的 session 狀態——
+    // 錨定（current_paths）、本視窗持有的檔案鎖（file_locks）、dirty 旗標。
+    // 沿用 CloseRequested 的清理語意（lib.rs），但不關視窗；下次開新/開啟時重新錨定。
+    let label = window.label().to_string();
+    {
+        let mut paths = state.current_paths.lock().unwrap();
+        paths.remove(&label);
+    }
+    {
+        let mut locks = state.file_locks.lock().unwrap();
+        locks.retain(|_, owner| owner != &label);
+    }
+    {
+        let mut dirty = state.dirty_states.lock().unwrap();
+        dirty.remove(&label);
+    }
+    Ok(())
+}
+
 /// 選擇資料夾並掃描影像（供 datasetManager pickFolder 使用）
 /// default_path：對話框起始目錄（XML 專案根），僅作為起始位置，不限制選取
 #[tauri::command]

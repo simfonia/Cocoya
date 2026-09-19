@@ -206,3 +206,6 @@
 - [x] [2026-09-17] 追加：二次啟動仍落回 Program Files——seeded 判定放寬（戳記或目錄非空皆算播種，防 merge 中途失敗戳記永不寫）＋失敗診斷落地 %AppData%\com.cocoya.app\examples_seed_error.log（Release 無 console）。cargo check PASS；待實機，若復發讀診斷檔定位
 
 - [x] [2026-09-17] Examples 播種 AppData 實機驗證 PASS（使用者確認）：捷徑二次啟動開範例導向 AppData 副本。方案 B 全案收斂；backlog：設定面板「還原範例」功能
+
+- [x] [2026-09-18] #task[依開發板更新腳位資訊] 腳位無法解析根因＝Blockly 產生器不可見 ID 標記污染：`utils/generators.js` 的 `scrub_` 為所有具 output 連線的積木前置 `U+0001ID:<blockId>U+0002`，`mcu_pin_shadow`（output="String"）經 `valueToCode(PIN)` 取出的字串被污染成 `U+0001ID:xU+0002`+`board.GP0（含引號）`，而 `resolveGpio` 只去引號/前綴 → 標記殘留 → gpioMap 查表與全板兜底皆 miss → `# [Cocoya] 無法解析腳位: board.GP0`（板名正確、mcu_car field 型腳位正常，故極難察覺：標記不可見＋`workspace.js` 於預覽前清除）。修：`hardware_blocks.js` 新增 `CocoyaBoard.normalizePinRef()`（`resolveGpio` 入口統一施作，hardware＋mcu_car 共用）＋`cocoyaNormalizePinRef`／`mcuCarNormalizePin` 供錯誤訊息去污並附當前板名；新測試 `ui/src/modules/hardware/pin_resolve.test.mjs`（9 測，Node+stub 直載瀏覽器模組）；文件：AGENTS.md／.clinerules.md 新增「字串語意比對前必先剝除不可見 ID 標記」鐵律＋Framework_API_Index §7。驗證：node --check×4＋9/9＋DM 141/141＋vite build PASS；備份 `backup/hardware_blocks_20260918_081911.js` 等 3 檔。待 Tauri 實機回歸（GP0/GP26/PWM）
+- [ ] [2026-09-18] backlog（可選）方案 B：讓 value 積木的 ID 標記不流入產生器邏輯（治本；須先驗證 `ui/src/ui/renderer.js` 的 extractIds/lineIndexToBlockId 高亮同步不依賴 value 標記）

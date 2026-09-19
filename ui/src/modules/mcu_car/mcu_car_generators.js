@@ -2,6 +2,17 @@
 // Optimized for MicroPython (Machine module)
 
 /**
+ * 正規化腳位參考（顯示與比對用）：剝除 Cocoya 不可見 ID 標記、引號與 board. 前綴。
+ * 標記來源見 hardware/hardware_blocks.js 的 normalizePinRef 與 utils/generators.js 的 scrub_。
+ */
+function mcuCarNormalizePin(ref) {
+  if (typeof CocoyaBoard !== 'undefined' && CocoyaBoard.normalizePinRef) {
+    return CocoyaBoard.normalizePinRef(ref);
+  }
+  return String(ref).replace(/\u0001ID:[\s\S]*?\u0002/g, '').replace(/['"]/g, '').replace(/^board\./, '').trim();
+}
+
+/**
  * 共用腳位解析（嚴格模式）：boardRef（board.GPx）→ GPIO 號碼。
  * 只走 CocoyaBoard.resolveGpio（board_defs.json gpioMap 權威映射），
  * 解析失敗回 null，由各 generator 產生明確錯誤註解。
@@ -16,8 +27,14 @@ function mcuCarResolvePin(pinCode) {
 
 /** 產生「未知腳位」的錯誤註解代碼（取代默默產生壞碼） */
 function mcuCarPinError(pinCode) {
-  return '# [Cocoya] 無法解析腳位: ' + String(pinCode).replace(/['"]/g, '') +
-         ' （請在工具列選擇開發板）\npass\n';
+  var ref = mcuCarNormalizePin(pinCode);
+  var boardLabel = '未指定';
+  if (typeof CocoyaBoard !== 'undefined' && CocoyaBoard.boardName) {
+    var id = CocoyaBoard.getCurrent();
+    boardLabel = id ? CocoyaBoard.boardName(id) : '未指定';
+  }
+  return '# [Cocoya] 無法解析腳位: ' + ref +
+         '（目前開發板: ' + boardLabel + '；請在工具列選擇正確開發板）\npass\n';
 }
 
 Blockly.Python.forBlock['mcu_car_motor'] = function(block, generator) {

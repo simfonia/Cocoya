@@ -17,6 +17,18 @@ Blockly.Python.forBlock['mcu_board_init'] = function(block, generator) {
 };
 
 /**
+ * 正規化腳位參考（顯示與比對用）：剝除 Cocoya 不可見 ID 標記、引號與 board. 前綴。
+ * 標記來源見 hardware_blocks.js 的 normalizePinRef 註解與 utils/generators.js 的 scrub_。
+ */
+function cocoyaNormalizePinRef(ref) {
+  if (typeof CocoyaBoard !== 'undefined' && CocoyaBoard.normalizePinRef) {
+    return CocoyaBoard.normalizePinRef(ref);
+  }
+  // 防禦性 fallback（模組載入順序異常時仍可去污）
+  return String(ref).replace(/\u0001ID:[\s\S]*?\u0002/g, '').replace(/['"]/g, '').replace(/^board\./, '').trim();
+}
+
+/**
  * 共用腳位解析（嚴格模式）：boardRef 字串 → GPIO 號碼。
  * 只走 CocoyaBoard.resolveGpio（board_defs.json gpioMap 權威映射），
  * 解析失敗回 null，由各 generator 產生明確錯誤註解（不產壞碼、無舊格式 fallback）。
@@ -31,8 +43,14 @@ function cocoyaResolvePinNum(pinCode) {
 
 /** 產生「未知腳位」的錯誤註解代碼（取代默默產生壞碼） */
 function cocoyaPinErrorComment(pinCode) {
-  return '# [Cocoya] 無法解析腳位: ' + String(pinCode).replace(/['"]/g, '') +
-         ' （請確認已選擇開發板，或改用腳位下拉選單）\npass\n';
+  var ref = cocoyaNormalizePinRef(pinCode);
+  var boardLabel = '未指定';
+  if (typeof CocoyaBoard !== 'undefined' && CocoyaBoard.boardName) {
+    var id = CocoyaBoard.getCurrent();
+    boardLabel = id ? CocoyaBoard.boardName(id) : '未指定';
+  }
+  return '# [Cocoya] 無法解析腳位: ' + ref +
+         '（目前開發板: ' + boardLabel + '；請改用腳位下拉選單選擇該板腳位）\npass\n';
 }
 
 Blockly.Python.forBlock['mcu_set_led'] = function(block, generator) {

@@ -336,33 +336,66 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
     },
 
     /**
-     * Ctrl+R / F5 攔截處理（2026-08-26）：
-     * webview 真重載會清空前端狀態（編輯區清空、顯示未命名），但後端錨定仍在，
-     * 造成「看起來未命名、實際已錨定」的不一致（還能開 Dataset Manager）。
-     * 改為：dirty 時先確認放棄 → resetWorkspace 清空 → 無條件回首頁 overlay，
-     * 由使用者明確「開新/開啟」重建一致性狀態。
+     * 回到啟動首頁（統一入口：toolbar 模式 label 點擊、Ctrl+R/F5 攔截）。
+     * 流程：E1 守門 → 停止執行中代碼 → dirty 三選確認（儲存/放棄/取消）
+     *       → 釋放後端 session（錨定/檔案鎖/dirty）→ 前端 resetWorkspace → 回首頁 overlay。
+     * 與舊 handleReloadRequest 不同：走 dirty 三選（與關窗/開新同語意），且後端錨定一併釋放，
+     * 消除「前端未命名、後端仍錨定」的暫態不一致。
      */
-    handleReloadRequest: async function() {
-        // 逃逸路徑 E1 守門：重新載入會 resetWorkspace + 回首頁，
-        // 前端安裝狀態雖在同一頁記憶體中保留，但 resetWorkspace 會讓使用者離開
-        // 正在設定的環境上下文；且安裝中不該被其他流程打斷。
-        // 安裝中直接擋下並提示（唯一出口是「中止安裝」）。
+    backToHome: async function() {
+        // 逃逸路徑守門（E1）：Python 套件安裝中不可離開（唯一出口是「中止安裝」）
         if (window.CocoyaUI && window.CocoyaUI.isEnvInstallActive && window.CocoyaUI.isEnvInstallActive()) {
             const lockMsg = (Blockly.Msg['DIAG_LOCK_RELOAD'])
                 || 'Python environment is installing; cannot reload right now';
             if (window.CocoyaBridge && window.CocoyaBridge.alert) window.CocoyaBridge.alert(lockMsg);
             return;
         }
+
+        // 停止執行中的 Python（若有），避免子進程殘留
+        if (window.CocoyaBridge) {
+            try { window.CocoyaBridge.send('stopCode'); } catch (e) { /* 忽略 */ }
+        }
+
+        // dirty 三選確認（儲存/放棄/取消；與 closeEditor、開新專案同語意）
         if (this.isDirty) {
-            const discard = await window.CocoyaBridge.confirm(
-                (Blockly.Msg['MSG_RELOAD_HOME_CONFIRM'] || '重新載入將回到啟動首頁，目前未儲存的變更將遺失。確定嗎？')
-            );
-            if (!discard) return;
+            const msg = (window.Blockly && Blockly.Msg['MSG_SAVE_CONFIRM']) || 'Do you want to save changes to the current project?';
+            let choice = 'cancel';
+            if (window.CocoyaUI && window.CocoyaUI.showSaveConfirm) {
+                choice = await window.CocoyaUI.showSaveConfirm(msg);
+            }
+            if (choice === 'cancel') return;
+            if (choice === 'save') {
+                // 已錨定存回原檔（Tauri 回傳結果；VSIX send 無回傳值以 undefined 容錯）
+                const saved = await window.CocoyaBridge.send('saveFile', { xml: this._getCurrentXmlWithPlatform() });
+                if (saved === false) return; // 存檔被取消（另存對話框取消等）→ 中止回首頁
+            }
             // 同步後端 dirty 狀態（原子化狀態同步鐵律）
             await this.setDirty(false);
         }
+
+        // 清後端 session（Tauri：current_paths/file_locks/dirty_states；VSIX：currentFilePath）
+        if (window.CocoyaBridge) {
+            try { await window.CocoyaBridge.send('backToHome'); } catch (e) { console.error('[BackToHome] backend release failed:', e); }
+        }
+
+        // 前端狀態清空：workspace、預設積木、檔名膠囊、dirty、readonly、minimap
         this.resetWorkspace();
+
+        // Tauri：後端錨定已釋放，同步 _anchor / capabilities 快照（VSIX 無此方法則略過）
+        if (window.CocoyaBridge && typeof window.CocoyaBridge.refreshProjectAnchor === 'function') {
+            try { await window.CocoyaBridge.refreshProjectAnchor(); } catch (e) { /* 忽略 */ }
+        }
+
         this.showStartupHomeOverlay();
+    },
+
+    /**
+     * Ctrl+R / F5 攔截處理（2026-09-18 改為統一走 backToHome）：
+     * 舊版僅「確認放棄」且後端錨定保留（前端未命名、後端仍錨定的暫態不一致）；
+     * 現與 toolbar 模式 label 點擊共用同一條 dirty 三選 + 後端 session 釋放流程。
+     */
+    handleReloadRequest: function() {
+        return this.backToHome();
     },
 
     /**

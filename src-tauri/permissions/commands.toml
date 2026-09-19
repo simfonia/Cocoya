@@ -45,5 +45,6 @@ commands.allow = [
   "dataset_import_from_folder",
   "open_folder",
   "open_help",
-  "set_window_focus"
+  "set_window_focus",
+  "release_session"
 ]

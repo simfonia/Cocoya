@@ -126,12 +126,6 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
                 zoom: { controls: true, wheel: false, startScale: 1.0, maxScale: 3, minScale: 0.3, scaleSpeed: 1.2 }
             };
 
-            if (this.useScrollPlugin) {
-                const scrollDragger = window.ScrollBlockDragger || (window.ScrollOptions ? window.ScrollOptions.BlockDragger : undefined);
-                const scrollMetrics = window.ScrollMetricsManager || (window.ScrollOptions ? window.ScrollOptions.MetricsManager : undefined);
-                injectOptions.plugins = { 'blockDragger': scrollDragger, 'metricsManager': scrollMetrics };
-            }
-
             // 第二道：手動註冊 context menu 的註解選項 (Blockly v12+ 重構機制)
             if (typeof Blockly.ContextMenuItems !== 'undefined' &&
                 typeof Blockly.ContextMenuItems.registerCommentOptions === 'function') {
