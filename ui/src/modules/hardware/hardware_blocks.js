@@ -55,13 +55,36 @@ var CocoyaBoard = (function() {
     }
 
     /**
+     * 正規化腳位參考：剝除 Cocoya 不可見 ID 標記，以及 Python 字串引號與 board. 前綴。
+     *
+     * 為什麼需要（2026-09-18 除錯定論）：
+     *   utils/generators.js 的 Blockly.Python.scrub_ 會為「所有具有 output 連線的積木」
+     *   前置不可見標記 \u0001ID:<blockId>\u0002。mcu_pin_shadow 正是 output 積木，
+     *   因此 generator.valueToCode(block, 'PIN') 取出的腳位字串實際長成
+     *   '\u0001ID:c8xk...\u0002"board.GP0"'。
+     *   該標記不可見，且最終輸出會被 workspace.js 的 replace(/\u0001ID:.*?\u0002/g, '') 清掉，
+     *   故肉眼完全看不出污染；若不正規化，gpioMap 查表與全板兜底掃描都會 miss，
+     *   症狀即「無法解析腳位: board.GP0」（板名正常、只有腳位失敗）。
+     *
+     * @param {string} ref 腳位參考（可能含 ID 標記／引號／board. 前綴）
+     * @returns {string} 純鍵值（如 GP0 / D10 / LED）
+     */
+    function normalizePinRef(ref) {
+        return String(ref)
+            .replace(/\u0001[\s\S]*?\u0002/g, '')   // 剝除 \u0001ID:xxx\u0002（[\s\S] 避開實體換行）
+            .replace(/['"]/g, '')
+            .replace(/^board\./, '')
+            .trim();
+    }
+
+    /**
      * 將 boardRef（如 board.GP0 / board.D10）解析為 GPIO 號碼。
      * - 有選板：優先查該板 gpioMap（權威映射）
      * - 查無 → 合併掃描所有板兜底（看程式永遠可解析；ref 帶 GP/D 家族前綴，歧義極低）
      * 全部查無回 null → generator 產生錯誤註解。
      */
     function resolveGpio(boardId, ref) {
-        var bare = String(ref).replace(/['"]/g, '').replace(/^board\./, '');
+        var bare = normalizePinRef(ref);
         var b = getBoard(boardId) || getBoard(currentBoardId);
         if (b && b.gpioMap && Object.prototype.hasOwnProperty.call(b.gpioMap, bare)) {
             return b.gpioMap[bare];
@@ -100,6 +123,7 @@ var CocoyaBoard = (function() {
         boardName: boardName,
         boardIds: boardIds,
         pinOptions: pinOptions,
+        normalizePinRef: normalizePinRef,
         resolveGpio: resolveGpio,
         onChange: onChange,
         registerPinBlock: registerPinBlock

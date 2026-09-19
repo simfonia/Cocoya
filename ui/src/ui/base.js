@@ -203,6 +203,15 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             });
         }
 
+        // 模式 label（左上）：點擊 → 走 dirty 偵測 + 清 session → 回到啟動首頁
+        const platformLabel = document.getElementById('current-platform');
+        if (platformLabel) {
+            platformLabel.addEventListener('click', () => {
+                const app = window.CocoyaApp;
+                if (app && typeof app.backToHome === 'function') app.backToHome();
+            });
+        }
+
         /**
          * 綁定按鈕點擊事件的內部輔助函式
          */
@@ -386,29 +395,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         }
         
         // 綁定設定與功能按鈕（Python 路徑 + 套件檢查已整合為單一「Python 環境設定」視窗）
-        
-        // 綁定捲軸優化插件切換
-        const scrollOptionsBtn = document.getElementById('btn-toggle-scroll-options');
-        const scrollCheck = document.getElementById('scroll-options-check');
-        if (scrollOptionsBtn && scrollCheck) {
-            const updateCheckUI = () => {
-                const isEnabled = localStorage.getItem('cocoya_use_scroll_plugin') === 'true'; // 預設關閉
-                scrollCheck.textContent = isEnabled ? '✔' : '';
-            };
-            updateCheckUI();
-            
-            scrollOptionsBtn.onclick = async () => {
-                const current = localStorage.getItem('cocoya_use_scroll_plugin') === 'true';
-                const nextValue = !current;
-                localStorage.setItem('cocoya_use_scroll_plugin', nextValue);
-                updateCheckUI();
-                
-                // 僅提示，不自動重啟以保護進度
-                window.CocoyaBridge.alert(
-                    Blockly.Msg['MSG_RELOAD_TO_APPLY'] || 'Settings saved. Please restart the application to apply changes.'
-                );
-            };
-        }
+        // 「啟用工作區自動平移」（scroll-options 插件）功能已移除（2026-09-18）
 
         // --- 語系開關：[中文 ⇄ English] 膠囊雙選項（沿用首頁 cocoya_lang 偏好 + reloadWebview 機制） ---
         const langToggleBtn = document.getElementById('btn-toggle-language');

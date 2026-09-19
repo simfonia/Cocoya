@@ -150,5 +150,18 @@ console.log(spec.toJSON());
       <li><code>.blocklyTreeLabel</code> 為 <b>舊版相容命名</b>：Blockly 12.3.1 內建 CSS/DOM <b>完全沒有此 class</b>（grep 命中 0 次）；主題檔沿用它是無害的防禦寫法，新規則請以 <code>.blocklyToolboxCategoryLabel</code> 為準。</li>
     </ul>
     <p>其他：toolbox 寬度由 Blockly 於<b>載入時量測</b>決定 flyout 位置 → 字級改動需 reload 後量測才正確。</p>
-</body>
+  <h2>7. Cocoya 產生器管線：不可見 ID 標記（scrub_）污染陷阱（2026-09-18 除錯蒸餾）</h2>
+  <p><b>症狀</b>：放好 <code>mcu_board_init</code>（板名正確印出 <code># Board: Maker Pi RP2040 (maker-pi)</code>），但腳位積木卻產生 <code># [Cocoya] 無法解析腳位: board.GP0</code>。</p>
+  <p><b>機制（三個事實串起來）</b>：</p>
+  <ol>
+    <li><code>ui/src/utils/generators.js</code> 覆寫 <code>Blockly.Python.scrub_</code>：<code>if (block.outputConnection) return `\u0001ID:${block.id}\u0002${code}`;</code>——**所有具 output 連線的積木**（含陰影積木）產生的值都被前置不可見標記。</li>
+    <li>Blockly 核心 <code>blockToCode</code> 對 output 積木回傳 <code>scrub_(block, code)</code>，而 <code>valueToCode</code> 直接取用該字串（<code>ui/blockly/core/blockly.js</code>）→ 產生器期間拿到的腳位是 <code>\u0001ID:c8xk...\u0002"board.GP0"</code>。</li>
+    <li><code>hardware_generators.js</code> 的 <code>cocoyaResolvePinNum</code> → <code>CocoyaBoard.resolveGpio</code> 只做「去引號 + 去 <code>^board.</code>」→ 標記殘留 → <code>gpioMap</code> 查表與全板兜底掃描都 miss → <code>null</code> → 錯誤註解。</li>
+  </ol>
+  <p><b>為何難察覺</b>：標記是不可見控制字元；且 <code>ui/src/app/workspace.js</code> 於預覽前執行 <code>code.replace(/\u0001ID:.*?\u0002/g, '')</code>，最終輸出與終端機都是乾淨的——只有「產生期間的語意查表」看到污染。</p>
+  <p><b>鐵律</b>：凡產生器要對 <code>valueToCode()</code> 結果做語意比對（字典查表、映射、字串相等、<code>JSON.parse</code>）前，必須先剝除標記。</p>
+  <p><b>SSOT 實作</b>：<code>hardware_blocks.js</code> → <code>CocoyaBoard.normalizePinRef(ref)</code>（<code>resolveGpio</code> 入口統一施作）；<code>hardware_generators.js</code> → <code>cocoyaNormalizePinRef</code>；<code>mcu_car_generators.js</code> → <code>mcuCarNormalizePin</code>（後兩者為顯示用，含防禦性 fallback）。</p>
+  <p><b>回歸測試</b>：<code>ui/src/modules/hardware/pin_resolve.test.mjs</code>（9 測）——<code>cd ui; node --test "src/modules/hardware/*.test.mjs"</code>。</p>
+  <p><b>診斷手法（可重用）</b>：以 <code>new Function(fs.readFileSync(...))</code> + <code>globalThis</code> stub（<code>window</code>/<code>Blockly</code>）在 Node 直接載入瀏覽器模組，即可對產生器做無 GUI 的端到端測試（免開 Tauri/VSIX）。</p>
+</body></body>
 </html>

@@ -384,6 +384,17 @@ export class BridgeTauri extends BaseBridge {
                     if (this._appWindow) await this._handleCloseDialog(this._appWindow);
                     break;
 
+                case 'backToHome':
+                    // 回首頁（模式 label 點擊 / Ctrl+R 攔截共用）：釋放本視窗 session
+                    // （current_paths 錨定 / file_locks / dirty_states）並同步 _anchor 快照
+                    try {
+                        await this.tauriInvoke('release_session');
+                    } catch (e) {
+                        console.error('[Bridge] release_session failed:', e);
+                    }
+                    await this._refreshAnchor();
+                    break;
+
                 case 'setupStableMode':
                     try {
                         window.CocoyaUI.showLoadingModal('Setting up stable mode...');

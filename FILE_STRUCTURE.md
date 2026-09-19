@@ -132,6 +132,7 @@ C:\Workspace\cocoya\
 │   │   │   │   ├── board_defs.js         # 開發板資訊表 SSOT（vidPid + pins + gpioMap；新增板子只改此檔，loadScript 載入）
 │   │   │   │   ├── hardware_blocks.js    # 積木定義 + CocoyaBoard 登錄器（mcu_board_init 宣告積木、動態 mcu_pin_shadow）
 │   │   │   │   ├── hardware_generators.js # Python 產生器（cocoyaResolvePinNum 權威映射 + 未知腳位錯誤註解）
+│   │   │   │   ├── pin_resolve.test.mjs  # [2026-09-18] 腳位解析契約測試（node --test；鎖住 scrub_ 不可見標記 U+0001/0002 污染 bug）
 │   │   │   ├── dataset_manager/ # Dataset Spec 與資料集管理器應用層模組
 │   │   │   └── dataset_manager/ # Dataset Spec 與資料集管理器應用層模組
 │   │   │       ├── core/      # 純資料規則層，禁止依賴 DOM、Bridge、window 與 i18n

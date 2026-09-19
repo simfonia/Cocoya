@@ -224,6 +224,10 @@ export class CocoyaManager {
                 case 'closeEditor':
                     await this.fileOps.handleCloseEditor(message);
                     break;
+                case 'backToHome':
+                    // 回首頁（模式 label 點擊 / Ctrl+R 攔截共用）：清 host 端 session
+                    this.fileOps.handleBackToHome();
+                    break;
                 case 'setDirty':
                     this.lastDirtyState = message.isDirty;
                     this.updateTitle();

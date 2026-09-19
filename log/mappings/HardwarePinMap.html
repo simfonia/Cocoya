@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>Cocoya Hardware Pin Map（開發板腳位 SSOT）</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 960px; margin: 0 auto; padding: 20px; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; border-left: 5px solid #FE2F89; }
+        h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 40px; }
+        table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+        th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; vertical-align: top; }
+        th { background: #fafafa; }
+        .warn { background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px 15px; }
+    </style>
+</head>
+<body>
+    <h1>Cocoya Hardware Pin Map（開發板腳位 SSOT）</h1>
+    <p>適用版本：2026-09-19。對應檔案：<code>ui/src/modules/hardware/board_defs.js</code>（資料）、
+       <code>ui/src/modules/hardware/hardware_blocks.js</code>（CocoyaBoard 解析器）、
+       <code>ui/src/modules/hardware/hardware_generators.js</code>（MicroPython 產生器）。</p>
+
+    <h2>1. 資料結構（board_defs.js）</h2>
+    <pre>
+window.CocoyaBoardDefs.hardware.boards = {
+  "&lt;boardId&gt;": {
+    name:   "顯示名稱",                 // mcu_board_init 下拉文字、錯誤註解用
+    vidPid: [["2E8A","0005"]],          // 序列埠自動偵測（需與 Rust / VSIX 表同步）
+    pins: [                             // mcu_pin_shadow 下拉選項來源
+      { ref: "board.GP8", label: "GP8 (M1A)", tags: ["digital","pwm"] }
+    ],
+    gpioMap: { GP8: 8 }                 // ref 的正規化鍵 → GPIO 號碼（權威映射）
+  }
+}</pre>
+    <ul>
+        <li><code>ref</code> 是解析鍵（舊專案 XML 寫入的就是它）；<code>label</code> 只是下拉顯示文字，改 label 不影響舊專案。</li>
+        <li><code>tags</code> 詞彙：<code>digital / pwm / adc / input / i2c / uart / spi</code>（目前尚未依積木類型過濾下拉，屬預留欄位）。</li>
+        <li><code>gpioMap</code> 可含多個別名鍵（例：micro:bit 同時有 <code>P0</code> 與 <code>pin0</code>）。</li>
+    </ul>
+
+    <h2>2. 解析鏈（從積木到 GPIO 號碼）</h2>
+    <pre>
+mcu_pin_shadow 產生器        return [JSON.stringify(pin)]        // "board.GP8"
+  ↓ Blockly 產生器管線（scrub_）→ 前置不可見標記：\u0001ID:x\u0002"board.GP8"
+  ↓ generator.valueToCode('PIN')
+cocoyaResolvePinNum()        → CocoyaBoard.resolveGpio(currentBoardId, ref)
+  ↓ normalizePinRef()        剝除標記／引號／board. 前綴 → "GP8"
+  ↓ gpioMap 查表（該板優先）→ 查無則掃描全部板兜底
+  ↓ 命中 → pin_8 = machine.Pin(8, ...)；查無 → 「無法解析腳位」錯誤註解</pre>
+    <p class="warn"><b>鐵律</b>：任何對 <code>valueToCode()</code> 結果做字串語意比對的產生器，都必須先剝除
+       <code>\u0001ID:&lt;blockId&gt;\u0002</code>（詳見 <code>Framework_API_Index.html</code> §7）。</p>
+
+    <h2>3. 既有開發板一覽（2026-09-19）</h2>
+    <table>
+        <tr><th>boardId</th><th>名稱</th><th>VID:PID</th><th>pins</th><th>備註</th></tr>
+        <tr><td><code>picow</code></td><td>Raspberry Pi Pico W</td><td>2E8A:0003</td><td>9</td><td>gpioMap 含 <code>LED:25</code></td></tr>
+        <tr><td><code>maker-pi</code></td><td>Maker Pi RP2040</td><td>2E8A:0005</td><td>25</td><td>見第 4 節（Datasheet Rev 1.2）</td></tr>
+        <tr><td><code>xiao-s3</code></td><td>XIAO ESP32-S3 Sense</td><td>303A:*</td><td>11</td><td>D0~D10</td></tr>
+        <tr><td><code>microbit</code></td><td>Micro:bit V1/V2</td><td>0D28:0204/0209</td><td>19</td><td>gpioMap 雙鍵 <code>PN</code>/<code>pinN</code></td></tr>
+        <tr><td><code>spike-prime</code></td><td>LEGO SPIKE Prime</td><td>0694:0009</td><td>0</td><td>無 GPIO，走 spike 專屬積木</td></tr>
+    <h2>4. Maker Pi RP2040 完整腳位（Cytron Datasheet Rev 1.2, Jan 2022, Table 1）</h2>
+    <h3>4.1 板載週邊</h3>
+    <table>
+        <tr><th>腳位</th><th>功能</th><th>tags</th></tr>
+        <tr><td><code>GP8 / GP9</code></td><td>直流馬達 M1A / M1B（正轉 / 反轉）</td><td>digital, pwm</td></tr>
+        <tr><td><code>GP10 / GP11</code></td><td>直流馬達 M2A / M2B</td><td>digital, pwm</td></tr>
+        <tr><td><code>GP12 ~ GP15</code></td><td>4 組 RC 伺服訊號</td><td>digital, pwm</td></tr>
+        <tr><td><code>GP18</code></td><td>WS2812B RGB LED（NeoPixel）</td><td>digital</td></tr>
+        <tr><td><code>GP20 / GP21</code></td><td>可程式按鈕 1 / 2</td><td>digital, input</td></tr>
+        <tr><td><code>GP22</code></td><td>Piezo 蜂鳴器</td><td>digital, pwm</td></tr>
+    </table>
+    <h3>4.2 Grove 埠與複用功能</h3>
+    <table>
+        <tr><th>Grove</th><th>腳位</th><th>PWM</th><th>SPI</th><th>I2C</th><th>UART</th><th>Analog</th></tr>
+        <tr><td>1</td><td>GP0 / GP1</td><td>PWM0-A / B</td><td>SDI0 / CSn0</td><td>SDA0 / SCL0</td><td>TX0 / RX0</td><td>-</td></tr>
+        <tr><td>2</td><td>GP2 / GP3</td><td>PWM1-A / B</td><td>SCK0 / SDO0</td><td>SDA1 / SCL1</td><td>-</td><td>-</td></tr>
+        <tr><td>3</td><td>GP4 / GP5</td><td>PWM2-A / B</td><td>SDI0 / CSn0</td><td>SDA0 / SCL0</td><td>TX1 / RX1</td><td>-</td></tr>
+        <tr><td>4</td><td>GP16 / GP17</td><td>PWM0-A / B</td><td>SDI0 / CSn0</td><td>SDA0 / SCL0</td><td>TX0 / RX0</td><td>-</td></tr>
+        <tr><td>5</td><td>GP6 / GP26</td><td>PWM3-A / PWM5-A</td><td>SCK0 / -</td><td>SDA1 / SDA1</td><td>-</td><td>- / ADC0</td></tr>
+        <tr><td>6</td><td>GP26 / GP27</td><td>PWM5-A / PWM5-B</td><td>- / -</td><td>SDA1 / SCL1</td><td>-</td><td>ADC0 / ADC1</td></tr>
+        <tr><td>7</td><td>GP7 / GP28</td><td>PWM3-B / PWM6-A</td><td>SDO0 / -</td><td>SCL1 / -</td><td>-</td><td>- / ADC2</td></tr>
+    </table>
+    <p>註1：<code>GP26</code> 在原始 datasheet 表中同時出現於 Grove 5 與 Grove 6（依原文登載，未自行更正）。<br>
+       註2：板載馬達／伺服輸出電壓等於電源輸入電壓（僅 USB 供電時約 VUSB − 0.4V）。<br>
+       註3：USB VID:PID 除 2E8A:0005（MicroPython）外，datasheet 另載 2E8A:1000（CircuitPython / Arduino Core）——
+       <b>尚未</b>納入自動偵測（需三處同步 + 實機驗證，見 todo backlog）。<br>
+       註4：<code>LED: 25</code> 保留於 gpioMap 僅為相容舊專案 XML 的 <code>board.LED</code>（Pico 慣例）；
+       Maker Pi RP2040 沒有 GP25 指示燈（板上的 Power LED 非 GPIO）。</p>
+
+    <h2>5. 新增／修改開發板的檢查清單</h2>
+    <ol>
+        <li>在 <code>board_defs.js</code> 新增／更新條目：<code>name / vidPid / pins / gpioMap</code>。</li>
+        <li><b>不變式</b>：每個 <code>pins[].ref</code> 都必須能在 <code>gpioMap</code> 命中（同一板內 ref 不得重複）。
+            直接跑測試驗證：<code>cd ui; node --test "src/modules/hardware/*.test.mjs"</code>（<code>board_defs.test.mjs</code>）。</li>
+        <li>動到 <code>vidPid</code> 時三處必須同步：<code>board_defs.js</code>、<code>src-tauri/src/commands/mcu.rs</code>（<code>detect_board_id</code>）、
+            <code>src/handlers/serialOps.ts</code>（<code>boardIdMap</code>）。</li>
+        <li>更新使用者說明文件：<code>docs/help/hardware_pins_zh-hant.html</code> 與 <code>hardware_pins_en.html</code>。</li>
+        <li>驗證：<code>node --check</code>、上述測試、<code>npx vite build</code>、實機（VSIX + Tauri）放 <code>初始化開發板</code> 後檢查腳位下拉與產生的 GPIO 號碼。</li>
+    </ol>
+
+    <h2>6. 歷史踩坑（同類症狀：產生碼出現「無法解析腳位」）</h2>
+    <table>
+        <tr><th>日期</th><th>根因</th><th>修正</th></tr>
+        <tr><td>2026-09-18</td><td><code>scrub_</code> 不可見標記（<code>\u0001ID:x\u0002</code>）污染 <code>valueToCode</code> 字串 → gpioMap miss</td>
+            <td><code>CocoyaBoard.normalizePinRef()</code>（<code>resolveGpio</code> 入口統一剝除）＋ <code>pin_resolve.test.mjs</code></td></tr>
+        <tr><td>2026-09-19</td><td>micro:bit <code>pins[].ref = board.pinN</code> 但 <code>gpioMap</code> 僅有 <code>PN</code> → 大小寫不一致，全部 miss</td>
+            <td><code>gpioMap</code> 加 <code>pinN</code> 雙鍵 ＋ <code>board_defs.test.mjs</code>「所有板 pins 必可解析」不變式</td></tr>
+    </table>
+</body>
+</html>

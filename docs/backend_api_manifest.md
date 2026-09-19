@@ -96,6 +96,7 @@ Notation: `key?` = Optional. **Rule: changing a Rust signature -> immediately up
 | file | get_manifest       | -- | {} | Result<serde_json::Value, String> |
 | file | get_module_toolbox  | path: String | {path} | Result<String, String> |
 | file | get_project_anchor  | -- | {} | ProjectAnchor（serde camelCase：`isAnchored` / `projectRoot`；呼叫端勿以 snake_case 讀欄位） |
+| file | release_session     | -- | {} | Result<(), String>；回首頁（backToHome）：移除本視窗 `current_paths[label]`（解除錨定）、`file_locks` 中 owner=label 的鎖、`dirty_states[label]`。2026-09-18 |
 | file | open_file          | -- | {} | Result<OpenFileResult, String> |
 | file | open_examples      | -- | {} | Result<OpenFileResult, String> |
 | file | save_file          | xml, save_as: bool, force_examples: Option<bool>, dialog_title: Option<String> | {xml, saveAs, forceExamples?, dialogTitle?} | Result<String, String>（Err 碼：`Canceled` / `EXAMPLES_PATH` / `SAME_AS_CURRENT`（開新/另存命中目前專案檔位置，防呆擋下） / `檔案已被其他視窗開啟...`） |

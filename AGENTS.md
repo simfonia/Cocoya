@@ -88,6 +88,12 @@ Dataset Manager 的狀態/錯誤/結果訊息一律透過集中式函式 `showSt
 - **路徑處理**: 
     - 專案內檔案與資料集路徑一律使用正斜線 `/` 作為統一分隔符號，在傳入後端平台前由通訊橋樑進行環境適配，避免 Windows 與 Unix-like 系統路徑斜線衝突。
 
+- **字串語意比對前必先剝除不可見 ID 標記（2026-09-18 踩坑）**：
+  - `ui/src/utils/generators.js` 的 `Blockly.Python.scrub_` 會為**所有具 output 連線的積木**前置不可見標記 `\u0001ID:<blockId>\u0002`（原始碼寫成 escape，實際是 U+0001/U+0002 控制字元）。
+  - 因此 `generator.valueToCode()` 取出的字串**在產生期間是被污染的**；最終輸出會被 `workspace.js` 的 `replace(/\u0001ID:.*?\u0002/g, '')` 清掉 → 生成碼與畫面都看不出來（極難察覺的坑）。
+  - 凡產生器要對 `valueToCode` 結果做**語意比對**（字典查表、腳位映射、字串相等、`JSON.parse`）之前，必須先除標記。
+  - SSOT 實作：`ui/src/modules/hardware/hardware_blocks.js` 的 `CocoyaBoard.normalizePinRef()`（`resolveGpio` 入口統一施作，hardware 與 mcu_car 共用）；產生器顯示用 `cocoyaNormalizePinRef` / `mcuCarNormalizePin`（含防禦性 fallback）。
+  - 回歸測試：`ui/src/modules/hardware/pin_resolve.test.mjs`（`cd ui; node --test "src/modules/hardware/*.test.mjs"`）。
 ### Python 子進程編碼鐵律 (UTF-8 I/O, 2026-09-02 蒸餾)
 Cocoya 混合架構（VSIX + Tauri）兩端都會以 Python 子進程執行訓練/轉換/部署腳本。Windows 下子進程輸出若為 UTF-8、而父端以 locale(cp950) 解讀，會造成 `UnicodeDecodeError` 或終端機亂碼。**所有子進程 I/O 一律強制 UTF-8，雙平台根本解決，不依賴環境變數/locale。**
 
