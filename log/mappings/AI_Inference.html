@@ -1,0 +1,89 @@
+﻿<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>Cocoya AI Inference 模組對照表（py_ai_* 積木與推論結果契約）</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 20px; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; border-left: 5px solid #9C27B0; }
+        h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 40px; }
+        table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+        th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; vertical-align: top; }
+        th { background: #fafafa; }
+        .warn { background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px 15px; }
+    </style>
+</head>
+<body>
+    <h1>Cocoya AI Inference 模組對照表（py_ai_* 積木與推論結果契約）</h1>
+    <p>建立日期：2026-09-19（循線推論 H5 實作同日）。適用範圍：<code>ui/src/modules/ai_inference/</code>（積木 + Python 產生器 + i18n + toolbox + 測試）與其產出的 PC 端推論程式。</p>
+    <p>相關文件：訓練模板資料格式見 <code>resources/train_templates/</code>；HuskyLens 內建循跡見 <a href="HuskyLens.html">HuskyLens.html</a>。</p>
+
+    <h2>1. 檔案職責</h2>
+    <table>
+        <tr><th>檔案</th><th>職責</th></tr>
+        <tr><td><code>ai_inference_blocks.js</code></td><td>積木定義：訓練 1 塊（py_ai_train_run）、推論 2 塊（model_init / model_predict）、解析 8 塊（label / confidence / bbox / bbox_center / direction / line / line_end / line_offset / line_angle）。</td></tr>
+        <tr><td><code>ai_inference_generators.js</code></td><td>Python 產生器；<code>generator.definitions_['module_ai_inference']</code> 注入執行期類別 <code>_ModelInference</code>（單一實例 <code>_model_inference</code>）。改參數時需同步本檔產出的字串。</td></tr>
+        <tr><td><code>i18n/zh-hant.js</code> / <code>i18n/en.js</code></td><td>積木文案與 tooltip，兩語系 key 需對等。</td></tr>
+        <tr><td><code>line_inference.test.mjs</code></td><td>契約測試（2026-09-19）：積木/tooltip/toolbox/i18n 對帳、產生器輸出格式、以 stub interpreter 實跑 <code>_follow_line</code> 與 <code>_detect</code>（含 int8 還原）。執行：<code>cd ui; node --test "src/modules/ai_inference/*.test.mjs"</code>。</td></tr>
+    </table>
+
+    <h2>2. 推論結果契約（predict() 回傳字典）</h2>
+    <table>
+        <tr><th>任務</th><th>回傳結構</th><th>解析積木</th></tr>
+        <tr><td>classifier</td><td><code>{type, label, confidence}</code></td><td>py_ai_get_label / py_ai_get_confidence</td></tr>
+        <tr><td>detector</td><td><code>{type, objects: [{label, confidence, bbox: (x1,y1,x2,y2)}]}</code></td><td>py_ai_get_bbox / py_ai_get_bbox_center</td></tr>
+        <tr><td><b>line_follower</b></td><td><code>{type, line: (x1,y1,x2,y2), offset, angle, direction, confidence}</code></td><td>py_ai_get_line / py_ai_get_line_end / py_ai_get_line_offset / py_ai_get_line_angle / py_ai_get_direction</td></tr>
+        <tr><td>table</td><td><code>{type, prediction, confidence}</code>（尚未實作）</td><td>—</td></tr>
+    </table>
+    <p>line_follower 欄位語意：</p>
+    <ul>
+        <li><code>line</code>：模型回歸的兩端點（歸一化 0~1，與 Dataset Manager 的線段標註同座標系）。</li>
+        <li><code>offset</code>：<b>近端 X − 0.5</b>；範圍 −0.5~0.5，正值＝線在畫面右側。近端＝兩端點中 Y 較大者（畫面較下方）。</li>
+        <li><code>angle</code>：<b>atan2(遠端X−近端X, 近端Y−遠端Y)</b> 換算為度；0 = 正前方，正值 = 順時針（與 HuskyLens 角度語意一致）。</li>
+        <li><code>direction</code>：由 <code>offset</code> 推得（|offset| ≤ 0.05 視為置中），值為 <code>left / right / forward / none</code>。無影像時整組回 0 且 <code>direction="none"</code>。</li>
+        <li><code>confidence</code>：回歸模型無校正後信心值 → 固定 <b>1.0</b>（與 detector 同策略）。</li>
+    </ul>
+    <div class="warn"><strong>int8 模型輸出還原</strong>：int8（uint8 in/out）模型的輸出張量是 0~255，必須 <code>/255.0</code> 還原成 0~1。此還原在 <code>_classify</code>、<code>_detect</code>、<code>_follow_line</code> 三處**都必須**存在；<code>_detect</code> 先前缺漏（2026-09-19 修正），缺失會讓 bbox 值放大 255 倍而難以察覺。辨識方式：<code>self.isf</code>（輸入 dtype 是否 float32）。</div>
+
+    <h2>3. 兩個「循線」世界（重要觀念區分）</h2>
+    <table>
+        <tr><th></th><th>世界 A：HuskyLens 內建循跡</th><th>世界 B：Cocoya 自訓循線模型</th></tr>
+        <tr><td>需要訓練</td><td>否（機上自學習／內建演算法）</td><td>是（DM 標註 → py_ai_train_run → .tflite）</td></tr>
+        <tr><td>提供的資訊</td><td>V1：起點+終點；V2：固定起點 (320,480) + 目標 + 角度 + 長度</td><td><b>起點+終點（兩點回歸）</b>，即 V1 語意</td></tr>
+        <tr><td>資料來源</td><td>HuskyLens 韌體</td><td>Dataset Manager 的線段標註（`{class_id, line:[x1,y1,x2,y2]}`）</td></tr>
+        <tr><td>可用積木</td><td><code>mcu_huskylens_*</code>（見 HuskyLens.html）</td><td><code>py_ai_get_line*</code>（本檔）</td></tr>
+    </table>
+    <p>兩者的角度語意刻意對齊（0 = 正前方、順時針為正），因此**同一套循跡控制器可以互換資料來源**（PC 端模型輸出 or HuskyLens 回報），教學上可從「開箱即用」無痛過渡到「自己訓練」。</p>
+
+    <h2>4. 循線控制實務（P + D 控制器）</h2>
+    <p>有效的循跡控制器＝<b>橫向誤差（P 項） + 線的方向（D／預測項）</b>：</p>
+    <pre>
+offset = get_line_offset(result)     # 近端相對畫面中央：車在線的哪一側
+angle  = get_line_angle(result)      # 線往哪個角度延伸：提前知道要彎了
+steer  = Kp * offset + Kd * angle    # Kp、Kd 需實機調
+motor_left  = base + steer
+motor_right = base - steer</pre>
+    <ul>
+        <li><b>只有 P 項</b>：直線很穩，但進彎反應慢、容易衝出線外。</li>
+        <li><b>只有角度</b>：等於瞄準遠端點（pure pursuit），急彎會切內側抄近路。</li>
+        <li><b>P + D</b>：兩者互補，這正是「不切西瓜、乖乖沿線」的關鍵。</li>
+    </ul>
+    <p>實作要點：</p>
+    <ul>
+        <li><b>死區</b>：<code>|offset| &lt; 0.02</code> 不修正，避免直線抖動。</li>
+        <li><b>限幅與斜率限制</b>：<code>steer</code> 夾在合理範圍，且限制每秒變化量。</li>
+        <li><b>掉線處理</b>：<code>direction == 'none'</code> 時沿用最後一次 <code>steer</code> 並降速（不要用 0 硬轉）。</li>
+        <li><b>增益起始值</b>：<code>Kp</code> 先小（如 100）、<code>Kd</code> 約 <code>Kp</code> 的 1/100 量級再實調（單位：offset 為 ±0.5、angle 為 ±90 度）。</li>
+        <li><b>方向符號</b>：馬達左右方向取決於車體接線，務必先以「車置中、線偏左」情境驗證符號再調增益。</li>
+    </ul>
+    <div class="warn"><strong>標註與訓練的一致性</strong>：模型輸出座標與標註同系（比例座標），因此資料集應固定同一顆鏡頭與安裝角度；若換鏡頭/位移，需重新採集或至少重標一批驗證。線段標註「兩點」不可改為單點——單點會失去方向（D 項）資訊，且與現行 Dense(4) 回歸頭不符。</div>
+
+    <h2>5. 已知限制</h2>
+    <ul>
+        <li><code>py_ai_train_run</code> 的巢狀欄位（驗證比／擴增／Dropout／LR／Epochs／Batch／Backbone／DNN 層／優化器／輸出格式）在 VSIX 與 Tauri 雙模下皆走同一產生器；修改時需同步 <code>resources/train_templates/</code> 的 argparse 介面。</li>
+        <li>table 任務（表格資料）推論尚未實作，回傳固定值。</li>
+        <li>解析積木在找不到欄位時一律回安全預設（0 / 0.0 / 'none' / (0,0,0,0)），不拋錯；教學時建議先以「取得信心度 &gt; 0」判斷是否真的有結果。</li>
+    </ul>
+</body>
+</html>

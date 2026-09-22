@@ -6,6 +6,8 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
     isInitializing: true,
     promptRequests: new Map(),
     manifest: null,
+    // 開機時間戳（module_loader 的 cache-busting 用；同一頁面生命週期內固定）
+    __bootedAt: Date.now(),
 
     /**
      * 啟動初始化
@@ -133,6 +135,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             }
             
             this.workspace = Blockly.inject('blocklyDiv', injectOptions);
+            this._installZombieTrap(this.workspace);
             this.initMinimap();
 
             setTimeout(() => {
@@ -172,7 +175,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
                 }, true);
             }
 
-            const restoredSnapshot = this._restoreReloadSnapshot();
+            const restoredSnapshot = await this._restoreReloadSnapshot();
             if (!restoredSnapshot && this.workspace.getTopBlocks(false).length === 0) {
                 this.createDefaultBlocks();
             }
@@ -308,15 +311,25 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
 
     /**
      * 於 initializeCocoya 建立 workspace 後還原主題切換的 reload 快照（2026-09-01）。
-     * consume 一次：載入快照 xml、回復唯讀與檔名；回傳是否成功還原（true 表示非全新工作區）。
+     * consume 一次：先切換快照平台（確保該平台模組已載入）再載入快照 xml、回復唯讀與檔名；
+     * 回傳 snap 物件（含 isDirty；非全新工作區），無快照或失敗回 null。
      * 快照由 persistence.snapshotWorkspaceForReload 產生（sessionStorage）。
+     * @returns {Promise<Object|null>}
      */
-    _restoreReloadSnapshot: function() {
+    _restoreReloadSnapshot: async function() {
         if (!window.CocoyaApp || typeof window.CocoyaApp.consumeReloadSnapshot !== 'function' || !this.workspace) return null;
         const snap = window.CocoyaApp.consumeReloadSnapshot();
         if (!snap) return null;
 
         try {
+            // ★ 平台必須先切換再還原積木（2026-09-22）：快照的 platform 可能與本次啟動的平台不同
+            //   （多視窗共用 localStorage／預設 MicroPython），順序顛倒會讓另一平台的積木變成
+            //   「空積木」，之後補上產生器再產碼即 ReferenceError（詳見
+            //   CocoyaApp.ensurePlatformForXml 的鐵律說明）。
+            if (snap.platform && snap.platform !== this.currentPlatform) {
+                await window.CocoyaApp.ensurePlatformForXml(
+                    Blockly.utils.xml.textToDom(snap.xml));
+            }
             Blockly.Events.disable();
             try {
                 this.workspace.clear();
@@ -326,9 +339,9 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
                 Blockly.Events.enable();
             }
             this.isReadOnly = !!snap.isReadOnly;
-            if (snap.platform && this.currentPlatform && snap.platform !== this.currentPlatform) {
-                console.warn('[App] reload snapshot platform mismatch, keep current:',
-                    this.currentPlatform, 'snapshot=', snap.platform);
+            // 平台已在還原前對齊（見上方 ensurePlatformForXml），故此處只需記錄快照平台供診斷
+            if (snap.platform) {
+                console.log('[App] reload snapshot restored on platform:', this.currentPlatform);
             }
             if (window.CocoyaUI) window.CocoyaUI.updateFileStatus(snap.filename || '');
             // 快照還原在 Blockly.Events.disable() 下進行（clear+domToWorkspace），minimap 靠事件 mirror 同步、

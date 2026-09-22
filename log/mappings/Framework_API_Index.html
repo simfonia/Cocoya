@@ -163,5 +163,38 @@ console.log(spec.toJSON());
   <p><b>SSOT 實作</b>：<code>hardware_blocks.js</code> → <code>CocoyaBoard.normalizePinRef(ref)</code>（<code>resolveGpio</code> 入口統一施作）；<code>hardware_generators.js</code> → <code>cocoyaNormalizePinRef</code>；<code>mcu_car_generators.js</code> → <code>mcuCarNormalizePin</code>（後兩者為顯示用，含防禦性 fallback）。</p>
   <p><b>回歸測試</b>：<code>ui/src/modules/hardware/pin_resolve.test.mjs</code>（9 測）——<code>cd ui; node --test "src/modules/hardware/*.test.mjs"</code>。</p>
   <p><b>診斷手法（可重用）</b>：以 <code>new Function(fs.readFileSync(...))</code> + <code>globalThis</code> stub（<code>window</code>/<code>Blockly</code>）在 Node 直接載入瀏覽器模組，即可對產生器做無 GUI 的端到端測試（免開 Tauri/VSIX）。</p>
-</body></body>
+
+  <h2>8. 模組級對照表索引（log/mappings/）</h2>
+  <table>
+    <tr><th>檔案</th><th>內容</th></tr>
+    <tr><td><a href="AppPlatformRestore.html">AppPlatformRestore.html</a>（2026-09-22）</td><td>App 層工作區還原契約：三條 XML→工作區路徑（loadWorkspace / checkAutoBackup / _restoreReloadSnapshot）、<code>ensurePlatformForXml</code> 鐵律、空積木症狀對照、<code>currentPlatform</code> 來源與 origin 隔離、<code>_describeCodegenError</code>。</td></tr>
+    <tr><td><a href="HuskyLens.html">HuskyLens.html</a>（2026-09-19）</td><td><code>mcu_huskylens</code> 模組：V1/V2 通訊協定（幀格式、CMD 碼、checksum 範圍、封包欄位偏移、座標系）、循線向量起點語意與 V2 保持中位三解法、15 個積木的生成碼契約、πCar 循線範例、已知限制與實機驗證清單。</td></tr>
+    <tr><td><a href="AI_Inference.html">AI_Inference.html</a>（2026-09-19）</td><td><code>py_ai_*</code> 模組：推論結果契約（classifier / detector / line_follower / table）、循線欄位（line/offset/angle/direction）語意、int8 輸出還原鐵律、兩個「循線世界」分野、P+D 循跡控制實務。</td></tr>
+    <tr><td><a href="HardwarePinMap.html">HardwarePinMap.html</a></td><td>開發板腳位 SSOT（<code>board_defs.js</code>）與解析鏈。</td></tr>
+    <tr><td><a href="KerasSerializationCompat.html">KerasSerializationCompat.html</a></td><td>訓練模板 int8 量化與 Keras 序列化相容性陷阱。</td></tr>
+    <tr><td><a href="Tauri_Sidecar_API.html">Tauri_Sidecar_API.html</a></td><td>Sidecar 通訊契約。</td></tr>
+    <tr><td><a href="DatasetManager.html">DatasetManager.html</a> / <a href="DatasetManager_DevGuide.html">DevGuide</a> / <a href="DatasetManagerParityMatrix.md">ParityMatrix</a></td><td>Dataset Manager 架構、四層責任、雙平台對等矩陣。</td></tr>
+    <tr><td><a href="ThemeManager.html">ThemeManager.html</a> / <a href="FontScale.html">FontScale.html</a> / <a href="cocoya_ssh_sftp_api.html">cocoya_ssh_sftp_api.html</a></td><td>主題、字級縮放、SSH/SFTP 命令。</td></tr>
+  </table>
+
+  <h2>9. Blockly 積木註冊 × 平台載入：空積木（zombie block）契約（2026-09-22 除錯蒸餾）</h2>
+  <p><b>症狀</b>：啟動時 Console 出現 <code>[Workspace] Sync Code Update failed: ReferenceError: Input "RESULT" doesn't exist on "py_ai_get_line_end"</code>（伴隨 alert）。</p>
+  <p><b>Blockly 12.3.1 的三個事實</b>（皆可於 <code>ui/blockly/core/blockly.js</code> 驗證）：</p>
+  <ol>
+    <li><b>未註冊型別不會拋錯</b>：<code>workspace.newBlock(type)</code> 對 <code>Blockly.Blocks[type] === undefined</code> 只 <code>console.warn('Block definiton for "x" not found.')</code> 並建立<b>空積木</b>（<code>getInput()</code> 全 <code>null</code>／下拉等 field 全無）。因此 <code>Blockly.Blocks[type]</code> 的存在與否，就是「這個積木有沒有被註冊」的權威判準。</li>
+    <li><b>產生器與積木定義是兩個獨立註冊表</b>：<code>Blockly.Python.forBlock[type]</code> 可以存在而同型的 <code>Blockly.Blocks[type]</code> 不存在（模組檔分成 <code>*_blocks.js</code> / <code>*_generators.js</code>，且都可能因平台過濾而未載入）→ 產碼時就會走到產生器，再爆在 <code>valueToCode()</code>。</li>
+    <li><b><code>valueToCode</code> 的錯誤語意</b>：<code>if (!target &amp;&amp; !block.getInput(name)) throw ReferenceError(`Input "${name}" doesn't exist on "${block.type}"`)</code>——看到此訊息即代表「積木實例缺少該 input」，而 input 只由 <code>init()</code> 產生，故必然是<b>建立當下沒有註冊</b>（或 <code>init()</code> 提前拋錯）。</li>
+  </ol>
+  <p><b><code>jsonInit</code> 的早期拋錯點（同樣會留下半成品空積木）</b>：<code>args0</code> 存在但 <code>message0</code> 未定義時，<code>jsonInit</code> 在<b>附加任何 input 之前</b>就 <code>throw Error('Block "x": args0 must have a corresponding message (message0).')</code>；<code>interpolate</code> 的 <code>validateTokens</code> 亦會因 <code>%N</code> 超出 <code>argsN</code> 長度而拋 <code>Message index %N out of range</code>。<br>
+  實務結論：<b>積木使用的所有 <code>Blockly.Msg[...]</code> 必須在積木「建立」前就緒</b>（i18n 檔先載、再載 <code>*_blocks.js</code>），且 message 佔位數要與 <code>argsN</code> 對齊。</p>
+  <p><b>Cocoya 鐵律</b>：任何把 XML 載入工作區的路徑，<b>必須先切換到該 XML 的平台</b>（<code>Blockly.Xml.domToWorkspace</code> 之前）——詳見 <a href="AppPlatformRestore.html">AppPlatformRestore.html</a> 的 <code>CocoyaApp.ensurePlatformForXml</code>。UI 降噪：<code>CocoyaApp._describeCodegenError</code>（列出未註冊型別 + 平台提示）。</p>
+  <p><b>Round 2 補充（同日，真正根因與防禦層）</b>：</p>
+  <ul>
+    <li><b>i18n 佔位符契約（本事故真正根因）</b>：模組 i18n 的 <code>AI_GET_LINE_END</code> 缺 <code>%1</code>（args0 有 RESULT＋END 兩個 arg）→ <code>init() → jsonInit → interpolate → validateTokens</code> 拋 <code>Message does not reference all 2 arg(s)</code> → 積木成為<b>半成品空積木</b>（定義已註冊，與平台載入順序無關）→ 產生器 <code>valueToCode('RESULT')</code> 爆同型 ReferenceError。<b>症狀相同、病因不同</b>：兩條路徑都會產生空積木。</li>
+    <li><b>dev 模組載入快取陷阱</b>：<code>module_loader.loadScript</code> 以 <code>script[src]</code> 去重＋瀏覽器 HTTP cache，vite dev server 常駐下修正 i18n 後 reload 仍載到舊檔（「改了沒生效」假象）。修：<code>loadScript</code> 附加 <code>?_v=&lt;__bootedAt&gt;</code>（戳記存於 <code>CocoyaApp.__bootedAt</code>，同一頁面生命週期內固定，不破壞同頁去重）。</li>
+    <li><b>防禦層（workspace.js / lifecycle.js）</b>：<code>_installZombieTrap(ws)</code> 攔截主工作區 <code>newBlock</code>，對「定義未註冊就建立」立即印 <code>[Zombie-Trap]</code>＋呼叫堆（犯案現場取證）；<code>_repairZombieBlocks()</code> 於每次產碼前掃描「型別已註冊但實例無 input」的半成品，重跑 <code>def.init.call(b)</code>＋<code>initSvg/render</code> 補回結構（欄位值無法復原），成功則 <code>setDirty(true)</code> 並 console.warn，失敗則印原始例外——本事故即靠 <code>[Workspace] Zombie repair failed: ... Message does not reference all 2 arg(s)</code> 鎖定真根因。</li>
+    <li><b>回歸測試（新增）</b>：<code>ui/src/app/block_jsoninit.test.mjs</code>——靜態抽取所有 <code>*_blocks.js</code> 的 <code>jsonInit({...})</code> 字面值，以（主 i18n＋模組 i18n）stub Msg 求值後驗證每個 <code>messageN</code> 的 <code>%k</code> 涵蓋 <code>argsN</code> 全部 arg（含 <code>%{BKY_*}</code> 轉引展開；zh-hant 與 en 都掃）。<code>cd ui; node --test "src/app/*.test.mjs"</code>。</li>
+  </ul>
+  <p><b>回歸測試</b>：<code>ui/src/app/platform_restore.test.mjs</code>（<code>cd ui; node --test "src/app/*.test.mjs"</code>）。</p>
+</body>
 </html>

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>取得循線線段的端點 - py_ai_get_line_end 積木說明</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 20px; max-width: 800px; margin: 0 auto; }
+  h1 { color: #9C27B0; border-bottom: 2px solid #9C27B0; padding-bottom: 8px; }
+  .section { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .code { background: #f8f8f8; padding: 12px; border-radius: 4px; font-family: Consolas, monospace; font-size: 13px; overflow-x: auto; }
+  .note { background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px 14px; margin: 12px 0; border-radius: 0 4px 4px 0; }
+</style>
+</head>
+<body>
+  <h1>📐 取得循線線段的端點積木 (py_ai_get_line_end)</h1>
+  <div class="section">
+    <h2>功能說明</h2>
+    <p>取得線段單一端點的座標值（單一數字），方便直接餵給數學積木做運算。</p>
+    <p>輸入：推論結果（py_ai_model_predict 的輸出，需為 line_follower 類型）＋ 端點選項</p>
+    <p>輸出：數字（0~1 比例座標；取不到時回傳 0.0）</p>
+    <ul>
+      <li><b>端點1 X / 端點1 Y</b>：標註時第一個點擊的端點</li>
+      <li><b>端點2 X / 端點2 Y</b>：標註時第二個點擊的端點</li>
+    </ul>
+  </div>
+  <div class="section">
+    <h2>端點1 是「近端」嗎？</h2>
+    <p>不一定。端點1/2 只代表標註時的點擊順序。若要判斷「哪一端離車比較近」，請比較兩者的 Y：<b>Y 較大者（畫面上較下方）就是近端</b>。這也是「取得循線橫向偏移」與「取得循線方向角」兩個積木內部採用的規則。</p>
+  </div>
+  <div class="section">
+    <h2>使用範例</h2>
+    <div class="code">
+result = predict(frame)<br>
+x1 = get_line_end(result, 端點1 X)<br>
+y1 = get_line_end(result, 端點1 Y)<br>
+x2 = get_line_end(result, 端點2 X)<br>
+y2 = get_line_end(result, 端點2 Y)<br>
+<span style="color:#888;"># 自行計算斜率或畫自訂圖形</span></div>
+  </div>
+  <div class="section">
+    <div class="note">💡 若只是要做循跡控制，建議直接使用「取得循線橫向偏移」與「取得循線方向角」兩個積木，公式已內建。</div>
+  </div>
+</body>
+</html>

@@ -4,16 +4,23 @@
 
 async function loadScript(url) {
     return new Promise((resolve, reject) => {
+        // 開發模式 cache busting（2026-09-22）：vite dev server 對 dev 平台腳本回
+        // no-store，但生產/打包腳本（如 modules/*.js 經 baseURI 解析）可能命中
+        // HTTP cache。帶上版本戳記避免 reload 後拿到舊版模組碼（zombie 積木的
+        // 慣犯：i18n 修好但瀏覽器仍拿舊檔，錯誤看起來像「改了沒生效」）。
+        const bust = (window.CocoyaApp && window.CocoyaApp.__bootedAt) || Date.now();
+        const sep = url.indexOf('?') === -1 ? '?' : '&';
+        const bustUrl = url + sep + '_v=' + bust;
         // --- 檢查是否已載入過此腳本 ---
-        if (document.querySelector(`script[src="${url}"]`)) {
+        if (document.querySelector(`script[src="${bustUrl}"]`)) {
             resolve();
             return;
         }
         const script = document.createElement('script');
-        script.src = url;
+        script.src = bustUrl;
         script.onload = resolve;
         script.onerror = (err) => {
-            console.error(`[Loader] Failed to load script: ${url}`, err);
+            console.error(`[Loader] Failed to load script: ${bustUrl}`, err);
             reject(err);
         };
         document.head.appendChild(script);

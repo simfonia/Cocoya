@@ -61,6 +61,7 @@ C:\Workspace\cocoya\
 │   │   ├── BboxAnnotationUIImprovement.md # BBox 標註 UI 改善
 │   │   ├── DatasetManagerOptimization.md # Dataset Manager 優化
 │   │   ├── ObjectDetectorTrain.md # 物件偵測訓練計畫
+│   │   ├── SenseTFLMFirmwareAndModelPush.md # [NEW 2026-09-19] Sense(XIAO ESP32-S3) TFLM 韌體 + 模型推送通道計畫（backlog；TFLM 路線定案/接線規格/P0~P5 六階段）
 │   │   ├── openTrainingReport.md # 開啟訓練報告計畫
 │   │   └── SpikeModuleDesign.md  # [NEW] Lego SPIKE Prime 模組開發計畫
 │   │   └── openTrainingReport.md # 開啟訓練報告計畫
@@ -83,6 +84,9 @@ C:\Workspace\cocoya\
 │       ├── Tauri_Sidecar_API.html   # Tauri Sidecar API 使用對照表
 │       └── Renderer_API.html        # UI Renderer API (syncSelection, findLocatableBlock)
 │       └── ThemeManager.html        # [NEW] 主題管理模組對照表（API/主題定義格式/reloadWebview 鏈/新增主題 SOP）
+│       └── HuskyLens.html           # [NEW 2026-09-19] mcu_huskylens 模組對照表（V1/V2 協定/幀格式/CMD 碼/欄位偏移/座標系/循線向量語意與 V2 中位三解法/15 積木生成碼契約/πCar 循線範例/限制）
+│       └── AI_Inference.html        # [NEW 2026-09-19] py_ai_* 模組對照表（推論結果契約 classifier/detector/line_follower、循線 line/offset/angle 語意、int8 還原鐵律、兩個循線世界、P+D 控制實務）
+│       └── AppPlatformRestore.html  # [NEW 2026-09-22] App 層工作區還原契約（三條 XML→工作區路徑的平台切換順序、ensurePlatformForXml 鐵律、空積木症狀對照、currentPlatform 來源/origin 隔離、_describeCodegenError）
 
 
 ├── ui/                    # 雙模共用前端根目錄 (Vite Project)
@@ -104,9 +108,11 @@ C:\Workspace\cocoya\
 │   │   ├── app/         # 應用程式核心子模組
 │   │   │   ├── config.js   # 平台與主題配置
 │   │   │   ├── controller.js # [NEW] 中央分發與解耦控制
-│   │   │   ├── persistence.js # 檔案與備份持久化
-│   │   │   ├── workspace.js # Blockly 與 Minimap 管理
-│   │   │   └── lifecycle.js # 初始化與通訊生命週期
+│   │   │   ├── persistence.js # 檔案與備份持久化（ensurePlatformForXml：XML 還原前平台對齊守門 [2026-09-22]）
+│   │   │   ├── workspace.js # Blockly 與 Minimap 管理（_describeCodegenError 降噪；_installZombieTrap/_repairZombieBlocks：空積木取證與自癒 [2026-09-22]）
+│   │   │   ├── lifecycle.js # 初始化與通訊生命週期（_restoreReloadSnapshot：reload 快照還原，先切平台 [2026-09-22]；__bootedAt：模組載入 cache-busting 戳記）
+│   │   │   ├── platform_restore.test.mjs # [2026-09-22] 平台切換→積木還原順序契約測試（3 測；node --test "src/app/*.test.mjs"）
+│   │   │   └── block_jsoninit.test.mjs # [2026-09-22] 全模組 jsonInit 佔位符契約測試（messageN %N 必須涵蓋 argsN，含 %{BKY_*} 展開；空積木事故回歸防護）
 │   │   ├── utils/         # 通用工具子模組
 │   │   │   ├── core.js      # DOM 攔截、ID 提取與縮排修復
 │   │   │   ├── toolbox.js   # XML 過濾邏輯
@@ -120,7 +126,11 @@ C:\Workspace\cocoya\
 │   │   │   │       ├── cocoya_light.js # 淺色主題 (Blockly Classic + 淺色 cssVars)
 │   │   │   │       └── cocoya_dark.js  # 深色主題 (Blockly Theme componentStyles + 深色 cssVars, hideGrid)
 │   │   │   ├── ai_inference/ # AI 訓練與推論積木模組
-│   │   │   │   └── ai_inference_generators.js # 訓練/推論積木 Python 產生器（多候選路徑搜尋，候選 0 讀 COCOYA_TRAIN_TEMPLATES env）
+│   │   │   │   ├── ai_inference_blocks.js      # 積木定義（訓練 1 + 推論 2 + 解析 8；含循線 4 塊 py_ai_get_line/_end/_offset/_angle [2026-09-19]）
+│   │   │   │   ├── ai_inference_generators.js  # 訓練/推論積木 Python 產生器（多候選路徑搜尋，候選 0 讀 COCOYA_TRAIN_TEMPLATES env）；注入 _ModelInference 類，含 _follow_line 線段端點回歸與 int8 輸出還原
+│   │   │   │   ├── toolbox.xml                 # 工具箱（訓練／推論／結果解析）
+│   │   │   │   ├── i18n/                       # zh-hant.js / en.js 文案（key 需對等）
+│   │   │   │   └── line_inference.test.mjs     # [2026-09-19] 循線推論契約測試（stub interpreter 實跑 _follow_line/_detect 含 int8 還原）
 │   │   │   ├── ai_pose/            # AI 姿勢偵測積木模組 (MediaPipe Pose)
 │   │   │   │   ├── ai_pose_blocks.js      # 積木定義 (含 py_ai_pose_calc_angle [NEW])
 │   │   │   │   ├── ai_pose_generators.js  # Python 產生器 (含 cocoya_calc_angle_3pts [NEW])
@@ -133,6 +143,12 @@ C:\Workspace\cocoya\
 │   │   │   │   ├── hardware_blocks.js    # 積木定義 + CocoyaBoard 登錄器（mcu_board_init 宣告積木、動態 mcu_pin_shadow）
 │   │   │   │   ├── hardware_generators.js # Python 產生器（cocoyaResolvePinNum 權威映射 + 未知腳位錯誤註解）
 │   │   │   │   ├── pin_resolve.test.mjs  # [2026-09-18] 腳位解析契約測試（node --test；鎖住 scrub_ 不可見標記 U+0001/0002 污染 bug）
+│   │   │   ├── mcu_huskylens/ # HuskyLens AI 視覺感測器積木模組（V1/V2 通用 [2026-09-19]；15 積木）
+│   │   │   │   ├── mcu_huskylens_blocks.js    # 積木定義（init 含 V2/V1+I2C/UART 下拉；V2-only：set_algorithm/learn/forget/save_knowledge/load_knowledge/set_name/get_name；通用：request/get_box/get_arrow(6 欄含 origin/length)/is_detected/count/get_id_at/any_arrow；全數含 tooltip 與 V1/V2 標示）
+│   │   │   │   ├── mcu_huskylens_generators.js # 雙協定 Python 產生器（V1: 55 AA+ADDR 0x11 幀、checksum 含幀頭、BLOCK/ARROW 皆 5×int16；V2: 55 AA+CMD+ALGO+LEN 幀、ARROW angle/length 為 int16 @6/@8；依官方 HUSKYLENS Protocol.md v0.5.1 與 ProtocolV2.cpp/Result.cpp）
+│   │   │   │   ├── huskylens_protocol.test.mjs # 契約測試（積木/tooltip/toolbox 對帳＋V1/V2 假幀解析＋官方範例幀＋checksum 拒收，Python 實跑）
+│   │   │   │   ├── toolbox.xml                 # 工具箱（分 5 組標籤：設定/循跡/偵測與辨識/分類與命名/學習與存檔）
+│   │   │   │   └── i18n/                       # zh-hant.js / en.js 文案（61 key，含 5 個分組標籤）
 │   │   │   ├── dataset_manager/ # Dataset Spec 與資料集管理器應用層模組
 │   │   │   └── dataset_manager/ # Dataset Spec 與資料集管理器應用層模組
 │   │   │       ├── core/      # 純資料規則層，禁止依賴 DOM、Bridge、window 與 i18n

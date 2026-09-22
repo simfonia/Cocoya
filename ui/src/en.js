@@ -227,6 +227,7 @@
     "MSG_ERASE_FS_CONFIRM": "WARNING: This will force stop the program and ERASE ALL USER FILES (main.py, etc.) on the MCU. This cannot be undone! Continue?",
     "MSG_NO_TRAINING_RESULT": "No training results yet. Please run training first.",
     "MSG_RELOAD_HOME_CONFIRM": "Reloading will return to the Startup Home; unsaved changes will be lost. Continue?",
+    "MSG_CODEGEN_UNKNOWN_BLOCK": "This project contains blocks that are not loaded on the current platform: %1\n\nPossible cause: the project platform does not match the current platform (PC / MicroPython).\nPlease reopen the project via \"Open Project\", or check the project contents.",
     "MSG_TRAINING_RESULT_TITLE": "Training Results",
     "MSG_TRAINING_RESULT_PROJECT": "Project Name",
     "MSG_TRAINING_RESULT_ACCURACY": "Validation Accuracy",
