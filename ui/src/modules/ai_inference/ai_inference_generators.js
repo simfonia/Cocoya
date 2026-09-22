@@ -239,6 +239,7 @@ Blockly.Python.forBlock['py_ai_model_init'] = function(block, generator) {
       '            return {"type": "detector", "objects": []}\n' +
       '        self.it.set_tensor(self.i[0]["index"], d2); self.it.invoke()\n' +
       '        out = self.it.get_tensor(self.o[0]["index"])[0]\n' +
+      '        out = out.astype(np.float32)/255.0 if not self.isf else out\n' +
       '        # out = [cx, cy, w, h] (0~1)\n' +
       '        cx, cy, w, h = float(out[0]), float(out[1]), float(out[2]), float(out[3])\n' +
       '        # 轉換為 (x1, y1, x2, y2)\n' +
@@ -248,14 +249,38 @@ Blockly.Python.forBlock['py_ai_model_init'] = function(block, generator) {
       '        return {"type": "detector", "objects": [{"label": label, "confidence": 1.0, "bbox": (x1, y1, x2, y2)}]}\n' +
       '    \n' +
       '    def _follow_line(self, frame):\n' +
-      '        # 循線偵測推論（預留接口）\n' +
-      '        import numpy as np\n' +
+      '        # 循線偵測推論（線段端點回歸）\n' +
+      '        import math, numpy as np\n' +
       '        d2 = self._preprocess(frame)\n' +
       '        if d2 is None:\n' +
-      '            return {"type": "line_follower", "direction": "none", "confidence": 0.0}\n' +
+      '            return {"type": "line_follower", "line": (0.0, 0.0, 0.0, 0.0), "offset": 0.0, "angle": 0.0, "direction": "none", "confidence": 0.0}\n' +
       '        self.it.set_tensor(self.i[0]["index"], d2); self.it.invoke()\n' +
-      '        # 目前回傳空結果，待 line_follower_train.py 實作後補齊\n' +
-      '        return {"type": "line_follower", "direction": "none", "confidence": 0.0}\n' +
+      '        out = self.it.get_tensor(self.o[0]["index"])[0]\n' +
+      '        out = out.astype(np.float32)/255.0 if not self.isf else out\n' +
+      '        # 模型輸出 [x1, y1, x2, y2]：歸一化線段端點（0~1，與標註同一座標系）\n' +
+      '        x1, y1, x2, y2 = float(out[0]), float(out[1]), float(out[2]), float(out[3])\n' +
+      '        x1 = min(max(x1, 0.0), 1.0); x2 = min(max(x2, 0.0), 1.0)\n' +
+      '        y1 = min(max(y1, 0.0), 1.0); y2 = min(max(y2, 0.0), 1.0)\n' +
+      '        # 近端 = y 較大者（畫面上較下方 = 離車較近）\n' +
+      '        if y1 >= y2:\n' +
+      '            nx, ny, fx, fy = x1, y1, x2, y2\n' +
+      '        else:\n' +
+      '            nx, ny, fx, fy = x2, y2, x1, y1\n' +
+      '        # offset：近端相對畫面中央的橫向偏移（-0.5~0.5，正值 = 線在右側）\n' +
+      '        offset = nx - 0.5\n' +
+      '        # angle：線的方向角（度；0 = 正前方，正值 = 順時針/往右；與 HuskyLens 語意一致）\n' +
+      '        try:\n' +
+      '            angle = math.degrees(math.atan2(fx - nx, max(ny - fy, 1e-6)))\n' +
+      '        except Exception:\n' +
+      '            angle = 0.0\n' +
+      '        if offset < -0.05:\n' +
+      '            direction = "left"\n' +
+      '        elif offset > 0.05:\n' +
+      '            direction = "right"\n' +
+      '        else:\n' +
+      '            direction = "forward"\n' +
+      '        # 回歸模型無校正後信心值 → 固定 1.0（與 detector 一致）\n' +
+      '        return {"type": "line_follower", "line": (x1, y1, x2, y2), "offset": offset, "angle": angle, "direction": direction, "confidence": 1.0}\n' +
       '    \n' +
       '    def _table_predict(self, data):\n' +
       '        # 表格資料推論（預留接口）\n' +
@@ -329,6 +354,49 @@ Blockly.Python.forBlock['py_ai_get_direction'] = function(block, generator) {
 Blockly.Python.forBlock['py_ai_get_bbox_center'] = function(block, generator) {
   var resultCode = Blockly.Python.valueToCode(block, 'RESULT', Blockly.Python.ORDER_ATOMIC) || '{}';
   var code = '(lambda b: ((b[0]+b[2])/2, (b[1]+b[3])/2))(' + resultCode + '.get("objects", [{}])[0].get("bbox", (0,0,0,0)) if ' + resultCode + '.get("objects", []) else (0,0,0,0))';
+  if (!block.outputConnection) {
+    return code + '\n';
+  }
+  return [code, Blockly.Python.ORDER_FUNCTION_CALL];
+};
+
+// === 循線（line_follower）解析積木（2026-09-19 H5）===
+
+Blockly.Python.forBlock['py_ai_get_line'] = function(block, generator) {
+  var resultCode = Blockly.Python.valueToCode(block, 'RESULT', Blockly.Python.ORDER_ATOMIC) || '{}';
+  var code = resultCode + '.get("line", (0.0, 0.0, 0.0, 0.0))';
+  if (!block.outputConnection) {
+    return code + '\n';
+  }
+  return [code, Blockly.Python.ORDER_FUNCTION_CALL];
+};
+
+Blockly.Python.forBlock['py_ai_get_line_end'] = function(block, generator) {
+  var field = block.getFieldValue('END'); // x1 | y1 | x2 | y2
+  var idx = { x1: 0, y1: 1, x2: 2, y2: 3 }[field];
+  if (idx === undefined) {
+    idx = 0;
+  }
+  var resultCode = Blockly.Python.valueToCode(block, 'RESULT', Blockly.Python.ORDER_ATOMIC) || '{}';
+  var code = resultCode + '.get("line", (0.0, 0.0, 0.0, 0.0))[' + idx + ']';
+  if (!block.outputConnection) {
+    return code + '\n';
+  }
+  return [code, Blockly.Python.ORDER_MEMBER];
+};
+
+Blockly.Python.forBlock['py_ai_get_line_offset'] = function(block, generator) {
+  var resultCode = Blockly.Python.valueToCode(block, 'RESULT', Blockly.Python.ORDER_ATOMIC) || '{}';
+  var code = resultCode + '.get("offset", 0.0)';
+  if (!block.outputConnection) {
+    return code + '\n';
+  }
+  return [code, Blockly.Python.ORDER_FUNCTION_CALL];
+};
+
+Blockly.Python.forBlock['py_ai_get_line_angle'] = function(block, generator) {
+  var resultCode = Blockly.Python.valueToCode(block, 'RESULT', Blockly.Python.ORDER_ATOMIC) || '{}';
+  var code = resultCode + '.get("angle", 0.0)';
   if (!block.outputConnection) {
     return code + '\n';
   }

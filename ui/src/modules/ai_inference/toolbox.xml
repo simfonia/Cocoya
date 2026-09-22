@@ -27,4 +27,8 @@
     <block type="py_ai_get_confidence"></block>
     <block type="py_ai_get_bbox"></block>
     <block type="py_ai_get_direction"></block>
+    <block type="py_ai_get_line"></block>
+    <block type="py_ai_get_line_end"></block>
+    <block type="py_ai_get_line_offset"></block>
+    <block type="py_ai_get_line_angle"></block>
 </category>

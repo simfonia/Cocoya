@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <title>Cocoya 工作區還原與平台切換契約（App 層）</title>
+    <style>
+        body { font-family: sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 20px; }
+        code { background: #f4f4f4; padding: 2px 5px; border-radius: 3px; }
+        pre { background: #f4f4f4; padding: 10px; overflow-x: auto; border-left: 5px solid #3f51b5; }
+        h2 { border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 40px; }
+        table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+        th, td { border: 1px solid #ddd; padding: 6px 8px; text-align: left; vertical-align: top; }
+        th { background: #fafafa; }
+        .warn { background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px 15px; }
+        .ok { background: #e8f5e9; border-left: 4px solid #4caf50; padding: 10px 15px; }
+    </style>
+</head>
+<body>
+    <h1>Cocoya 工作區還原與平台切換契約（App 層）</h1>
+    <p>建立日期：2026-09-22（<code>Input "RESULT" doesn't exist on "py_ai_get_line_end"</code> 除錯蒸餾）。適用範圍：<code>ui/src/app/*.js</code>（persistence / lifecycle / workspace / config）與其後端來源（Rust <code>file.rs</code>、VSIX <code>fileOps.ts</code> / <code>cocoyaManager.ts</code>）。</p>
+
+    <h2>1. 三條「XML → 工作區」路徑（都必須先切平台）</h2>
+    <table>
+        <tr><th>路徑</th><th>XML 來源</th><th>平台來源</th><th>順序狀態</th></tr>
+        <tr>
+            <td><code>CocoyaApp.loadWorkspace</code>（persistence.js）</td>
+            <td>後端 <code>open_file</code> / <code>open_examples</code> / VSIX <code>handleOpenFile</code>（讀檔內容）</td>
+            <td>後端解析（Rust：<code>xml.contains("platform=\"MicroPython\"")</code>；VSIX：regex + 內容啟發）→ 訊息帶 <code>platform</code></td>
+            <td>✅ 先 <code>setPlatformUI(platform)</code> 再 <code>domToWorkspace</code>（正確樣板）</td>
+        </tr>
+        <tr>
+            <td><code>CocoyaApp.checkAutoBackup</code>（persistence.js）</td>
+            <td>啟動備份（<code>recoveryData</code> 指令）：Tauri <code>%TEMP%\cocoya_tauri\untitled_backup[_&lt;label&gt;].xml</code>；專案旁 <code>.&lt;name&gt;.xml.bak</code>；VSIX <code>&lt;extensionPath&gt;/temp_scripts/untitled_backup.xml</code></td>
+            <td>XML 根節點 <code>platform</code> 屬性</td>
+            <td>🔧 2026-09-22 修正（原本先 <code>domToWorkspace</code> 才切平台 → 本檔記錄的 bug）</td>
+        </tr>
+        <tr>
+            <td><code>CocoyaApp._restoreReloadSnapshot</code>（lifecycle.js）</td>
+            <td><code>sessionStorage['cocoya_reload_snapshot']</code>（換主題／語系 reload 前寫入）</td>
+            <td>快照 JSON 的 <code>platform</code> 欄位</td>
+            <td>🔧 2026-09-22 修正（原本只 <code>console.warn</code> 平台不符，不切換）</td>
+        </tr>
+    </table>
+    <p>其他 <code>domToWorkspace</code> 呼叫點（<code>workspace.js</code> 的 minimap 重建）只在同平台內複製，無此問題。</p>
+
+    <h2>2. 鐵律：載入積木前必須先切換平台</h2>
+    <div class="warn">
+        <p><b>模組依平台載入</b>（<code>ui/src/core_manifest.json</code> 的 <code>platforms</code>；如 <code>ai_inference</code> 僅 <code>["PC"]</code>，<code>mcu_*</code> 僅 <code>["MicroPython"]</code>）。
+        <b>未載入</b>的積木型別被 Blockly 建立時，只會得到 <code>Blockly.Blocks[type] === undefined</code>：Blockly 印一行 <code>Block definiton for xxx not found</code> 警告後，建立一個<b>「空積木」</b>（無 input／無 field），且<b>不會拋錯</b>。</p>
+        <p>空積木本身不致命，致命的是「之後平台被切換、產生器被註冊」——此時 <code>workspaceToCode</code> 會呼叫產生器，而產生器讀不到的 input／field 就爆：</p>
+        <pre>ReferenceError: Input "RESULT" doesn't exist on "py_ai_get_line_end"
+ReferenceError: Python generator does not know how to generate code for block type "xxx"</pre>
+        <p>兩者都指向同一根因：<b>建立積木的當下，該型別沒有註冊</b>。<br>
+        ⚠️ 2026-09-22 Round 2 補正：本案例的<b>真正根因</b>其實是另一條同症狀路徑——模組 i18n 的 <code>AI_GET_LINE_END</code> 訊息缺 <code>%1</code>（args0 有 RESULT＋END 兩個 arg），<code>init() → jsonInit → validateTokens</code> 拋 <code>Message does not reference all 2 arg(s)</code>，積木一樣變成無 input 的半成品。判讀準則：看到 <code>Message does not reference all N arg(s)</code> ＝ i18n 佔位符與 args 不對齊；<code>Input "..." doesn't exist</code> 只是它的下游症狀。回歸測試：<code>block_jsoninit.test.mjs</code>。</p>
+    </div>
+    <div class="ok">
+        <p><b>SSOT 實作</b>：<code>CocoyaApp.ensurePlatformForXml(dom)</code>（<code>ui/src/app/persistence.js</code>）
+        ——讀 XML 的 <code>platform</code> 屬性，與 <code>currentPlatform</code> 不同才 <code>await setPlatformUI(platform)</code>；
+        屬性缺失／傳 <code>null</code> 靜默略過。<b>任何新的 XML 還原入口都必須先呼叫它</b>（<code>loadWorkspace</code> 已有等價邏輯）。</p>
+    </div>
+    <pre>// 正確樣板（以 checkAutoBackup 為例）
+const dom = Blockly.utils.xml.textToDom(backupXml);
+await this.ensurePlatformForXml(dom);   // ★ 先切平台（載入該平台模組與產生器）
+Blockly.Events.disable();
+try {
+    this.workspace.clear();
+    Blockly.Xml.domToWorkspace(dom, this.workspace);
+} finally { Blockly.Events.enable(); }
+this.triggerCodeUpdate();</pre>
+
+    <h2>3. 為何平台會與專案不符（<code>currentPlatform</code> 的來源）</h2>
+    <ul>
+        <li><code>config.js</code>：<code>currentPlatform = localStorage['cocoya_platform'] || 'MicroPython'</code>（<b>預設 MicroPython</b>）。</li>
+        <li>localStorage 是<b>依 origin</b> 隔離：Tauri 開發（vite <code>localhost:5173</code>）與 Tauri 打包（<code>http://tauri.localhost</code>）各有自己的 <code>cocoya_platform</code>；多視窗共用同一份（另一視窗切平台會改到你的值，但自己記憶體中的 <code>currentPlatform</code> 不會跟著變）。</li>
+        <li>啟動備份／專案旁 <code>.bak</code> 是<b>跨 session 殘留</b>的檔案 → 其 platform 與本次啟動的 <code>currentPlatform</code> 完全獨立，不能假設一致。</li>
+        <li>診斷手法：<code>%LOCALAPPDATA%\com.cocoya.app\EBWebView\Default\Local Storage\leveldb\*.log</code> 可直接看到 <code>cocoya_platform</code> 的歷次寫入值（檔案被執行中的 App 鎖住，需以 ReadWrite 共享模式開啟）。</li>
+    </ul>
+    <h2>4. 症狀 → 診斷對照</h2>
+    <table>
+        <tr><th>症狀</th><th>判讀</th></tr>
+        <tr><td>Console 對新積木出現 <code>Block definiton for xxx not found</code></td><td>當下平台沒載入該模組（flyout 正常不該有它；若出現在<b>工作區</b>＝XML 平台不符）</td></tr>
+        <tr><td>產碼爆 <code>Input "..." doesn't exist on "..."</code></td><td>積木是空積木（未註冊）但產生器已註冊 → 平台切換與載入順序顛倒</td></tr>
+        <tr><td>積木下拉／欄位整組消失，只剩空白框</td><td>同上（空積木無 field）</td></tr>
+        <tr><td>專案存檔後再開，下拉值（如端點選項）回到預設</td><td>空積木存檔時無法序列化 field → 值遺失（需重建該積木）</td></tr>
+    </table>
+    <p>UI 降噪：<code>CocoyaApp._describeCodegenError(e)</code>（<code>workspace.js</code>）會把上述兩類錯誤改寫為「列出目前平台未註冊的積木型別 + 平台提示」（i18n key <code>MSG_CODEGEN_UNKNOWN_BLOCK</code>，zh-hant/en 皆已定義）；<b>已註冊型別</b>的契約錯誤與其他例外一律回傳 <code>null</code>，維持原始 <code>Blockly to Python Error: ...</code> + stack。</p>
+
+    <h2>5. App 層 API 索引</h2>
+    <table>
+        <tr><th>API</th><th>檔案</th><th>用途</th></tr>
+        <tr><td><code>ensurePlatformForXml(dom)</code></td><td>app/persistence.js</td><td>XML 還原前的平台對齊守門（async）</td></tr>
+        <tr><td><code>setPlatformUI(platform)</code></td><td>app/config.js</td><td>切平台：寫 localStorage、重建 toolbox（載入該平台所有模組＝積木＋產生器＋i18n）、設 <code>Blockly.Python.PLATFORM</code>、重啟積木搜尋索引</td></tr>
+        <tr><td><code>loadWorkspace(xml, filename, platform, isReadOnly)</code></td><td>app/persistence.js</td><td>開檔（先切平台 → 載入 → 設唯讀 → 清髒 → 產碼 → 隱藏首頁）</td></tr>
+        <tr><td><code>checkAutoBackup(backupXml)</code></td><td>app/persistence.js</td><td>啟動備份／<code>.bak</code> 還原（確認對話框 → 切平台 → 載入 → 標髒 → <code>clearBackup</code>）</td></tr>
+        <tr><td><code>_restoreReloadSnapshot()</code></td><td>app/lifecycle.js</td><td>reload 快照還原（async；切平台 → 載入 → 還原唯讀/檔名/dirty → 重建 minimap）</td></tr>
+        <tr><td><code>_describeCodegenError(e)</code></td><td>app/workspace.js</td><td>產碼例外降噪（未註冊積木 → 友善訊息；其餘 → null）</td></tr>
+    </table>
+
+    <h2>6. 回歸測試</h2>
+    <p><code>ui/src/app/platform_restore.test.mjs</code>（3 測）：</p>
+    <ul>
+        <li><code>ensurePlatformForXml</code>：平台不同才切換／相同不切／無 <code>platform</code> 屬性與 <code>null</code> 不炸。</li>
+        <li><code>checkAutoBackup</code>：<b>順序契約</b> — <code>setPlatformUI</code> 必須排在 <code>domToWorkspace</code> 之前（舊碼會 FAIL）。</li>
+        <li><code>_describeCodegenError</code>：未註冊積木給友善訊息（型別去重）、已註冊型別與無關錯誤回 <code>null</code>。</li>
+    </ul>
+    <pre>cd ui; node --test "src/app/*.test.mjs"</pre>
+    <p>測試載入法同 <a href="Framework_API_Index.html">Framework_API_Index.html</a> §7 診斷手法（<code>new Function(fs.readFileSync(...))()</code> + <code>globalThis</code> stub <code>window</code>/<code>Blockly</code>/<code>CocoyaBridge</code>）。</p>
+
+    <h2>7. 待辦 / 注意</h2>
+    <ul>
+        <li>使用者若已把「空積木」存進專案，該積木的 field 值無法救回（開啟後需重設，下拉會停在第一項）。</li>
+        <li><code>setPlatformUI</code> 的 toolbox 重建為 fire-and-forget（<code>updateToolbox</code> 同步；搜尋索引 500ms 後重建），與平台正確性無關；但呼叫端若要緊接著載入積木，必須 <code>await</code>。</li>
+        <li>專案是否可用「目前平台」開啟，仍屬使用者選擇（例如刻意在 MicroPython 平台開 PC 專案）；此時由 <code>_describeCodegenError</code> 給出可讀提示，而非靜默失敗。</li>
+    </ul>
+</body>
+</html>

@@ -230,6 +230,7 @@
     "MSG_ERASE_FS_CONFIRM": "【警告】：這將強制終止目前的程式並清空 MCU 內的所有使用者檔案（main.py 等），資料將消失且無法復原！\n\n確定要執行深度修復嗎？",
     "MSG_NO_TRAINING_RESULT": "尚無訓練結果，請先執行訓練。",
     "MSG_RELOAD_HOME_CONFIRM": "重新載入將回到啟動首頁，目前未儲存的變更將遺失。確定嗎？",
+    "MSG_CODEGEN_UNKNOWN_BLOCK": "此專案含有目前平台未載入的積木：%1\n\n可能原因：專案平台與目前啟動平台不符（PC / MicroPython）。\n請以「開啟專案」重新載入該專案，或確認專案內容後再執行。",
     "MSG_TRAINING_RESULT_TITLE": "訓練結果",
     "MSG_TRAINING_RESULT_PROJECT": "專案名稱",
     "MSG_TRAINING_RESULT_ACCURACY": "驗證準確率",

@@ -59,7 +59,7 @@ Blockly.Msg["AI_SYNC_SKIP"] = "略過 (使用遠端資料)";
 Blockly.Msg["AI_MODEL_INIT"] = "初始化模型";
 Blockly.Msg["AI_MODEL_INIT_TOOLTIP"] = "載入訓練好的 TFLite 模型用於推論\n\n欄位說明：\n• 模型路徑：.tflite 模型檔案的路徑\n  支援相對/絕對路徑\n  例如：model/classifier_model\n• 類型：任務類型（分類器/偵測器/循線/表格）\n  決定使用的推論引擎\n\n注意事項：\n• 自動載入對應的標籤檔\n• 標籤檔案命名：{model name}_labels.txt\n• 模型檔案命名：{model name}.tflite\n• 回傳模型物件用於推論";
 Blockly.Msg["AI_MODEL_PREDICT"] = "推論 %1";
-Blockly.Msg["AI_MODEL_PREDICT_TOOLTIP"] = "對影像幀執行推論\n\n輸入：\n• FRAME：影像幀（來自 OpenCV 的 numpy 陣列）\n\n輸出：\n• 通用推論結果字典（依任務類型包含不同欄位）\n  - 分類器：{type, label, confidence}\n  - 偵測器：{type, objects: [{label, confidence, bbox}]}\n  - 循線：{type, direction, confidence}\n  - 表格：{type, prediction, confidence}\n\n使用方式：\n• 使用「取得標籤」/「取得信心度」/「取得邊界框」/「取得方向」\n  等積木從結果中提取特定數值";
+Blockly.Msg["AI_MODEL_PREDICT_TOOLTIP"] = "對影像幀執行推論\n\n輸入：\n• FRAME：影像幀（來自 OpenCV 的 numpy 陣列）\n\n輸出：\n• 通用推論結果字典（依任務類型包含不同欄位）\n  - 分類器：{type, label, confidence}\n  - 偵測器：{type, objects: [{label, confidence, bbox}]}\n  - 循線：{type, line: (x1,y1,x2,y2), offset, angle, direction, confidence}\n  - 表格：{type, prediction, confidence}\n\n使用方式：\n• 使用「取得標籤」/「取得信心度」/「取得邊界框」/「取得方向」\n  等積木從結果中提取特定數值";
 
 // Extraction blocks
 Blockly.Msg["AI_GET_LABEL"] = "取得標籤 %1";
@@ -73,3 +73,17 @@ Blockly.Msg["AI_GET_DIRECTION_TOOLTIP"] = "從循線結果中提取方向\n\n輸
 
 Blockly.Msg["AI_GET_BBOX_CENTER"] = "取得邊界框中心點 %1";
 Blockly.Msg["AI_GET_BBOX_CENTER_TOOLTIP"] = "從偵測結果中計算邊界框的中心點座標\n\n輸入：\n• RESULT：推論結果字典（偵測器類型）\n\n輸出：\n• Tuple (cx, cy)：中心點座標（0~1 比例）\n  若無法取得則回傳 (0, 0)\n\n用途：\n• 雲台追蹤：計算目標中心與畫面中心的偏移量\n• 控制伺服馬達轉向目標";
+
+// 循線（line_follower）解析積木（2026-09-19）
+Blockly.Msg["AI_GET_LINE"] = "取得循線線段 %1";
+Blockly.Msg["AI_GET_LINE_TOOLTIP"] = "從循線推論結果中提取線段端點\n\n輸入：\n• RESULT：推論結果字典（循線類型）\n\n輸出：\n• Tuple (x1, y1, x2, y2)：線段兩端點（0~1 比例座標，與資料集標註同一座標系）\n  若無法取得則回傳 (0, 0, 0, 0)\n\n注意：\n• 端點順序＝標註時的點擊順序；模型採「線段端點回歸」（兩點），\n  因此同時擁有「起點（近端）」與「終點（遠端）」資訊";
+Blockly.Msg["AI_GET_LINE_END"] = "取得循線線段 %1 的 %2";
+Blockly.Msg["AI_GET_LINE_END_TOOLTIP"] = "取得循線線段的單一端點座標值\n\n輸入：\n• RESULT：推論結果字典（循線類型）\n• 端點：端點1 X / 端點1 Y / 端點2 X / 端點2 Y\n\n輸出：\n• 數字：端點座標（0~1 比例）\n  若無法取得則回傳 0.0\n\n用途：\n• 搭配數學積木自行計算橫向偏移或線的斜率";
+Blockly.Msg["AI_LINE_END_X1"] = "端點1 X";
+Blockly.Msg["AI_LINE_END_Y1"] = "端點1 Y";
+Blockly.Msg["AI_LINE_END_X2"] = "端點2 X";
+Blockly.Msg["AI_LINE_END_Y2"] = "端點2 Y";
+Blockly.Msg["AI_GET_LINE_OFFSET"] = "取得循線橫向偏移 %1";
+Blockly.Msg["AI_GET_LINE_OFFSET_TOOLTIP"] = "取得線的近端相對畫面中央的橫向偏移\n\n輸入：\n• RESULT：推論結果字典（循線類型）\n\n輸出：\n• 數字：-0.5 ~ 0.5（正值 = 線在畫面右側，負值 = 左側，0 = 置中）\n\n說明：\n• 近端 = 兩端點中 Y 較大者（畫面上較下方 = 離車較近）\n• 適合當作循跡的「比例（P）項」";
+Blockly.Msg["AI_GET_LINE_ANGLE"] = "取得循線方向角 %1";
+Blockly.Msg["AI_GET_LINE_ANGLE_TOOLTIP"] = "取得線的方向角（由近端指向遠端）\n\n輸入：\n• RESULT：推論結果字典（循線類型）\n\n輸出：\n• 數字：角度（度）；0 = 正前方，正值 = 順時針（線往右前方），負值 = 逆時針\n\n說明：\n• 與 HuskyLens 的角度語意一致，可直接沿用同一套控制器\n• 適合當作循跡的「預測/阻尼（D）項」，可避免急彎切內側";

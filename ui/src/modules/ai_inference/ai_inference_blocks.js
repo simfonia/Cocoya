@@ -248,3 +248,75 @@ Blockly.Blocks["py_ai_get_bbox_center"] = {
     this.setOutput(true, "Tuple");
   }
 };
+
+// === 循線（line_follower）解析積木（2026-09-19 H5）===
+
+Blockly.Blocks["py_ai_get_line"] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["AI_GET_LINE"],
+      "args0": [
+        { "type": "input_value", "name": "RESULT" }
+      ],
+      "colour": Blockly.Msg["COLOUR_AI_INFERENCE"],
+      "tooltip": Blockly.Msg["AI_GET_LINE_TOOLTIP"],
+      "helpUrl": "py_ai_get_line"
+    });
+    this.setOutput(true, "Tuple");
+  }
+};
+
+Blockly.Blocks["py_ai_get_line_end"] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["AI_GET_LINE_END"],
+      "args0": [
+        { "type": "input_value", "name": "RESULT" },
+        {
+          "type": "field_dropdown",
+          "name": "END",
+          "options": [
+            [Blockly.Msg["AI_LINE_END_X1"], "x1"],
+            [Blockly.Msg["AI_LINE_END_Y1"], "y1"],
+            [Blockly.Msg["AI_LINE_END_X2"], "x2"],
+            [Blockly.Msg["AI_LINE_END_Y2"], "y2"]
+          ]
+        }
+      ],
+      "colour": Blockly.Msg["COLOUR_AI_INFERENCE"],
+      "tooltip": Blockly.Msg["AI_GET_LINE_END_TOOLTIP"],
+      "helpUrl": "py_ai_get_line_end"
+    });
+    this.setOutput(true, "Number");
+  }
+};
+
+Blockly.Blocks["py_ai_get_line_offset"] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["AI_GET_LINE_OFFSET"],
+      "args0": [
+        { "type": "input_value", "name": "RESULT" }
+      ],
+      "colour": Blockly.Msg["COLOUR_AI_INFERENCE"],
+      "tooltip": Blockly.Msg["AI_GET_LINE_OFFSET_TOOLTIP"],
+      "helpUrl": "py_ai_get_line_offset"
+    });
+    this.setOutput(true, "Number");
+  }
+};
+
+Blockly.Blocks["py_ai_get_line_angle"] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["AI_GET_LINE_ANGLE"],
+      "args0": [
+        { "type": "input_value", "name": "RESULT" }
+      ],
+      "colour": Blockly.Msg["COLOUR_AI_INFERENCE"],
+      "tooltip": Blockly.Msg["AI_GET_LINE_ANGLE_TOOLTIP"],
+      "helpUrl": "py_ai_get_line_angle"
+    });
+    this.setOutput(true, "Number");
+  }
+};

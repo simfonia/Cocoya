@@ -96,34 +96,59 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
     },
 
     /**
+     * 確保「XML 所屬平台」已切換（積木定義與產生器皆已載入）後才載入積木。
+     *
+     * ★ 鐵律（2026-09-22 踩坑）：任何 `Blockly.Xml.domToWorkspace` 之前，必須先切換平台。
+     *   模組依平台載入（core_manifest.json 的 platforms，如 ai_inference 僅 PC），
+     *   若在錯誤平台下載入積木，未註冊的積木會被 Blockly 建成「空積木」（無 input／無 field，
+     *   console 只留一行 "Block definiton for xxx not found" 警告）；之後切換平台補上產生器
+     *   再產碼，就會在 Blockly.Python.valueToCode 爆
+     *   `ReferenceError: Input "RESULT" doesn't exist on "py_ai_get_line_end"`。
+     *   正確順序見 loadWorkspace（先 setPlatformUI 再 domToWorkspace）。
+     *
+     * @param {Element} dom Blockly XML DOM（讀取其 platform 屬性）
+     * @returns {Promise<void>}
+     */
+    ensurePlatformForXml: async function(dom) {
+        let platform = null;
+        try { platform = (dom && dom.getAttribute) ? dom.getAttribute('platform') : null; } catch (e) { platform = null; }
+        if (platform && platform !== this.currentPlatform) {
+            await this.setPlatformUI(platform);
+        }
+    },
+
+    /**
      * 檢查並恢復自動備份
+     * @param {string} backupXml 後端提供的備份 XML（含 platform 屬性）
      */
     checkAutoBackup: async function(backupXml) {
         if (!backupXml || backupXml.trim().length === 0) return;
         
         setTimeout(() => {
             const msg = Blockly.Msg['MSG_RECOVER_BACKUP'] || '偵測到上次未儲存的變更，是否要恢復？';
-            Blockly.dialog.confirm(msg, (ok) => {
+            Blockly.dialog.confirm(msg, async (ok) => {
                 if (ok) {
-                    Blockly.Events.disable();
                     try {
-                        this.workspace.clear();
                         const dom = Blockly.utils.xml.textToDom(backupXml);
-                        Blockly.Xml.domToWorkspace(dom, this.workspace);
-                        const platform = dom.getAttribute('platform');
-                        if (platform) this.setPlatformUI(platform);
-                        this.triggerCodeUpdate();
-                        this.setDirty(true);
-                        
-                        if (this.minimap) {
-                            this.minimap._isPaused = false;
-                            this.refreshMinimap();
+                        // ★ 先切平台再載入積木（順序不可顛倒；備份可能來自另一平台的專案）
+                        await this.ensurePlatformForXml(dom);
+                        Blockly.Events.disable();
+                        try {
+                            this.workspace.clear();
+                            Blockly.Xml.domToWorkspace(dom, this.workspace);
+                            this.triggerCodeUpdate();
+                            this.setDirty(true);
+                            
+                            if (this.minimap) {
+                                this.minimap._isPaused = false;
+                                this.refreshMinimap();
+                            }
+                            window.CocoyaBridge.send('clearBackup');
+                        } finally {
+                            Blockly.Events.enable();
                         }
-                        window.CocoyaBridge.send('clearBackup');
                     } catch (e) {
                         console.error('[App] Recovery failed:', e);
-                    } finally {
-                        Blockly.Events.enable();
                     }
                 } else {
                     window.CocoyaBridge.send('rejectRecovery');

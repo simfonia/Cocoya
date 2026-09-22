@@ -324,10 +324,71 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
      * @param {boolean} forceUI 是否無視輸入狀態強制更新 UI (預覽與高亮)
      * @returns {string} 清理後的程式碼
      */
+    /**
+     * Zombie 陷阱（2026-09-22 續修）：攔截主工作區的 newBlock，捕捉「定義未註冊就建積木」
+     * 的當下呼叫堆。空積木的錯誤現場（valueToCode）與犯案現場（newBlock）時間分離，
+     * 只有在建立當下留下證據才能定位真正的載入路徑。
+     * @param {Blockly.WorkspaceSvg} ws 主工作區
+     */
+    _installZombieTrap: function(ws) {
+        if (!ws || ws.__zombieTrapInstalled) return;
+        ws.__zombieTrapInstalled = true;
+        this._zombieTraces = [];
+        const app = this;
+        const orig = ws.newBlock.bind(ws);
+        ws.newBlock = function(type, id) {
+            if (typeof Blockly === 'undefined' || !Blockly.Blocks[type]) {
+                const trace = {
+                    type: type,
+                    platform: app.currentPlatform,
+                    time: new Date().toISOString(),
+                    stack: (new Error().stack || '').split('\n').slice(1, 9).join('\n')
+                };
+                (app._zombieTraces = app._zombieTraces || []).push(trace);
+                console.error('[Zombie-Trap] 未註冊型別建立積木！type=' + type +
+                    ' platform=' + trace.platform + ' at ' + trace.time + '\n' + trace.stack);
+            }
+            return orig(type, id);
+        };
+    },
+
+    /**
+     * Zombie 自癒（2026-09-22 續修）：產碼前掃描，若積木型別「現在已註冊」但實例
+     * 缺 input（空積木，定義是在建立之後才載入），重跑定義 init 補回 input，
+     * 讓產碼恢復運作（欄位值/連線在建立當下已遺失，無法復原，只能補回結構）。
+     * @returns {boolean} 是否有修復任何積木
+     */
+    _repairZombieBlocks: function() {
+        let repaired = false;
+        try {
+            if (!this.workspace || typeof Blockly === 'undefined') return false;
+            this.workspace.getAllBlocks(false).forEach((b) => {
+                try {
+                    const def = Blockly.Blocks[b.type];
+                    if (!def || typeof def.init !== 'function') return;
+                    if (b.inputList && b.inputList.length > 0) return; // 正常積木
+                    def.init.call(b);
+                    if (b.inputList && b.inputList.length > 0) {
+                        b.initSvg();
+                        b.render();
+                        repaired = true;
+                        console.warn('[Workspace] Zombie block repaired:', b.type, b.id,
+                            (this._zombieTraces || []).filter((t) => t.type === b.type).map((t) => t.stack));
+                    }
+                } catch (err) {
+                    console.error('[Workspace] Zombie repair failed:', b.type, err);
+                }
+            });
+        } catch (e) { /* 掃描失敗不阻擋產碼 */ }
+        if (repaired) this.setDirty(true);
+        return repaired;
+    },
+
     triggerCodeUpdateSync: function(forceUI = false) {
         try {
             if (!this.workspace || typeof Blockly === 'undefined') return this.lastCleanCode;
             
+            this._repairZombieBlocks();
             let code = Blockly.Python.workspaceToCode(this.workspace);
             // 徹底清理：濾掉變數宣告預設值、行尾 ID 註解與運算式隱形標記
             code = code.replace(/^[a-zA-Z_][a-zA-Z0-9_]* = None(  # ID:.*)?\n/mg, '');
@@ -347,8 +408,46 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             return this.lastCleanCode;
         } catch (e) {
             console.error('[Workspace] Sync Code Update failed:', e);
-            alert('Blockly to Python Error: ' + e.message + '\n' + e.stack);
+            const hint = this._describeCodegenError(e);
+            alert(hint || ('Blockly to Python Error: ' + e.message + '\n' + e.stack));
             return this.lastCleanCode;
+        }
+    },
+
+    /**
+     * 將產碼例外轉為可行動的提示（2026-09-22，回傳 null 表示無更好訊息，交回原始 alert）。
+     *
+     * 典型情境：專案 XML 的平台與目前平台不符（多視窗共用 localStorage／預設 MicroPython），
+     * 該平台模組未載入 → 積木被建成「空積木」→ 之後補上產生器產碼即爆
+     * `Input "RESULT" doesn't exist on "py_ai_get_line_end"` 這類對使用者毫無意義的訊息。
+     * 此處改為「列出目前平台未註冊的積木型別 + 平台提示」；原始錯誤仍完整輸出 console。
+     *
+     * 注意：修掉「平台未先切換就載入積木」的根因在 CocoyaApp.ensurePlatformForXml
+     *      （persistence.checkAutoBackup / lifecycle._restoreReloadSnapshot）；本函式僅為
+     *      殘餘情境（例如使用者手動把 PC 專案在 MicroPython 平台開啟）的降噪。
+     * @param {Error} e 產碼時拋出的例外
+     * @returns {string|null} 友善訊息或 null
+     */
+    _describeCodegenError: function(e) {
+        try {
+            const raw = (e && e.message) ? e.message : String(e);
+            const m = raw.match(/Input "[^"]+" doesn't exist on "([^"]+)"/) ||
+                      raw.match(/does not know how to generate code for block type "([^"]+)"/);
+            if (!m || !this.workspace || typeof Blockly === 'undefined') return null;
+            // 該型別有註冊卻缺 input → 不是平台問題（真正的產生器/積木契約錯誤）→ 不降噪
+            if (Blockly.Blocks[m[1]]) return null;
+
+            const types = [];
+            this.workspace.getAllBlocks(false).forEach((b) => {
+                if (!Blockly.Blocks[b.type] && types.indexOf(b.type) === -1) types.push(b.type);
+            });
+            if (types.length === 0) types.push(m[1]);
+
+            const tpl = Blockly.Msg['MSG_CODEGEN_UNKNOWN_BLOCK'] ||
+                '此專案含有目前平台未載入的積木：%1\n\n可能原因：專案平台與目前平台不符（PC / MicroPython）。\n請以「開啟專案」重新載入該專案，或確認專案內容。';
+            return tpl.replace('%1', types.join(', '));
+        } catch (err) {
+            return null;
         }
     }
 });

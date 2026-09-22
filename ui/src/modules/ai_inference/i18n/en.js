@@ -59,7 +59,7 @@ Blockly.Msg["AI_SYNC_SKIP"] = "skip (use remote data)";
 Blockly.Msg["AI_MODEL_INIT"] = "init model";
 Blockly.Msg["AI_MODEL_INIT_TOOLTIP"] = "Load a trained TFLite model for inference\n\nField descriptions:\n• Model Path: Path to the .tflite model file\n  Supports relative/absolute paths\n  e.g. model/classifier_model\n• Type: Task type (classifier/detector/line_follower/table)\n  Determines the inference engine to use\n\nNotes:\n• Automatically loads corresponding labels file\n• Labels file naming: {model name}_labels.txt\n• Model file naming: {model name}.tflite\n• Returns a model object for prediction";
 Blockly.Msg["AI_MODEL_PREDICT"] = "predict %1";
-Blockly.Msg["AI_MODEL_PREDICT_TOOLTIP"] = "Run inference on an image frame\n\nInput:\n• FRAME: Image frame (numpy array from OpenCV)\n\nOutput:\n• InferenceResult dict with task-specific fields\n  - classifier: {type, label, confidence}\n  - detector: {type, objects: [{label, confidence, bbox}]}\n  - line_follower: {type, direction, confidence}\n  - table: {type, prediction, confidence}\n\nUsage:\n• Use get_label / get_confidence / get_bbox / get_direction\n  to extract specific values from the result";
+Blockly.Msg["AI_MODEL_PREDICT_TOOLTIP"] = "Run inference on an image frame\n\nInput:\n• FRAME: Image frame (numpy array from OpenCV)\n\nOutput:\n• InferenceResult dict with task-specific fields\n  - classifier: {type, label, confidence}\n  - detector: {type, objects: [{label, confidence, bbox}]}\n  - line_follower: {type, line: (x1,y1,x2,y2), offset, angle, direction, confidence}\n  - table: {type, prediction, confidence}\n\nUsage:\n• Use get_label / get_confidence / get_bbox / get_direction\n  to extract specific values from the result";
 
 // Extraction blocks
 Blockly.Msg["AI_GET_LABEL"] = "get label %1";
@@ -73,3 +73,17 @@ Blockly.Msg["AI_GET_DIRECTION_TOOLTIP"] = "Extract the direction from a line fol
 
 Blockly.Msg["AI_GET_BBOX_CENTER"] = "get bbox center %1";
 Blockly.Msg["AI_GET_BBOX_CENTER_TOOLTIP"] = "Calculate the center point of the bounding box from a detection result\n\nInput:\n• RESULT: Inference result dict (detector type)\n\nOutput:\n• Tuple (cx, cy): Center coordinates (0~1 ratio)\n  Returns (0, 0) if not available\n\nUsage:\n• Pan-tilt tracking: Calculate offset between target center and frame center\n• Control servo motors to track the target";
+
+// Line follower extraction blocks (2026-09-19)
+Blockly.Msg["AI_GET_LINE"] = "get line segment %1";
+Blockly.Msg["AI_GET_LINE_TOOLTIP"] = "Extract the line segment endpoints from a line-follower result\n\nInput:\n• RESULT: Inference result dict (line_follower type)\n\nOutput:\n• Tuple (x1, y1, x2, y2): both endpoints (0~1 ratio, same coordinate space as the dataset annotation)\n  Returns (0, 0, 0, 0) if not available\n\nNote:\n• Endpoint order follows the annotation click order; the model does endpoint\n  regression (two points), so both the near point and the far point are available";
+Blockly.Msg["AI_GET_LINE_END"] = "get %2 of line segment %1";
+Blockly.Msg["AI_GET_LINE_END_TOOLTIP"] = "Get a single endpoint coordinate of the line segment\n\nInput:\n• RESULT: Inference result dict (line_follower type)\n• Endpoint: point1 X / point1 Y / point2 X / point2 Y\n\nOutput:\n• Number: endpoint coordinate (0~1 ratio)\n  Returns 0.0 if not available\n\nUsage:\n• Combine with math blocks to compute lateral offset or line slope";
+Blockly.Msg["AI_LINE_END_X1"] = "point1 X";
+Blockly.Msg["AI_LINE_END_Y1"] = "point1 Y";
+Blockly.Msg["AI_LINE_END_X2"] = "point2 X";
+Blockly.Msg["AI_LINE_END_Y2"] = "point2 Y";
+Blockly.Msg["AI_GET_LINE_OFFSET"] = "get line lateral offset %1";
+Blockly.Msg["AI_GET_LINE_OFFSET_TOOLTIP"] = "Get the lateral offset of the line's near point relative to frame center\n\nInput:\n• RESULT: Inference result dict (line_follower type)\n\nOutput:\n• Number: -0.5 to 0.5 (positive = line is on the right, negative = left, 0 = centered)\n\nNotes:\n• The near point is the endpoint with the larger Y (lower in the image = closer to the car)\n• Use it as the proportional (P) term of line following";
+Blockly.Msg["AI_GET_LINE_ANGLE"] = "get line heading angle %1";
+Blockly.Msg["AI_GET_LINE_ANGLE_TOOLTIP"] = "Get the line heading angle (from the near point toward the far point)\n\nInput:\n• RESULT: Inference result dict (line_follower type)\n\nOutput:\n• Number: angle in degrees; 0 = straight ahead, positive = clockwise (line goes right), negative = counterclockwise\n\nNotes:\n• Same semantics as the HuskyLens angle, so the same controller can be reused\n• Use it as the derivative (D) term to avoid cutting corners";

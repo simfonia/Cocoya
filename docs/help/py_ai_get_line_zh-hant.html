@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>取得循線線段 - py_ai_get_line 積木說明</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 20px; max-width: 800px; margin: 0 auto; }
+  h1 { color: #9C27B0; border-bottom: 2px solid #9C27B0; padding-bottom: 8px; }
+  .section { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .code { background: #f8f8f8; padding: 12px; border-radius: 4px; font-family: Consolas, monospace; font-size: 13px; overflow-x: auto; }
+  .note { background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px 14px; margin: 12px 0; border-radius: 0 4px 4px 0; }
+</style>
+</head>
+<body>
+  <h1>📏 取得循線線段積木 (py_ai_get_line)</h1>
+  <div class="section">
+    <h2>功能說明</h2>
+    <p>從循線（line_follower）推論結果中提取線段的兩個端點。</p>
+    <p>輸入：推論結果（py_ai_model_predict 的輸出，需為 line_follower 類型）</p>
+    <p>輸出：Tuple (x1, y1, x2, y2) — 兩端點的歸一化比例座標（0~1，與資料集標註同一座標系）。</p>
+  </div>
+  <div class="section">
+    <h2>為什麼有兩個端點？</h2>
+    <p>Cocoya 的循線標註是「起點 → 終點」兩點（Dataset Manager 的線段標註），訓練模板（<code>line_follower_train.py</code>）以線段端點回歸（Dense(4)）輸出 4 個值，因此模型同時提供：</p>
+    <ul>
+      <li><b>近端</b>（畫面上 Y 較大者）：可用來判斷車子目前偏離線多少（橫向誤差）</li>
+      <li><b>遠端</b>：可用來判斷線往哪裡彎（方向／預測）</li>
+    </ul>
+    <p>兩者搭配即可做出「不切西瓜」的循跡控制（P 項來自近端偏移、D 項來自兩點連線的角度）。</p>
+  </div>
+  <div class="section">
+    <h2>使用範例</h2>
+    <div class="code">
+result = predict(frame)        <span style="color:#888;"># 推論</span><br>
+x1, y1, x2, y2 = get_line(result)   <span style="color:#888;"># 解包兩端點</span><br>
+cv2.line(frame, (int(x1*w), int(y1*h)), (int(x2*w), int(y2*h)), (0, 255, 0), 3)  <span style="color:#888;"># 畫線</span></div>
+  </div>
+  <div class="section">
+    <div class="note">💡 此積木僅適用於「循線 (line_follower)」任務類型。若只想取單一座標值，請使用「取得循線線段的 ⋯」積木。</div>
+  </div>
+</body>
+</html>
