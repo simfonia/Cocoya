@@ -3,6 +3,7 @@ import json
 import time
 import os
 import csv
+import shutil
 import threading
 import importlib
 import tempfile
@@ -57,6 +58,53 @@ class DatasetSidecar:
             except Exception:
                 self.feature = None
         return self.feature
+    @staticmethod
+    def _src_abs_in_staging(source_dir, rel_path):
+        rel = (rel_path or '').replace('\\', '/').lstrip('/')
+        if not rel or os.path.isabs(rel) or '..' in rel.split('/'):
+            return None
+        p = os.path.normpath(os.path.join(source_dir, rel))
+        if not p.startswith(os.path.normpath(source_dir) + os.sep):
+            return None
+        return p
+    @staticmethod
+    def _flatten_images_for_training(source_dir, samples_list):
+        imgs = os.path.join(source_dir, 'images')
+        os.makedirs(imgs, exist_ok=True)
+        flat_map = {}
+        copied, missing = 0, 0
+        for s in samples_list:
+            src_p = DatasetSidecar._src_abs_in_staging(source_dir, s.get('image_path', ''))
+            if not src_p:
+                continue
+            if not os.path.isfile(src_p):
+                missing += 1
+                continue
+            rel = (s.get('image_path', '') or '').replace('\\', '/').lstrip('/')
+            base = os.path.basename(rel)
+            stem, ext = os.path.splitext(base)
+            flat = base
+            if flat in flat_map and flat_map[flat] != src_p:
+                parent = rel.split('/')[0] if '/' in rel else ''
+                if parent and parent != base:
+                    cand = parent + '_' + base
+                else:
+                    cand = stem + '_2' + ext
+                if cand in flat_map and flat_map[cand] != src_p:
+                    i = 3
+                    while (stem + '_' + str(i) + ext) in flat_map:
+                        i += 1
+                    cand = stem + '_' + str(i) + ext
+                flat = cand
+            flat_map[flat] = src_p
+            dst = os.path.join(imgs, flat)
+            if not os.path.exists(dst):
+                shutil.copy2(src_p, dst)
+                copied += 1
+        print('[Sidecar Log] images/ flat: copy %d, missing %d' % (copied, missing), file=sys.stderr)
+        return flat_map
+
+
 
     def _monitor_camera(self):
         """背景監控攝影機狀態，若手動關閉則主動回報"""
@@ -200,7 +248,12 @@ class DatasetSidecar:
                         from dataset_io import DatasetIO
                         if not os.path.exists(source_dir):
                             raise Exception(f"Source directory does not exist: {source_dir}")
-                        
+
+                        # 2026-09-22 OD 對齊：偵測/循跡分支會把「非訓練佈局的頂層
+                        # 資料夾」（即 DM 工作用 <label>/ 原始副本）加入此清單，
+                        # ZIP 只留 images/+labels/（lines/）+dataset.json+labels.txt；
+                        # 磁碟不刪（staging 為 temp；VSIX 舊路徑直接對 source_dir 打包亦安全）。
+                        zip_exclude = set()
                         # 檢查是否有 dataset.json，若有 annotations 則寫入 YOLO labels
                         spec_path = os.path.join(source_dir, "dataset.json")
                         if os.path.exists(spec_path):
@@ -211,6 +264,13 @@ class DatasetSidecar:
                             samples = spec.get("data_source", {}).get("samples", [])
                             
                             if project_type == "object_detection" and samples:
+                                flat_map = DatasetSidecar._flatten_images_for_training(source_dir, samples)
+                                mpath = os.path.join(source_dir, "export_manifest.json")
+                                relmap = {}
+                                for k in sorted(flat_map.keys()):
+                                    relmap[k] = os.path.relpath(flat_map[k], source_dir).replace(chr(92), "/")
+                                with open(mpath, "w", encoding="utf-8") as f:
+                                    json.dump(relmap, f, ensure_ascii=False, indent=2)
                                 labels_dir = os.path.join(source_dir, "labels")
                                 os.makedirs(labels_dir, exist_ok=True)
                                 
@@ -226,17 +286,29 @@ class DatasetSidecar:
                                     print(f"[Sidecar Log] Wrote labels.txt with {len(sorted_labels)} classes", file=sys.stderr)
                                 
                                 # 為每張影像寫入 YOLO label 檔案
+                                skipped_neg = 0
+                                skipped_empty = 0
                                 for sample in samples:
                                     image_path = sample.get("image_path", "")
                                     annotations = sample.get("annotations", [])
                                     
                                     if not image_path or not annotations:
+                                        skipped_empty += 1
                                         continue
+                                    src_abs = DatasetSidecar._src_abs_in_staging(source_dir, image_path)
+                                    stem = None
+                                    if src_abs is not None:
+                                        for flat, pp in flat_map.items():
+                                            if pp == src_abs:
+                                                stem = os.path.splitext(flat)[0]
+                                                break
+                                    if stem is None:
+                                        skipped_empty += 1
+                                        continue
+                                    label_filepath = os.path.join(labels_dir, stem + ".txt")
+                                    wrote = 0
+                                    # 配對檔名已由扁平化決定
                                     
-                                    # 取得影像檔名（不含副檔名）
-                                    img_filename = os.path.basename(image_path)
-                                    label_filename = os.path.splitext(img_filename)[0] + ".txt"
-                                    label_filepath = os.path.join(labels_dir, label_filename)
                                     
                                     with open(label_filepath, 'w') as f:
                                         for ann in annotations:
@@ -250,9 +322,19 @@ class DatasetSidecar:
                                                 x, y, w, h = bbox[0], bbox[1], bbox[2], bbox[3]
                                                 cx = x + w / 2
                                                 cy = y + h / 2
+                                                if isinstance(class_id, int) and class_id < 0:
+                                                    skipped_neg += 1
+                                                    continue
                                                 f.write(f"{class_id} {cx:.6f} {cy:.6f} {w:.6f} {h:.6f}\n")
+                                                wrote += 1
+                                    if wrote == 0 and os.path.exists(label_filepath):
+                                        os.remove(label_filepath)
                                 
                                 print(f"[Sidecar Log] Wrote YOLO labels for {len(samples)} images", file=sys.stderr)
+                                if skipped_neg:
+                                    print("[Sidecar Log] warn: skip unclassified boxes", file=sys.stderr)
+                                if skipped_empty:
+                                    print("[Sidecar Log] unannotated or missing samples skipped", file=sys.stderr)
 
                             elif project_type in ("table", "feature") and samples:
                                 # M-T1：表格 → data.csv；M4：feature 同款分流 → data.csv
@@ -270,6 +352,7 @@ class DatasetSidecar:
                                     print(f"[Sidecar Log] 警告: 表格樣本超過 2000 筆上限，dataset.json 僅保留前 2000 筆，訓練資料亦以此為限", file=sys.stderr)
 
                             elif project_type == "line_following" and samples:
+                                flat_map = DatasetSidecar._flatten_images_for_training(source_dir, samples)
                                 # M-L1：循線 → lines/ 目錄（每張標註影像一個同名 .txt，一行 x1 y1 x2 y2 歸一化比例座標）
                                 lines_dir = os.path.join(source_dir, "lines")
                                 os.makedirs(lines_dir, exist_ok=True)
@@ -282,10 +365,16 @@ class DatasetSidecar:
                                     line = annotations[0].get("line")
                                     if not line or len(line) != 4:
                                         continue
-                                    img_filename = os.path.basename(sample.get("image_path", ""))
-                                    if not img_filename:
+                                    src_abs = DatasetSidecar._src_abs_in_staging(source_dir, sample.get("image_path", ""))
+                                    stem = None
+                                    if src_abs is not None:
+                                        for flat, pp in flat_map.items():
+                                            if pp == src_abs:
+                                                stem = os.path.splitext(flat)[0]
+                                                break
+                                    if stem is None:
                                         continue
-                                    txt_name = os.path.splitext(img_filename)[0] + ".txt"
+                                    txt_name = stem + ".txt"
                                     txt_path = os.path.join(lines_dir, txt_name)
                                     with open(txt_path, 'w', encoding='utf-8') as f:
                                         f.write(f"{line[0]:.6f} {line[1]:.6f} {line[2]:.6f} {line[3]:.6f}\n")
@@ -293,8 +382,24 @@ class DatasetSidecar:
                                 print(f"[Sidecar Log] Wrote lines/ for {written}/{total} images", file=sys.stderr)
                                 if total > 0 and written < total / 2:
                                     print(f"[Sidecar Log] 警告: 超過半數影像未標註線段（未標註 {total - written}/{total}），訓練資料量可能不足", file=sys.stderr)
-                        
-                        result_path = DatasetIO.export_dataset(source_dir, output_zip)
+
+                            # 2026-09-22：偵測/循跡 ZIP 去重——排除所有非訓練佈局的
+                            # 頂層資料夾（DM 工作用 <label>/ 副本；images/ labels/ lines/ 保留）。
+                            if project_type in ("object_detection", "line_following") and samples:
+                                keep = {"images", "labels", "lines"}
+                                for entry in os.listdir(source_dir):
+                                    full = os.path.join(source_dir, entry)
+                                    if os.path.isdir(full) and entry not in keep:
+                                        zip_exclude.add(entry)
+                                if zip_exclude:
+                                    print(f"[Sidecar Log] ZIP 排除冗餘原始標籤資料夾: {sorted(zip_exclude)}", file=sys.stderr)
+                       
+                        # 注意：只能打包一次——舊 code 曾殘留第二個無 exclude 的
+                        # export_dataset 呼叫，會把去重後的 ZIP 又覆寫回雙份佈局。
+                        result_path = DatasetIO.export_dataset(
+                            source_dir, output_zip,
+                            exclude_top_dirs=(sorted(zip_exclude) if zip_exclude else None)
+                        )
                         self.send_response(request_id, {"success": True, "path": result_path})
                     except Exception as e:
                         print(f"[Sidecar Log] Export failed: {str(e)}", file=sys.stderr)
@@ -552,6 +657,14 @@ class DatasetSidecar:
                                                 remote_files[parts[0]] = (int(parts[1]), float(parts[2]))
                                             except ValueError:
                                                 pass
+                                # 診斷（2026-09-23）：remote 清單恆 0 → smart 比對失效、每次全數上傳；
+                                # find 錯誤已被 2>/dev/null 吃掉，這裡把退出碼與「空清單」狀態顯形。
+                                if code_ls != 0 and not remote_files:
+                                    rt_log("[Remote] 遠端資料集清單讀取失敗 (find exit=" + str(code_ls) +
+                                           ")，將退化為全數上傳")
+                                elif not remote_files and local_files:
+                                    rt_log("[Remote] 遠端資料集清單為空（本地 " + str(len(local_files)) +
+                                           " 檔）——遠端目錄可能被清空，或 find 未回傳可解析輸出")
                                 if sync_mode == "always":
                                     changed = list(local_files.keys())
                                 else:
@@ -625,6 +738,14 @@ class DatasetSidecar:
                                             tmpl_remote[parts[0]] = (int(parts[1]), float(parts[2]))
                                         except ValueError:
                                             pass
+                            # 診斷（2026-09-23）：同資料集同步——遠端清單恆 0 時 smart 比對失效、
+                            # 每次全數上傳（結果仍正確但失去增量）；將退出碼與空清單狀態顯形。
+                            if code_lt != 0 and not tmpl_remote:
+                                rt_log("[Remote] 模板清單讀取失敗 (find exit=" + str(code_lt) +
+                                       ")，將退化為全數上傳")
+                            elif not tmpl_remote and tmpl_local:
+                                rt_log("[Remote] 遠端模板清單為空（本地 " + str(len(tmpl_local)) +
+                                       " 檔）——遠端 templates 目錄可能被清空，或 find 未回傳可解析輸出")
                             tmpl_changed = []
                             for rel, (sz, mt) in tmpl_local.items():
                                 r = tmpl_remote.get(rel)
@@ -686,6 +807,35 @@ class DatasetSidecar:
                                 script_rel = "serial/serial_train.py"
                             else:
                                 script_rel = "classifier/classifier_train.py"
+                            # --- 映像存在性檢查（2026-09-23）---
+                            # 各任務映像只是「相同 TF 執行環境」的別名（腳本走 bind mount /workspace）；
+                            # 遠端通常只建過 cocoya-train-classifier → 缺映像時自動 tag 補齊，
+                            # 避免 docker pull denied（exit 125，映像不存在也不該 pull 公有 repo）。
+                            c_img, _, _ = run('docker image inspect "' + docker_image + '"')
+                            if c_img != 0:
+                                c_base, _, _ = run('docker image inspect "cocoya-train-classifier"')
+                                if c_base == 0:
+                                    c_tag, o_tag, e_tag = run(
+                                        'docker tag "cocoya-train-classifier" "' + docker_image + '"')
+                                    if c_tag != 0:
+                                        self._remote_train = None  # 清狀態（早於 except，避免 stopTraining 誤判訓練中）
+                                        self.send_response(request_id, {
+                                            "success": False,
+                                            "error": "遠端建立映像別名失敗: " + (e_tag or o_tag or str(c_tag))
+                                        })
+                                        return
+                                    rt_log("[Remote] 遠端無映像 " + docker_image +
+                                           "，已由 cocoya-train-classifier 建立別名（共用 TF 執行環境）")
+                                else:
+                                    self._remote_train = None  # 同上：清狀態再回
+                                    self.send_response(request_id, {
+                                        "success": False,
+                                        "error": ("遠端找不到 Docker 映像 " + docker_image +
+                                                  " 與 cocoya-train-classifier。請先於遠端主機執行: "
+                                                  "docker build -t cocoya-train-classifier -f Dockerfile.train ."
+                                                  "（見 docs/docker_training_deployment_guide.html）")
+                                    })
+                                    return
                             epochs = hyperparams.get("epochs", 30)
                             batch_size = hyperparams.get("batchSize", 32)
                             lr = hyperparams.get("learningRate", 0.001)

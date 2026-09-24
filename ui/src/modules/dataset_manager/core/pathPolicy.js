@@ -111,3 +111,51 @@ export function validateDeletableDiskPath(diskPath, sourceFolderPath, expectedFi
     }
     return { ok: true, value: p };
 }
+
+/**
+ * OD 對齊 P3（2026-09-22）：匯出產物（images/ 扁平佈局）再匯入的標籤回填。
+ * scan 層只認「上一層資料夾名」→ images/ 下的圖會被誤標 label="images"。
+ * 本函式以 dataset.json samples[].label 為真相回填（key=basename；碰撞時保守回 null）。
+ * @param {Array<{path:string,label:string}>} images 後端掃描結果（原地改 label）
+ * @param {Array<{image_path:string,label:string}>} samples dataset.json 樣本
+ * @returns {{fixed:number, ambiguous:number}} 回填與碰撞統計
+ */
+export function relabelExportedImages(images, samples) {
+    if (!Array.isArray(images) || !Array.isArray(samples) || samples.length === 0) {
+        return { fixed: 0, ambiguous: 0 };
+    }
+    const byBase = new Map();
+    const dup = new Set();
+    samples.forEach((s) => {
+        const base = normalizePath(s && s.image_path).split('/').pop();
+        if (!base) return;
+        if (byBase.has(base)) { dup.add(base); return; }
+        byBase.set(base, (s && s.label != null) ? String(s.label) : null);
+    });
+    let fixed = 0;
+    let ambiguous = 0;
+    images.forEach((img) => {
+        if (!img || img.label !== 'images') return;
+        const base = normalizePath(img.path).split('/').pop();
+        if (dup.has(base) || !byBase.has(base)) { ambiguous++; return; }
+        const label = byBase.get(base);
+        if (label != null && label !== img.label) { img.label = label; fixed++; }
+    });
+    return { fixed, ambiguous };
+}
+
+/**
+ * OD 對齊 P3（2026-09-22）：image_path 比對鍵。
+ * 全路徑一致優先；匯出→再匯入（<label>/a.jpg vs images/a.jpg）時退回 basename。
+ * @returns {object|null} 命中的 sample，無則 null
+ */
+export function matchSampleForImage(loadedSamples, imgPath) {
+    if (!Array.isArray(loadedSamples)) return null;
+    const target = normalizePath(imgPath);
+    let hit = loadedSamples.find((s) => normalizePath(s && s.image_path) === target);
+    if (hit) return hit;
+    const base = target.split('/').pop();
+    if (!base) return null;
+    const cands = loadedSamples.filter((s) => normalizePath(s && s.image_path).split('/').pop() === base);
+    return cands.length === 1 ? cands[0] : null;
+}

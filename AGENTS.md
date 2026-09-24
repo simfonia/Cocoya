@@ -55,6 +55,13 @@ Cocoya 是一個針對 Python AI 視覺的教學工具。它透過 Blockly 產�
   - `table` / `feature` / `serial`（表格型資料集，schema 有 label 欄位）→ **依 label 欄位值分層**；回歸型（label 為連續數值）才允許隨機切，但需在報告註明。
   - 新模板實作時請重用既有分層切分函式，勿重新實作全域隨機切。
 
+### 訓練資料集雙佈局鐵律（C2，2026-09-23）
+影像系訓練模板（classifier/detector/line）的 `DATASET_DIR` **永遠填資料集根 `dataset/<名稱>`**，loader 內部自理佈局：
+- **落盤佈局**（DM 日常，拍完即練）：`<label>/*.jpg` ＋ `dataset.json`（標註真相）——classifier 本來就是掃子資料夾；detector/line 的 loader 已加 fallback（`images/` 不存在時走此路），**不需匯出/扁平化**。
+- **匯出佈局**（分享/第三方 YOLO 工具）：`images/` ＋ `labels/`（或 `lines/`）＋ `labels.txt`——`images/` 存在時優先走此路。
+- 標註 SSOT 永遠是 `dataset.json`；`labels/*.txt`／`lines/*.txt` 是匯出期衍生品。切勿在落盤區手工造 `images/`（會觸發佈局 A 而其 labels 不完整）。
+- 實作：`common/detector_dataset.py::_collect_dm_pairs`、`common/line_dataset.py::_collect_dm_lines`；e2e `temp_scripts/e2e_c2_check.py`。
+
 
 
 ### 前端狀態訊息慣例 (showStatusMessage)

@@ -241,6 +241,11 @@ fn stop_sidecar_inner(label: &str, processes: &Mutex<std::collections::HashMap<S
 }
 
 /// 匯出資料集：複製檔案到 staging → 透過 sidecar 打包 ZIP → 存檔對話框
+/// OD 對齊 P2（2026-09-22）：staging 取圖改為「canonical 優先＋source 合併」。
+/// 舊行為只 copy sourceFolderPath；live 模式該值為空 → ZIP 只有 dataset.json。
+/// 新行為：① canonical <專案根>/dataset/<名>（live 落盤真相）全量 copy；
+/// ② sourceFolderPath 若在 canonical 之外再 merge（file 匯入殘留圖不斷鏈）。
+/// 簽名不變（後端零 command 改動；spec_json 內仍帶 base_dir 做除錯）。
 #[tauri::command]
 pub async fn export_dataset(
     window: Window,
@@ -261,10 +266,19 @@ pub async fn export_dataset(
     }
     fs::create_dir_all(&temp_dir).map_err(|e| format!("Failed to create staging dir: {}", e))?;
 
-    // 3. 從 sourceFolderPath 複製影像到 staging
+    // 3. 從 canonical ＋ sourceFolderPath 合併影像到 staging
+    // canonical：目前 .xml 所在資料夾（錨定 SSOT）下的 dataset/<名>
+    if let Some(canonical) = state.current_paths.lock().unwrap()
+        .get(window.label())
+        .and_then(|p| p.parent().map(|d| d.join("dataset").join(project_name)))
+    {
+        if canonical.is_dir() {
+            crate::utils::copy_dir_merge(&canonical, &temp_dir)?;
+        }
+    }
     let source = std::path::Path::new(&source_folder_path);
-    if source.exists() && source.is_dir() {
-        copy_dir_recursive(source, &temp_dir)?;
+    if !source_folder_path.is_empty() && source.exists() && source.is_dir() {
+        crate::utils::copy_dir_merge(source, &temp_dir)?;
     }
 
     // 4. 寫入 dataset.json
@@ -430,8 +444,9 @@ pub async fn export_dataset(
     }
 }
 
-/// 遞迴複製目錄
-fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> Result<(), String> {
+/// 遞迴複製目錄（export 已改 copy_dir_merge；本函式現無呼叫，保留供未來覆寫語意用）
+#[allow(dead_code)]
+fn copy_dir_recursive_unused(src: &std::path::Path, dst: &std::path::Path) -> Result<(), String> {
     if let Ok(entries) = fs::read_dir(src) {
         for entry in entries.flatten() {
             let path = entry.path();
@@ -440,7 +455,7 @@ fn copy_dir_recursive(src: &std::path::Path, dst: &std::path::Path) -> Result<()
 
             if path.is_dir() {
                 fs::create_dir_all(&dst_path).map_err(|e| format!("Create dir failed: {}", e))?;
-                copy_dir_recursive(&path, &dst_path)?;
+                copy_dir_recursive_unused(&path, &dst_path)?;
             } else {
                 fs::copy(&path, &dst_path).map_err(|e| format!("Copy file failed: {}", e))?;
             }

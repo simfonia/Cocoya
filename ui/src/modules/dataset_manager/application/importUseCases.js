@@ -7,6 +7,7 @@
  */
 import { DatasetSpec } from '../spec.js';
 import { datasetBridge } from '../io/bridge.js';
+import { relabelExportedImages } from '../core/pathPolicy.js';
 
 /**
  * 純轉換：CSV/JSON 檔案內容 → 資料列陣列。
@@ -159,6 +160,27 @@ export function createImportUseCases(deps) {
             }
 
             // 初始化每張圖的 annotations 為獨立陣列（後端回傳的 images 沒有 annotations 欄位）
+            // OD 對齊 P3：匯出產物（images/ 扁平佈局）再匯入時，scan 層 label 會誤為 "images"；
+            // 若 canonical 內有 dataset.json（loadProgress 尚未回來，先用它同步讀一次），
+            // 以 samples[].label 回填；碰撞/缺檔保守保留原值，後續 applyLoadedProgress 再套標註。
+            let progressSpec = null;
+            try {
+                const { promise } = datasetBridge.request({
+                    command: 'datasetLoadProgress',
+                    payload: { folderPath: targetFolderPath },
+                    resultCommand: 'datasetLoadProgressResult',
+                    timeoutMs: 15000
+                });
+                const prog = await promise;
+                if (prog && prog.success && prog.hasProgress && prog.spec) progressSpec = prog.spec;
+            } catch (e) { progressSpec = null; }
+            const progressSamples = (progressSpec && progressSpec.data_source && progressSpec.data_source.samples) || [];
+            if (progressSamples.length) {
+                const stat = relabelExportedImages(importImages, progressSamples);
+                if (stat.fixed || stat.ambiguous) {
+                    console.log('[DatasetManager] relabelExportedImages:', stat);
+                }
+            }
             state.images = importImages.map(img => ({ ...img, annotations: img.annotations || [] }));
             state.tableRows = [];
             state.sourceFolderPath = targetFolderPath; // 儲存來源路徑以便匯出時同步（決策後一律為專案根 canonical 目錄）

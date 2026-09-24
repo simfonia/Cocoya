@@ -4,10 +4,10 @@ import { UIComponents } from './ui_components.js';
 import { UICanvas } from './ui_canvas.js';
 import { t } from './i18n.js';
 import { buildLabelMap as buildCoreLabelMap, nextLabelId as getNextLabelId } from './core/labelMap.js';
-import { calculateStats } from './core/stats.js';
+import { calculateStats, countAnnotatedImages } from './core/stats.js';
 import { createInitialDatasetState, DatasetStore } from './core/state.js';
 import { sanitizeProjectName, detectDatasetNameDrift } from './core/projectNaming.js';
-import { validateDeletableImagePath, validateDeletableDiskPath, normalizePath } from './core/pathPolicy.js';
+import { validateDeletableImagePath, validateDeletableDiskPath, normalizePath, matchSampleForImage } from './core/pathPolicy.js';
 import { escapeHtml } from './core/html.js';
 import { datasetBridge } from './io/bridge.js';
 import { createProgressUseCases } from './application/progressUseCases.js';
@@ -74,6 +74,8 @@ const labelManager = createLabelManager({
     onLabelMapChanged: () => { refreshLiveLabelOptions(); refreshThumbnailBadges(); },
     // Part B：改名後同步磁碟資料夾/檔名（live 落盤區；非阻塞）
     onLabelRenamed: (oldName, newName) => handleLabelRenamedOnDisk(oldName, newName),
+    // 2026-09-22：統計摘要（影像張數/已標註）SSOT——管理器重繪統計時同步帶入
+    buildStatsViewOptions: () => buildStatsViewOptions(),
     bridge: datasetBridge
 });
 
@@ -322,9 +324,11 @@ function applyLoadedProgress(spec) {
     }
 
     // 2. 依 image_path 將 annotations / label 套回重新掃描出的 images[]
+    // OD 對齊 P3：匯出產物（images/ 扁平佈局）再匯入時，全路徑對不上 →
+    // matchSampleForImage 退回 basename 唯一配對；碰撞時保守不套（回傳 null）
     let matched = 0;
     state.images.forEach((img) => {
-        const sample = loadedSamples.find((s) => normalizePath(s.image_path) === normalizePath(img.path));
+        const sample = matchSampleForImage(loadedSamples, img.path);
         if (sample) {
             img.annotations = Array.isArray(sample.annotations) ? sample.annotations.map((a) => ({ ...a })) : (img.annotations || []);
             if (sample.label != null) img.label = sample.label;
@@ -973,7 +977,7 @@ function renderStructurePanel(structureTitle, structureActions, structureContent
             document.getElementById('view-label-class-manager'),
             document.getElementById('view-label-stats')
         );
-        UIComponents.renderLabelStats(document.getElementById('view-label-stats'), state.spec.toJSON().stats);
+        UIComponents.renderLabelStats(document.getElementById('view-label-stats'), state.spec.toJSON().stats, buildStatsViewOptions());
     } else {
         structureTitle.textContent = t('STRUCTURE_TITLE', '欄位與標籤');
         structureActions.style.display = 'block';
@@ -1379,6 +1383,27 @@ function addFeatureRow({ row, useZ, schema }) {
     refreshPreview();
 }
 
+/**
+ * 2026-09-22：統計面板檢視選項（SSOT）。
+ * 偵測/循跡的 label_counts 是「框數/線段數」，採集後未標註時全為 0，
+ * 初學者會誤判「沒拍到圖」；故一併傳入影像張數與已標註張數，
+ * 由 UIComponents.renderLabelStats 於頂部顯示摘要列（並依任務換計數欄表頭）。
+ * 表格系（table/feature/serial，無 state.images）回空物件（僅渲染標籤計數）。
+ * @returns {{projectType?: string, imageCount?: number, annotatedCount?: number}}
+ */
+function buildStatsViewOptions() {
+    const projectType = state.spec.toJSON().project.type || getFormValue('projectType') || 'table';
+    if (projectType !== 'image' && projectType !== 'object_detection' && projectType !== 'line_following') {
+        return {};
+    }
+    const images = Array.isArray(state.images) ? state.images : [];
+    return {
+        projectType,
+        imageCount: images.length,
+        annotatedCount: countAnnotatedImages(projectType, images)
+    };
+}
+
 /** 重繪統計容器：優先 #view-label-stats（影像系/live 與 label manager 並存，P2 已全 live 涵蓋），
  *  其次：統一管理器存在但統計容器缺失 → 重建整個結構面板（嚴禁覆寫 innerHTML 沖掉管理器）；
  *  最後才退回 #dataset-structure-content（表格 file 模式，該模式無統一管理器） */
@@ -1388,7 +1413,7 @@ function renderStatsPanels() {
     const stats = state.spec.toJSON().stats;
     const viewStats = document.getElementById('view-label-stats');
     if (viewStats) {
-        UIComponents.renderLabelStats(viewStats, stats);
+        UIComponents.renderLabelStats(viewStats, stats, buildStatsViewOptions());
         return;
     }
     // [2026-09-17 修] 管理器在、統計容器不在 → 走 SSOT 重建，避免直接覆寫管理器的父容器
@@ -1398,7 +1423,7 @@ function renderStatsPanels() {
     }
     const structureContent = modal.querySelector('#dataset-structure-content');
     if (structureContent && state.images.length > 0) {
-        UIComponents.renderLabelStats(structureContent, stats);
+        UIComponents.renderLabelStats(structureContent, stats, buildStatsViewOptions());
     }
 }
 

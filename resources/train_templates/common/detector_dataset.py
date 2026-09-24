@@ -1,7 +1,15 @@
 """
 物件偵測資料集處理模組
-讀取 YOLO 格式資料集（images/ + labels/），提供 tf.data.Dataset pipeline。
-支援單一目標偵測（每張圖 1 個 bbox）。
+提供 tf.data.Dataset pipeline，支援單一目標偵測（每張圖 1 個 bbox）。
+
+雙佈局（C2 對齊分類，2026-09-23）：
+  A. YOLO 佈局（Dataset Manager 匯出 ZIP 解壓後）：
+        dataset_dir/images/ + dataset_dir/labels/ + dataset_dir/labels.txt
+  B. DM 落盤佈局（拍完即可直練，與分類對稱，無需匯出/扁平化）：
+        dataset_dir/<label>/*.jpg + dataset_dir/dataset.json（標註真相）
+  偵測順序：images/ 存在 → A；否則 → B。
+  B 的 bbox 為 DM 左上角 [x,y,w,h]，載入時轉 YOLO 中心點 [cx,cy,w,h]；
+  類別名取 schema.label_map；未標註圖與 class_id=-1 框跳過並計數。
 """
 
 import os
@@ -12,39 +20,8 @@ import tensorflow as tf
 AUTOTUNE = tf.data.AUTOTUNE
 
 
-def load_detector_dataset(dataset_dir, img_size=224, batch_size=32, validation_split=0.2, seed=123):
-    """
-    載入 YOLO 格式物件偵測資料集。
-
-    預期目錄結構：
-        dataset_dir/
-        ├── images/        (jpg/png 影像)
-        ├── labels/        (txt 標註，每行: class_id cx cy w h)
-        └── labels.txt     (類別名稱，每行一個)
-
-    Args:
-        dataset_dir: 資料集根目錄
-        img_size: 輸入影像尺寸（預設 224）
-        batch_size: 批次大小
-        validation_split: 驗證集比例（0.0~1.0）
-        seed: 亂數種子
-
-    Returns:
-        (train_ds, val_ds, labels, class_counts)
-        - train_ds: tf.data.Dataset，每個元素為 (image_batch, bbox_batch)
-          bbox_batch shape: (batch, 4)，值為 [cx, cy, w, h] 歸一化座標
-        - val_ds: 驗證集 Dataset（或 None）
-        - labels: 類別名稱列表
-        - class_counts: 各類別樣本數字典
-    """
-    images_dir = os.path.join(dataset_dir, 'images')
-    labels_dir = os.path.join(dataset_dir, 'labels')
-    labels_file = os.path.join(dataset_dir, 'labels.txt')
-
-    if not os.path.exists(images_dir):
-        print(f"錯誤: 找不到 images 目錄 {images_dir}")
-        sys.exit(1)
-
+def _collect_yolo_pairs(images_dir, labels_dir, labels_file):
+    """佈局 A：掃 images/ + labels/*.txt（YOLO 匯出包）。"""
     if not os.path.exists(labels_dir):
         print(f"錯誤: 找不到 labels 目錄 {labels_dir}")
         sys.exit(1)
@@ -57,7 +34,6 @@ def load_detector_dataset(dataset_dir, img_size=224, batch_size=32, validation_s
         # 若無 labels.txt，從標註檔案中推斷類別
         labels = []
 
-    # 掃描所有影像與對應標註
     image_paths = []
     bboxes = []
     class_ids = []
@@ -90,6 +66,11 @@ def load_detector_dataset(dataset_dir, img_size=224, batch_size=32, validation_s
             continue
 
         cid = int(parts[0])
+        # OD 對齊 P4（2026-09-22）：略過未分類框（sidecar 已在匯出期過濾並警告；
+        # 此為訓練端雙保險：手動拼裝的資料集若含 -1 也不會污染分層統計）
+        if cid < 0:
+            print(f"警告: 略過未分類框 {label_path}（class_id=-1，匯出前請先分類）")
+            continue
         cx, cy, w, h = float(parts[1]), float(parts[2]), float(parts[3]), float(parts[4])
 
         image_paths.append(img_path)
@@ -100,6 +81,146 @@ def load_detector_dataset(dataset_dir, img_size=224, batch_size=32, validation_s
         if cid >= len(labels):
             while len(labels) <= cid:
                 labels.append(f'class_{len(labels)}')
+
+    return image_paths, bboxes, class_ids, labels
+
+
+def _collect_dm_pairs(dataset_dir):
+    """佈局 B（C2 落盤直練）：<label>/*.jpg + dataset.json 標註（無需 images/）。"""
+    import json
+
+    spec_path = os.path.join(dataset_dir, 'dataset.json')
+    if not os.path.exists(spec_path):
+        print(f"錯誤: 找不到 images 目錄，也找不到 {spec_path}（無法讀取標註）")
+        sys.exit(1)
+
+    with open(spec_path, 'r', encoding='utf-8') as f:
+        spec = json.load(f)
+
+    samples = ((spec.get('data_source') or {}).get('samples')) or []
+    label_map = ((spec.get('schema') or {}).get('label_map')) or {}
+
+    # class_id → 類別名（label_map 為 {name: id}）
+    labels = []
+    for name, cid in label_map.items():
+        try:
+            cid = int(cid)
+        except (TypeError, ValueError):
+            continue
+        if cid < 0:
+            continue
+        while len(labels) <= cid:
+            labels.append(f'class_{len(labels)}')
+        labels[cid] = str(name)
+
+    # 影像索引：掃所有標籤子資料夾（相對路徑優先，basename 唯一時兜底）
+    image_extensions = ('.jpg', '.jpeg', '.png', '.webp', '.bmp')
+    by_rel = {}
+    by_base = {}
+    for entry in sorted(os.listdir(dataset_dir)):
+        sub = os.path.join(dataset_dir, entry)
+        if not os.path.isdir(sub) or entry in ('images', 'labels', 'lines'):
+            continue
+        for fn in sorted(os.listdir(sub)):
+            if not fn.lower().endswith(image_extensions):
+                continue
+            abs_p = os.path.join(sub, fn)
+            by_rel[f'{entry}/{fn}'] = abs_p
+            by_base.setdefault(fn, []).append(abs_p)
+
+    image_paths = []
+    bboxes = []
+    class_ids = []
+    skipped_no_ann = 0
+    skipped_neg = 0
+    skipped_missing = 0
+
+    for s in samples:
+        img_rel = str(s.get('image_path') or '').replace('\\', '/')
+        base = img_rel.split('/')[-1]
+        img_abs = by_rel.get(img_rel)
+        if img_abs is None:
+            cands = by_base.get(base) or []
+            if len(cands) == 1:
+                img_abs = cands[0]
+        if img_abs is None or not os.path.exists(img_abs):
+            skipped_missing += 1
+            continue
+
+        anns = s.get('annotations') or []
+        picked = None
+        for a in anns:
+            try:
+                cid = int(a.get('class_id', -1))
+            except (TypeError, ValueError):
+                cid = -1
+            if cid >= 0 and a.get('bbox') and len(a['bbox']) >= 4:
+                picked = (cid, a['bbox'])
+                break
+        if picked is None:
+            if anns:
+                skipped_neg += 1  # 只有未分類框（class_id=-1）
+            else:
+                skipped_no_ann += 1  # 未標註
+            continue
+
+        cid, bbox = picked
+        # DM bbox 為左上角 [x,y,w,h] → YOLO 中心點 [cx,cy,w,h]（同 sidecar 匯出轉換）
+        x, y, w, h = float(bbox[0]), float(bbox[1]), float(bbox[2]), float(bbox[3])
+        image_paths.append(img_abs)
+        bboxes.append([x + w / 2.0, y + h / 2.0, w, h])
+        class_ids.append(cid)
+        while len(labels) <= cid:
+            labels.append(f'class_{len(labels)}')
+
+    if skipped_no_ann:
+        print(f"警告: 跳過 {skipped_no_ann} 張未標註影像（先到 Dataset Manager 標註）")
+    if skipped_neg:
+        print(f"警告: 跳過 {skipped_neg} 張僅含未分類框的影像（class_id=-1，請先分類）")
+    if skipped_missing:
+        print(f"警告: {skipped_missing} 筆樣本的影像檔不存在，跳過")
+
+    return image_paths, bboxes, class_ids, labels
+
+
+def load_detector_dataset(dataset_dir, img_size=224, batch_size=32, validation_split=0.2, seed=123):
+    """
+    載入物件偵測資料集（雙佈局，見模組 docstring）。
+
+    佈局 A（images/ 存在，YOLO 匯出包）：
+        dataset_dir/
+        ├── images/        (jpg/png 影像)
+        ├── labels/        (txt 標註，每行: class_id cx cy w h)
+        └── labels.txt     (類別名稱，每行一個)
+    佈局 B（DM 落盤，拍完直練）：
+        dataset_dir/<label>/*.jpg + dataset_dir/dataset.json
+
+    Args:
+        dataset_dir: 資料集根目錄
+        img_size: 輸入影像尺寸（預設 224）
+        batch_size: 批次大小
+        validation_split: 驗證集比例（0.0~1.0）
+        seed: 亂數種子
+
+    Returns:
+        (train_ds, val_ds, labels, class_counts)
+        - train_ds: tf.data.Dataset，每個元素為 (image_batch, bbox_batch)
+          bbox_batch shape: (batch, 4)，值為 [cx, cy, w, h] 歸一化座標
+        - val_ds: 驗證集 Dataset（或 None）
+        - labels: 類別名稱列表
+        - class_counts: 各類別樣本數字典
+    """
+    images_dir = os.path.join(dataset_dir, 'images')
+    labels_dir = os.path.join(dataset_dir, 'labels')
+    labels_file = os.path.join(dataset_dir, 'labels.txt')
+
+    # 雙佈局分派（C2）：images/ 存在 → YOLO 匯出包；否則 → DM 落盤直練
+    if os.path.exists(images_dir):
+        image_paths, bboxes, class_ids, labels = _collect_yolo_pairs(
+            images_dir, labels_dir, labels_file)
+    else:
+        print(f"註: 無 images 目錄，改以 DM 落盤佈局讀取 {dataset_dir}")
+        image_paths, bboxes, class_ids, labels = _collect_dm_pairs(dataset_dir)
 
     if len(image_paths) == 0:
         print("錯誤: 沒有有效的影像-標註配對")
@@ -112,6 +233,19 @@ def load_detector_dataset(dataset_dir, img_size=224, batch_size=32, validation_s
         class_counts[label_name] = class_counts.get(label_name, 0) + 1
 
     print(f"找到 {len(image_paths)} 張影像，{len(labels)} 個類別")
+    # 類別統計與不平衡提示（2026-09-23 對齊分類 log）：
+    # 分類有「{label}: {count} 張」逐類列表；偵測比照輸出。
+    # 偵測為 bbox 回歸，Keras class_weight 不適用（y 是座標非類別）——
+    # 不平衡由上方分層抽樣保護驗證集比例，並提示補拍較少類別。
+    print("各類別樣本數:")
+    for name, cnt in sorted(class_counts.items(), key=lambda kv: kv[0]):
+        print(f"  {name}: {cnt} 張")
+    if class_counts:
+        counts = list(class_counts.values())
+        if min(counts) > 0 and max(counts) / min(counts) >= 3:
+            ratio = max(counts) / min(counts)
+            print(f"警告: 類別不平衡（最大/最小 ≈ {ratio:.1f}）——"
+                  f"分層抽樣已確保驗證集各類比例一致；建議補拍樣本較少的類別以提升訓練穩定性")
     for label, count in class_counts.items():
         print(f"  {label}: {count} 張")
 

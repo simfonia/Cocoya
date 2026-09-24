@@ -156,7 +156,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         const current = this.sshConfig || {};
         const defaultHost = current.host || '192.168.3.8';
         const defaultPort = current.port || '22';
-        const defaultUser = current.username || 'simfonia';
+        const defaultUser = current.username || 'trainer';
 
         const escapeHtml = (val) => {
             return String(val ?? '')

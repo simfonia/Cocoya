@@ -46,6 +46,31 @@ from common.training_loop import get_optimizer
 from common.model_export import save_keras_model, export_tflite, save_labels
 
 
+def bbox_iou(y_true, y_pred):
+    """
+	單目標 bbox IoU（[cx, cy, w, h] 歸一化座標）。
+	作為偵測的「準確率級」指標（越高越好、0~1），讓訓練訊息/曲線/報告
+	對齊分類（Loss + Accuracy）的觀察習慣；MSE/MAE 仍保留於 history。
+	"""
+    yt = tf.cast(y_true, tf.float32)
+    yp = tf.cast(y_pred, tf.float32)
+    # [cx,cy,w,h] → 左上/右下角
+    t_x1 = yt[:, 0] - yt[:, 2] / 2.0
+    t_y1 = yt[:, 1] - yt[:, 3] / 2.0
+    t_x2 = yt[:, 0] + yt[:, 2] / 2.0
+    t_y2 = yt[:, 1] + yt[:, 3] / 2.0
+    p_x1 = yp[:, 0] - yp[:, 2] / 2.0
+    p_y1 = yp[:, 1] - yp[:, 3] / 2.0
+    p_x2 = yp[:, 0] + yp[:, 2] / 2.0
+    p_y2 = yp[:, 1] + yp[:, 3] / 2.0
+    inter_w = tf.maximum(0.0, tf.minimum(t_x2, p_x2) - tf.maximum(t_x1, p_x1))
+    inter_h = tf.maximum(0.0, tf.minimum(t_y2, p_y2) - tf.maximum(t_y1, p_y1))
+    inter = inter_w * inter_h
+    union = yt[:, 2] * yt[:, 3] + yp[:, 2] * yp[:, 3] - inter
+    iou = inter / (union + 1e-6)
+    return tf.reduce_mean(iou)
+
+
 def compile_and_train_detector(model, train_ds, val_ds, optimizer_name='adam',
                                learning_rate=0.001, epochs=30):
     """
@@ -66,12 +91,14 @@ def compile_and_train_detector(model, train_ds, val_ds, optimizer_name='adam',
     """
     from datetime import datetime
 
-    # 編譯模型（回歸用 MSE loss）
+    # 編譯模型（回歸用 MSE loss + MAE 輔助 + IoU 指標）
+    # IoU（2026-09-23 對齊分類）：每 epoch 輸出 bbox_iou/val_bbox_iou，
+    # 訓練終端訊息與報告曲線由此呈現「越高越好」的準確率級觀察指標。
     optimizer = get_optimizer(optimizer_name, learning_rate)
     model.compile(
         optimizer=optimizer,
         loss='mse',
-        metrics=['mae']  # Mean Absolute Error 作為輔助指標
+        metrics=['mae', bbox_iou]
     )
 
     model.summary()
@@ -92,24 +119,35 @@ def compile_and_train_detector(model, train_ds, val_ds, optimizer_name='adam',
     train_time = (datetime.now() - start_time).total_seconds()
     print(f"\n訓練完成! 耗時: {train_time:.1f} 秒")
 
-    # 顯示最終 loss
+    # 顯示最終指標（對齊分類：loss 之外也報 IoU）
     if val_ds is not None:
         final_loss = history.history['val_loss'][-1]
         final_mae = history.history['val_mae'][-1]
+        final_iou = history.history.get('val_bbox_iou', history.history.get('bbox_iou', [0.0]))[-1]
         print(f"驗證 Loss (MSE): {final_loss:.6f}")
         print(f"驗證 MAE: {final_mae:.6f}")
+        print(f"驗證 IoU: {final_iou:.4f}")
     else:
         final_loss = history.history['loss'][-1]
         final_mae = history.history['mae'][-1]
+        final_iou = history.history.get('bbox_iou', [0.0])[-1]
         print(f"訓練 Loss (MSE): {final_loss:.6f}")
         print(f"訓練 MAE: {final_mae:.6f}")
+        print(f"訓練 IoU: {final_iou:.4f}")
 
     return history, train_time
 
 
 def plot_detector_curves(history, output_path, project_name, epochs):
     """
-    繪製物件偵測訓練曲線圖（Loss + MAE）。
+    繪製物件偵測訓練曲線圖（Loss (MSE) + MAE + IoU）。
+
+    面板順序固定「Loss → MAE → IoU」：
+      - Loss (MSE)：越低越好（訓練目標）
+      - MAE：越低越好，對離群值較不敏感，可與 MSE 對照判讀
+        （2026-09-24 補繪；此欄位本來就存在於 history JSON，只是未呈現）
+      - IoU：越高越好（0~1），版面對齊分類的 Accuracy 面板
+    舊 history（無 mae／bbox_iou 欄）自動略過對應面板，不中斷繪圖。
 
     Args:
         history: tf.keras.callbacks.History 物件
@@ -127,31 +165,48 @@ def plot_detector_curves(history, output_path, project_name, epochs):
         import base64
         from io import BytesIO
 
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(10, 8), sharex=True)
-
         epoch_range = range(1, epochs + 1)
 
-        # 上圖：Loss (MSE)
-        ax1.plot(epoch_range, history.history['loss'], 'b-',
-                 label='Training Loss (MSE)', linewidth=2)
-        if 'val_loss' in history.history:
-            ax1.plot(epoch_range, history.history['val_loss'], 'r-',
-                     label='Validation Loss (MSE)', linewidth=2)
-        ax1.set_ylabel('Loss (MSE)', fontsize=12)
-        ax1.set_title(f'{project_name} - Detector Training Curves', fontsize=14, fontweight='bold')
-        ax1.legend(loc='best')
-        ax1.grid(True, alpha=0.3)
+        # 依 history 實際擁有的欄位決定面板（向後相容舊 history／外部匯入）
+        has_mae = 'mae' in history.history
+        has_iou = 'bbox_iou' in history.history
+        panels = ['loss'] + (['mae'] if has_mae else []) + (['iou'] if has_iou else [])
 
-        # 下圖：MAE
-        ax2.plot(epoch_range, history.history['mae'], 'b-',
-                 label='Training MAE', linewidth=2)
-        if 'val_mae' in history.history:
-            ax2.plot(epoch_range, history.history['val_mae'], 'r-',
-                     label='Validation MAE', linewidth=2)
-        ax2.set_xlabel('Epoch', fontsize=12)
-        ax2.set_ylabel('MAE', fontsize=12)
-        ax2.legend(loc='best')
-        ax2.grid(True, alpha=0.3)
+        fig, axes = plt.subplots(len(panels), 1, figsize=(10, 4 * len(panels)), sharex=True)
+        axes = [axes] if len(panels) == 1 else list(axes)
+
+        for ax, panel in zip(axes, panels):
+            if panel == 'loss':
+                # 面板 1：Loss (MSE)
+                ax.plot(epoch_range, history.history['loss'], 'b-',
+                        label='Training Loss (MSE)', linewidth=2)
+                if 'val_loss' in history.history:
+                    ax.plot(epoch_range, history.history['val_loss'], 'r-',
+                            label='Validation Loss (MSE)', linewidth=2)
+                ax.set_ylabel('Loss (MSE)', fontsize=12)
+                ax.set_title(f'{project_name} - Training Curves', fontsize=14, fontweight='bold')
+            elif panel == 'mae':
+                # 面板 2：MAE（回歸誤差，越低越好）
+                ax.plot(epoch_range, history.history['mae'], 'b-',
+                        label='Training MAE', linewidth=2)
+                if 'val_mae' in history.history:
+                    ax.plot(epoch_range, history.history['val_mae'], 'r-',
+                            label='Validation MAE', linewidth=2)
+                ax.set_ylabel('MAE', fontsize=12)
+            else:
+                # 面板 3：IoU（準確率級指標，越高越好——對齊分類 Accuracy 面板）
+                ax.plot(epoch_range, history.history['bbox_iou'], 'b-',
+                        label='Training IoU', linewidth=2)
+                if 'val_bbox_iou' in history.history:
+                    ax.plot(epoch_range, history.history['val_bbox_iou'], 'r-',
+                            label='Validation IoU', linewidth=2)
+                ax.set_ylabel('IoU', fontsize=12)
+                ax.set_ylim(0.0, 1.0)
+
+            ax.legend(loc='best')
+            ax.grid(True, alpha=0.3)
+
+        axes[-1].set_xlabel('Epoch', fontsize=12)
 
         plt.tight_layout()
 
@@ -202,12 +257,18 @@ def save_detector_history(history, output_path, project_name, epochs,
         'batchSize': batch_size,
         'learningRate': learning_rate,
         'finalLoss': float(final_loss),
+        # IoU（2026-09-23 對齊分類）：準確率級最終指標，供報告卡片/前端面板顯示
+        'finalIoU': float(
+            history.history.get('val_bbox_iou', history.history.get('bbox_iou', [0.0]))[-1]
+        ),
         'trainTime': train_time,
         'history': {
             'loss': [float(x) for x in history.history['loss']],
             'val_loss': [float(x) for x in history.history.get('val_loss', [])],
             'mae': [float(x) for x in history.history['mae']],
-            'val_mae': [float(x) for x in history.history.get('val_mae', [])]
+            'val_mae': [float(x) for x in history.history.get('val_mae', [])],
+            'bbox_iou': [float(x) for x in history.history.get('bbox_iou', [])],
+            'val_bbox_iou': [float(x) for x in history.history.get('val_bbox_iou', [])]
         }
     }
 
@@ -232,6 +293,8 @@ def generate_detector_report(history_data, curve_b64, output_path, labels, proje
     from datetime import datetime
 
     final_loss = float(history_data['finalLoss'])
+    # IoU 卡片（2026-09-23 對齊分類報告版面）：舊 history 無 finalIoU → 不顯示該卡
+    final_iou = history_data.get('finalIoU')
     train_time = history_data['trainTime']
     train_time_str = f"{train_time:.1f}s" if train_time < 60 else f"{train_time/60:.1f}m"
     history_json_str = json.dumps(history_data, indent=2)
@@ -243,6 +306,15 @@ def generate_detector_report(history_data, curve_b64, output_path, labels, proje
   <div class="chart">
     <img src="data:image/png;base64,{curve_b64}" alt="Training Curves">
   </div>'''
+
+    # IoU 卡片（準確率級指標；樣式對齊分類報告的驗證準確率綠卡）
+    iou_card = ''
+    if final_iou is not None:
+        iou_card = f'''
+    <div class="stat-card">
+      <div class="label">驗證 IoU</div>
+      <div class="value accuracy">{final_iou * 100:.2f}%</div>
+    </div>'''
 
     html_content = f'''<!DOCTYPE html>
 <html lang="zh-TW">
@@ -278,7 +350,7 @@ def generate_detector_report(history_data, curve_b64, output_path, labels, proje
     <div class="stat-card">
       <div class="label">最終 Loss (MSE)</div>
       <div class="value loss">{final_loss:.6f}</div>
-    </div>
+    </div>{iou_card}
     <div class="stat-card">
       <div class="label">訓練輪數</div>
       <div class="value">{history_data['epochs']}</div>
@@ -383,7 +455,7 @@ def main():
     IMG_SIZE = 224
 
     # === 載入資料集 ===
-    print("\n載入 YOLO 格式資料集...")
+    print("\n載入偵測資料集（雙佈局：images/ YOLO 匯出包，或 DM 落盤 <label>/＋dataset.json）...")
     train_ds, val_ds, labels, class_counts = load_detector_dataset(
         args.dataset_dir,
         img_size=IMG_SIZE,
@@ -504,8 +576,11 @@ def main():
         'epochs': args.epochs,
         'batchSize': args.batch_size,
         'learningRate': args.learning_rate,
-        'accuracy': final_loss,  # 重用 accuracy 欄位傳遞 loss 值
+        'accuracy': final_loss,  # 重用 accuracy 欄位傳遞 loss 值（向後相容；IoU 見 finalIoU）
         'finalLoss': final_loss,
+        'finalIoU': float(
+            history.history.get('val_bbox_iou', history.history.get('bbox_iou', [0.0]))[-1]
+        ),
         'curvePath': curve_path,
         'historyPath': history_path,
         'reportPath': report_path

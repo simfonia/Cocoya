@@ -304,7 +304,7 @@ def main():
     IMG_SIZE = 224
 
     # === 載入資料集 ===
-    print("\n載入循線資料集...")
+    print("\n載入循線資料集（雙佈局：images/＋lines/ 匯出包，或 DM 落盤 <label>/＋dataset.json）...")
     train_ds, val_ds, meta = load_line_dataset(
         args.dataset_dir,
         img_size=IMG_SIZE,

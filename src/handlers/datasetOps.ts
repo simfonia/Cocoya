@@ -236,11 +236,16 @@ export class DatasetOpsHandler {
         console.log('[Host] Received datasetExport request', message.spec?.project?.name);
         const spec = message.spec;
         const projectName = spec.project?.name || 'dataset';
-        const sourceFolderPath = message.sourceFolderPath; 
-        
-        const baseDir = (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)
-            ? vscode.workspace.workspaceFolders[0].uri.fsPath
-            : path.join(this.manager.context.extensionPath, 'temp_scripts');
+        const sourceFolderPath = message.sourceFolderPath;
+
+        // OD 對齊 P2（2026-09-22）：改專案根 SSOT（xml 所在資料夾優先），
+        // 舊 workspaceFolders[0] 在 xml 居子資料夾時會取錯目錄。
+        const projectRoot = this.manager.currentFilePath
+            ? path.dirname(this.manager.currentFilePath)
+            : ((vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)
+                ? vscode.workspace.workspaceFolders[0].uri.fsPath
+                : path.join(this.manager.context.extensionPath, 'temp_scripts'));
+        const baseDir = projectRoot;
         
         const datasetDir = path.join(baseDir, 'dataset', projectName);
         const specPath = path.join(datasetDir, 'dataset.json');
@@ -257,6 +262,20 @@ export class DatasetOpsHandler {
 
             fs.writeFileSync(specPath, JSON.stringify(spec, null, 2));
 
+            // OD 對齊 Issue 2（2026-09-22）：sidecar 匯出會在 sourceDir 內建
+            // images/labels/（labels.txt/export_manifest.json）訓練佈局——直接傳
+            // 真實落盤區 datasetDir 會把這些檔寫進 DM 日常目錄（污染 scan/relabel）。
+            // 改為複製到 temp staging 再交給 sidecar，完成/取消/失敗後清理。
+            const stagingDir = path.join(
+                os.tmpdir(), 'cocoya_export',
+                `${projectName}_${Date.now()}`
+            );
+            fs.mkdirSync(stagingDir, { recursive: true });
+            this.copyRecursiveSync(datasetDir, stagingDir);
+            const cleanupStaging = () => {
+                try { fs.rmSync(stagingDir, { recursive: true, force: true }); } catch { /* ignore */ }
+            };
+
             const options: vscode.SaveDialogOptions = {
                 defaultUri: vscode.Uri.file(path.join(os.homedir(), `${projectName}.zip`)),
                 filters: { 'ZIP Archive': ['zip'] },
@@ -264,15 +283,16 @@ export class DatasetOpsHandler {
             };
 
             const fileUri = await vscode.window.showSaveDialog(options);
-            if (!fileUri) return;
+            if (!fileUri) { cleanupStaging(); return; }
 
             const outputZip = fileUri.fsPath;
 
             this.manager.sidecar.start();
             this.manager.sidecar.send('exportDataset', {
-                sourceDir: datasetDir,
+                sourceDir: stagingDir,
                 outputZip: outputZip
             }, (resp: any) => {
+                cleanupStaging();
                 if (resp.success) {
                     vscode.window.showInformationMessage(hostMsg('exportSuccess', resp.path));
                     this.manager.panel.webview.postMessage({ command: 'datasetExportResult', success: true, path: resp.path });

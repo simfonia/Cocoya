@@ -39,3 +39,19 @@ export function calculateStats(projectType, images, existingLabelMap) {
         sampleCount: sourceImages.length
     };
 }
+
+/**
+ * 2026-09-22 統計欄補強：計算「已標註影像張數」。
+ * 偵測/循跡的 label_counts 是「框數/線段數」——採集後未標註時全為 0，
+ * 初學者會誤以為沒拍到圖；故中欄統計面板另顯示張數（採集量）與已標註張數。
+ * 分類（image）模式：label 即標註，全部視為已標註。
+ * 表格系（table/feature/serial，無 state.images）回 0。
+ * @param {string} projectType 專案類型
+ * @param {Array<{annotations?: Array}>} images state.images
+ * @returns {number} 已標註張數
+ */
+export function countAnnotatedImages(projectType, images) {
+    const list = Array.isArray(images) ? images : [];
+    if (projectType === 'image') return list.length;
+    return list.filter((img) => Array.isArray(img && img.annotations) && img.annotations.length > 0).length;
+}
