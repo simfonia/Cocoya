@@ -8,7 +8,9 @@ import {
     buildCanonicalDatasetFilePath,
     buildCanonicalDatasetDirectoryPath,
     resolveSourceImagePath,
-    validateDeletableImagePath
+    validateDeletableImagePath,
+    relabelExportedImages,
+    matchSampleForImage
 } from './pathPolicy.js';
 
 test('normalizeProjectName cleans whitespace and illegal chars', () => {
@@ -81,5 +83,37 @@ test('validateDeletableImagePath mirrors resolveSourceImagePath', () => {
         validateDeletableImagePath('C:/src', 'a/b.jpg').value,
         resolveSourceImagePath('C:/src', 'a/b.jpg').value
     );
+});
+
+test('relabelExportedImages refills label from dataset.json samples', () => {
+    const images = [
+        { path: 'images/cat_1.jpg', label: 'images' },
+        { path: 'cat/cat_2.jpg', label: 'cat' }
+    ];
+    const samples = [{ image_path: 'cat/cat_1.jpg', label: 'cat' }];
+    const r = relabelExportedImages(images, samples);
+    assert.equal(r.fixed, 1);
+    assert.equal(images[0].label, 'cat');
+    assert.equal(images[1].label, 'cat');
+});
+
+test('relabelExportedImages keeps ambiguous basename untouched', () => {
+    const images = [{ path: 'images/a.jpg', label: 'images' }];
+    const samples = [
+        { image_path: 'cat/a.jpg', label: 'cat' },
+        { image_path: 'dog/a.jpg', label: 'dog' }
+    ];
+    const r = relabelExportedImages(images, samples);
+    assert.equal(r.fixed, 0);
+    assert.equal(r.ambiguous, 1);
+    assert.equal(images[0].label, 'images');
+});
+
+test('matchSampleForImage prefers full path then basename fallback', () => {
+    const samples = [{ image_path: 'cat/a.jpg', label: 'cat' }];
+    assert.equal(matchSampleForImage(samples, 'cat/a.jpg').label, 'cat');
+    assert.equal(matchSampleForImage(samples, 'images/a.jpg').label, 'cat');
+    const dup = [{ image_path: 'cat/a.jpg' }, { image_path: 'dog/a.jpg' }];
+    assert.equal(matchSampleForImage(dup, 'images/a.jpg'), null);
 });
 

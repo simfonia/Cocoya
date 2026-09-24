@@ -42,3 +42,7 @@ src-tauri/.env*
 
 # Rust specific
 # Cargo.lock # 建議保留以確保編譯一致性，若想完全純淨可開啟此行
+
+# Examples 使用者產生的資料集/模型（不入版控）
+examples/**/dataset/
+examples/**/model/

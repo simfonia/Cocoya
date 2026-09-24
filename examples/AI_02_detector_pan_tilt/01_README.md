@@ -44,15 +44,21 @@
 3. 用滑鼠在目標物體上拉一個矩形框
 4. 每張影像至少標註 1 個 bbox
 
-#### 步驟 6：匯出資料集
-1. 點擊「匯出」按鈕
-2. 選擇儲存位置
-3. 匯出後確認目錄結構包含 `images/` 和 `labels/`
+#### 步驟 6（選配）：匯出資料集
+1. **本地訓練不需匯出**——`py_ai_train_run` 的資料集欄位直接填落盤路徑 `dataset/detector_dataset`（loader 雙佈局：有 `images/` 走 YOLO 包，否則自動掃 `<label>/*.jpg` ＋ `dataset.json` 標註）。
+2. 匯出僅用於「對外分享 / 第三方 YOLO 工具」：點「匯出」→ 選儲存位置 → ZIP 內為標準 `images/` + `labels/` 佈局。
 
 ### 資料集結構
+落盤（DM 日常，拍完可直接訓練）：
 ```
 dataset/detector_dataset/
-├── images/          # 所有影像檔
+├── <label>/*.jpg      # 按標籤子資料夾分存放（如 redBall/ blueBall/）
+└── dataset.json       # Dataset Spec（標註真相）
+```
+匯出 ZIP（分享/標準化用）：
+```
+dataset/detector_dataset/
+├── images/          # 所有影像檔（扁平）
 ├── labels/          # YOLO 格式標註（class_id cx cy w h）
 ├── dataset.json     # Dataset Spec
 └── labels.txt       # 類別名稱

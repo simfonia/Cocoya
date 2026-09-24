@@ -1,15 +1,15 @@
 """
 循線資料集處理模組
-讀取 images/ + lines/（Dataset Manager 匯出），提供回歸切分與 tf.data.Dataset pipeline。
+提供回歸切分與 tf.data.Dataset pipeline。
 
-目錄結構（Dataset Manager 匯出）：
-    dataset_dir/
-    ├── images/        (jpg/png 影像)
-    ├── lines/         (每張標註影像一個同名 .txt，一行: x1 y1 x2 y2 歸一化比例座標)
-    └── dataset.json   (Dataset Spec)
-
-line 標註無類別欄位（class_id 恆 0）→ 屬回歸型任務，依規範採隨機切分
-（seed 固定確保再現性），報告需註明「無類別欄位（回歸），隨機切分」。
+雙佈局（C2 對齊分類，2026-09-23）：
+  A. 匯出佈局（Dataset Manager ZIP 解壓後）：
+        dataset_dir/images/ + dataset_dir/lines/*.txt
+  B. DM 落盤佈局（拍完即可直練，與分類對稱，無需匯出/扁平化）：
+        dataset_dir/<label>/*.jpg + dataset_dir/dataset.json（標註真相）
+  偵測順序：images/ 存在 → A；否則 → B。
+  線段為歸一化比例座標；循線標註無類別（class_id 恆 0）→ 屬回歸型任務，
+  依規範採隨機切分（seed 固定確保再現性），報告需註明「無類別欄位（回歸），隨機切分」。
 """
 
 import os
@@ -20,29 +20,12 @@ import tensorflow as tf
 AUTOTUNE = tf.data.AUTOTUNE
 
 
-def load_line_dataset(dataset_dir, img_size=224, batch_size=32, validation_split=0.2, seed=123):
-    """
-    載入循線資料集。
-
-    Returns:
-        (train_ds, val_ds, meta)
-        - train_ds: tf.data.Dataset，元素為 (image_batch, line_batch)
-          line_batch shape: (batch, 4)，值為 [x1, y1, x2, y2] 歸一化座標
-        - val_ds: 驗證集 Dataset（或 None）
-        - meta: dict 含 sample_count / class_counts
-    """
-    images_dir = os.path.join(dataset_dir, 'images')
-    lines_dir = os.path.join(dataset_dir, 'lines')
-
-    if not os.path.exists(images_dir):
-        print(f"錯誤: 找不到 images 目錄 {images_dir}")
-        sys.exit(1)
-
+def _collect_exported_lines(images_dir, lines_dir):
+    """佈局 A：掃 images/ + lines/*.txt（匯出包）。"""
     if not os.path.exists(lines_dir):
-        print(f"錯誤: 找不到 lines 目錄 {lines_dir}（請先在 Dataset Manager 標註線段並匯出）")
+        print(f"錯誤: 找不到 lines 目錄 {lines_dir}（請先在 Dataset Manager 標註線段並匯出，或確認資料集含 dataset.json）")
         sys.exit(1)
 
-    # 掃描所有影像與對應線段標註
     image_paths = []
     lines = []
 
@@ -68,6 +51,97 @@ def load_line_dataset(dataset_dir, img_size=224, batch_size=32, validation_split
         x1, y1, x2, y2 = (float(p) for p in parts[:4])
         image_paths.append(img_path)
         lines.append([x1, y1, x2, y2])
+
+    return image_paths, lines
+
+
+def _collect_dm_lines(dataset_dir):
+    """佈局 B（C2 落盤直練）：<label>/*.jpg + dataset.json 線段標註（無需 images/）。"""
+    import json
+
+    spec_path = os.path.join(dataset_dir, 'dataset.json')
+    if not os.path.exists(spec_path):
+        print(f"錯誤: 找不到 images 目錄，也找不到 {spec_path}（無法讀取線段標註）")
+        sys.exit(1)
+
+    with open(spec_path, 'r', encoding='utf-8') as f:
+        spec = json.load(f)
+    samples = ((spec.get('data_source') or {}).get('samples')) or []
+
+    # 影像索引：掃所有標籤子資料夾（相對路徑優先，basename 唯一時兜底）
+    image_extensions = ('.jpg', '.jpeg', '.png', '.webp', '.bmp')
+    by_rel = {}
+    by_base = {}
+    for entry in sorted(os.listdir(dataset_dir)):
+        sub = os.path.join(dataset_dir, entry)
+        if not os.path.isdir(sub) or entry in ('images', 'labels', 'lines'):
+            continue
+        for fn in sorted(os.listdir(sub)):
+            if not fn.lower().endswith(image_extensions):
+                continue
+            abs_p = os.path.join(sub, fn)
+            by_rel[f'{entry}/{fn}'] = abs_p
+            by_base.setdefault(fn, []).append(abs_p)
+
+    image_paths = []
+    lines = []
+    skipped_no_ann = 0
+    skipped_missing = 0
+
+    for s in samples:
+        img_rel = str(s.get('image_path') or '').replace('\\', '/')
+        base = img_rel.split('/')[-1]
+        img_abs = by_rel.get(img_rel)
+        if img_abs is None:
+            cands = by_base.get(base) or []
+            if len(cands) == 1:
+                img_abs = cands[0]
+        if img_abs is None or not os.path.exists(img_abs):
+            skipped_missing += 1
+            continue
+
+        # 線段標註：annotations = [{ class_id, line:[x1,y1,x2,y2] }]，每張取第一條有效線
+        seg = None
+        for a in (s.get('annotations') or []):
+            ln = a.get('line')
+            if ln and len(ln) >= 4:
+                seg = [float(ln[0]), float(ln[1]), float(ln[2]), float(ln[3])]
+                break
+        if seg is None:
+            skipped_no_ann += 1  # 未標註（同佈局 A「無 txt 即跳過」）
+            continue
+
+        image_paths.append(img_abs)
+        lines.append(seg)
+
+    if skipped_no_ann:
+        print(f"警告: 跳過 {skipped_no_ann} 張未標註影像（先到 Dataset Manager 標註線段）")
+    if skipped_missing:
+        print(f"警告: {skipped_missing} 筆樣本的影像檔不存在，跳過")
+
+    return image_paths, lines
+
+
+def load_line_dataset(dataset_dir, img_size=224, batch_size=32, validation_split=0.2, seed=123):
+    """
+    載入循線資料集。
+
+    Returns:
+        (train_ds, val_ds, meta)
+        - train_ds: tf.data.Dataset，元素為 (image_batch, line_batch)
+          line_batch shape: (batch, 4)，值為 [x1, y1, x2, y2] 歸一化座標
+        - val_ds: 驗證集 Dataset（或 None）
+        - meta: dict 含 sample_count / class_counts
+    """
+    images_dir = os.path.join(dataset_dir, 'images')
+    lines_dir = os.path.join(dataset_dir, 'lines')
+
+    # 雙佈局分派（C2）：images/ 存在 → 匯出佈局；否則 → DM 落盤直練
+    if os.path.exists(images_dir):
+        image_paths, lines = _collect_exported_lines(images_dir, lines_dir)
+    else:
+        print(f"註: 無 images 目錄，改以 DM 落盤佈局讀取 {dataset_dir}")
+        image_paths, lines = _collect_dm_lines(dataset_dir)
 
     if len(image_paths) < 2:
         print(f"錯誤: 有效標註樣本僅 {len(image_paths)} 筆（至少需要 2 筆才能切分訓練/驗證集）")

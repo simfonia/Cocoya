@@ -4,6 +4,7 @@
  * 依賴全注入，無模組級全域耦合，Node 可測。
  */
 import { nextLabelId as getNextLabelId } from '../core/labelMap.js';
+import { countAnnotatedImages } from '../core/stats.js';
 import {
     countImagesWithLabel, countBoxesWithClassId,
     removeAnnotationsByClassId, reassignLabelsToUnlabeled
@@ -14,6 +15,7 @@ export function createLabelManager({
     syncLabelMap, updateStatsFromImages, scheduleAutoSave, refreshPreview,
     renderClassificationControls, renderAnnotationControls, updateThumbnailHighlight,
     onLabelMapChanged, onLabelRenamed,
+    buildStatsViewOptions = () => ({}),
     bridge, getDocument = () => globalThis.document
 }) {
     function doc() {
@@ -57,7 +59,9 @@ export function createLabelManager({
                 updateThumbnailHighlight();
             } else {
                 createLabelMapManager(container, statsContainer);
-                if (statsContainer) UIComponents.renderLabelStats(statsContainer, state.spec.toJSON().stats);
+                // 2026-09-22：帶 buildStatsViewOptions（影像張數/已標註摘要）——
+                // 漏傳會讓增/改/刪標籤後摘要列消失、計數欄表頭退回「樣本數」。
+                if (statsContainer) UIComponents.renderLabelStats(statsContainer, state.spec.toJSON().stats, buildStatsViewOptions());
             }
             scheduleAutoSave();
             refreshPreview();

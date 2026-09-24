@@ -301,17 +301,17 @@ C:\Workspace\cocoya\
 │   │   │   ├── __init__.py            # 模組包
 │   │   │   ├── classifier_dataset.py  # 分類資料集載入、驗證、分割、擴增
 │   │   │   ├── classifier_model.py    # 分類模型建立、backbone 管理、FC 層自訂
-│   │   │   ├── detector_dataset.py    # [NEW] YOLO 格式資料載入、bbox 解析
+│   │   │   ├── detector_dataset.py    # [C2] 雙佈局載入：YOLO 匯出包（images/+labels/）或 DM 落盤（<label>/*.jpg＋dataset.json），bbox 解析
 │   │   │   ├── detector_model.py      # [NEW] 物件偵測回歸模型（MobileNetV2 + Dense(4, sigmoid)）
 │   │   │   ├── table_dataset.py       # [M3] 表格 data.csv＋dataset.json 載入；分類分層/回歸隨機切分
-│   │   │   ├── line_dataset.py        # [M3] 循線 images/＋lines/ 載入；回歸隨機切分
+│   │   │   ├── line_dataset.py        # [M3][C2] 循線雙佈局：匯出 images/＋lines/ 或 DM 落盤（<label>＋dataset.json）；回歸隨機切分
 │   │   │   ├── training_loop.py       # 訓練迴圈、class weight、優化器選擇（共用）
 │   │   │   ├── model_export.py        # TFLite 轉換、模型儲存（共用）
 │   │   │   └── training_report.py     # 訓練曲線繪製、HTML 報告產生（共用）
 │   │   ├── classifier/
 │   │   │   └── classifier_train.py    # 分類訓練腳本（使用 common 模組）
 │   │   └── detector/
-│   │       └── detector_train.py      # [NEW] 物件偵測訓練腳本（單一目標，MSE loss）
+│   │       └── detector_train.py      # 物件偵測訓練腳本（單一目標，MSE loss＋MAE＋bbox IoU 指標；曲線三面板 Loss/MAE/IoU，報告對齊分類 Loss+Accuracy 版面）
 │   │   ├── table/
 │   │   │   └── table_train.py         # [M3] 表格訓練（MLP；分類 softmax／回歸 linear＋報告）
 │   │   ├── feature/

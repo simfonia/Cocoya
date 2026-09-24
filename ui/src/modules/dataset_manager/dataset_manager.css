@@ -797,6 +797,28 @@ body.vscode-high-contrast .dataset-label-color {
     border-color: rgba(255,255,255,0.2);
 }
 
+/* 統計頂部摘要列（2026-09-22：影像張數／已標註張數，偵測採集未標註也可見張數） */
+.dataset-label-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    background: var(--dsm-surface-alt);
+    font-size: calc(12px * var(--dsm-font-scale));
+    color: var(--dsm-text);
+}
+
+body.vscode-dark .dataset-label-summary,
+body.vscode-high-contrast .dataset-label-summary {
+    background: #333333;
+}
+
+.dataset-label-summary-item b {
+    font-weight: 600;
+    color: var(--dsm-brand);
+}
+
 .dataset-empty-state {
     padding: 40px 20px;
     text-align: center;

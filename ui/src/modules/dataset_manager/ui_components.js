@@ -122,22 +122,49 @@ export const UIComponents = {
 
     /**
      * 渲染標籤統計列表
+     * @param {HTMLElement} container 統計容器（#view-label-stats）
+     * @param {Object} stats spec.stats（sample_count / label_counts）
+     * @param {Object} [options] 2026-09-22：
+     *        { projectType, imageCount, annotatedCount }
+     *        — 影像系時於頂部顯示「影像張數／已標註張數」摘要列，
+     *          並依任務類型調整計數欄表頭（偵測=標註框數、循跡=標註線段、分類=樣本數）。
+     *          未傳 options 時僅渲染標籤計數（向後相容）。
      */
-    renderLabelStats(container, stats, onLabelChange) {
+    renderLabelStats(container, stats, options = {}) {
         if (!container) return;
-        const counts = stats.label_counts || {};
+        const counts = (stats && stats.label_counts) || {};
         const labels = Object.keys(counts).sort((a, b) => a.localeCompare(b));
+        const projectType = options.projectType || '';
+        const isImageTask = projectType === 'image' || projectType === 'object_detection' || projectType === 'line_following';
+        const imageCount = Number.isInteger(options.imageCount)
+            ? options.imageCount
+            : (Number.isInteger(stats && stats.sample_count) ? stats.sample_count : 0);
+        const annotatedCount = Number.isInteger(options.annotatedCount) ? options.annotatedCount : null;
+        const countHeader = projectType === 'object_detection'
+            ? t('BOX_COUNT', '標註框數')
+            : (projectType === 'line_following' ? t('LINE_COUNT', '標註線段') : t('SAMPLE_COUNT', '樣本數'));
+
+        const summaryHtml = isImageTask
+            ? '<div class="dataset-label-summary">'
+                + `<span class="dataset-label-summary-item">📷 ${t('IMAGE_COUNT', '影像張數')} <b>${imageCount}</b></span>`
+                + (annotatedCount === null
+                    ? ''
+                    : `<span class="dataset-label-summary-item">✅ ${t('ANNOTATED_COUNT', '已標註')} <b>${annotatedCount}</b> / ${imageCount}</span>`)
+                + '</div>'
+            : '';
 
         if (labels.length === 0) {
-            container.innerHTML = '<div class="dataset-empty-state">' + t('NO_LABELS', '尚未偵測到標籤') + '</div>';
+            container.innerHTML = summaryHtml
+                + '<div class="dataset-empty-state">' + t('NO_LABELS', '尚未偵測到標籤') + '</div>';
             return;
         }
 
         container.innerHTML = `
             <div class="dataset-label-stats">
+                ${summaryHtml}
                 <div class="dataset-label-head">
                     <span>${t('LABEL_NAME', '標籤名稱')}</span>
-                    <span>${t('SAMPLE_COUNT', '樣本數')}</span>
+                    <span>${countHeader}</span>
                     <span>${t('COLOR', '顏色')}</span>
                 </div>
                 ${labels.map(label => {
