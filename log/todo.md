@@ -291,3 +291,9 @@
 - [x] VSIX 新增跨 PowerShell／CMD／Bash 環境前綴產生器，上傳與 monitor 均寫入使用者 XML 專案根；未錨定時提前提示。
 - [x] Python RawDumper 改為 ProjectRoot／工作目錄 fallback、啟動時截斷、寫入錯誤顯示；Python 4/4、UI 2/2、Rust 路徑 2/2、tsc／cargo／Vite 全通過。
 - [ ] 待硬體／雙平台實機：Tauri seeded 範例與多視窗 focus 重取、VSIX 三種 shell 上傳／監看，並確認各專案根的 `raw_dump.log` 內容。
+
+### [2026-09-25] #task[ESLint 工具鏈] Extension lint 設定恢復
+- [x] 新增 `.eslintrc.json`，採用 ESLint 8 + `@typescript-eslint` recommended 規則。
+- [x] 修正既有 unused import/argument、case declaration、prefer-const、non-null assertion 與 buffer null guard。
+- [x] `npm run lint` 達到 0 errors／0 warnings；`npm run compile`、193/193 Node tests、`git diff --check` 通過。
+- [ ] `npm test` 正式測試仍待補 `out/test/runTest.js` 對應的 VS Code 測試 harness；不屬於本次 lint 修復範圍。

@@ -21,7 +21,7 @@ export class FirmwareOpsHandler {
 
         let firmwareFileName: string | undefined;
         let isSerial = model.includes('SERIAL') || model.includes('CAMERA') || model.includes('FACTORY');
-        let flashSegments: { addr: string, path: string }[] = [];
+        const flashSegments: { addr: string, path: string }[] = [];
 
         if (model === 'custom') {
             const uris = await vscode.window.showOpenDialog({
@@ -110,8 +110,6 @@ export class FirmwareOpsHandler {
         }
 
         // UF2 模式
-        const uf2File = flashSegments[0];
-        let burnTarget: string | null = null;
         const findDisk = (label: string) => {
             try {
                 const output = execSync('wmic logicaldisk get name, volumename').toString();
@@ -126,7 +124,7 @@ export class FirmwareOpsHandler {
             return null;
         };
 
-        burnTarget = findDisk('RPI-RP2');
+        const burnTarget = findDisk('RPI-RP2');
         if (!burnTarget) {
             vscode.window.showErrorMessage('Please put MCU into BOOTSEL mode (RPI-RP2 drive not found).');
             return;
@@ -138,7 +136,7 @@ export class FirmwareOpsHandler {
                 title: `Burning firmware...`,
                 cancellable: false
             }, async (progress) => {
-                const destPath = path.join(burnTarget!, firmwareFileName!);
+                const destPath = path.join(burnTarget, firmwareFileName || 'firmware.uf2');
                 fs.copyFileSync(flashSegments[0].path, destPath);
 
                 if (!shouldClear) {

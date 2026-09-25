@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as os from 'os';
 import { DatasetSidecarManager } from './sidecarManager';
 import { TrainingOpsHandler } from './handlers/trainingOps';
 import { FileOpsHandler } from './handlers/fileOps';
@@ -217,10 +216,11 @@ export class CocoyaManager {
                 case 'stopCode':
                     this.envOps.handleStopCode();
                     break;
-                case 'checkUpdate':
+                case 'checkUpdate': {
                     const v = this.context.extension.packageJSON.version;
                     vscode.window.showInformationMessage(this.t('MSG_UPDATE_LATEST', v));
                     break;
+                }
                 case 'closeEditor':
                     await this.fileOps.handleCloseEditor(message);
                     break;

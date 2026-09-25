@@ -20,7 +20,7 @@ export class EnvOpsHandler {
     }
 
     public async handleCheckEnvironment() {
-        let pythonPath = this.manager.getPythonPath();
+        const pythonPath = this.manager.getPythonPath();
         
         // SSOT: 從 config/python_modules.json 讀取套件清單
         const configPath = path.join(this.manager.context.extensionPath, 'config', 'python_modules.json');
@@ -120,7 +120,7 @@ print(json.dumps({
      * 新作法：spawn 獨立進程，stdout/stderr 轉為 `installModuleLog` 事件，
      * 以 `close`（真實結束訊號）發 `installModuleDone` 驅動前端重檢。
      */
-    public async handleInstallModule(moduleId: string, pipPackage?: string, moduleDisplay?: string) {
+    public async handleInstallModule(moduleId: string, pipPackage?: string, _moduleDisplay?: string) {
         const post = (msg: any) => this.manager.panel.webview.postMessage(msg);
         const pipPkg = (pipPackage && pipPackage.trim()) ? pipPackage.trim() : moduleId;
 
@@ -495,7 +495,7 @@ print(json.dumps({
                     this.manager.panel.webview.postMessage({ command: 'updateStatus', data: { hasUpdate, currentVersion, latestVersion, url: `https://github.com/${repo}/releases` } });
                 } catch (e) {}
             });
-        }).on('error', () => {});
+        }).on('error', () => undefined);
     }
 
     private isNewerVersion(curr: string, late: string): boolean {

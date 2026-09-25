@@ -344,7 +344,8 @@ export class DatasetOpsHandler {
             this.manager.uploadBuffers.set(fileId, new Array(totalChunks));
         }
 
-        const chunks = this.manager.uploadBuffers.get(fileId)!;
+        const chunks = this.manager.uploadBuffers.get(fileId);
+        if (!chunks) return;
         chunks[chunkIndex] = Buffer.from(zipDataChunk, 'base64');
 
         if (!isLast) return;
@@ -396,7 +397,7 @@ export class DatasetOpsHandler {
         });
     }
 
-    public handleDatasetListCameras(message: any) {
+    public handleDatasetListCameras(_message: any) {
         this.manager.sidecar.start();
         this.manager.sidecar.send('listCameras', {}, (resp: any) => {
             this.manager.panel.webview.postMessage({
