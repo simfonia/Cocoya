@@ -1,11 +1,85 @@
 use std::process::{Command, Stdio};
-use std::io::{BufReader, BufRead};
+use std::io::{BufReader, BufRead, Read};
 use std::fs;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, State, Window, Emitter};
 use tauri_plugin_dialog::DialogExt;
 use crate::state::AppState;
 use crate::utils::{get_deployer_path, get_firmware_dir};
 use crate::commands::python::stop_python;
+
+/// 由目前錨定的 XML 檔案推導 Raw Dump 路徑：`<ProjectRoot>/raw_dump.log`。
+/// 關閉時回傳 None；開啟但未錨定時拒絕啟動，不猜測或回退到安裝目錄。
+fn raw_dump_path_for_project(
+    project_file: Option<&Path>,
+    enabled: bool,
+) -> Result<Option<PathBuf>, String> {
+    if !enabled {
+        return Ok(None);
+    }
+    let project_file = project_file.ok_or_else(|| {
+        "PROJECT_ROOT_REQUIRED: 請先開啟並儲存 XML 專案，再啟用 MCU 序列埠 Raw Dump".to_string()
+    })?;
+    let project_root = project_file.parent().ok_or_else(|| {
+        format!("PROJECT_ROOT_REQUIRED: 無法由專案檔案推導 ProjectRoot: {}", project_file.display())
+    })?;
+    Ok(Some(project_root.join("raw_dump.log")))
+}
+
+fn resolve_serial_raw_dump_path(
+    state: &State<'_, AppState>,
+    window_label: &str,
+    enabled: bool,
+) -> Result<Option<PathBuf>, String> {
+    let project_file = {
+        let paths = state.current_paths.lock().unwrap();
+        paths.get(window_label).cloned()
+    };
+    raw_dump_path_for_project(project_file.as_deref(), enabled)
+}
+
+fn configure_serial_raw_dump(
+    cmd: &mut Command,
+    state: &State<'_, AppState>,
+    window_label: &str,
+    enabled: bool,
+) -> Result<(), String> {
+    match resolve_serial_raw_dump_path(state, window_label, enabled)? {
+        Some(path) => {
+            cmd.env("COCOYA_SERIAL_RAW_DUMP", "1");
+            cmd.env("COCOYA_SERIAL_RAW_DUMP_PATH", path);
+        }
+        None => {
+            // UI 關閉必須是權威狀態，不可意外繼承 shell/父程序既有的診斷旗標。
+            cmd.env("COCOYA_SERIAL_RAW_DUMP", "0");
+            cmd.env_remove("COCOYA_SERIAL_RAW_DUMP_PATH");
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod raw_dump_tests {
+    use super::raw_dump_path_for_project;
+    use std::path::Path;
+
+    #[test]
+    fn raw_dump_path_is_project_root_file() {
+        let path = raw_dump_path_for_project(Some(Path::new("C:/robot/line.xml")), true)
+            .expect("anchored project should resolve");
+        assert_eq!(path, Some("C:/robot/raw_dump.log".into()));
+    }
+
+    #[test]
+    fn raw_dump_requires_anchor_only_when_enabled() {
+        assert_eq!(raw_dump_path_for_project(None, false), Ok(None));
+        let error = raw_dump_path_for_project(None, true).expect_err("unanchored project must fail");
+        assert!(error.starts_with("PROJECT_ROOT_REQUIRED:"));
+    }
+}
 
 /// UTF-8 chunk 邊界保護：回傳 buf 尾端不完整多位元組序列的位元組數（0 表完整）。
 /// 背景：deploy/monitor 以 1024-byte chunk 直通＋from_utf8_lossy 逐塊解碼，
@@ -40,6 +114,120 @@ fn utf8_incomplete_tail_len(buf: &[u8]) -> usize {
     }
     cont
 }
+
+/// 具備背壓與時間窗聚合的串流轉發函式
+/// 解決高頻 print (如 while True: print("hello")) 造成的 Tauri IPC 洪水與 WebView 卡死
+fn forward_stream_with_backpressure<R: Read + Send + 'static>(
+    mut reader: R,
+    window: Window,
+    label: String,
+    event_name: &'static str,
+    stopped: Option<Arc<AtomicBool>>,
+    on_finished_event: Option<&'static str>,
+) {
+    std::thread::spawn(move || {
+        use std::sync::mpsc::sync_channel;
+        // 有界通道：最多緩衝 128 個 chunk (~128 KB)，防止記憶體無界膨脹
+        let (tx, rx) = sync_channel::<Vec<u8>>(128);
+        let dropped_bytes = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let dropped_clone = dropped_bytes.clone();
+        let stopped_reader = stopped.clone();
+
+        // 讀取執行緒：以阻塞方式讀取 pipe，在隊列滿時丟棄並記錄 dropped，保證快速清空 stdout pipe 避免 Python 子進程卡死
+        let reader_thread = std::thread::spawn(move || {
+            let mut buf = [0u8; 1024];
+            while let Ok(n) = reader.read(&mut buf) {
+                if n == 0 {
+                    break;
+                }
+                if let Some(ref st) = stopped_reader {
+                    if st.load(Ordering::SeqCst) {
+                        break;
+                    }
+                }
+                let chunk = buf[..n].to_vec();
+                if let Err(std::sync::mpsc::TrySendError::Full(_)) = tx.try_send(chunk) {
+                    dropped_clone.fetch_add(n, Ordering::Relaxed);
+                }
+            }
+        });
+
+        // 聚合轉發迴圈：以 30ms 時間窗或批次大小累積發送
+        const FLUSH_INTERVAL: Duration = Duration::from_millis(30);
+        const BATCH_SIZE_THRESHOLD: usize = 4096;
+        let mut pending: Vec<u8> = Vec::new();
+        let mut last_emit = Instant::now();
+
+        loop {
+            if let Some(ref st) = stopped {
+                if st.load(Ordering::SeqCst) {
+                    break;
+                }
+            }
+
+            let timeout = FLUSH_INTERVAL.saturating_sub(last_emit.elapsed());
+            match rx.recv_timeout(timeout) {
+                Ok(chunk) => {
+                    pending.extend_from_slice(&chunk);
+                    if pending.len() >= BATCH_SIZE_THRESHOLD || last_emit.elapsed() >= FLUSH_INTERVAL {
+                        let tail = utf8_incomplete_tail_len(&pending);
+                        let split = pending.len() - tail;
+                        if split > 0 {
+                            let mut s = String::from_utf8_lossy(&pending[..split]).to_string();
+                            let dropped = dropped_bytes.swap(0, Ordering::Relaxed);
+                            if dropped > 0 {
+                                let warn = format!("\n[Cocoya Warning: 序列埠輸出過於頻繁，已略過約 {} KB 日誌]\n", (dropped + 1023) / 1024);
+                                s = warn + &s;
+                            }
+                            let _ = window.emit_to(&label, event_name, s);
+                            pending.drain(..split);
+                            last_emit = Instant::now();
+                        }
+                    }
+                }
+                Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
+                    if !pending.is_empty() {
+                        let tail = utf8_incomplete_tail_len(&pending);
+                        let split = pending.len() - tail;
+                        if split > 0 {
+                            let mut s = String::from_utf8_lossy(&pending[..split]).to_string();
+                            let dropped = dropped_bytes.swap(0, Ordering::Relaxed);
+                            if dropped > 0 {
+                                let warn = format!("\n[Cocoya Warning: 序列埠輸出過於頻繁，已略過約 {} KB 日誌]\n", (dropped + 1023) / 1024);
+                                s = warn + &s;
+                            }
+                            let _ = window.emit_to(&label, event_name, s);
+                            pending.drain(..split);
+                            last_emit = Instant::now();
+                        }
+                    }
+                }
+                Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
+                    // Reader thread 退出 (EOF)
+                    break;
+                }
+            }
+        }
+
+        // 清空剩餘資料
+        if !pending.is_empty() {
+            let mut s = String::from_utf8_lossy(&pending).to_string();
+            let dropped = dropped_bytes.swap(0, Ordering::Relaxed);
+            if dropped > 0 {
+                let warn = format!("\n[Cocoya Warning: 序列埠輸出過於頻繁，已略過約 {} KB 日誌]\n", (dropped + 1023) / 1024);
+                s = warn + &s;
+            }
+            let _ = window.emit_to(&label, event_name, s);
+        }
+
+        let _ = reader_thread.join();
+
+        if let Some(finished_event) = on_finished_event {
+            let _ = window.emit_to(&label, finished_event, ());
+        }
+    });
+}
+
 
 #[derive(serde::Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -195,7 +383,11 @@ pub async fn deploy_mcu(
     code: String,
     serial_upload_only: bool,
     lang: String,
+    raw_dump_enabled: Option<bool>,
 ) -> Result<(), String> {
+    let raw_dump_enabled = raw_dump_enabled.unwrap_or(false);
+    // 驗證錨定必須在停止既有程序之前完成，避免設定錯誤時中斷目前工作。
+    resolve_serial_raw_dump_path(&state, window.label(), raw_dump_enabled)?;
     stop_python(window.clone(), state.clone()).await?;
 
     let temp_dir = std::env::temp_dir().join("cocoya_tauri");
@@ -215,6 +407,12 @@ pub async fn deploy_mcu(
     // 使 deploy_mcu.py 的中文訊息（MESSAGES zh-hant）以 UTF-8 輸出，Rust 端 from_utf8_lossy 解讀才不會亂碼
     cmd.env("PYTHONIOENCODING", "utf-8")
         .env("PYTHONUTF8", "1");
+    configure_serial_raw_dump(
+        &mut cmd,
+        &state,
+        window.label(),
+        raw_dump_enabled,
+    )?;
     cmd.arg("-u")
         .arg(&deployer_path)
         .arg(&port)
@@ -240,8 +438,8 @@ pub async fn deploy_mcu(
         .spawn()
         .map_err(|e| format!("Failed to execute deployer: {}", e))?;
 
-    let mut stdout = child.stdout.take().unwrap();
-    let mut stderr = child.stderr.take().unwrap();
+    let stdout = child.stdout.take().unwrap();
+    let stderr = child.stderr.take().unwrap();
 
     {
         let mut procs = state.python_processes.lock().unwrap();
@@ -250,68 +448,62 @@ pub async fn deploy_mcu(
 
     let own_label = window.label().to_string();
 
-    let deploy_stdout_label = own_label.clone();
+    forward_stream_with_backpressure(
+        stdout,
+        window.clone(),
+        own_label.clone(),
+        "python-log",
+        None,
+        None,
+    );
 
-    let window_clone = window.clone();
-    std::thread::spawn(move || {
-        use std::io::Read;
-        // chunk 直通：原樣送出 stdout 每塊，換行/空行之控制統一交由 deploy/base.py 於源頭完成
-        // （含「OK 後補空行」與資料行壓平）；此處不另行整行切分，避免把 base 已產好的
-        // 空白行（\n\n）拆成獨立 payload，在前端 pre-wrap 渲染成多餘空行。
-        // UTF-8 邊界保護：中文字 3 bytes 若被切在 1024 邊界，尾端殘缺序列留待下一批合併再解碼
-        let mut buffer = [0; 1024];
-        let mut pending: Vec<u8> = Vec::new();
-        while let Ok(n) = stdout.read(&mut buffer) {
-            if n == 0 { break; }
-            pending.extend_from_slice(&buffer[..n]);
-            let tail = utf8_incomplete_tail_len(&pending);
-            let split = pending.len() - tail;
-            if split > 0 {
-                let s = String::from_utf8_lossy(&pending[..split]).to_string();
-                let _ = window_clone.emit_to(&deploy_stdout_label, "python-log", s);
-                pending.drain(..split);
-            }
-        }
-        if !pending.is_empty() {
-            let s = String::from_utf8_lossy(&pending).to_string();
-            let _ = window_clone.emit_to(&deploy_stdout_label, "python-log", s);
-        }
-    });
-
-    let deploy_stderr_label = own_label.clone();
-
-    let window_clone_err = window.clone();
-    std::thread::spawn(move || {
-        use std::io::Read;
-        let mut buffer = [0; 1024];
-        let mut pending: Vec<u8> = Vec::new();
-        while let Ok(n) = stderr.read(&mut buffer) {
-            if n == 0 { break; }
-            pending.extend_from_slice(&buffer[..n]);
-            let tail = utf8_incomplete_tail_len(&pending);
-            let split = pending.len() - tail;
-            if split > 0 {
-                let s = String::from_utf8_lossy(&pending[..split]).to_string();
-                let _ = window_clone_err.emit_to(&deploy_stderr_label, "python-error", s);
-                pending.drain(..split);
-            }
-        }
-        if !pending.is_empty() {
-            let s = String::from_utf8_lossy(&pending).to_string();
-            let _ = window_clone_err.emit_to(&deploy_stderr_label, "python-error", s);
-        }
-    });
+    forward_stream_with_backpressure(
+        stderr,
+        window.clone(),
+        own_label,
+        "python-error",
+        None,
+        None,
+    );
 
     Ok(())
 }
 
-/// 停止指定視窗的串列埠監視 session（失焦釋放用）。
-/// 只釋放 monitor session，保留 `serial_wants` 以便重新聚焦自動重開。
+/// 停止指定視窗的串列埠監視 session（失焦釋放與上傳交接用）。
+/// 包含安全終止 child 進程樹、等待 child 完全退出、冷卻讓 OS 釋放 COM 埠 handle。
+/// 保留 `serial_wants` 以便重新聚焦自動重開（使用者明確關閉則由呼叫端手動清除 wants）。
 pub fn stop_serial_monitor(state: State<'_, AppState>, label: String) -> bool {
-    let mut monitors = state.serial_monitors.lock().unwrap();
-    if let Some(mut session) = monitors.remove(&label) {
-        // monitor child 不存於 python_processes（避免與執行 python/部署混淆）
-        let _ = session.child.kill();
+    let session_opt = {
+        let mut monitors = state.serial_monitors.lock().unwrap();
+        monitors.remove(&label)
+    };
+
+    if let Some(mut session) = session_opt {
+        // 1. 設定停止旗標，使 reader/forwarder thread 能儘速中斷
+        session.stopped.store(true, Ordering::SeqCst);
+
+        // 2. 終止進程樹（Windows 下 taskkill /F /T 確保所有子孫完全終止）
+        crate::commands::python::kill_tree(&mut session.child);
+
+        // 3. 等待子進程結束（最多等候 1.5 秒）
+        let start = Instant::now();
+        loop {
+            match session.child.try_wait() {
+                Ok(Some(_status)) => break,
+                Ok(None) => {
+                    if start.elapsed() > Duration::from_millis(1500) {
+                        let _ = session.child.kill();
+                        let _ = session.child.wait();
+                        break;
+                    }
+                    std::thread::sleep(Duration::from_millis(25));
+                }
+                Err(_) => break,
+            }
+        }
+
+        // 4. 短暫冷卻（100ms），讓 Windows 串列埠驅動徹底釋放 Handle，避免再次上傳或重開時撞到 AccessDenied
+        std::thread::sleep(Duration::from_millis(100));
         return true;
     }
     false
@@ -325,8 +517,11 @@ fn spawn_serial_monitor(
     port: String,
     python_path: String,
     lang: String,
+    raw_dump_enabled: bool,
 ) -> Result<(), String> {
     let label = window.label().to_string();
+    // 在搶占其他視窗序列埠前先驗證 ProjectRoot。
+    resolve_serial_raw_dump_path(&state, &label, raw_dump_enabled)?;
 
     // 若同一埠已被其他視窗佔用 → 先停止該視窗，避免雙重衝突
     let occupied_by: Option<String> = {
@@ -347,7 +542,12 @@ fn spawn_serial_monitor(
     // 記錄「想要」的監看埠（跨失焦保留，供重新聚焦後自動重開）
     {
         let mut wants = state.serial_wants.lock().unwrap();
-        wants.insert(label.clone(), crate::state::SerialMonitorWant { port: port.clone(), python_path: python_path.clone(), lang: lang.clone() });
+        wants.insert(label.clone(), crate::state::SerialMonitorWant {
+            port: port.clone(),
+            python_path: python_path.clone(),
+            lang: lang.clone(),
+            raw_dump_enabled,
+        });
     }
 
     let script_path = get_deployer_path(&handle);
@@ -356,6 +556,7 @@ fn spawn_serial_monitor(
     // 編碼修復（對齊 deploy_mcu）：monitor 轉發 MCU 回傳的中文 print，Host 端必須同樣強制 UTF-8
     cmd.env("PYTHONIOENCODING", "utf-8")
         .env("PYTHONUTF8", "1");
+    configure_serial_raw_dump(&mut cmd, &state, &label, raw_dump_enabled)?;
     #[cfg(target_os = "windows")]
     {
         use std::os::windows::process::CommandExt;
@@ -374,66 +575,42 @@ fn spawn_serial_monitor(
         .spawn()
         .map_err(|e| format!("Failed to start serial monitor with {}: {}", python_path, e))?;
 
-    let mut stdout = child.stdout.take().unwrap();
-    let mut stderr = child.stderr.take().unwrap();
+    let stdout = child.stdout.take().unwrap();
+    let stderr = child.stderr.take().unwrap();
+
+    let stopped = Arc::new(AtomicBool::new(false));
 
     {
         let mut monitors = state.serial_monitors.lock().unwrap();
-        monitors.insert(label.clone(), crate::state::SerialMonitorSession { port: port.clone(), python_path: python_path.clone(), lang: lang.clone(), child: child });
+        monitors.insert(
+            label.clone(),
+            crate::state::SerialMonitorSession {
+                port: port.clone(),
+                python_path: python_path.clone(),
+                lang: lang.clone(),
+                child: child,
+                stopped: stopped.clone(),
+            },
+        );
     }
 
-    let monitor_stdout_label = label.clone();
+    forward_stream_with_backpressure(
+        stdout,
+        window.clone(),
+        label.clone(),
+        "python-log",
+        Some(stopped.clone()),
+        Some("serial-monitor-stopped"),
+    );
 
-    let window_clone = window.clone();
-    std::thread::spawn(move || {
-        // stdout：chunk 直通原樣送出（空白行控制統一在 deploy/base.py 源頭完成），
-        // 避免在此整行切分把 base 產的 \n\n 拆成獨立 payload 於前端渲染成多餘空行
-        use std::io::Read;
-        let mut buffer = [0; 1024];
-        let mut pending: Vec<u8> = Vec::new();
-        while let Ok(n) = stdout.read(&mut buffer) {
-            if n == 0 { break; }
-            pending.extend_from_slice(&buffer[..n]);
-            let tail = utf8_incomplete_tail_len(&pending);
-            let split = pending.len() - tail;
-            if split > 0 {
-                let s = String::from_utf8_lossy(&pending[..split]).to_string();
-                // 精準單播：只發給本視窗，避免多視窗終端機互相污染
-                let _ = window_clone.emit_to(&monitor_stdout_label, "python-log", s);
-                pending.drain(..split);
-            }
-        }
-        if !pending.is_empty() {
-            let s = String::from_utf8_lossy(&pending).to_string();
-            let _ = window_clone.emit_to(&monitor_stdout_label, "python-log", s);
-        }
-        // monitor 行程結束（被 stop/toggle 或自行退出）→ 通知前端熄滅監看鈕狀態
-        let _ = window_clone.emit_to(&monitor_stdout_label, "serial-monitor-stopped", ());
-    });
-
-    let monitor_stderr_label = label.clone();
-
-    let window_clone_err = window.clone();
-    std::thread::spawn(move || {
-        use std::io::Read;
-        let mut buffer = [0; 1024];
-        let mut pending: Vec<u8> = Vec::new();
-        while let Ok(n) = stderr.read(&mut buffer) {
-            if n == 0 { break; }
-            pending.extend_from_slice(&buffer[..n]);
-            let tail = utf8_incomplete_tail_len(&pending);
-            let split = pending.len() - tail;
-            if split > 0 {
-                let s = String::from_utf8_lossy(&pending[..split]).to_string();
-                let _ = window_clone_err.emit_to(&monitor_stderr_label, "python-error", s);
-                pending.drain(..split);
-            }
-        }
-        if !pending.is_empty() {
-            let s = String::from_utf8_lossy(&pending).to_string();
-            let _ = window_clone_err.emit_to(&monitor_stderr_label, "python-error", s);
-        }
-    });
+    forward_stream_with_backpressure(
+        stderr,
+        window.clone(),
+        label,
+        "python-error",
+        Some(stopped),
+        None,
+    );
 
     Ok(())
 }
@@ -449,6 +626,7 @@ pub async fn toggle_serial_monitor(
     port: Option<String>,
     python_path: Option<String>,
     lang: Option<String>,
+    raw_dump_enabled: Option<bool>,
 ) -> Result<String, String> {
     let label = window.label().to_string();
     let had = stop_serial_monitor(state.clone(), label.clone());
@@ -459,7 +637,8 @@ pub async fn toggle_serial_monitor(
     let port = port.ok_or_else(|| "NO_PORT".to_string())?;
     let pp = python_path.unwrap_or_else(|| "python".to_string());
     let lg = lang.unwrap_or_else(|| "en".to_string());
-    spawn_serial_monitor(window.clone(), state.clone(), handle, port, pp, lg)?;
+    let raw_dump_enabled = raw_dump_enabled.unwrap_or(false);
+    spawn_serial_monitor(window.clone(), state.clone(), handle, port, pp, lg, raw_dump_enabled)?;
     Ok("opened".to_string())
 }
 
@@ -471,9 +650,14 @@ pub async fn open_serial_monitor(
     port: String,
     python_path: String,
     lang: String,
+    raw_dump_enabled: Option<bool>,
 ) -> Result<(), String> {
+    let raw_dump_enabled = raw_dump_enabled.unwrap_or(false);
+    resolve_serial_raw_dump_path(&state, window.label(), raw_dump_enabled)?;
     stop_python(window.clone(), state.clone()).await?;
-    let _ = spawn_serial_monitor(window.clone(), state.clone(), handle, port, python_path, lang)?;
+    let _ = spawn_serial_monitor(
+        window.clone(), state.clone(), handle, port, python_path, lang, raw_dump_enabled
+    )?;
     Ok(())
 }
 
@@ -486,13 +670,35 @@ pub async fn set_window_focus(
     handle: AppHandle,
     state: State<'_, AppState>,
     focused: bool,
+    raw_dump_enabled: Option<bool>,
 ) -> Result<(), String> {
     let label = window.label().to_string();
     if focused {
+        // 部署中或執行中守門：若此視窗已有 python_processes，不可自動重開 serial monitor 造成衝突
+        let is_running_or_deploying = {
+            let procs = state.python_processes.lock().unwrap();
+            procs.contains_key(&label)
+        };
+        if is_running_or_deploying {
+            return Ok(());
+        }
+
+        // 使用者可能在 monitor 執行期間調整設定；focus 重取前同步 wants 的開關狀態。
+        if let Some(enabled) = raw_dump_enabled {
+            if let Some(want) = state.serial_wants.lock().unwrap().get_mut(&label) {
+                want.raw_dump_enabled = enabled;
+            }
+        }
+
         let want: Option<crate::state::SerialMonitorWant> = {
             let wants = state.serial_wants.lock().unwrap();
             wants.get(&label)
-                .map(|w| crate::state::SerialMonitorWant { port: w.port.clone(), python_path: w.python_path.clone(), lang: w.lang.clone() })
+                .map(|w| crate::state::SerialMonitorWant {
+                    port: w.port.clone(),
+                    python_path: w.python_path.clone(),
+                    lang: w.lang.clone(),
+                    raw_dump_enabled: w.raw_dump_enabled,
+                })
         };
         let already_active = {
             let monitors = state.serial_monitors.lock().unwrap();
@@ -502,7 +708,10 @@ pub async fn set_window_focus(
             if !already_active {
                 // 略為延遲讓 OS 徹底釋放前一位鎖定的埠，再重開避免衝突
                 std::thread::sleep(std::time::Duration::from_millis(400));
-                let _ = spawn_serial_monitor(window.clone(), state.clone(), handle, w.port, w.python_path, w.lang)?;
+                let _ = spawn_serial_monitor(
+                    window.clone(), state.clone(), handle,
+                    w.port, w.python_path, w.lang, w.raw_dump_enabled
+                )?;
             }
         }
     } else {

@@ -137,6 +137,9 @@ export class BridgeTauri extends BaseBridge {
                                 port: data.serialPort,
                                 code: data.code,
                                 serialUploadOnly: data.serialUploadOnly || false,
+                                rawDumpEnabled: data.rawDumpEnabled === undefined
+                                    ? localStorage.getItem('cocoya_serial_raw_dump_enabled') === 'true'
+                                    : !!data.rawDumpEnabled,
                                 lang: lang
                             });
                             
@@ -173,6 +176,9 @@ export class BridgeTauri extends BaseBridge {
                         await this.tauriInvoke('open_serial_monitor', { 
                             port: data.serialPort,
                             pythonPath: pythonPath,
+                            rawDumpEnabled: data.rawDumpEnabled === undefined
+                                ? localStorage.getItem('cocoya_serial_raw_dump_enabled') === 'true'
+                                : !!data.rawDumpEnabled,
                             lang: lang
                         });
                     } catch (e) {
@@ -191,6 +197,9 @@ export class BridgeTauri extends BaseBridge {
                         const res = await this.tauriInvoke('toggle_serial_monitor', {
                             port: data.serialPort,
                             pythonPath: monPython,
+                            rawDumpEnabled: data.rawDumpEnabled === undefined
+                                ? localStorage.getItem('cocoya_serial_raw_dump_enabled') === 'true'
+                                : !!data.rawDumpEnabled,
                             lang: monLang
                         });
                         const opened = res === 'opened';
@@ -219,7 +228,12 @@ export class BridgeTauri extends BaseBridge {
                     await this.tauriInvoke('deploy_mcu', {
                         pythonPath: localStorage.getItem('pythonPath') || 'python',
                         port: data.port,
-                        code: data.code
+                        code: data.code,
+                        serialUploadOnly: false,
+                        rawDumpEnabled: data.rawDumpEnabled === undefined
+                            ? localStorage.getItem('cocoya_serial_raw_dump_enabled') === 'true'
+                            : !!data.rawDumpEnabled,
+                        lang: (window.Blockly && Blockly.Msg['BKY_LANG']) || 'zh-hant'
                     });
                     this._dispatchToFrontend({ command: 'deployCompleted' });
                     break;
@@ -1100,12 +1114,18 @@ export class BridgeTauri extends BaseBridge {
             if (doc && this.tauriInvoke) {
                 doc.addEventListener('blur', () => {
                     if (this.tauriInvoke) {
-                        this.tauriInvoke('set_window_focus', { focused: false }).catch(() => {});
+                        this.tauriInvoke('set_window_focus', {
+                            focused: false,
+                            rawDumpEnabled: localStorage.getItem('cocoya_serial_raw_dump_enabled') === 'true'
+                        }).catch(() => {});
                     }
                 });
                 doc.addEventListener('focus', () => {
                     if (this.tauriInvoke) {
-                        this.tauriInvoke('set_window_focus', { focused: true }).catch(() => {});
+                        this.tauriInvoke('set_window_focus', {
+                            focused: true,
+                            rawDumpEnabled: localStorage.getItem('cocoya_serial_raw_dump_enabled') === 'true'
+                        }).catch(() => {});
                     }
                 });
             }

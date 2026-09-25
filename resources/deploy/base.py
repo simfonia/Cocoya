@@ -48,6 +48,64 @@ MESSAGES = {
 }
 
 
+
+class _RawDumper:
+    """診斷用序列埠原始位元組記錄器（背景有界佇列，避免阻塞 Serial 讀取主迴圈）"""
+
+    def __init__(self, log_path=None):
+        # Host 一律傳入目前 XML 專案 ProjectRoot/raw_dump.log；手動執行 Python 時
+        # 則以目前工作目錄作為合理 fallback，不再寫入 Cocoya 安裝目錄的 temp_scripts。
+        if not log_path:
+            log_path = os.path.join(os.getcwd(), "raw_dump.log")
+        self.log_path = log_path
+        self.queue = None
+        self.thread = None
+        self.stop_event = threading.Event()
+        self.dropped_count = 0
+        try:
+            parent = os.path.dirname(os.path.abspath(self.log_path))
+            os.makedirs(parent, exist_ok=True)
+            # 先同步建立/截斷，讓權限或路徑錯誤立即顯示，而不是背景 thread 靜默失敗。
+            with open(self.log_path, "w", encoding="utf-8"):
+                pass
+            import queue
+            self.queue = queue.Queue(maxsize=1000)
+            self.thread = threading.Thread(target=self._worker, daemon=True)
+            self.thread.start()
+        except Exception as exc:
+            print(f"[Cocoya RawDumper] ERROR: cannot open {self.log_path}: {exc}", file=sys.stderr, flush=True)
+            self.queue = None
+
+    def _worker(self):
+        try:
+            with open(self.log_path, "a", encoding="utf-8") as f:
+                while not self.stop_event.is_set() or (self.queue and not self.queue.empty()):
+                    try:
+                        item = self.queue.get(timeout=0.2)
+                        f.write(item + "\n")
+                        self.queue.task_done()
+                    except Exception:
+                        pass
+                    if self.dropped_count > 0:
+                        f.write(f"[Cocoya RawDumper] dropped {self.dropped_count} chunks due to queue backpressure\n")
+                        self.dropped_count = 0
+        except Exception as exc:
+            print(f"[Cocoya RawDumper] ERROR: write failed for {self.log_path}: {exc}", file=sys.stderr, flush=True)
+
+    def record(self, data_raw):
+        if not self.queue or self.stop_event.is_set():
+            return
+        try:
+            self.queue.put_nowait(repr(data_raw))
+        except Exception:
+            self.dropped_count += 1
+
+    def stop(self):
+        self.stop_event.set()
+        if self.thread and self.thread.is_alive():
+            self.thread.join(timeout=1.0)
+
+
 def get_msg(key, lang="en"):
     """取得本地化訊息"""
     return MESSAGES.get(lang, MESSAGES["en"]).get(key, key)
@@ -79,6 +137,8 @@ class BaseDeployer:
         # 程式執行完畢提示（program_done）每次監看會話只顯示一次
         self._done_shown = False
         stop_event = threading.Event()
+        raw_dump_flag = os.environ.get("COCOYA_SERIAL_RAW_DUMP", "").strip().lower()
+        raw_dumper = _RawDumper(os.environ.get("COCOYA_SERIAL_RAW_DUMP_PATH")) if raw_dump_flag in ("1", "true", "yes", "on") else None
 
         def handle_input():
             try:
@@ -122,12 +182,8 @@ class BaseDeployer:
                 if ser.in_waiting > 0:
                     data_raw = ser.read(ser.in_waiting)
                     data_str = data_raw.decode("utf-8", errors="ignore")
-                    # 診斷（暫存）：把每批原始 bytes repr 寫到 temp_scripts/raw_dump.log，不影響終端輸出
-                    try:
-                        with open(r"c:/Workspace/cocoya/temp_scripts/raw_dump.log", "a", encoding="utf-8") as _f:
-                            _f.write(repr(data_raw) + "\n")
-                    except Exception:
-                        pass
+                    if raw_dumper:
+                        raw_dumper.record(data_raw)
                     # --- 生資料最小正規化 ---
                     # Raw REPL 以 \x04 分隔輸出段落；把 \x04 視作換行語意、統一 \r。
                     data_str = data_str.replace("\r", "")
@@ -198,7 +254,11 @@ class BaseDeployer:
                         print(welcome_msg)
                     banner_pending = False
             except KeyboardInterrupt:
-                print(get_msg("stopped", lang)); stop_event.set(); break
+                print(get_msg("stopped", lang))
+                stop_event.set()
+                if raw_dumper:
+                    raw_dumper.stop()
+                break
             except Exception as e:
                 if not is_tauri:
                     print(get_msg("disconnected", lang) % str(e))

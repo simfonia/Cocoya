@@ -87,12 +87,12 @@ Notation: `key?` = Optional. **Rule: changing a Rust signature -> immediately up
 | python | abort_install_module | -- | {} | Result<(), String>（kill 進程樹；發 `install-module-done` 帶 aborted:true；無進行中安裝時靜默回 Ok） |
 | mcu | get_serial_ports    | -- | {} | Result<Vec<SerialPortResult>, String>（欄位 camelCase：port/label/vid/pid/boardId；boardId 對應 board_defs.json，未知板空字串） |
 | mcu | setup_stable_mode   | port: String, lang: String | {port, lang} | Result<(), String> |
-| mcu | deploy_mcu          | python_path, port, code, serial_upload_only: bool, lang | {pythonPath, port, code, serialUploadOnly, lang} | Result<(), String> |
-| mcu | open_serial_monitor | port: String, python_path, lang | {port, pythonPath, lang} | Result<(), String> |
-| mcu | toggle_serial_monitor | port: Option<String>, python_path, lang: Option<String> | {port?, pythonPath?, lang?} | Result<String, String>（回 "opened"/"stopped"；已啟用中 → 停止並清除 serial_wants；否則啟動） |
+| mcu | deploy_mcu          | python_path, port, code, serial_upload_only: bool, lang, raw_dump_enabled: Option<bool> | {pythonPath, port, code, serialUploadOnly, lang, rawDumpEnabled?} | Result<(), String>（Raw Dump 開啟時路徑固定為 `<ProjectRoot>/raw_dump.log`；未錨定回 `PROJECT_ROOT_REQUIRED`） |
+| mcu | open_serial_monitor | port: String, python_path, lang, raw_dump_enabled: Option<bool> | {port, pythonPath, lang, rawDumpEnabled?} | Result<(), String> |
+| mcu | toggle_serial_monitor | port: Option<String>, python_path, lang: Option<String>, raw_dump_enabled: Option<bool> | {port?, pythonPath?, lang?, rawDumpEnabled?} | Result<String, String>（回 "opened"/"stopped"；設定保存於 serial_wants，聚焦重取沿用） |
 | mcu | erase_filesystem    | port: String, python_path, lang | {port, pythonPath, lang} | Result<(), String> |
 | mcu | reset_firmware      | model: String, should_clear: bool, serial_port: Option<String> | {model, shouldClear, serialPort?} | Result<(), String> |
-| mcu | set_window_focus    | focused: bool | {focused} | Result<(), String> |
+| mcu | set_window_focus    | focused: bool, raw_dump_enabled: Option<bool> | {focused, rawDumpEnabled?} | Result<(), String>（focus 時同步既有 serial_wants 的 Raw Dump 設定後重取） |
 | file | get_manifest       | -- | {} | Result<serde_json::Value, String> |
 | file | get_module_toolbox  | path: String | {path} | Result<String, String> |
 | file | get_project_anchor  | -- | {} | ProjectAnchor（serde camelCase：`isAnchored` / `projectRoot`；呼叫端勿以 snake_case 讀欄位） |

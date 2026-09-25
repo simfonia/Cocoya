@@ -472,6 +472,45 @@ body.cocoya-dark-mode .dropdown-item:hover img {
     margin: 4px 0;
 }
 
+/* MCU Raw Dump 診斷開關：右側滑動 track；狀態同步至 aria-checked。 */
+#btn-serial-raw-dump .diagnostic-toggle {
+    margin-left: auto;
+    width: 30px;
+    height: 17px;
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: #c7c7cc;
+    position: relative;
+    transition: background-color 0.2s;
+}
+
+#btn-serial-raw-dump .diagnostic-toggle > span {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    transition: transform 0.2s;
+}
+
+#btn-serial-raw-dump.enabled .diagnostic-toggle {
+    background: #FE2F89;
+}
+
+#btn-serial-raw-dump.enabled .diagnostic-toggle > span {
+    transform: translateX(13px);
+}
+
+body.cocoya-dark-mode #btn-serial-raw-dump .diagnostic-toggle,
+body.vscode-dark #btn-serial-raw-dump .diagnostic-toggle,
+body.vscode-high-contrast #btn-serial-raw-dump .diagnostic-toggle {
+    background: #5a5a62;
+    border: 1px solid #888;
+}
+
 /* 語系切換開關：[中文 ⇄ English] 膠囊雙選項，目前語系高亮 */
 .lang-switch {
     display: inline-flex;

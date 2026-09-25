@@ -154,8 +154,9 @@ pub fn run() {
                     {
                         let mut monitors = state.serial_monitors.lock().unwrap();
                         if let Some(mut session) = monitors.remove(&label) {
-                            let _: crate::state::SerialMonitorSession = session;
-                            let _ = session.child.kill();
+                            session.stopped.store(true, std::sync::atomic::Ordering::SeqCst);
+                            crate::commands::python::kill_tree(&mut session.child);
+                            let _ = session.child.wait();
                         }
                         let mut wants = state.serial_wants.lock().unwrap();
                         wants.remove(&label);

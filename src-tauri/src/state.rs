@@ -1,4 +1,5 @@
 use std::sync::{Arc, Mutex};
+use std::sync::atomic::AtomicBool;
 use std::collections::HashMap;
 use std::process::Child;
 use std::path::PathBuf;
@@ -19,6 +20,7 @@ pub struct SerialMonitorSession {
     pub python_path: String,
     pub lang: String,
     pub child: Child,
+    pub stopped: Arc<AtomicBool>,
 }
 
 unsafe impl Send for SerialMonitorSession {}
@@ -29,6 +31,7 @@ pub struct SerialMonitorWant {
     pub port: String,
     pub python_path: String,
     pub lang: String,
+    pub raw_dump_enabled: bool,
 }
 
 pub struct AppState {

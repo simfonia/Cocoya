@@ -192,42 +192,147 @@
         }, 310);
     };
 
+    /** @type {Array<{text: string, type: 'out'|'err'|'info'|'success', inline: boolean}>} 批次緩衝隊列 */
+    UI._terminalQueue = [];
+    /** @type {number|null} requestAnimationFrame 或 setTimeout handle */
+    UI._terminalRafId = null;
+    /** @type {number} 前端丟棄的普通日誌筆數 */
+    UI._terminalDroppedCount = 0;
+    /** @type {number} 隊列最大長度（超過時丟棄普通 out 訊息保護 WebView） */
+    const MAX_TERMINAL_QUEUE_SIZE = 600;
+    /** @type {number} 單個 span 節點最大字元數保護，超過時建立新節點避免 DOM 渲染卡死 */
+    const MAX_SPAN_TEXT_LEN = 20000;
+
     /**
-     * 向終端機新增日誌
-     * @param {string} text 文字內容
-     * @param {'out'|'err'|'info'|'success'} type 類型 (影響顏色)
+     * 立即將隊列中的日誌 flush 到終端機 DOM
      */
-    UI.appendTerminal = function(text, type = 'out', inline = false) {
+    UI.flushTerminal = function() {
+        if (this._terminalRafId) {
+            if (typeof cancelAnimationFrame === 'function') {
+                cancelAnimationFrame(this._terminalRafId);
+            } else {
+                clearTimeout(this._terminalRafId);
+            }
+            this._terminalRafId = null;
+        }
+
+        const items = this._terminalQueue;
+        this._terminalQueue = [];
+        const dropped = this._terminalDroppedCount;
+        this._terminalDroppedCount = 0;
+
+        if (items.length === 0 && dropped === 0) return;
+
         const content = document.getElementById('terminalContent');
         if (!content) return;
 
-        // --- 優化：只要有訊息就自動展開 (除非面板已收合且非錯誤訊息) ---
-        if (document.getElementById('terminalArea').classList.contains('collapsed')) {
+        // 若收合則自動展開（單次 flush 最多檢查一次）
+        const panel = document.getElementById('terminalArea');
+        if (panel && panel.classList.contains('collapsed')) {
             this.toggleTerminal(true);
         }
 
-        const lastChild = content.lastElementChild;
-        // inline 模式：同一行水平附加（不做換行），需在一般合併規則前判斷
-        if (lastChild && lastChild.className === `term-${type}` && inline && !lastChild.textContent.endsWith('\n')) {
-            lastChild.textContent += text;
-        } else if (lastChild && lastChild.className === `term-${type}` && !lastChild.textContent.endsWith('\n')) {
-            // 如果最後一行存在，且類型相同，且不以換行符結尾，則先插入換行再附加文字
-            lastChild.textContent += '\n' + text;
-        } else {
-            const span = document.createElement('span');
-            span.className = `term-${type}`;
-            span.textContent = text;
-            content.appendChild(span);
+        // 若有被丟棄的訊息，注入一筆 info 警告
+        if (dropped > 0) {
+            items.unshift({
+                text: `\n[Cocoya Warning: 介面渲染保護，已略過 ${dropped} 筆高頻日誌]\n`,
+                type: 'info',
+                inline: false
+            });
         }
 
-        // --- 優化：最大行數限制 (1000 行) ---
-        if (content.children.length > 1000) {
-            content.removeChild(content.firstChild);
+        const fragment = document.createDocumentFragment();
+        // 追蹤當前最後一個節點（先從 content 取，若建立新節點則指向 fragment 內的最後一個）
+        let curLast = content.lastElementChild;
+
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const text = item.text;
+            const type = item.type || 'out';
+            const inline = !!item.inline;
+
+            const isSameType = curLast && curLast.className === `term-${type}`;
+            const isNotTooLong = curLast && (curLast.textContent.length + text.length <= MAX_SPAN_TEXT_LEN);
+
+            if (isSameType && inline && !curLast.textContent.endsWith('\n') && isNotTooLong) {
+                curLast.textContent += text;
+            } else if (isSameType && !curLast.textContent.endsWith('\n') && isNotTooLong) {
+                curLast.textContent += '\n' + text;
+            } else {
+                const span = document.createElement('span');
+                span.className = `term-${type}`;
+                span.textContent = text;
+                fragment.appendChild(span);
+                curLast = span;
+            }
         }
 
-        // 自動捲動到底部 (除非已關閉自動捲動)
+        if (fragment.childNodes.length > 0) {
+            content.appendChild(fragment);
+        }
+
+        // 行數限制保護 (保留最多 1000 行)
+        const excess = content.children.length - 1000;
+        if (excess > 0) {
+            for (let k = 0; k < excess; k++) {
+                if (content.firstChild) content.removeChild(content.firstChild);
+            }
+        }
+
+        // 自動捲動到底部（單次 flush 僅計算一次 scrollHeight）
         if (this.isTerminalAutoScroll) {
             content.scrollTop = content.scrollHeight;
+        }
+    };
+
+    /**
+     * 排程 flush 終端機隊列
+     */
+    UI._scheduleTerminalFlush = function() {
+        if (this._terminalRafId) return;
+        const scheduleFn = (typeof requestAnimationFrame === 'function')
+            ? requestAnimationFrame
+            : (cb) => setTimeout(cb, 25);
+        this._terminalRafId = scheduleFn(() => {
+            UI._terminalRafId = null;
+            UI.flushTerminal();
+        });
+    };
+
+    /**
+     * 向終端機新增日誌（有界隊列＋批次渲染，解決高頻輸出時 DOM reflow 阻塞問題）
+     * @param {string} text 文字內容
+     * @param {'out'|'err'|'info'|'success'} type 類型 (影響顏色)
+     * @param {boolean} inline 是否為行內附加
+     */
+    UI.appendTerminal = function(text, type = 'out', inline = false) {
+        if (text === undefined || text === null) return;
+        const str = String(text);
+
+        // 背壓丟棄保護：隊列超量時僅丟棄普通 'out' 日誌，重要控制或報錯永不丟棄
+        if (this._terminalQueue.length >= MAX_TERMINAL_QUEUE_SIZE) {
+            if (type === 'out') {
+                this._terminalDroppedCount++;
+                this._scheduleTerminalFlush();
+                return;
+            }
+        }
+
+        this._terminalQueue.push({ text: str, type, inline });
+        this._scheduleTerminalFlush();
+    };
+
+    /**
+     * 批次向終端機新增日誌
+     * @param {Array<{text: string, type?: 'out'|'err'|'info'|'success', inline?: boolean}>} items
+     */
+    UI.appendTerminalBatch = function(items) {
+        if (!Array.isArray(items)) return;
+        for (let i = 0; i < items.length; i++) {
+            const it = items[i];
+            if (it && it.text !== undefined && it.text !== null) {
+                this.appendTerminal(it.text, it.type || 'out', !!it.inline);
+            }
         }
     };
 
@@ -235,6 +340,16 @@
      * 清空終端機
      */
     UI.clearTerminal = function() {
+        this._terminalQueue = [];
+        this._terminalDroppedCount = 0;
+        if (this._terminalRafId) {
+            if (typeof cancelAnimationFrame === 'function') {
+                cancelAnimationFrame(this._terminalRafId);
+            } else {
+                clearTimeout(this._terminalRafId);
+            }
+            this._terminalRafId = null;
+        }
         const content = document.getElementById('terminalContent');
         if (content) content.innerHTML = '';
     };

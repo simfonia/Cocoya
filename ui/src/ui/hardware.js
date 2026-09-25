@@ -242,7 +242,37 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         if (eraseBtn) eraseBtn.style.display = isMCU ? 'flex' : 'none';
     },
 
-    // === Python 環境安裝狀態（2026-09-15）===
+    /** MCU Raw Dump 診斷偏好鍵；false 為安全預設。 */
+    SERIAL_RAW_DUMP_KEY: 'cocoya_serial_raw_dump_enabled',
+
+    isSerialRawDumpEnabled: function() {
+        return localStorage.getItem(this.SERIAL_RAW_DUMP_KEY) === 'true';
+    },
+
+    _setSerialRawDumpEnabled: function(enabled) {
+        const value = !!enabled;
+        localStorage.setItem(this.SERIAL_RAW_DUMP_KEY, String(value));
+        const toggle = document.getElementById('btn-serial-raw-dump');
+        if (toggle) {
+            toggle.classList.toggle('enabled', value);
+            toggle.setAttribute('aria-checked', String(value));
+        }
+    },
+
+    initSerialRawDumpToggle: function() {
+        const toggle = document.getElementById('btn-serial-raw-dump');
+        if (!toggle) return;
+        this._setSerialRawDumpEnabled(this.isSerialRawDumpEnabled());
+        const activate = () => this._setSerialRawDumpEnabled(!this.isSerialRawDumpEnabled());
+        toggle.onclick = activate;
+        toggle.onkeydown = (event) => {
+            if (event.key !== 'Enter' && event.key !== ' ') return;
+            event.preventDefault();
+            activate();
+        };
+    },
+
+    // === Python 環境安裝（2026-09-15）===
     // 掛在 CocoyaUI 上、而非 modal DOM 內，是本次的關鍵設計：
     // 狀態存活於 modal 之外 → 即使 modal 被關閉／頁面局部重繪，重開時仍能立刻
     // 知道「卡在哪個套件」。同時讓「重開 modal」與「持續顯示進度」兩個需求合一。

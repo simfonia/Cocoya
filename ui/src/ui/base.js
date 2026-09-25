@@ -274,6 +274,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                     msg.platform = window.CocoyaApp?.currentPlatform;
                     msg.serialPort = window.CocoyaUI && window.CocoyaUI.getSerialPort ? window.CocoyaUI.getSerialPort() : (document.getElementById('serial-selector')?.getAttribute('data-value') || '') || '';
                     msg.serialUploadOnly = localStorage.getItem('cocoya_serial_upload_only') === 'true';
+                    msg.rawDumpEnabled = window.CocoyaUI?.isSerialRawDumpEnabled?.() === true;
                     if (self.flashButton) self.flashButton(id, '#e8f5e9'); // 綠色回饋
 
                     // --- 遠端訓練攔截（RemoteTrainingRefactor D3/D4）：backend='remote' 時改走 SSH 精靈 + host 遠端鏈 ---
@@ -569,9 +570,18 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                     else alert(msg);
                     return;
                 }
-                postMessageFunc({ command: 'toggleSerialMonitor', serialPort: port });
+                postMessageFunc({
+                    command: 'toggleSerialMonitor',
+                    serialPort: port,
+                    rawDumpEnabled: window.CocoyaUI?.isSerialRawDumpEnabled?.() === true
+                });
                 if (self.flashButton) self.flashButton('btn-serial-monitor', '#e3f2fd');
             };
+        }
+
+        const rawDumpToggle = document.getElementById('btn-serial-raw-dump');
+        if (rawDumpToggle && window.CocoyaUI?.initSerialRawDumpToggle) {
+            window.CocoyaUI.initSerialRawDumpToggle();
         }
 
         // 綁定訓練按鈕
