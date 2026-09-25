@@ -79,7 +79,7 @@ export class TrainingOpsHandler {
      * 處理模型訓練請求（本地或遠端）
      */
     public async handleStartTraining(message: any) {
-        const { projectName, taskType, backend, sshConfig, datasetDir, outputDir } = message;
+        const { projectName, taskType, backend, datasetDir, outputDir } = message;
 
         const baseDir = (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)
             ? vscode.workspace.workspaceFolders[0].uri.fsPath

@@ -1,5 +1,6 @@
 C:\Workspace\cocoya\
 ├── .vscodeignore          # VSIX 打包過濾清單
+├── .eslintrc.json         # ESLint 8 + TypeScript 規則設定（npm run lint）
 ├── docs/                  # 專案文檔
 │   ├── help/              # 積木說明文件與腳位圖（右鍵 Help 統一位置）
 │   │   ├── hardware_pins_en.html        # 硬體腳位說明（英文）
