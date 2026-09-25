@@ -225,3 +225,30 @@ Blockly.Blocks['py_try_except'] = {
     this.setTooltip(Blockly.Msg['TRY_EXCEPT_TOOLTIP']);
   }
 };
+
+// --- Try-Finally Block ---
+Blockly.Blocks['py_try_finally'] = {
+  init: function() {
+    this.appendDummyInput().appendField(Blockly.Msg['TRY_FINALLY_TRY']);
+    this.appendStatementInput('TRY_BODY').setCheck(null);
+    this.appendDummyInput().appendField(Blockly.Msg['TRY_FINALLY_FINALLY']);
+    this.appendStatementInput('FINALLY_BODY').setCheck(null);
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour(Blockly.Msg['COLOUR_LOGIC']);
+    this.setTooltip(Blockly.Msg['TRY_FINALLY_TOOLTIP']);
+  }
+};
+
+// --- Pass Block ---
+Blockly.Blocks['py_logic_pass'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["LOGIC_PASS"],
+      "previousStatement": null,
+      "nextStatement": null,
+      "colour": Blockly.Msg["COLOUR_LOGIC"],
+      "tooltip": Blockly.Msg["LOGIC_PASS_TOOLTIP"]
+    });
+  }
+};

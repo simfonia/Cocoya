@@ -11,6 +11,11 @@ Blockly.Python.forBlock['py_variables_get'] = function(block, generator) {
   return [variable, Blockly.Python.ORDER_ATOMIC];
 };
 
+Blockly.Python.forBlock['py_variables_del'] = function(block, generator) {
+  var variable = generator.nameDB_.getName(block.getFieldValue('VAR'), Blockly.VARIABLE_CATEGORY_NAME);
+  return 'del ' + variable + '\n';
+};
+
 Blockly.Python.forBlock['py_variables_global'] = function(block, generator) {
   var vars = [];
   for (var i = 0; i < block.itemCount_; i++) {

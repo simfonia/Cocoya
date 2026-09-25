@@ -120,6 +120,7 @@ C:\Workspace\cocoya\
 │   │   │   ├── mutator.js   # Mutator Undo 方案
 │   │   │   └── search.js    # 積木搜尋引擎
 │   │   ├── modules/       # 雙模共用積木模組
+│   │   │   ├── core/      # Python／MicroPython 核心語法積木；`core_contract.test.mjs` 對帳 block、generator、toolbox、i18n、主題與平台契約
 │   │   │   ├── theme_manager/ # [NEW] 主題管理模組（registry + 模式切換 + 系統深淺色偵測）
 │   │   │   │   ├── theme_manager.js # 核心：registerTheme/getThemes/setMode/getMode/apply/startWatching (window.CocoyaTheme)
 │   │   │   │   └── themes/    # 內建主題（一主題一檔，載入時 registerTheme）

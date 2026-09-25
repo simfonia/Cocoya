@@ -79,5 +79,19 @@ Blockly.Python.forBlock['py_io_serial_available'] = function(block, generator) {
 };
 
 Blockly.Python.forBlock['py_io_serial_flush'] = function(block, generator) {
+  if (generator.PLATFORM === 'MicroPython') {
+    generator.definitions_['import_sys'] = 'import sys';
+    generator.definitions_['import_uselect'] = 'import uselect';
+    generator.definitions_['func_flush_serial_mcu'] = `
+def cocoya_flush_serial():
+    global _cocoya_serial_buf
+    poll = uselect.poll()
+    poll.register(sys.stdin, uselect.POLLIN)
+    while poll.poll(0):
+        sys.stdin.read(1)
+    _cocoya_serial_buf = ""
+`;
+    return 'cocoya_flush_serial()\n';
+  }
   return 'ser.reset_input_buffer()\n';
 };

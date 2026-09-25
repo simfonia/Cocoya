@@ -213,6 +213,7 @@
     <section id="module-system">
         <h2>4. 模組化與平行載入</h2>
         <p>系統採用 <code>Promise.all</code> 平行載入所有模組。順序由 <code>core_manifest.json</code> 決定，確保 Toolbox 分類順序一致且載入效能最優化。</p>
+        <p><strong>Manifest SSOT：</strong><code>ui/src/core_manifest.json</code> 是唯一編輯來源。VSIX 由 <code>src/cocoyaManager.ts</code> 直接讀取該檔案；Tauri 由 <code>src-tauri/tauri.conf.json</code> 的 <code>bundle.resources</code> 在建置時將同一檔案複製為 Resource。不得直接編輯打包輸出的 Resource 副本；若未來改為產生流程，產生腳本也必須以 UI SSOT 為輸入並在建置前執行。</p>
         <h3>ID 命名慣例</h3>
         <p>檔案命名必須遵循 <code>[pure_id]_blocks.js</code> 與 <code>[pure_id]_generators.js</code>。載入器會自動根據 ID 分段 (split) 並提取最後一部分作為檔名。</p>
     </section>
@@ -238,6 +239,9 @@
 Blockly.Msg["CAT_AI_INFERENCE"] = "AI 推論";
 Blockly.Msg["COLOUR_AI_INFERENCE"] = "#9C27B0";</code></pre>
         <p>這樣 Blockly 解析 <code>%{BKY_CAT_AI_INFERENCE}</code> → 查詢 <code>Blockly.Msg["CAT_AI_INFERENCE"]</code> → 正常顯示「AI 推論」。</p>
+
+        <h3>Python 語法教學術語策略</h3>
+        <p>核心 Python 語法積木的分類名稱與語法關鍵文字可刻意保留英文。這些文字用於對應 Python／MicroPython 原生語法與教學專用術語，不視為繁體中文語系缺漏。積木的說明文案仍應依 zh-hant／en 提供，讓使用者能理解語法用途。</p>
     </section>
 
     <section id="platform">

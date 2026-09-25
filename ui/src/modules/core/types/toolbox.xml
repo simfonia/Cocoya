@@ -9,6 +9,9 @@
     <block type="py_type_dict">
         <mutation items="1"></mutation>
     </block>
+    <block type="py_type_set">
+        <mutation items="3"></mutation>
+    </block>
 
     <sep gap="24"></sep>
     <label text="%{BKY_TYPE_LBL_CAST}"></label>
@@ -41,6 +44,28 @@
         <value name="INDEX"><shadow type="py_math_number"><field name="NUM">0</field></shadow></value>
     </block>
     <block type="py_types_dict_get_parts"></block>
+    <block type="py_types_dict_get">
+        <value name="KEY"><shadow type="py_text"><field name="TEXT">key</field></shadow></value>
+        <value name="DEFAULT"><shadow type="py_logic_boolean"><field name="BOOL">None</field></shadow></value>
+    </block>
+    <block type="py_types_dict_delete">
+        <value name="KEY"><shadow type="py_text"><field name="TEXT">key</field></shadow></value>
+    </block>
+    <block type="py_types_dict_update">
+        <value name="OTHER"><shadow type="py_type_dict"><mutation items="1"></mutation></shadow></value>
+    </block>
+    <block type="py_types_dict_clear"></block>
+
+    <sep gap="24"></sep>
+    <label text="%{BKY_TYPE_LBL_SET}"></label>
+    <block type="py_types_set_add">
+        <value name="ITEM"><shadow type="py_text"><field name="TEXT">item</field></shadow></value>
+    </block>
+    <block type="py_types_set_remove">
+        <value name="ITEM"><shadow type="py_text"><field name="TEXT">item</field></shadow></value>
+    </block>
+    <block type="py_types_set_clear"></block>
+    <block type="py_types_set_operation"></block>
 
     <sep gap="24"></sep>
     <label text="%{BKY_TYPE_LBL_SORT}"></label>

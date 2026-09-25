@@ -9,5 +9,10 @@
   "PY_EQUAL": "=",
   "TRY_EXCEPT_TRY": "try:",
   "TRY_EXCEPT_EXCEPT": "except",
-  "TRY_EXCEPT_TOOLTIP": "嘗試執行程式碼，當發生指定的例外時執行例外處理。"
+  "TRY_EXCEPT_TOOLTIP": "嘗試執行程式碼，當發生指定的例外時執行例外處理。",
+  "TRY_FINALLY_TRY": "try:",
+  "TRY_FINALLY_FINALLY": "finally:",
+  "TRY_FINALLY_TOOLTIP": "無論 try 區塊是否發生例外，都會執行 finally 區塊。",
+  "LOGIC_PASS": "pass",
+  "LOGIC_PASS_TOOLTIP": "不執行任何動作，作為需要語法內容但暫時留空的區塊。"
 });

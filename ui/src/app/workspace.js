@@ -196,6 +196,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             xmlList.push(Blockly.utils.xml.textToDom('<block type="py_variables_global"></block>'));
             xmlList.push(Blockly.utils.xml.textToDom('<block type="py_variables_set"><value name="VALUE"><shadow type="py_math_number"><field name="NUM">0</field></shadow></value></block>'));
             xmlList.push(Blockly.utils.xml.textToDom('<block type="py_variables_get"></block>'));
+            xmlList.push(Blockly.utils.xml.textToDom('<block type="py_variables_del"></block>'));
             return xmlList;
         });
         this.workspace.registerButtonCallback('CREATE_VARIABLE', (btn) => {

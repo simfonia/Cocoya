@@ -21,6 +21,18 @@ Blockly.Blocks['py_variables_get'] = {
   }
 };
 
+Blockly.Blocks['py_variables_del'] = {
+  init: function() {
+    this.appendDummyInput()
+        .appendField(Blockly.Msg["PY_DEL"])
+        .appendField(new Blockly.FieldVariable("item"), "VAR");
+    this.setPreviousStatement(true, null);
+    this.setNextStatement(true, null);
+    this.setColour(Blockly.Msg["COLOUR_VARIABLES"]);
+    this.setTooltip(Blockly.Msg["PY_VARIABLES_DEL_TOOLTIP"]);
+  }
+};
+
 // --- Global Declaration Block ---
 Blockly.Blocks['py_variables_global'] = {
   init: function() {
