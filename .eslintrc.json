@@ -30,5 +30,25 @@
         "caughtErrors": "none"
       }
     ]
-  }
+  },
+  "overrides": [
+    {
+      "files": ["ui/**/*.js"],
+      "env": {
+        "browser": true
+      },
+      "globals": {
+        "Blockly": "readonly",
+        "CocoyaLoader": "readonly",
+        "CocoyaUtils": "readonly",
+        "CocoyaMediaUri": "readonly",
+        "CocoyaBoard": "readonly",
+        "acquireVsCodeApi": "readonly",
+        "hljs": "readonly"
+      },
+      "rules": {
+        "@typescript-eslint/no-this-alias": "off"
+      }
+    }
+  ]
 }
