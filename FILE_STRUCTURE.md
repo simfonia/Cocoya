@@ -90,7 +90,7 @@ C:\Workspace\cocoya\
 
 
 ├── ui/                    # 雙模共用前端根目錄 (Vite Project)
-│   ├── index.html         # Webview 與 Tauri 共用入口
+│   ├── index.html         # Webview 與 Tauri 共用入口（工具列韌體 Raw Dump 診斷開關）
 │   ├── vite.config.js     # Vite 配置 (含資產同步外掛)
 │   ├── favicon.ico        # 本地圖示以解決 404 報錯
 │   ├── blockly/           # Blockly 核心庫與靜態插件
@@ -100,9 +100,11 @@ C:\Workspace\cocoya\
 │   │   │   ├── tauri.js   # Tauri 專屬橋接 (含介面適配；datasetSaveProgress/datasetLoadProgress 路由 [NEW])
 │   │   │   └── vscode.js  # VS Code 專屬橋接
 │   │   ├── ui/          # UI 功能子模組
-│   │   │   ├── terminal.js # 終端機邏輯
+│   │   │   ├── terminal.js # 終端機邏輯（有界隊列、rAF 批次 flush、1000 行保護、單節點字元長度防護）
+│   │   │   ├── terminal_batch.test.mjs # [2026-09-25] 終端機高頻日誌批次渲染與背壓測試
 │   │   │   ├── renderer.js # 渲染與佈局邏輯
-│   │   │   ├── hardware.js # 序列埠、韌體邏輯與 Python 環境設定狀態機（_envInstall）
+│   │   │   ├── hardware.js # 序列埠、韌體、Python 環境狀態機與 Raw Dump 診斷偏好開關
+│   │   │   ├── serial_raw_dump_ui.test.mjs # [2026-09-25] Raw Dump 開關持久化與鍵盤操作測試
 │   │   │   ├── dialogs.js  # 對話框與視覺反饋
 │   │   │   └── base.js     # 基礎狀態與工具列事件
 │   │   ├── app/         # 應用程式核心子模組
@@ -234,7 +236,8 @@ C:\Workspace\cocoya\
 │       ├── fileOps.ts       # 檔案：new/open/save/saveAs/backup/recovery
 │       ├── firmwareOps.ts   # 韌體：resetFirmware, eraseFilesystem, setupStableMode
 │       ├── datasetOps.ts    # 資料集：capture/export/upload/scan/pickFolder/pickDataFile + SaveProgress/LoadProgress 存讀 [NEW]
-│       ├── serialOps.ts     # 序列埠：refreshPorts, serialMonitor, setPythonPath
+│       ├── serialOps.ts     # 序列埠：refreshPorts, serialMonitor, setPythonPath（注入 ProjectRoot/raw_dump.log 診斷環境）
+│       ├── serialRawDump.ts # VSIX terminal 跨 PowerShell/CMD/Bash 的 Raw Dump 環境前綴與 Python 呼叫產生器
 │       └── envOps.ts        # 環境：checkEnvironment, installModule(spawn+事件), abortInstall, runCode, checkUpdate
 ├── src-tauri/             # Tauri 後端專案 (Rust)
 │   ├── Cargo.toml         # Rust 專案配置
@@ -249,7 +252,7 @@ C:\Workspace\cocoya\
 │           ├── mod.rs       # 指令集匯出
 │           ├── python.rs    # Python 執行與環境診斷（注入 UTF-8 編碼與 COCOYA_TRAIN_TEMPLATES 環境變數）；install_python_module/abort_install_module 為套件安裝專用命令（獨立進程 + install-module-* 事件 + kill_tree）
 │           ├── file.rs      # 檔案讀寫、備份與鎖定 (+ dataset_save_progress/dataset_load_progress 進度存讀 [NEW] + 內建範例唯讀保護：Release 開啟時確認後複製範例專案到 桌面\Cocoya\Projects；2026-09-16 由文件改為桌面)
-│           ├── mcu.rs       # 硬體通訊、韌體與序列埠
+│           ├── mcu.rs       # 硬體通訊、韌體與序列埠（ProjectRoot/raw_dump.log 注入、輸出背壓與聚焦重取）
 │           ├── app.rs       # 視窗控制與系統資訊
 │           ├── dataset.rs   # [NEW] Sidecar 通訊 (start/send/stop)
 │           └── training.rs  # [NEW] 訓練報告開啟 (open_report, find_latest_training_report)
@@ -262,7 +265,7 @@ C:\Workspace\cocoya\
 │   ├── deploy_mcu.py      # [REFACTORED] CLI 入口（向後相容薄包裝，委派 deploy/ 套件）
 │   ├── deploy/            # [NEW] 部署器模組化套件（工廠模式）
 │   │   ├── __init__.py    #   工廠函式 get_deployer() 與登錄表
-│   │   ├── base.py        #   BaseDeployer 基底類別 + 序列埠監控 + detect_board()
+│   │   ├── base.py        #   BaseDeployer 基底類別 + 序列埠監控 + detect_board() + 可選 RawDumper
 │   │   ├── micropython.py #   MicroPython Raw REPL 部署器
 │   │   └── pybricks.py    #   Pybricks SPIKE 部署器（新增）
 │   └── extension_icon.png # 插件圖示

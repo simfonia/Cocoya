@@ -1,6 +1,11 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { hostMsg } from '../hostI18n';
+import {
+    buildPythonInvocationPrefix,
+    buildSerialRawDumpEnvPrefix,
+    detectSerialShellKind,
+} from './serialRawDump';
 
 /**
  * 序列埠操作 Handler（序列埠列表、監控器、Python 路徑設定等）
@@ -96,7 +101,7 @@ export class SerialOpsHandler {
     private monitorTerminal: any = null;
 
     public handleOpenSerialMonitor(message: any) {
-        this.spawnMonitorTerminal(message?.serialPort);
+        this.spawnMonitorTerminal(message?.serialPort, message?.rawDumpEnabled === true);
     }
 
     /**
@@ -110,17 +115,27 @@ export class SerialOpsHandler {
             this.postMonitorState(false);
             return;
         }
-        this.spawnMonitorTerminal(message?.serialPort);
+        this.spawnMonitorTerminal(message?.serialPort, message?.rawDumpEnabled === true);
     }
 
-    private spawnMonitorTerminal(monPort?: string) {
+    private spawnMonitorTerminal(monPort?: string, rawDumpEnabled: boolean = false) {
         if (!monPort) return;
+        const projectRoot = this.manager.getProjectRoot();
+        if (rawDumpEnabled && !projectRoot) {
+            vscode.window.showErrorMessage(this.manager.t('MSG_RAW_DUMP_NEED_ANCHOR'));
+            return;
+        }
         const monPython = this.manager.getPythonPath();
         const monLang = vscode.env.language.startsWith('zh') ? 'zh-hant' : 'en';
         const monScript = vscode.Uri.joinPath(this.manager.context.extensionUri, 'resources', 'deploy_mcu.py').fsPath;
+        const shellKind = detectSerialShellKind((vscode as any).env?.shell || '', process.platform);
+        const envPrefix = buildSerialRawDumpEnvPrefix(rawDumpEnabled, projectRoot, shellKind);
+        const pythonInvocation = buildPythonInvocationPrefix(monPython, shellKind);
 
         const monTerminal = vscode.window.createTerminal('Cocoya Serial Monitor');
-        monTerminal.sendText(`& "${monPython}" "${monScript}" "${monPort}" --monitor-only --lang ${monLang}`);
+        monTerminal.sendText(
+            envPrefix + pythonInvocation + ` "${monScript}" "${monPort}" --monitor-only --lang ${monLang}`
+        );
         monTerminal.show();
         this.monitorTerminal = monTerminal;
         this.postMonitorState(true);

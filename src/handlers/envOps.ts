@@ -3,6 +3,11 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as https from 'https';
 import { exec, spawn } from 'child_process';
+import {
+    buildPythonInvocationPrefix,
+    buildSerialRawDumpEnvPrefix,
+    detectSerialShellKind,
+} from './serialRawDump';
 
 /**
  * 環境操作 Handler（環境檢查、模組安裝、更新檢查等）
@@ -249,6 +254,12 @@ print(json.dumps({
                 vscode.window.showErrorMessage(this.manager.t('MSG_SELECT_PORT'));
                 return;
             }
+            const rawDumpEnabled = message.rawDumpEnabled === true;
+            const projectRoot = this.manager.getProjectRoot();
+            if (rawDumpEnabled && !projectRoot) {
+                vscode.window.showErrorMessage(this.manager.t('MSG_RAW_DUMP_NEED_ANCHOR'));
+                return;
+            }
 
             let pythonPath = (this.manager.context.globalState as any).get('pythonPath', 'python') as string;
             if (!await this.validatePythonPath(pythonPath)) {
@@ -276,7 +287,18 @@ print(json.dumps({
             terminal.show();
             const lang = vscode.env.language.toLowerCase().startsWith('zh') ? 'zh-hant' : 'en';
             const serialFlag = message.serialUploadOnly ? '--serial-only' : '';
-            terminal.sendText(`& "${pythonPath}" "${deployScriptPath}" "${port}" "${mcuCodePath}" ${serialFlag} --lang ${lang}`);
+            const shellKind = detectSerialShellKind((vscode as any).env?.shell || '', process.platform);
+            const envPrefix = buildSerialRawDumpEnvPrefix(rawDumpEnabled, projectRoot, shellKind);
+            const pythonInvocation = buildPythonInvocationPrefix(pythonPath, shellKind);
+            const args = [
+                `"${deployScriptPath}"`,
+                `"${port}"`,
+                `"${mcuCodePath}"`,
+                serialFlag,
+                '--lang',
+                lang,
+            ].filter(Boolean).join(' ');
+            terminal.sendText(envPrefix + pythonInvocation + ' ' + args);
             
             this.manager.panel.webview.postMessage({ command: 'runCompleted' });
             return;

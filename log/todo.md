@@ -273,3 +273,21 @@
 - [x] [2026-09-25] 新增 `ui/src/modules/core/core_generators.test.mjs` 回歸測試，核心 generator 7/7 PASS；block_jsoninit 既有測試 PASS。
 - [x] [2026-09-25] 修正 Variables 自訂 Blockly category callback 遺漏 `py_variables_del`：`custom="VARIABLE"` 會覆蓋 XML 內 block，已在 `ui/src/app/workspace.js::registerVariablesCallback()` 補入；`npm run build --prefix ui` PASS。
 - [x] [2026-09-25] 建立核心積木契約驗證層：新增 `ui/src/modules/core/core_contract.test.mjs`，對帳 block/generator/toolbox、Variables dynamic callback、mutation、雙語 i18n、核心色碼、三主題 msgColours 與平台限制；契約 4/4、核心 generator 7/7、jsonInit 1/1、UI build、Extension compile 全通過。
+
+### [2026-09-25] #task[MCU serial高頻寫入] MCU 高頻 Serial 輸出穩定性優化
+- [x] 完成 Phase 0 壓力測試 harness：`temp_scripts/test_deploy_base_raw_dump.py`（Python 3/3 PASS）與 `ui/src/ui/terminal_batch.test.mjs`（Node 4/4 PASS）。
+- [x] 完成 Phase 1 raw dump 開發旗標化：`resources/deploy/base.py` 移除每次 read 同步 open/write/close，改用 `_RawDumper` 有界背景線程（`COCOYA_SERIAL_RAW_DUMP` 預設關閉；隊列滿背壓丟棄計數；停止時優雅 flush）。同步至 `src-tauri/target/debug/resources/deploy/base.py`。
+- [x] 完成 Phase 2 Rust 輸出聚合與背壓：`src-tauri/src/commands/mcu.rs` 抽出 `forward_stream_with_backpressure`（30ms 時間窗／4KB 批次累積／128 chunk 有界佇列／dropped bytes 警告注入／UTF-8 殘缺尾段修復／`emit_to` 精準單播）；`deploy_mcu` 與 `spawn_serial_monitor` 共同套用。
+- [x] 完成 Phase 3 前端批次渲染：`ui/src/ui/terminal.js` 加入 `_terminalQueue` 有界隊列、`requestAnimationFrame` 批次 flush、1000 行限制、單節點字元長度防護（`MAX_SPAN_TEXT_LEN`）、`appendTerminalBatch` 與 `flushTerminal`，解決大量 DOM reflow 阻塞。
+- [x] 完成 Phase 4 monitor/上傳交接：`SerialMonitorSession` 增加 `stopped: Arc<AtomicBool>`；`stop_serial_monitor` 採用 `kill_tree` + 等待 child exit + 100ms 驅動冷卻以徹底釋放 COM 埠；`set_window_focus` 加入部署與執行中防呆；視窗關閉清理對齊。
+- [x] 完成 Phase 5 VSIX 相容性驗證：共用 `base.py` 性能提升，VSIX 原生 Terminal 不受影響，`npm run compile` 通過。
+- [ ] 待實機驗證（待硬體）：Tauri ESP32-S3 / RP2040 30 秒高頻輸出 UI 響應性，以及停止後連續 10 次上傳成功率。
+
+
+### [2026-09-25] #task[MCU 序列埠 Raw Dump 診斷切換] UI／Tauri／VSIX／Python 全鏈路
+- [x] 工具列韌體設定新增 Raw Dump 開關，localStorage 持久化、鍵盤操作、中英文 i18n 與深色主題完成。
+- [x] MCU 上傳／序列監看 payload 帶入 `rawDumpEnabled`；Tauri 與 VSIX 雙橋接同步完成。
+- [x] Tauri 由視窗錨定 `current_paths` 推導 `<ProjectRoot>/raw_dump.log`，`SerialMonitorWant` 保存設定且 focus 重取前同步最新偏好；補 `toggle_serial_monitor` permission。
+- [x] VSIX 新增跨 PowerShell／CMD／Bash 環境前綴產生器，上傳與 monitor 均寫入使用者 XML 專案根；未錨定時提前提示。
+- [x] Python RawDumper 改為 ProjectRoot／工作目錄 fallback、啟動時截斷、寫入錯誤顯示；Python 4/4、UI 2/2、Rust 路徑 2/2、tsc／cargo／Vite 全通過。
+- [ ] 待硬體／雙平台實機：Tauri seeded 範例與多視窗 focus 重取、VSIX 三種 shell 上傳／監看，並確認各專案根的 `raw_dump.log` 內容。

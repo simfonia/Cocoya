@@ -96,9 +96,12 @@
     "TLB_SETTINGS_PYTHON_ENV": "Python Environment (Path & Modules)",
     "TLB_SETTINGS_SERIAL_UPLOAD": "Stable Mode (Serial Upload Only)",
     "TLB_SETTINGS_FIRMWARE_GROUP": "Firmware Settings",
+    "TLB_SETTINGS_SERIAL_RAW_DUMP": "MCU Serial Raw Dump",
+    "TLB_SETTINGS_SERIAL_RAW_DUMP_TOOLTIP": "Records raw serial bytes to raw_dump.log in the current XML project root. Applies to the next MCU upload or monitor session.",
     "TLB_SETTINGS_SETUP_STABLE": "Lock USB Disk (Stable Mode)",
     "TLB_SETTINGS_ERASE_FS": "Deep Repair (Clear MCU Files)",
     "TLB_SETTINGS_ERASE_FS_TOOLTIP": "Stops dead loops and clears internal MCU files. Use when code freezes or to reset for a new user.",
+    "MSG_RAW_DUMP_NEED_ANCHOR": "Open and save an XML project before enabling MCU Serial Raw Dump.",
     "TLB_SETTINGS_RESET_FIRMWARE": "Reset Firmware (Flash UF2)",
 
     "TLB_RUN": "Run Program",
