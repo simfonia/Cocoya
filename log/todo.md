@@ -254,3 +254,22 @@
 
 - [x] [2026-09-24] #task[DM物件偵測模組修改] 偵測訓練曲線補 MAE 面板：`plot_detector_curves` 由固定 2 圖（Loss/IoU）改為依 history 欄位動態 `Loss→MAE→IoU`（面板數 = 1+有mae+有iou；figsize 高度 4×n；單面板 axes 正規化；舊 history 缺欄自動略過，移除原「退回 MAE」分支）。驗證：`py_compile` 0；新回歸工具 `temp_scripts/e2e_detector_curve_check.py` **ALL PASS**（full→3 圖/1482x1780、no_iou→2 圖/1482x1180、minimal→1 圖/1482x580，含曲線 label 斷言）；真跑 1-epoch smoke（Desktop/cocoya/dataset/ball 落盤 135 張）TRAIN_EXIT=0＋history 六欄＋報告內嵌三圖（1482x1780）。循跡/table/feature 盤點：**本來就有 MAE 面板，無需改**。可選後續：偵測報告補「驗證 MAE」卡（`finalMAE`，對齊 table 回歸的「最終 MAE」卡）＋循跡「越高越好」級指標（端點誤差 px／角度誤差，非 IoU）。
 
+
+### [2026-09-25] Python 語法積木群稽核後續
+- [x] 完成稽核報告：`log/plan/PythonBlocksAudit_2026-09-25.md`。
+- [x] `py_io_serial_flush` 補 MicroPython 分支：以 `sys.stdin` + `uselect.poll()` 排空可讀字元並清除 Cocoya 行緩衝；PC 維持 `ser.reset_input_buffer()`。
+- [x] Candy 主題補齊 SPIKE 顏色 key：`SPIKE`、`SPIKE_MOTOR`、`SPIKE_MUSIC`、`SPIKE_LED`、`SPIKE_SENSOR_*`、`SPIKE_BUTTON`。
+- [x] 系統規格補註：Python 分類名稱與原語法文字可保留英文作為教學專用術語；`ui/src/core_manifest.json` 是唯一編輯來源，Tauri 建置時透過 `bundle.resources` 複製。
+- [ ] 建立核心積木契約驗證層：對帳 block 定義、generator、toolbox、mutation、雙語 i18n、主題顏色 key 與平台限制；納入 Node 測試及建置驗證。
+- [x] 為 `py_text_zfill` 補 toolbox 入口與回歸測試；功能定義為文字左側補零至指定寬度，例如 `"7".zfill(3)` → `"007"`。
+- [x] 為 raw Python statement／expression 補雙語說明與 tooltip，明確告知使用者自行負責 PC／MicroPython 相容性；保留雙平台顯示。
+
+- [x] [2026-09-25] `py_math_single` 已依 `math.*` 操作注入 `import math`；移除不可達的 `math.atan2` 分支，獨立 `py_math_atan2` 維持正確 import 與產碼。
+- [x] [2026-09-25] 完成核心 generator 回歸測試 `ui/src/modules/core/core_generators.test.mjs`：`math.*` import、atan2、serial flush 雙平台產碼、tuple 零／單／多元素；測試 4/4 PASS。
+- [x] [2026-09-25] 修正 `py_type_tuple` 單元素輸出尾逗號：`(value,)`，避免錯誤產生 `(value)`。
+- [x] [2026-09-25] 新增核心語法積木：`py_try_finally`、`py_logic_pass`、`py_variables_del`；確認 PC／MicroPython 共通語意並補雙語 tooltip。
+- [x] [2026-09-25] 擴充 dictionary 操作：`get`、`items`、`del key`、`update`、`clear`；補建立、讀取、修改、刪除、列舉與清空的教學閉環。
+- [x] [2026-09-25] 新增 set 操作：集合 literal、`add`、`discard`、`clear`、`union`、`intersection`、`difference`；空集合固定產生 `set()`。
+- [x] [2026-09-25] 新增 `ui/src/modules/core/core_generators.test.mjs` 回歸測試，核心 generator 7/7 PASS；block_jsoninit 既有測試 PASS。
+- [x] [2026-09-25] 修正 Variables 自訂 Blockly category callback 遺漏 `py_variables_del`：`custom="VARIABLE"` 會覆蓋 XML 內 block，已在 `ui/src/app/workspace.js::registerVariablesCallback()` 補入；`npm run build --prefix ui` PASS。
+- [x] [2026-09-25] 建立核心積木契約驗證層：新增 `ui/src/modules/core/core_contract.test.mjs`，對帳 block/generator/toolbox、Variables dynamic callback、mutation、雙語 i18n、核心色碼、三主題 msgColours 與平台限制；契約 4/4、核心 generator 7/7、jsonInit 1/1、UI build、Extension compile 全通過。

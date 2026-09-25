@@ -20,13 +20,24 @@ Blockly.Python.forBlock['py_type_dict'] = function(block, generator) {
   return ['{' + elements.join(', ') + '}', Blockly.Python.ORDER_ATOMIC];
 };
 
+Blockly.Python.forBlock['py_type_set'] = function(block, generator) {
+  var elements = [];
+  for (var i = 0; i < block.itemCount_; i++) {
+    var val = generator.valueToCode(block, 'ADD' + i, Blockly.Python.ORDER_NONE);
+    if (val) elements.push(val);
+  }
+  if (elements.length === 0) return ['set()', Blockly.Python.ORDER_FUNCTION_CALL];
+  return ['{' + elements.join(', ') + '}', Blockly.Python.ORDER_ATOMIC];
+};
+
 Blockly.Python.forBlock['py_type_tuple'] = function(block, generator) {
   var elements = [];
   for (var i = 0; i < block.itemCount_; i++) {
     var val = generator.valueToCode(block, 'ADD' + i, Blockly.Python.ORDER_NONE);
     if (val) elements.push(val);
   }
-  return ['(' + elements.join(', ') + ')', Blockly.Python.ORDER_ATOMIC];
+  var suffix = elements.length === 1 ? ',' : '';
+  return ['(' + elements.join(', ') + suffix + ')', Blockly.Python.ORDER_ATOMIC];
 };
 
 Blockly.Python.forBlock['py_types_cast'] = function(block, generator) {
@@ -85,6 +96,54 @@ Blockly.Python.forBlock['py_types_dict_get_parts'] = function(block, generator) 
   var part = block.getFieldValue('PART');
   var dict = generator.valueToCode(block, 'DICT', Blockly.Python.ORDER_MEMBER) || "{}";
   return ['list(' + dict + '.' + part + '())', Blockly.Python.ORDER_FUNCTION_CALL];
+};
+
+Blockly.Python.forBlock['py_types_dict_get'] = function(block, generator) {
+  var dict = generator.valueToCode(block, 'DICT', Blockly.Python.ORDER_MEMBER) || '{}';
+  var key = generator.valueToCode(block, 'KEY', Blockly.Python.ORDER_NONE) || "''";
+  var defaultValue = generator.valueToCode(block, 'DEFAULT', Blockly.Python.ORDER_NONE) || 'None';
+  return [dict + '.get(' + key + ', ' + defaultValue + ')', Blockly.Python.ORDER_FUNCTION_CALL];
+};
+
+Blockly.Python.forBlock['py_types_dict_delete'] = function(block, generator) {
+  var dict = generator.valueToCode(block, 'DICT', Blockly.Python.ORDER_MEMBER) || '{}';
+  var key = generator.valueToCode(block, 'KEY', Blockly.Python.ORDER_NONE) || "''";
+  return 'del ' + dict + '[' + key + ']\n';
+};
+
+Blockly.Python.forBlock['py_types_dict_update'] = function(block, generator) {
+  var dict = generator.valueToCode(block, 'DICT', Blockly.Python.ORDER_MEMBER) || '{}';
+  var other = generator.valueToCode(block, 'OTHER', Blockly.Python.ORDER_NONE) || '{}';
+  return dict + '.update(' + other + ')\n';
+};
+
+Blockly.Python.forBlock['py_types_dict_clear'] = function(block, generator) {
+  var dict = generator.valueToCode(block, 'DICT', Blockly.Python.ORDER_MEMBER) || '{}';
+  return dict + '.clear()\n';
+};
+
+Blockly.Python.forBlock['py_types_set_add'] = function(block, generator) {
+  var setValue = generator.valueToCode(block, 'SET', Blockly.Python.ORDER_MEMBER) || 'set()';
+  var item = generator.valueToCode(block, 'ITEM', Blockly.Python.ORDER_NONE) || 'None';
+  return setValue + '.add(' + item + ')\n';
+};
+
+Blockly.Python.forBlock['py_types_set_remove'] = function(block, generator) {
+  var setValue = generator.valueToCode(block, 'SET', Blockly.Python.ORDER_MEMBER) || 'set()';
+  var item = generator.valueToCode(block, 'ITEM', Blockly.Python.ORDER_NONE) || 'None';
+  return setValue + '.discard(' + item + ')\n';
+};
+
+Blockly.Python.forBlock['py_types_set_clear'] = function(block, generator) {
+  var setValue = generator.valueToCode(block, 'SET', Blockly.Python.ORDER_MEMBER) || 'set()';
+  return setValue + '.clear()\n';
+};
+
+Blockly.Python.forBlock['py_types_set_operation'] = function(block, generator) {
+  var left = generator.valueToCode(block, 'A', Blockly.Python.ORDER_MEMBER) || 'set()';
+  var right = generator.valueToCode(block, 'B', Blockly.Python.ORDER_MEMBER) || 'set()';
+  var operation = block.getFieldValue('OP');
+  return [left + '.' + operation + '(' + right + ')', Blockly.Python.ORDER_FUNCTION_CALL];
 };
 
 Blockly.Python.forBlock['py_types_sorted'] = function(block, generator) {

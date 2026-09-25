@@ -36,7 +36,11 @@
             'HARDWARE': '#7B9EF8', 'MCU_CAMERA': '#FF7AA2', 'HUSKYLENS': '#5BC8AF',
             'MCU_CAR': '#FF9770', 'MCU_CAR_MOTOR': '#FFB26B', 'MCU_CAR_SERVO': '#CBA6F7',
             'MCU_CAR_MUSIC': '#F49AC2', 'MCU_CAR_LED': '#89CFF0', 'MCU_CAR_SENSOR': '#B5E48C',
-            'MCU_CAR_BUTTON': '#76C893'
+            'MCU_CAR_BUTTON': '#76C893',
+            'SPIKE': '#D28303', 'SPIKE_MOTOR': '#FFB26B', 'SPIKE_MUSIC': '#F49AC2',
+            'SPIKE_LED': '#89CFF0', 'SPIKE_SENSOR_COLOR': '#B5E48C',
+            'SPIKE_SENSOR_DISTANCE': '#5BC8AF', 'SPIKE_SENSOR_FORCE': '#A86A4A',
+            'SPIKE_SENSOR_IMU': '#C77DFF', 'SPIKE_BUTTON': '#76C893'
         },
         cssVars: {
             '--cocoya-overlay': '#FFF8F0',

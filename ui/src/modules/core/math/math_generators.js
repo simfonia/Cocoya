@@ -21,9 +21,9 @@ Blockly.Python.forBlock['py_math_arithmetic'] = function(block, generator) {
 Blockly.Python.forBlock['py_math_single'] = function(block, generator) {
   var op = block.getFieldValue('OP');
   var num = generator.valueToCode(block, 'NUM', Blockly.Python.ORDER_NONE) || '0';
-  
-  if (op === 'math.atan2') {
-    return [op + '(*' + num + ')', Blockly.Python.ORDER_FUNCTION_CALL];
+
+  if (op.indexOf('math.') === 0) {
+    generator.definitions_['import_math'] = 'import math';
   }
   return [op + '(' + num + ')', Blockly.Python.ORDER_FUNCTION_CALL];
 };

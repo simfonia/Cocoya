@@ -9,5 +9,10 @@
   "PY_EQUAL": "=",
   "TRY_EXCEPT_TRY": "try:",
   "TRY_EXCEPT_EXCEPT": "except",
-  "TRY_EXCEPT_TOOLTIP": "Try to execute code, and run exception handling when the specified exception occurs."
+  "TRY_EXCEPT_TOOLTIP": "Try to execute code, and run exception handling when the specified exception occurs.",
+  "TRY_FINALLY_TRY": "try:",
+  "TRY_FINALLY_FINALLY": "finally:",
+  "TRY_FINALLY_TOOLTIP": "The finally block runs whether or not the try block raises an exception.",
+  "LOGIC_PASS": "pass",
+  "LOGIC_PASS_TOOLTIP": "Do nothing. Use this when Python syntax requires a statement but no action is needed yet."
 });

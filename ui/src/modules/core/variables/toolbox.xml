@@ -6,4 +6,5 @@
         </value>
     </block>
     <block type="py_variables_get"></block>
+    <block type="py_variables_del"></block>
 </category>

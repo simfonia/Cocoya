@@ -108,6 +108,41 @@ Blockly.Blocks['py_type_dict'] = {
   minus: function(index) { if (this.itemCount_ > 0) { window.CocoyaUtils.Mutator.execute(this, () => { this.itemCount_--; }, () => { this.updateShape_(index); this.updateShape_(); }); } }
 };
 
+Blockly.Blocks['py_type_set'] = {
+  init: function() { this.itemCount_ = 3; this.setOutput(true, "Set"); this.setInputsInline(true); this.setColour(Blockly.Msg["COLOUR_TYPES"]); this.updateShape_(); },
+  mutationToDom: function() { const container = Blockly.utils.xml.createElement('mutation'); container.setAttribute('items', this.itemCount_); return container; },
+  domToMutation: function(xmlElement) { this.itemCount_ = parseInt(xmlElement.getAttribute('items'), 10) || 0; this.updateShape_(); },
+  updateShape_: function(opt_skipIndex) {
+    const conns = [];
+    for (let i = 0; i < this.itemCount_; i++) {
+        const input = this.getInput('ADD' + i);
+        const conn = input ? input.connection.targetConnection : null;
+        if (conn) conn.disconnect();
+        if (opt_skipIndex !== undefined && i === opt_skipIndex) continue;
+        conns.push(conn);
+    }
+    if (this.getInput('EMPTY')) this.removeInput('EMPTY');
+    if (this.getInput('TAIL')) this.removeInput('TAIL');
+    let i = 0; while (this.getInput('ADD' + i)) { this.removeInput('ADD' + i); i++; }
+    if (this.itemCount_ === 0 || (opt_skipIndex !== undefined && this.itemCount_ === 1)) {
+        this.appendDummyInput('EMPTY').appendField(Blockly.Msg["TYPE_SET_EMPTY"]).appendField(new Blockly.FieldImage(getIcon('plus'), 18, 18, '+', () => setTimeout(() => this.plus(), 0)), 'PLUS');
+    } else {
+        const displayCount = opt_skipIndex !== undefined ? this.itemCount_ - 1 : this.itemCount_;
+        for (let j = 0; j < displayCount; j++) {
+            const input = this.appendValueInput('ADD' + j);
+            if (j === 0) input.appendField(Blockly.Msg["TYPE_SET_START"]); else input.appendField(',');
+        }
+        this.appendDummyInput('TAIL')
+            .appendField(Blockly.Msg["TYPE_SET_END"])
+            .appendField(new Blockly.FieldImage(getIcon('minus'), 18, 18, '-', () => setTimeout(() => this.minus(this.itemCount_ - 1), 0)), 'MINUS')
+            .appendField(new Blockly.FieldImage(getIcon('plus'), 18, 18, '+', () => setTimeout(() => this.plus(), 0)), 'PLUS');
+    }
+    for (let k = 0; k < conns.length; k++) { if (conns[k] && this.getInput('ADD' + k)) this.getInput('ADD' + k).connection.connect(conns[k]); }
+  },
+  plus: function() { window.CocoyaUtils.Mutator.execute(this, () => { this.itemCount_++; }, () => { this.updateShape_(); }); },
+  minus: function(index) { if (this.itemCount_ > 0) { window.CocoyaUtils.Mutator.execute(this, () => { this.itemCount_--; }, () => { this.updateShape_(index); this.updateShape_(); }); } }
+};
+
 // --- Tuple Block ---
 Blockly.Blocks['py_type_tuple'] = {
   init: function() { this.itemCount_ = 3; this.setOutput(true, "Tuple"); this.setInputsInline(true); this.setColour(Blockly.Msg["COLOUR_TYPES"]); this.updateShape_(); },
@@ -309,7 +344,8 @@ Blockly.Blocks['py_types_dict_get_parts'] = {
           "name": "PART",
           "options": [
             ["keys", "keys"],
-            ["values", "values"]
+            ["values", "values"],
+            ["items", "items"]
           ]
         },
         { "type": "input_value", "name": "DICT" }
@@ -317,7 +353,135 @@ Blockly.Blocks['py_types_dict_get_parts'] = {
       "output": "Array",
       "inputsInline": true,
       "colour": Blockly.Msg["COLOUR_TYPES"],
-      "tooltip": "取得字典的所有鍵或所有值，並轉為清單格式。"
+      "tooltip": Blockly.Msg["TYPES_DICT_GET_PARTS_TOOLTIP"]
+    });
+  }
+};
+
+Blockly.Blocks['py_types_dict_get'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["TYPE_DICT_GET"],
+      "args0": [
+        { "type": "input_value", "name": "DICT" },
+        { "type": "input_value", "name": "KEY" },
+        { "type": "input_value", "name": "DEFAULT" }
+      ],
+      "output": null,
+      "inputsInline": true,
+      "colour": Blockly.Msg["COLOUR_TYPES"],
+      "tooltip": Blockly.Msg["TYPES_DICT_GET_TOOLTIP"]
+    });
+  }
+};
+
+Blockly.Blocks['py_types_dict_delete'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["TYPE_DICT_DELETE"],
+      "args0": [
+        { "type": "input_value", "name": "DICT" },
+        { "type": "input_value", "name": "KEY" }
+      ],
+      "previousStatement": null,
+      "nextStatement": null,
+      "inputsInline": true,
+      "colour": Blockly.Msg["COLOUR_TYPES"],
+      "tooltip": Blockly.Msg["TYPES_DICT_DELETE_TOOLTIP"]
+    });
+  }
+};
+
+Blockly.Blocks['py_types_dict_update'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["TYPE_DICT_UPDATE"],
+      "args0": [
+        { "type": "input_value", "name": "DICT" },
+        { "type": "input_value", "name": "OTHER" }
+      ],
+      "previousStatement": null,
+      "nextStatement": null,
+      "inputsInline": true,
+      "colour": Blockly.Msg["COLOUR_TYPES"],
+      "tooltip": Blockly.Msg["TYPES_DICT_UPDATE_TOOLTIP"]
+    });
+  }
+};
+
+Blockly.Blocks['py_types_dict_clear'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["TYPE_DICT_CLEAR"],
+      "args0": [{ "type": "input_value", "name": "DICT" }],
+      "previousStatement": null,
+      "nextStatement": null,
+      "colour": Blockly.Msg["COLOUR_TYPES"],
+      "tooltip": Blockly.Msg["TYPES_DICT_CLEAR_TOOLTIP"]
+    });
+  }
+};
+
+Blockly.Blocks['py_types_set_add'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["TYPE_SET_ADD"],
+      "args0": [
+        { "type": "input_value", "name": "SET" },
+        { "type": "input_value", "name": "ITEM" }
+      ],
+      "previousStatement": null,
+      "nextStatement": null,
+      "inputsInline": true,
+      "colour": Blockly.Msg["COLOUR_TYPES"],
+      "tooltip": Blockly.Msg["TYPES_SET_ADD_TOOLTIP"]
+    });
+  }
+};
+
+Blockly.Blocks['py_types_set_remove'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["TYPE_SET_REMOVE"],
+      "args0": [
+        { "type": "input_value", "name": "SET" },
+        { "type": "input_value", "name": "ITEM" }
+      ],
+      "previousStatement": null,
+      "nextStatement": null,
+      "inputsInline": true,
+      "colour": Blockly.Msg["COLOUR_TYPES"],
+      "tooltip": Blockly.Msg["TYPES_SET_REMOVE_TOOLTIP"]
+    });
+  }
+};
+
+Blockly.Blocks['py_types_set_clear'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["TYPE_SET_CLEAR"],
+      "args0": [{ "type": "input_value", "name": "SET" }],
+      "previousStatement": null,
+      "nextStatement": null,
+      "colour": Blockly.Msg["COLOUR_TYPES"],
+      "tooltip": Blockly.Msg["TYPES_SET_CLEAR_TOOLTIP"]
+    });
+  }
+};
+
+Blockly.Blocks['py_types_set_operation'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["TYPE_SET_OPERATION"],
+      "args0": [
+        { "type": "input_value", "name": "A" },
+        { "type": "field_dropdown", "name": "OP", "options": [["union", "union"], ["intersection", "intersection"], ["difference", "difference"]] },
+        { "type": "input_value", "name": "B" }
+      ],
+      "output": "Set",
+      "inputsInline": true,
+      "colour": Blockly.Msg["COLOUR_TYPES"],
+      "tooltip": Blockly.Msg["TYPES_SET_OPERATION_TOOLTIP"]
     });
   }
 };

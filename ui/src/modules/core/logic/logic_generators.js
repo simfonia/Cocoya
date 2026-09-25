@@ -63,3 +63,13 @@ Blockly.Python.forBlock['py_try_except'] = function(block, generator) {
   var code = 'try:\n' + tryBody + 'except ' + exceptionType + ':\n' + exceptBody;
   return code;
 };
+
+Blockly.Python.forBlock['py_try_finally'] = function(block, generator) {
+  var tryBody = generator.statementToCode(block, 'TRY_BODY') || generator.INDENT + 'pass\n';
+  var finallyBody = generator.statementToCode(block, 'FINALLY_BODY') || generator.INDENT + 'pass\n';
+  return 'try:\n' + tryBody + 'finally:\n' + finallyBody;
+};
+
+Blockly.Python.forBlock['py_logic_pass'] = function() {
+  return 'pass\n';
+};

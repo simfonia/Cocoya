@@ -8,4 +8,9 @@
         </value>
     </block>
     <block type="py_text_length"></block>
+    <block type="py_text_zfill">
+        <value name="VALUE">
+            <shadow type="py_text"><field name="TEXT">7</field></shadow>
+        </value>
+    </block>
 </category>

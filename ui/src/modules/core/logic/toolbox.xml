@@ -9,4 +9,6 @@
     <block type="py_logic_boolean"></block>
     <block type="py_logic_ternary"></block>
     <block type="py_try_except"></block>
+    <block type="py_try_finally"></block>
+    <block type="py_logic_pass"></block>
 </category>
