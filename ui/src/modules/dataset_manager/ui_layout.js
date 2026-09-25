@@ -7,16 +7,13 @@ import { buildLabelMap as buildCoreLabelMap, nextLabelId as getNextLabelId } fro
 import { calculateStats, countAnnotatedImages } from './core/stats.js';
 import { createInitialDatasetState, DatasetStore } from './core/state.js';
 import { sanitizeProjectName, detectDatasetNameDrift } from './core/projectNaming.js';
-import { validateDeletableImagePath, validateDeletableDiskPath, normalizePath, matchSampleForImage } from './core/pathPolicy.js';
+import { validateDeletableImagePath, validateDeletableDiskPath, matchSampleForImage } from './core/pathPolicy.js';
 import { escapeHtml } from './core/html.js';
 import { datasetBridge } from './io/bridge.js';
 import { createProgressUseCases } from './application/progressUseCases.js';
 import { createImportUseCases } from './application/importUseCases.js';
 import { createExportUseCases } from './application/exportUseCases.js';
 import { reconcileRenamedPaths } from './application/labelRenameReconcile.js';
-import {
-    countUnclassifiedBoxes
-} from './application/annotationMutations.js';
 import { createStatusMessageUI } from './ui/statusMessage.js';
 import { buildModalTemplate } from './ui/modal.js';
 import { createFormPresenter } from './ui/form.js';
@@ -155,7 +152,7 @@ const featurePanel = createFeaturePanel({
     landmarksToRow,
     nextLabelId: (map) => nextLabelId(map),
     onFeatureCollected: (data) => addFeatureRow(data),
-    renderTablePreview: (container, rows) => renderTablePreview(container, rows),
+    renderTablePreview: (container, rows) => renderPreviewTable(container, rows),
     // P2：結構面板重繪回呼（重建中欄統一標籤管理器＋統計，不再覆寫 innerHTML）
     refreshStructurePanel: () => renderStructurePanel()
 });
@@ -601,11 +598,6 @@ function hasData() {
     return (state.images && state.images.length > 0) || (state.tableRows && state.tableRows.length > 0);
 }
 
-// Stage 3：writeProgressToDisk / scheduleAutoSave 移至 application/progressUseCases.js，此處僅保留同名委派 wrapper（呼叫點零改動）
-function writeProgressToDisk() {
-    getProgressUC().writeProgressToDisk();
-}
-
 function scheduleAutoSave(immediate = false) {
     getProgressUC().scheduleAutoSave(immediate);
 }
@@ -914,7 +906,7 @@ export function refreshDynamicPanels() {
         Sampler.stopStatusPoll();
         // Ctrl+R 後前端狀態重置但 sidecar 可能殘留 running；進 live 先對帳一次，
         // 事件遺失時由 sampler 內部 syncCameraStatus→onStatusChanged→重建校正。
-        Sampler.syncCameraStatus().catch(() => {});
+        Sampler.syncCameraStatus().catch(() => undefined);
         if (projectType === 'feature') {
             featurePanel.setupFeatureLiveView(modal, modal.querySelector('#dataset-sampler-view'));
         } else {
@@ -1343,7 +1335,7 @@ function updateStatsFromImages() {
  * M4 Phase 4：feature live 採集到一列後的回調——累計進 state.tableRows、
  * 依 featureSchema 動態建 schema.columns、重算 label_counts/sample_count、刷新表格預覽與統計。
  */
-function addFeatureRow({ row, useZ, schema }) {
+function addFeatureRow({ row, _useZ, schema }) {
     const curSpec = state.spec.toJSON();
     const labelMap = curSpec.schema.label_map || {};
 
@@ -1377,7 +1369,7 @@ function addFeatureRow({ row, useZ, schema }) {
     const modal = getModal();
     if (modal) {
         const tablePreview = modal.querySelector('#dataset-table-preview');
-        renderTablePreview(tablePreview, state.tableRows);
+        renderPreviewTable(tablePreview, state.tableRows);
     }
     renderStatsPanels();
     refreshPreview();

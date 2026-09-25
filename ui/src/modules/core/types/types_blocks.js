@@ -9,7 +9,7 @@ function getIcon(name) {
 
 // --- List Block ---
 Blockly.Blocks['py_type_list'] = {
-  init: function() { this.itemCount_ = 3; this.setOutput(true, "Array"); this.setInputsInline(true); this.setColour(Blockly.Msg["COLOUR_TYPES"]); this.updateShape_(); },
+  init: function() { this.itemCount_ = 3; this.setOutput(true, "Array"); this.setInputsInline(true); this.setColour(Blockly.Msg["COLOUR_TYPES"]); this.setTooltip(Blockly.Msg["TYPES_LIST_TOOLTIP"]); this.updateShape_(); },
   mutationToDom: function() { const container = Blockly.utils.xml.createElement('mutation'); container.setAttribute('items', this.itemCount_); return container; },
   domToMutation: function(xmlElement) { this.itemCount_ = parseInt(xmlElement.getAttribute('items'), 10) || 0; this.updateShape_(); },
   updateShape_: function(opt_skipIndex) {
@@ -51,6 +51,7 @@ Blockly.Blocks['py_type_dict'] = {
     this.setOutput(true, "Dict");
     this.setInputsInline(true); 
     this.setColour(Blockly.Msg["COLOUR_TYPES"]);
+     this.setTooltip(Blockly.Msg["TYPES_DICT_TOOLTIP"]);
     this.updateShape_();
   },
   mutationToDom: function() {
@@ -109,7 +110,7 @@ Blockly.Blocks['py_type_dict'] = {
 };
 
 Blockly.Blocks['py_type_set'] = {
-  init: function() { this.itemCount_ = 3; this.setOutput(true, "Set"); this.setInputsInline(true); this.setColour(Blockly.Msg["COLOUR_TYPES"]); this.updateShape_(); },
+  init: function() { this.itemCount_ = 3; this.setOutput(true, "Set"); this.setInputsInline(true); this.setColour(Blockly.Msg["COLOUR_TYPES"]); this.setTooltip(Blockly.Msg["TYPES_SET_TOOLTIP"]); this.updateShape_(); },
   mutationToDom: function() { const container = Blockly.utils.xml.createElement('mutation'); container.setAttribute('items', this.itemCount_); return container; },
   domToMutation: function(xmlElement) { this.itemCount_ = parseInt(xmlElement.getAttribute('items'), 10) || 0; this.updateShape_(); },
   updateShape_: function(opt_skipIndex) {
@@ -145,7 +146,7 @@ Blockly.Blocks['py_type_set'] = {
 
 // --- Tuple Block ---
 Blockly.Blocks['py_type_tuple'] = {
-  init: function() { this.itemCount_ = 3; this.setOutput(true, "Tuple"); this.setInputsInline(true); this.setColour(Blockly.Msg["COLOUR_TYPES"]); this.updateShape_(); },
+  init: function() { this.itemCount_ = 3; this.setOutput(true, "Tuple"); this.setInputsInline(true); this.setColour(Blockly.Msg["COLOUR_TYPES"]); this.setTooltip(Blockly.Msg["TYPES_TUPLE_TOOLTIP"]); this.updateShape_(); },
   mutationToDom: function() { const container = Blockly.utils.xml.createElement('mutation'); container.setAttribute('items', this.itemCount_); return container; },
   domToMutation: function(xmlElement) { this.itemCount_ = parseInt(xmlElement.getAttribute('items'), 10) || 0; this.updateShape_(); },
   updateShape_: function(opt_skipIndex) {

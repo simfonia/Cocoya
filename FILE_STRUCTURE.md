@@ -240,6 +240,8 @@ C:\Workspace\cocoya\
 │       ├── serialOps.ts     # 序列埠：refreshPorts, serialMonitor, setPythonPath（注入 ProjectRoot/raw_dump.log 診斷環境）
 │       ├── serialRawDump.ts # VSIX terminal 跨 PowerShell/CMD/Bash 的 Raw Dump 環境前綴與 Python 呼叫產生器
 │       └── envOps.ts        # 環境：checkEnvironment, installModule(spawn+事件), abortInstall, runCode, checkUpdate
+├── scripts/              # 專案腳本
+│   └── run-integration.cjs # VS Code integration test 未安裝時的明確入口提示
 ├── src-tauri/             # Tauri 後端專案 (Rust)
 │   ├── Cargo.toml         # Rust 專案配置
 │   ├── tauri.conf.json    # Tauri 應用配置 (含安裝與資源設定)

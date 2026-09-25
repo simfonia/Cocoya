@@ -61,7 +61,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                         this.currentProjectRoot = authorityRoot;
                         fileLabel.classList.toggle('has-path', !!authorityRoot);
                     }
-                }).catch(() => {});
+                }).catch(() => undefined);
             }
         }
         
@@ -825,7 +825,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             copyBtn.onclick = () => {
                 const rawCode = window.CocoyaApp.lastCleanCode || '';
                 // 徹底清理：濾掉行尾 ID 註解與運算式隱形標記
-                const cleanCode = rawCode.replace(/  # ID:.*$/mg, '').replace(/\u0001ID:.*?\u0002/g, '');
+                const cleanCode = rawCode.replace(/ {2}# ID:.*$/mg, '').replace(/\u0001ID:.*?\u0002/g, '');
                 
                 navigator.clipboard.writeText(cleanCode).then(() => {
                     if (self.flashButton) self.flashButton('btn-copy-code', '#c8e6c9'); // 綠色閃爍表示成功

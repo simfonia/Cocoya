@@ -2,7 +2,7 @@
     "name": "cocoya",
     "displayName": "Cocoya: Code, Compute, Yield AI",
     "description": "Visual Python programming for AI and Hardware education",
-    "version": "0.8.1",
+    "version": "0.8.2",
     "icon": "resources/extension_icon.png",
     "publisher": "simfonia",
     "extensionKind": [
@@ -52,9 +52,10 @@
         "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "pretest": "npm run compile && npm run lint",
         "lint": "eslint src --ext ts",
-        "test": "node ./out/test/runTest.js"
+        "test": "npm run test:unit",
+        "test:unit": "npm run compile && npm run lint",
+        "test:integration": "node scripts/run-integration.cjs"
     },
     "devDependencies": {
         "@types/node": "16.x",

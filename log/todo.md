@@ -297,3 +297,14 @@
 - [x] 修正既有 unused import/argument、case declaration、prefer-const、non-null assertion 與 buffer null guard。
 - [x] `npm run lint` 達到 0 errors／0 warnings；`npm run compile`、193/193 Node tests、`git diff --check` 通過。
 - [ ] `npm test` 正式測試仍待補 `out/test/runTest.js` 對應的 VS Code 測試 harness；不屬於本次 lint 修復範圍。
+
+### [2026-09-25] #task[測試入口分層] npm test 快速檢查與 integration 入口
+- [x] `npm test` 改為 `npm run test:unit`（compile＋lint），移除重複 `pretest`。
+- [x] 新增 `npm run test:integration` 與 `scripts/run-integration.cjs`，未建立 `out/test/runTest.js` 時顯示明確提示。
+- [x] `npm test`、`npm run test:unit`、script syntax check、`git diff --check` 通過。
+- [ ] 未來若需要 VS Code integration test，再新增 `src/test/runTest.ts` 與 test suite；不手動提交 `out/` 產物。
+
+### [2026-09-25] #task[types 資料結構積木] 補齊 tooltip
+- [x] 為 `py_type_list`、`py_type_dict`、`py_type_tuple`、`py_type_set` 加入中英文 tooltip。
+- [x] 新增 `core_contract.test.mjs` 契約測試，四個資料結構積木的 tooltip 與 i18n key 必須存在。
+- [x] core contract 5/5、types block syntax、Vite build、`git diff --check` 通過。

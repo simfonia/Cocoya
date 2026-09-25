@@ -86,6 +86,25 @@ test('核心積木契約：block、generator、toolbox 與 Variables 動態分�
 
   assert.deepEqual(problems, []);
 });
+test('types 資料結構積木都有中英文 tooltip', () => {
+  const source = blocksOf('core/types');
+  const definitions = [
+    ['py_type_list', 'TYPES_LIST_TOOLTIP'],
+    ['py_type_dict', 'TYPES_DICT_TOOLTIP'],
+    ['py_type_tuple', 'TYPES_TUPLE_TOOLTIP'],
+    ['py_type_set', 'TYPES_SET_TOOLTIP']
+  ];
+  for (const [id, key] of definitions) {
+    const start = source.indexOf(`Blockly.Blocks['${id}']`);
+    const end = source.indexOf('\n};', start);
+    assert.notEqual(start, -1, `${id} 應有 block 定義`);
+    assert.notEqual(end, -1, `${id} block 定義應完整`);
+    const blockSource = source.slice(start, end);
+    assert.match(blockSource, /tooltip|setTooltip/, `${id} 應設定 tooltip`);
+    assert.match(i18nOf('core/types', 'zh-hant'), new RegExp(`"${key}"`));
+    assert.match(i18nOf('core/types', 'en'), new RegExp(`"${key}"`));
+  }
+});
 
 test('核心 toolbox 平台標記只使用有效平台', () => {
   const validPlatforms = new Set(['PC', 'MicroPython']);
