@@ -19,6 +19,12 @@
   },
   "extends": ["eslint:recommended"],
   "ignorePatterns": ["*.min.js"],
+  "overrides": [
+    {
+      "files": ["src/**/*.test.mjs", "test/**/*.js", "test/**/*.mjs"],
+      "env": { "node": true }
+    }
+  ],
   "rules": {
     "no-unused-vars": [
       "error",
