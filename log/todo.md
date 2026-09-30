@@ -150,8 +150,8 @@
 - [ ] T3 前置盤點：列出六檔 fake DOM 差異點，確認最小抽象介面（getElementById／querySelector／classList／style／listeners／innerHTML／insertAdjacentHTML）
 
 #### Batch 0（無風險）
-- [ ] **待決策（2026-09-30 由 T2 浮現）**：`py_ai_draw_rect_alpha`（cv_draw）與 `py_ai_get_bbox_center`（ai_inference，有 helpUrl）已定義完整但未上架 toolbox；`py_ai_train_init` 是只有 generator 的死碼。三者目前列於契約測試白名單，是否上架／清理待決策
-- [ ] **待決策（2026-09-30）**：`index.html` 無 `btn-setup-stable-mcu` 元素，Stable Mode 功能實際未上架（`base.js:484` 的綁定為 no-op）。i18n 鍵已補齊，但按鈕是否要上架待確認
+- [x] ~~**待決策（2026-09-30 由 T2 浮現）**~~ ✅ 已於 2026-09-30 處理：`py_ai_draw_rect_alpha`（cv_draw，補齊 START/END/COLOR/ALPHA 四個 shadow 預設值）與 `py_ai_get_bbox_center`（ai_inference，放進「結果解析積木」群組）**已上架 toolbox**；`py_ai_train_init` 死碼 generator **已刪除**（全專案確認無 block／toolbox／範例 XML 引用，功能已被 `py_ai_train_run` 取代）。契約測試的 `UNPUBLISHED_BLOCKS`／`ORPHAN_GENERATORS` 兩個白名單現已清空
+- [ ] **待決策（2026-09-30 調查結果：建議不上架）**：`Stable Mode` 功能的**後端實作是空殼** —— `resources/deploy/base.py:274`、`micropython.py:153`、`pybricks.py:131` 三個 `setup_stable_mode()` 都只印一段訊息，**沒有任何實際動作**（不寫入 boot.py、不鎖定磁碟）。且 `index.html` 同時缺少 `btn-setup-stable-mcu` 與 `btn-toggle-serial-upload` 兩個元素，`base.js:484`／`:468` 的綁定皆為 no-op。**因此不建議上架按鈕**；已補的 `MSG_SETUP_STABLE_CONFIRM` 文案宣稱「會寫入 boot.py、Windows 變唯讀」與實際行為不符，若上架會誤導使用者。待決策：刪除該鍵與相關 JS 綁定，或補上真正的實作
 - [ ] P0-3 確認 zh-hant 獨有 6 個 `BKY_*_VARIABLE*` 鍵是否真缺（Blockly 內建可能已提供）；若屬內建則列入 parity 白名單
 - [ ] P3-1 自動化守門：新增 `ui/src/i18n_parity.test.mjs`（全語系鍵集合一致＋白名單）、三主題 cssVars 鍵集合一致測試、接入 `temp_scripts/unused_export_scan.cjs`
 - [ ] P3-2／T7 前段 補高風險檔測試：`bridge/tauri.js`（93KB／0 測試）至少覆蓋 `capabilities` getter 與 anchor normalize；`app/persistence.js` 備份／recovering 路徑

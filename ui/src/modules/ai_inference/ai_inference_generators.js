@@ -1,17 +1,9 @@
 // AI Inference Generators: 訓練積木的 Python 程式碼產生器
-
-Blockly.Python.forBlock['py_ai_train_init'] = function(block, generator) {
-  const epochs = block.getFieldValue('EPOCHS');
-  const batchSize = block.getFieldValue('BATCH_SIZE');
-  const learningRate = block.getFieldValue('LEARNING_RATE');
-
-  const code = '{\n' +
-    "    'epochs': " + epochs + ",\n" +
-    "    'batch_size': " + batchSize + ",\n" +
-    "    'learning_rate': " + learningRate + "\n" +
-    '}\n';
-  return [code, Blockly.Python.ORDER_ATOMIC];
-};
+//
+// 2026-09-30 移除 `py_ai_train_init`：該 generator 沒有對應的 block 定義，也沒有任何
+// toolbox／範例專案 XML 引用（已全專案搜尋確認）→ 死碼。其功能已被
+// `py_ai_train_run`（EPOCHS／BATCH_SIZE 欄位 + DATASET_DIR／MODEL_DIR）取代。
+// 由契約測試 core_contract.test.mjs 的 ORPHAN_GENERATORS 白名單發現。
 
 Blockly.Python.forBlock['py_ai_train_run'] = function(block, generator) {
   const datasetDir = block.getFieldValue('DATASET_DIR');

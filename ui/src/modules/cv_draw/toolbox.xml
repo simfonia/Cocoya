@@ -25,6 +25,32 @@
         </value>
     </block>
 
+    <!-- 半透明矩形（2026-09-30 上架：已定義完整但先前未公開於 toolbox） -->
+    <block type="py_ai_draw_rect_alpha">
+        <value name="START">
+            <shadow type="py_ai_point">
+                <field name="X">0</field>
+                <field name="Y">0</field>
+            </shadow>
+        </value>
+        <value name="END">
+            <shadow type="py_ai_point">
+                <field name="X">100</field>
+                <field name="Y">100</field>
+            </shadow>
+        </value>
+        <value name="COLOR">
+            <shadow type="py_ai_color">
+                <field name="B">255</field>
+                <field name="G">0</field>
+                <field name="R">0</field>
+            </shadow>
+        </value>
+        <value name="ALPHA">
+            <shadow type="py_math_number"><field name="NUM">0.5</field></shadow>
+        </value>
+    </block>
+
     <!-- 圓形 -->
     <block type="py_ai_draw_circle">
         <value name="CENTER">

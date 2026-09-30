@@ -78,13 +78,12 @@ test('積木契約：block、generator、toolbox 與 Variables 動態分類對�
 
   // 2026-09-30 T2 全面化後浮現的既有情況。刻意用「列名 + 原因」的白名單，
   // 而不是放寬斷言 —— 這樣未來新增的未公開積木仍會被擋下。
-  const UNPUBLISHED_BLOCKS = new Map([
-    ['py_ai_draw_rect_alpha', '已定義未上架（cv_draw），待決策是否公開'],
-    ['py_ai_get_bbox_center', '已定義未上架（ai_inference），有 helpUrl，待決策是否公開']
-  ]);
-  const ORPHAN_GENERATORS = new Map([
-    ['py_ai_train_init', '死碼：generator 無對應 block，待確認專案 XML 相容性後清理']
-  ]);
+  // 2026-09-30 處理結果：
+  //   py_ai_draw_rect_alpha／py_ai_get_bbox_center → 已上架 toolbox，白名單清空
+  //   py_ai_train_init（死碼 generator）→ 已刪除，白名單清空
+  // 兩個白名單目前皆為空；保留結構供未來有已查證的設計事實時使用。
+  const UNPUBLISHED_BLOCKS = new Map([]);
+  const ORPHAN_GENERATORS = new Map([]);
 
   for (const module of targetModules) {
     const blocks = blockIds(module.id);

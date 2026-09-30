@@ -26,6 +26,8 @@
     <block type="py_ai_get_label"></block>
     <block type="py_ai_get_confidence"></block>
     <block type="py_ai_get_bbox"></block>
+    <!-- 2026-09-30 上架：已定義完整但先前未公開於 toolbox（列於契約測試白名單） -->
+    <block type="py_ai_get_bbox_center"></block>
     <block type="py_ai_get_direction"></block>
     <block type="py_ai_get_line"></block>
     <block type="py_ai_get_line_end"></block>
