@@ -180,13 +180,13 @@ def cocoya_overlay_image(img, path, center, width, angle):
   return 'cocoya_overlay_image(' + varName + ', ' + path + ', tuple(map(int, ' + center + ')), ' + width + ', ' + angle + ')\n';
 };
 
-Blockly.Python.forBlock['py_ai_point'] = function(block, generator) {
+Blockly.Python.forBlock['py_ai_point'] = function(block) {
   var x = block.getFieldValue('X');
   var y = block.getFieldValue('Y');
   return ['(' + x + ', ' + y + ')', Blockly.Python.ORDER_ATOMIC];
 };
 
-Blockly.Python.forBlock['py_ai_color'] = function(block, generator) {
+Blockly.Python.forBlock['py_ai_color'] = function(block) {
   var b = block.getFieldValue('B');
   var g = block.getFieldValue('G');
   var r = block.getFieldValue('R');

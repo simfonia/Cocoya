@@ -4,7 +4,6 @@
  * 依賴全注入，無模組級全域耦合，Node 可測。
  */
 import { nextLabelId as getNextLabelId } from '../core/labelMap.js';
-import { countAnnotatedImages } from '../core/stats.js';
 import {
     countImagesWithLabel, countBoxesWithClassId,
     removeAnnotationsByClassId, reassignLabelsToUnlabeled

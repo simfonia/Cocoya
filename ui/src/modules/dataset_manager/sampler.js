@@ -92,7 +92,9 @@ export const Sampler = {
                 this.stopStatusPoll();
                 return;
             }
-            this.syncCameraStatus().catch(() => {});
+            this.syncCameraStatus().catch(() => {
+                // 輪詢期間攝影機可能已被其他流程關閉，同步失敗不需中斷輪詢。
+            });
         }, intervalMs);
     },
 

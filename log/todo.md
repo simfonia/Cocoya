@@ -390,3 +390,12 @@
 - [x] 為 `py_type_list`、`py_type_dict`、`py_type_tuple`、`py_type_set` 加入中英文 tooltip。
 - [x] 新增 `core_contract.test.mjs` 契約測試，四個資料結構積木的 tooltip 與 i18n key 必須存在。
 - [x] core contract 5/5、types block syntax、Vite build、`git diff --check` 通過。
+
+### [2026-09-30] #lint ui/ ESLint 清理與常設閘門
+- [x] 清掉 `ui/src` 既有 49 項 lint 問題（154 檔），現況 **0 error**。
+- [x] 建立 `ui/.eslintrc.json`：`eslint:recommended` 全基底 + 7 個 Cocoya globals + `ignorePatterns: ["*.min.js"]`。
+- [x] `package.json` 新增 `lint:ui`，並接入 `test:unit`（`npm test` 全閘）。
+- [x] 三條刻意關閉的規則（`no-control-regex`／`no-regex-spaces`／`no-empty`）已於 AGENTS.md 附設計原因。
+- [x] 驗收：`npm test` 197/197 全綠。
+- [ ] P2-6：`ui_components.js`（20.8KB）職責已被 `ui/panels.js`、`ui/thumbnails.js` 取代，本次僅移除 `index.js` 未用 import，**檔案本體仍待逐條比對呼叫端後刪除**。
+- [ ] T3 主線：共用測試夾具（`ui/test/fakeDom.js`／`depsBuilder.js`／`fixtures.js`），搬移 6 個 DM 測試檔的重複 DOM／依賴建構。

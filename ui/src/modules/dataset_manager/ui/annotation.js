@@ -280,8 +280,6 @@ export function createAnnotationController({
         if (!controls) return;
 
         const projectType = getFormValue('projectType');
-        const labelMap = state.spec.toJSON().schema.label_map || {};
-        const labelEntries = Object.entries(labelMap);
 
         // 類別選擇器（僅物件偵測模式顯示；標籤管理由共用 createLabelMapManager 處理）
         let classSelectorHtml = '';

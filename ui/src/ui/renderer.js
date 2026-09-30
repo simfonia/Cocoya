@@ -50,8 +50,8 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
 
             // [反向定位] 點擊代碼行 → 定位到對應積木
             lineDiv.style.cursor = 'pointer';
-            lineDiv.addEventListener('click', (evt) => {
-                // 避免誤觸純文字選取
+            lineDiv.addEventListener('click', () => {
+                // 避免誤觸純文字選取（用 window.getSelection() 而非 event 物件）
                 if (window.getSelection && window.getSelection().toString()) return;
                 this.locateBlockByLineIndex(index);
             });

@@ -10,8 +10,13 @@
          */
         Mutator: {
             execute: function(block, dataChangeFunc, silentShapeFunc) {
-                const runData = typeof dataChangeFunc === 'function' ? dataChangeFunc : () => {};
-                const runShape = typeof silentShapeFunc === 'function' ? silentShapeFunc : () => {};
+                // 傳入非函式時視為「不需資料變更」/「不需重建形狀」。
+                const runData = typeof dataChangeFunc === 'function' ? dataChangeFunc : () => {
+                    // no-op
+                };
+                const runShape = typeof silentShapeFunc === 'function' ? silentShapeFunc : () => {
+                    // no-op
+                };
 
                 if (!Blockly.Events.isEnabled()) {
                     runData();

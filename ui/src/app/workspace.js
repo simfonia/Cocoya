@@ -190,7 +190,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
      * 註冊變數分類回調
      */
     registerVariablesCallback: function() {
-        this.workspace.registerToolboxCategoryCallback('VARIABLE', (ws) => {
+        this.workspace.registerToolboxCategoryCallback('VARIABLE', (_ws) => {
             const xmlList = [];
             xmlList.push(Blockly.utils.xml.textToDom('<button text="%{BKY_NEW_VARIABLE}" callbackKey="CREATE_VARIABLE"></button>'));
             xmlList.push(Blockly.utils.xml.textToDom('<block type="py_variables_global"></block>'));

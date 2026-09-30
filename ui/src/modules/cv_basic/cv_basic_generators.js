@@ -1,5 +1,5 @@
 // OpenCV Basic Generators
-Blockly.Python.forBlock['py_ai_open_camera'] = function(block, generator) {
+Blockly.Python.forBlock['py_ai_open_camera'] = function(block) {
   var index = block.getFieldValue('INDEX');
   return 'cap = cv2.VideoCapture(' + index + ')\n';
 };
@@ -27,6 +27,6 @@ Blockly.Python.forBlock['py_ai_wait_key_break'] = function(block, generator) {
   return code;
 };
 
-Blockly.Python.forBlock['py_ai_release_all'] = function(block, generator) {
+Blockly.Python.forBlock['py_ai_release_all'] = function() {
   return 'cap.release()\ncv2.destroyAllWindows()\n';
 };

@@ -9,7 +9,6 @@ let bridge;
 
 // 環境偵測邏輯
 const isTauri = !!window.__TAURI_INTERNALS__;
-const isVsCode = typeof acquireVsCodeApi === 'function';
 
 if (isTauri) {
     bridge = new BridgeTauri();

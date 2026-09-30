@@ -1,7 +1,7 @@
 // Hardware Generators: hardware_generators.js
 // Optimized for MicroPython (Machine module)
 
-Blockly.Python.forBlock['mcu_pin_shadow'] = function(block, generator) {
+Blockly.Python.forBlock['mcu_pin_shadow'] = function(block) {
   var pin = block.getFieldValue('PIN');
   return [JSON.stringify(pin), Blockly.Python.ORDER_ATOMIC];
 };

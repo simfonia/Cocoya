@@ -5,7 +5,9 @@
 (function() {
     // --- 說明文件系統攔截器 ---
     const originalOpen = window.open;
-    window.open = function(url, name, specs) {
+    // 覆寫 window.open 以攔截說明檔連結；簽名必須與瀏覽器 API 一致
+    // (url, target, features)，故未使用的參數以底線標示（url 有用到）。
+    window.open = function(url, _name, _specs) {
         if (url && !url.startsWith('http') && !url.startsWith('vscode-webview')) {
             const langSuffix = (window.CocoyaApp && window.CocoyaApp.currentLang) ? `_${window.CocoyaApp.currentLang}` : '_zh-hant';
             const helpId = `${url}${langSuffix}`;

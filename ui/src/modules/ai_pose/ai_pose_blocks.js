@@ -13,7 +13,7 @@ Blockly.Blocks['py_ai_pose_init'] = {
       "tooltip": Blockly.Msg["AI_POSE_INIT_TOOLTIP"]
     });
   },
-  onchange: function(event) {
+  onchange: function() {
     if (!this.workspace || this.workspace.isDragging || this.workspace.isFlyout) return;
     let parent = this.getSurroundParent();
     let inDefZone = false;

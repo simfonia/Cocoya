@@ -14,7 +14,7 @@ Blockly.Blocks['py_ai_hand_init'] = {
       "tooltip": Blockly.Msg["AI_HAND_INIT_TOOLTIP"]
     });
   },
-  onchange: function(event) {
+  onchange: function() {
     if (!this.workspace || this.workspace.isDragging || this.workspace.isFlyout) return;
     
     // 檢查祖先積木是否有 py_definition_zone
