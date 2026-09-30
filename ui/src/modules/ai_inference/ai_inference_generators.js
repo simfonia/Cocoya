@@ -294,7 +294,7 @@ Blockly.Python.forBlock['py_ai_model_init'] = function(block, generator) {
   return code;
 };
 
-Blockly.Python.forBlock['py_ai_model_predict'] = function(block, generator) {
+Blockly.Python.forBlock['py_ai_model_predict'] = function(block) {
   var frameCode = block.getInput('FRAME') ?
     Blockly.Python.valueToCode(block, 'FRAME', Blockly.Python.ORDER_ATOMIC) || 'None' :
     'None';
@@ -307,7 +307,7 @@ Blockly.Python.forBlock['py_ai_model_predict'] = function(block, generator) {
 
 // === 解析積木產生器 ===
 
-Blockly.Python.forBlock['py_ai_get_label'] = function(block, generator) {
+Blockly.Python.forBlock['py_ai_get_label'] = function(block) {
   var resultCode = Blockly.Python.valueToCode(block, 'RESULT', Blockly.Python.ORDER_ATOMIC) || '{}';
   var code = resultCode + '.get("label", "none")';
   if (!block.outputConnection) {
@@ -316,7 +316,7 @@ Blockly.Python.forBlock['py_ai_get_label'] = function(block, generator) {
   return [code, Blockly.Python.ORDER_FUNCTION_CALL];
 };
 
-Blockly.Python.forBlock['py_ai_get_confidence'] = function(block, generator) {
+Blockly.Python.forBlock['py_ai_get_confidence'] = function(block) {
   var resultCode = Blockly.Python.valueToCode(block, 'RESULT', Blockly.Python.ORDER_ATOMIC) || '{}';
   var code = resultCode + '.get("confidence", 0.0)';
   if (!block.outputConnection) {
@@ -325,7 +325,7 @@ Blockly.Python.forBlock['py_ai_get_confidence'] = function(block, generator) {
   return [code, Blockly.Python.ORDER_FUNCTION_CALL];
 };
 
-Blockly.Python.forBlock['py_ai_get_bbox'] = function(block, generator) {
+Blockly.Python.forBlock['py_ai_get_bbox'] = function(block) {
   var resultCode = Blockly.Python.valueToCode(block, 'RESULT', Blockly.Python.ORDER_ATOMIC) || '{}';
   var code = resultCode + '.get("objects", [{}])[0].get("bbox", (0, 0, 0, 0)) if ' + resultCode + '.get("objects", []) else (0, 0, 0, 0)';
   if (!block.outputConnection) {
@@ -334,7 +334,7 @@ Blockly.Python.forBlock['py_ai_get_bbox'] = function(block, generator) {
   return [code, Blockly.Python.ORDER_FUNCTION_CALL];
 };
 
-Blockly.Python.forBlock['py_ai_get_direction'] = function(block, generator) {
+Blockly.Python.forBlock['py_ai_get_direction'] = function(block) {
   var resultCode = Blockly.Python.valueToCode(block, 'RESULT', Blockly.Python.ORDER_ATOMIC) || '{}';
   var code = resultCode + '.get("direction", "none")';
   if (!block.outputConnection) {
@@ -343,7 +343,7 @@ Blockly.Python.forBlock['py_ai_get_direction'] = function(block, generator) {
   return [code, Blockly.Python.ORDER_FUNCTION_CALL];
 };
 
-Blockly.Python.forBlock['py_ai_get_bbox_center'] = function(block, generator) {
+Blockly.Python.forBlock['py_ai_get_bbox_center'] = function(block) {
   var resultCode = Blockly.Python.valueToCode(block, 'RESULT', Blockly.Python.ORDER_ATOMIC) || '{}';
   var code = '(lambda b: ((b[0]+b[2])/2, (b[1]+b[3])/2))(' + resultCode + '.get("objects", [{}])[0].get("bbox", (0,0,0,0)) if ' + resultCode + '.get("objects", []) else (0,0,0,0))';
   if (!block.outputConnection) {
@@ -354,7 +354,7 @@ Blockly.Python.forBlock['py_ai_get_bbox_center'] = function(block, generator) {
 
 // === 循線（line_follower）解析積木（2026-09-19 H5）===
 
-Blockly.Python.forBlock['py_ai_get_line'] = function(block, generator) {
+Blockly.Python.forBlock['py_ai_get_line'] = function(block) {
   var resultCode = Blockly.Python.valueToCode(block, 'RESULT', Blockly.Python.ORDER_ATOMIC) || '{}';
   var code = resultCode + '.get("line", (0.0, 0.0, 0.0, 0.0))';
   if (!block.outputConnection) {
@@ -363,7 +363,7 @@ Blockly.Python.forBlock['py_ai_get_line'] = function(block, generator) {
   return [code, Blockly.Python.ORDER_FUNCTION_CALL];
 };
 
-Blockly.Python.forBlock['py_ai_get_line_end'] = function(block, generator) {
+Blockly.Python.forBlock['py_ai_get_line_end'] = function(block) {
   var field = block.getFieldValue('END'); // x1 | y1 | x2 | y2
   var idx = { x1: 0, y1: 1, x2: 2, y2: 3 }[field];
   if (idx === undefined) {
@@ -377,7 +377,7 @@ Blockly.Python.forBlock['py_ai_get_line_end'] = function(block, generator) {
   return [code, Blockly.Python.ORDER_MEMBER];
 };
 
-Blockly.Python.forBlock['py_ai_get_line_offset'] = function(block, generator) {
+Blockly.Python.forBlock['py_ai_get_line_offset'] = function(block) {
   var resultCode = Blockly.Python.valueToCode(block, 'RESULT', Blockly.Python.ORDER_ATOMIC) || '{}';
   var code = resultCode + '.get("offset", 0.0)';
   if (!block.outputConnection) {
@@ -386,7 +386,7 @@ Blockly.Python.forBlock['py_ai_get_line_offset'] = function(block, generator) {
   return [code, Blockly.Python.ORDER_FUNCTION_CALL];
 };
 
-Blockly.Python.forBlock['py_ai_get_line_angle'] = function(block, generator) {
+Blockly.Python.forBlock['py_ai_get_line_angle'] = function(block) {
   var resultCode = Blockly.Python.valueToCode(block, 'RESULT', Blockly.Python.ORDER_ATOMIC) || '{}';
   var code = resultCode + '.get("angle", 0.0)';
   if (!block.outputConnection) {

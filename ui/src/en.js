@@ -221,7 +221,6 @@
     "MSG_DEPLOYING_MCU": "Deploying code to MCU (%1)...",
     "MSG_DEPLOY_UPLOADING": "Uploading, do not disconnect USB...",
     "MSG_DEPLOY_COMPLETED": "Upload completed, you can disconnect USB.",
-    "MSG_UPDATE_LATEST": "You are already using the latest version.",
     "MSG_PYTHON_NOT_FOUND": "Could not execute Python (Current: %1). Please specify the correct python.exe path.",
     "MSG_PYTHON_UPDATED": "Python path updated: %1",
     "MSG_RECOVER_BACKUP": "Unsaved changes detected. Do you want to recover them?",

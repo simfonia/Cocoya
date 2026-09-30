@@ -88,10 +88,14 @@ export class BridgeTauri extends BaseBridge {
                     break;
 
                 case 'getModuleToolbox':
-                    const toolboxPath = `${data.moduleId}/toolbox.xml`;
-                    result = await this.tauriInvoke('get_module_toolbox', { path: toolboxPath });
-                    if (data.requestId) {
-                        this._dispatchToFrontend({ command: 'toolboxData', data: result, requestId: data.requestId });
+                    {
+                        // 單獨包成 block：switch 內宣告 const/let 必須有區塊作用域，
+                        // 否則與其他 case 的同名變數共用同一個 switch 作用域。
+                        const toolboxPath = `${data.moduleId}/toolbox.xml`;
+                        result = await this.tauriInvoke('get_module_toolbox', { path: toolboxPath });
+                        if (data.requestId) {
+                            this._dispatchToFrontend({ command: 'toolboxData', data: result, requestId: data.requestId });
+                        }
                     }
                     break;
 
@@ -160,7 +164,9 @@ export class BridgeTauri extends BaseBridge {
 
                 case 'stopCode':
                     // 順帶中斷遠端訓練（若無進行中訓練，sidecar 回「目前沒有」僅靜默）
-                    this._handleDatasetCommand('stopTraining', {}, null).catch(() => {});
+                    this._handleDatasetCommand('stopTraining', {}, null).catch(() => {
+                        // 停止遠端訓練失敗不影響本機停止（sidecar 可能已結束），靜默忽略。
+                    });
                     await this.tauriInvoke('stop_python');
                     break;
 
@@ -395,7 +401,7 @@ export class BridgeTauri extends BaseBridge {
 
                 case 'closeEditor':
                     // toolbar 的「關閉編輯器」：與右上角 X 走相同 dirty 檢查與存檔確認流程
-                    if (this._appWindow) await this._handleCloseDialog(this._appWindow);
+                    if (this._appWindow) await this._handleCloseDialog();
                     break;
 
                 case 'backToHome':
@@ -572,7 +578,7 @@ export class BridgeTauri extends BaseBridge {
                     break;
 
                 case 'datasetStopCamera':
-                    await this._handleDatasetCommand('stopCamera', data, (response) => {
+                    await this._handleDatasetCommand('stopCamera', data, (_response) => {
                         // 停止成功後，攝影機不在 running 狀態，故 success: false
                         this._dispatchToFrontend({
                             command: 'datasetCameraStatus',
@@ -1094,7 +1100,7 @@ export class BridgeTauri extends BaseBridge {
             
             // 監聽後端發來的「要關了」請求 (由 Rust 攔截 X 按鈕觸發)
             await appWindow.listen('closeRequested', () => {
-                this._handleCloseDialog(appWindow);
+                this._handleCloseDialog();
             });
 
             // 視窗焦點/失焦偵測（方案 B：多視窗自動交接串列埠監控）。
@@ -1107,7 +1113,9 @@ export class BridgeTauri extends BaseBridge {
                         this.tauriInvoke('set_window_focus', {
                             focused: false,
                             rawDumpEnabled: localStorage.getItem('cocoya_serial_raw_dump_enabled') === 'true'
-                        }).catch(() => {});
+                        }).catch(() => {
+                            // 失焦時釋放序列埠失敗不需打擾使用者（可能本就沒有 monitor）。
+                        });
                     }
                 });
                 doc.addEventListener('focus', () => {
@@ -1115,7 +1123,10 @@ export class BridgeTauri extends BaseBridge {
                         this.tauriInvoke('set_window_focus', {
                             focused: true,
                             rawDumpEnabled: localStorage.getItem('cocoya_serial_raw_dump_enabled') === 'true'
-                        }).catch(() => {});
+                        }).catch(() => {
+                            // 重新取得序列埠失敗（埠被拔除／被其他程式佔用）時靜默，
+                            // 使用者再次點擊序列埠選單即可重試。
+                        });
                     }
                 });
             }
@@ -1217,7 +1228,9 @@ export class BridgeTauri extends BaseBridge {
         }
     }
 
-    async _handleCloseDialog(appWindow) {
+    // 2026-09-30 移除未使用的 appWindow 參數（兩個呼叫點傳的都是 this._appWindow，
+    // 函式內完全未使用；關閉流程一律走 window.CocoyaApp）。
+    async _handleCloseDialog() {
         if (this._isClosing) {
             // 保險絲（E4-B）：萬一前一次關閉流程卡住（對話框 promise 永不 resolve、
             // 或確認框被更高 z-index 的 modal 覆蓋導致按鈕點不到），_isClosing 會永久為 true
