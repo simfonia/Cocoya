@@ -350,28 +350,10 @@ pub fn get_serial_ports() -> Result<Vec<SerialPortResult>, String> {
     Ok(list_serial_ports())
 }
 
-#[tauri::command]
-pub async fn setup_stable_mode(handle: AppHandle, port: String, lang: String) -> Result<(), String> {
-    let python_path = "python"; 
-    let script_path = get_deployer_path(&handle);
+// 2026-09-30 移除 setup_stable_mode command：CircuitPython 遺留功能。
+// 後端 resources/deploy/*.py 的 setup_stable_mode() 三個實作都只印一行訊息，
+// 不寫入 boot.py、也不鎖定磁碟；Cocoya 已不再支援 CircuitPython。
 
-    let mut ss_cmd = Command::new(python_path);
-    #[cfg(target_os = "windows")]
-    {
-        use std::os::windows::process::CommandExt;
-        ss_cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW：隱藏 python console 黑窗（對齊 python.rs run_python）
-    }
-    ss_cmd
-        .arg(script_path)
-        .arg(port)
-        .arg("--setup-stable")
-        .arg("--lang")
-        .arg(&lang)
-        .spawn()
-        .map_err(|e| e.to_string())?;
-
-    Ok(())
-}
 
 #[tauri::command]
 pub async fn deploy_mcu(

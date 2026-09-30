@@ -29,7 +29,6 @@ This document serves as the Technical Reference and Source of Truth (SSOT) for t
 | `get_serial_ports` | Lists available serial ports with smart labeling | Migrated | `commands/mcu.rs` |
 | `deploy_mcu` | Invokes `deploy_mcu.py` to upload code to hardware | Migrated | `commands/mcu.rs` |
 | `open_serial_monitor` | Starts serial monitor mode via `deploy_mcu.py` | Migrated | `commands/mcu.rs` |
-| `setup_stable_mode` | Configures MCU for stable mode (mpremote based) | Migrated | `commands/mcu.rs` |
 | `erase_filesystem` | Rebuilds the MCU filesystem (formatting) | Migrated | `commands/mcu.rs` |
 | `reset_firmware` | Burns MicroPython firmware to RPI-RP2 drive | Migrated | `commands/mcu.rs` |
 | `set_window_focus` | Releases/re-acquires serial monitor on window focus change (Multi-window handover) | Migrated | `commands/mcu.rs` |
@@ -86,7 +85,6 @@ Notation: `key?` = Optional. **Rule: changing a Rust signature -> immediately up
 | python | install_python_module | python_path: String, module_id: String, pip_package: String | {pythonPath, moduleId, pipPackage} | Result<(), String>（執行 `python -m pip install <pkg> --user --no-warn-script-location --progress-bar off`；事件 `install-module-log` {moduleId,text,stream} / `install-module-done` {moduleId,success,exitCode,aborted}；同視窗已有安裝進行中回 Err("INSTALL_ALREADY_RUNNING")） |
 | python | abort_install_module | -- | {} | Result<(), String>（kill 進程樹；發 `install-module-done` 帶 aborted:true；無進行中安裝時靜默回 Ok） |
 | mcu | get_serial_ports    | -- | {} | Result<Vec<SerialPortResult>, String>（欄位 camelCase：port/label/vid/pid/boardId；boardId 對應 board_defs.json，未知板空字串） |
-| mcu | setup_stable_mode   | port: String, lang: String | {port, lang} | Result<(), String> |
 | mcu | deploy_mcu          | python_path, port, code, serial_upload_only: bool, lang, raw_dump_enabled: Option<bool> | {pythonPath, port, code, serialUploadOnly, lang, rawDumpEnabled?} | Result<(), String>（Raw Dump 開啟時路徑固定為 `<ProjectRoot>/raw_dump.log`；未錨定回 `PROJECT_ROOT_REQUIRED`） |
 | mcu | open_serial_monitor | port: String, python_path, lang, raw_dump_enabled: Option<bool> | {port, pythonPath, lang, rawDumpEnabled?} | Result<(), String> |
 | mcu | toggle_serial_monitor | port: Option<String>, python_path, lang: Option<String>, raw_dump_enabled: Option<bool> | {port?, pythonPath?, lang?, rawDumpEnabled?} | Result<String, String>（回 "opened"/"stopped"；設定保存於 serial_wants，聚焦重取沿用） |

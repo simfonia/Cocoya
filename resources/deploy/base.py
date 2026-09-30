@@ -271,9 +271,8 @@ class BaseDeployer:
         """抹除檔案系統"""
         raise NotImplementedError
 
-    def setup_stable_mode(self, port, lang="en"):
-        """設定穩定模式"""
-        print("\n[Notice] Stable mode not required for this firmware.")
+    # 2026-09-30 移除 setup_stable_mode()：CircuitPython 遺留功能。
+    # 三個韌體的實作都只印一行訊息、不做任何事；Cocoya 已不再支援 CircuitPython。
 
 
 def detect_board(port, baud=115200, timeout=2.0):

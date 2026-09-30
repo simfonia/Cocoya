@@ -128,5 +128,4 @@ class PybricksDeployer(BaseDeployer):
         finally:
             if ser: ser.close()
 
-    def setup_stable_mode(self, port, lang="en"):
-        print("\n[Notice] Pybricks firmware is already optimized. No additional setup needed.")
+

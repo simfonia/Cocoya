@@ -29,7 +29,6 @@ def main():
     parser.add_argument("--no-monitor", action="store_true", help="Disable serial monitor after upload")
     parser.add_argument("--monitor-only", action="store_true", help="Only start serial monitor")
     parser.add_argument("--serial-only", action="store_true", help="Use serial only mode")
-    parser.add_argument("--setup-stable", action="store_true", help="Setup stable mode")
     parser.add_argument("--erase-filesystem", action="store_true", help="Erase all files (deep repair)")
     parser.add_argument("--board-type", default="micropython",
                         choices=["micropython", "pybricks", "spike-official", "auto"],
@@ -56,8 +55,6 @@ def main():
         deployer.monitor(args.port, lang=args.lang, is_tauri=args.tauri)
     elif args.erase_filesystem:
         deployer.erase_filesystem(args.port, lang=args.lang)
-    elif args.setup_stable:
-        deployer.setup_stable_mode(args.port, lang=args.lang)
     else:
         if not args.code_file:
             parser.error("code_file is required for deployment")
