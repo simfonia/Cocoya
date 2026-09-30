@@ -134,7 +134,10 @@
 > 基準（實測 2026-09-27）：`cd ui; node --test "src/**/*.test.mjs"` → tests 194 / pass 194 / fail 0（測試本體不差，問題是沒機制去跑）
 
 #### Stage 0（TDD 守門，最高優先；完成前不得動 Batch 1~6）
-- [ ] **T1**（最低成本最高回報）`package.json` 新增 `"test:ui": "cd ui && node --test \"src/**/*.test.mjs\""`，`test` 改為 `test:unit && test:ui`；確認 194 測試進入門檻（**勿用目錄模式**，會誤把 index.js 當入口）
+- [x] **T1**（最低成本最高回報）`package.json` 新增 `"test:ui": "cd ui && node --test \"src/**/*.test.mjs\""`，`test` 改為 `test:unit && test:ui`；確認 194 測試進入門檻（**勿用目錄模式**，會誤把 index.js 當入口）
+  - ✅ 2026-09-30 實作：改用 `npm --prefix ui run test:unit`（消除 `cd ui &&` 的 cmd/pwsh 差異）；根 `test` = `test:unit && test:ui`；實測 `npm test` exit 0、194/194
+- [x] **T-fast（新增，2026-09-30）** 分層守門：`test:fast`／`test:dm`／`test:core`／`test:rust` ＋ `scripts/test-related.cjs` 自動挑測試；修掉 `statusMessage.test.mjs` 計時器洩漏（Node 測試 5722ms → 1091ms）
+- [ ] **T-scan（新增，2026-09-30）** 掃描其餘測試檔是否仍有「未清除計時器／未 await handle」導致 event loop 空轉；另注意 28 檔約 150ms 為 Node 啟動開銷非測試邏輯
 - [ ] **P0-1** 英文版 SPIKE 感測器積木無顏色：`spike_blocks.js` 用 `COLOUR_SPIKE_SENSOR_COLOR/_DISTANCE/_FORCE/_IMU`，`ui/src/en.js` 缺（僅有無後綴的 `COLOUR_SPIKE_SENSOR`）→ 補 4 鍵並確認刪除無人用鍵
 - [ ] **P0-2** `ui/src/zh-hant.js` 缺 Stable Mode 三鍵（`TLB_SETTINGS_SERIAL_UPLOAD`／`TLB_SETTINGS_SETUP_STABLE`／`MSG_SETUP_STABLE_CONFIRM`，`base.js:492` 有用）→ 補鍵
 - [ ] **T2** 契約測試全模組化：`ui/src/modules/core/core_contract.test.mjs` 目前只過濾 `core/` 前綴 → 改為涵蓋 `core_manifest.json` 全部模組，續對帳 blocks↔generators↔toolbox↔雙語 i18n↔`COLOUR_*`（**T2 會讓 spike／hardware／mcu_* 立刻現紅，屬預期且正確；處理方式是補鍵不是放寬斷言**）

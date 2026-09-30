@@ -252,3 +252,21 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
 - `node --check` 所有新 JS；`npx vite build`（ui/）；實機檢查 toolbox 分類、flyout 積木色與產生的 Python 代碼
 ### 注意
 - 主題切換採「存偏好 + reloadWebview」：VSIX 由 host 重建 HTML（cocoyaManager.ts reloadWebview case）、Tauri 為 location.reload()；新模組無需處理此機制
+
+### 測試執行分層守門 (Test Gating, 2026-09-30)
+本專案 Node 測試共 34 檔 194 例，全量約 **1.1 秒**。**不同階段只跑該跑的層級**，避免浪費時間與 AI 對話 token。
+
+| 層級 | 指令 | 適用時機 | 內容 |
+|---|---|---|---|
+| **L0** | `npm run test:fast` | 每次改完碼 | 依 `git diff` 自動挑必要測試（同名 → 同目錄 → 模組 glob），只輸出摘要 |
+| **L0 指定** | `npm run test:fast -- <檔案…>` | 明確知道改到哪 | 手動指定變更檔 |
+| **L1** | `npm run test:dm` / `npm run test:core` | 一個功能切片完成 | 單一模組 |
+| **L2** | `npm run test:ui` | 階段／Batch 收尾、提交前 | 全量 194 例 |
+| **L2 全閘** | `npm test` | 發布前 | compile + lint + 全量 |
+| **其他** | `npm run test:rust` / `cargo check` | Rust 異動 | 不併入 `npm test` |
+
+- **測試 SSOT 執行方式**：`ui/` 目錄下 `node --test "src/**/*.test.mjs"`（**勿用目錄模式**，會誤把 `index.js` 當入口，見上文 DM 測試段落）。
+- **自動挑測試的規則**（`scripts/test-related.cjs`）：`*_blocks.js`／`*_generators.js`／`toolbox.xml`／任何 `i18n/*.js`／`src/zh-hant.js`／`src/en.js`／`core_manifest.json`／`theme_manager/themes/*.js` 一律納入 `core_contract.test.mjs` 契約對帳。
+- **AI 協作紀律**：迭代中一律用 `npm run test:fast`，且不得把子行程完整測試輸出灌入對話（`test-related.cjs` 已於輸出落地前過濾為摘要 + 失敗明細）。
+- **計時器洩漏紅線**：測試中呼叫會啟動 `setTimeout` 的 API 時，必須傳明確 `duration` 或於測試結束前 `dispose()`。未清除的 timer 會吊住 Node event loop，單檔實測多等 5 秒（`ui/statusMessage.test.mjs` 曾因此讓全量測試 5.7s → 0.6s 失守）。
+
