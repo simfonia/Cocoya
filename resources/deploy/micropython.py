@@ -150,5 +150,4 @@ class MicroPythonDeployer(BaseDeployer):
         finally:
             if ser: ser.close()
 
-    def setup_stable_mode(self, port, lang="en"):
-        print("\n[Notice] MicroPython does not need \'Stable Mode\'. It\'s already stable by design!")
+    # 2026-09-30 移除 setup_stable_mode()：CircuitPython 遺留功能。

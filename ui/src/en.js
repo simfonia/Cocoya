@@ -102,11 +102,12 @@
     "TLB_SAVE_AS": "Save As...",
     "TLB_SETTINGS": "Settings",
     "TLB_SETTINGS_PYTHON_ENV": "Python Environment (Path & Modules)",
-    "TLB_SETTINGS_SERIAL_UPLOAD": "Stable Mode (Serial Upload Only)",
     "TLB_SETTINGS_FIRMWARE_GROUP": "Firmware Settings",
     "TLB_SETTINGS_SERIAL_RAW_DUMP": "MCU Serial Raw Dump",
     "TLB_SETTINGS_SERIAL_RAW_DUMP_TOOLTIP": "Records raw serial bytes to raw_dump.log in the current XML project root. Applies to the next MCU upload or monitor session.",
-    "TLB_SETTINGS_SETUP_STABLE": "Lock USB Disk (Stable Mode)",
+    // 2026-09-30: TLB_SETTINGS_SETUP_STABLE removed (CircuitPython-era "Stable Mode"
+    //  leftover; the button never existed in index.html and the backend
+    //  setup_stable_mode() was a no-op). Removed entirely.
     "TLB_SETTINGS_ERASE_FS": "Deep Repair (Clear MCU Files)",
     "TLB_SETTINGS_ERASE_FS_TOOLTIP": "Stops dead loops and clears internal MCU files. Use when code freezes or to reset for a new user.",
     "MSG_RAW_DUMP_NEED_ANCHOR": "Open and save an XML project before enabling MCU Serial Raw Dump.",
@@ -233,7 +234,9 @@
     "MSG_BOARD_MISMATCH": "The declared board (%1) does not match the detected board (%2). Upload anyway?",
     "MSG_FIRMWARE_BURN_SUCCESS": "Firmware burned successfully! The MCU will restart.",
     "MSG_FIRMWARE_BURN_FAILED": "Burning failed: ",
-    "MSG_SETUP_STABLE_CONFIRM": "This will write boot.py to MCU to enable Stable Mode.\n\n[Effect]: Windows will become Read-Only for this drive (preventing damage), and Cocoya will upload code via Serial.\n[Escape]: To restore Windows write access later, hold \"GP20 button (Button 1)\" while plugging in the USB cable.\n\nAre you sure you want to continue?",
+    // 2026-09-30: MSG_SETUP_STABLE_CONFIRM removed (CircuitPython-era "Stable Mode"
+    //  confirm dialog; the backend only printed a notice and did nothing, so the
+    //  claimed effect — writing boot.py / locking the USB drive — never happened).
 
     "MSG_ERASE_FS_CONFIRM": "WARNING: This will force stop the program and ERASE ALL USER FILES (main.py, etc.) on the MCU. This cannot be undone! Continue?",
     "MSG_NO_TRAINING_RESULT": "No training results yet. Please run training first.",

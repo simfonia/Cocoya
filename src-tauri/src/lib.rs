@@ -36,7 +36,6 @@ pub fn run() {
             commands::deploy_mcu,
             commands::open_serial_monitor,
             commands::toggle_serial_monitor,
-            commands::setup_stable_mode,
             commands::erase_filesystem,
             commands::auto_backup,
             commands::clear_backup,

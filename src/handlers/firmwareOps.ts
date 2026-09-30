@@ -187,13 +187,7 @@ export class FirmwareOpsHandler {
         vscode.window.showInformationMessage(infoMsg);
     }
 
-    public handleSetupStableMode(message: any) {
-        const sPort = message.serialPort;
-        const sPython = this.manager.getPythonPath();
-        const sLang = vscode.env.language.startsWith('zh') ? 'zh-hant' : 'en';
-        const sScript = vscode.Uri.joinPath(this.manager.context.extensionUri, 'resources', 'deploy_mcu.py').fsPath;
-        const sTerminal = vscode.window.createTerminal('Cocoya Setup');
-        sTerminal.sendText(`& "${sPython}" "${sScript}" "${sPort}" --setup-stable --lang ${sLang}`);
-        sTerminal.show();
-    }
+    // 2026-09-30 移除 handleSetupStableMode()：CircuitPython 遺留功能。
+    // 後端 resources/deploy/*.py 的 setup_stable_mode() 只印訊息、不做任何事，
+    // 且 Cocoya 已不再支援 CircuitPython（僅 MicroPython / Pybricks / 官方 SPIKE）。
 }

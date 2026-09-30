@@ -254,10 +254,6 @@ export class CocoyaManager {
                     await this.stopAllCocoyaTerminals();
                     this.firmwareOps.handleEraseFilesystem(message);
                     break;
-                case 'setupStableMode':
-                    await this.stopAllCocoyaTerminals();
-                    this.firmwareOps.handleSetupStableMode(message);
-                    break;
                 case 'autoBackup':
                     this.fileOps.handleAutoBackup(message.xml);
                     break;

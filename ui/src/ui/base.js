@@ -480,22 +480,10 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             };
         }
 
-        // --- 穩定教學模式：初始化 MCU (寫入 boot.py) ---
-        const setupStableBtn = document.getElementById('btn-setup-stable-mcu');
-        if (setupStableBtn) {
-            setupStableBtn.onclick = async () => {
-                const port = window.CocoyaUI && window.CocoyaUI.getSerialPort ? window.CocoyaUI.getSerialPort() : (document.getElementById('serial-selector')?.getAttribute('data-value') || '');
-                if (!port) {
-                    window.CocoyaBridge.alert(Blockly.Msg['MSG_SELECT_PORT'] || 'Please select a port first.');
-                    return;
-                }
-                const confirmMsg = Blockly.Msg['MSG_SETUP_STABLE_CONFIRM'] || 
-                    'This will write boot.py to MCU to enable Stable Mode. Windows will become Read-Only for this drive. Continue?';
-                if (await window.CocoyaBridge.confirm(confirmMsg)) {
-                    window.CocoyaBridge.send('setupStableMode', { serialPort: port });
-                }
-            };
-        }
+        // 2026-09-30 移除「穩定教學模式：初始化 MCU」綁定。
+        // 原因：該功能是 CircuitPython 時代的遺留，本專案已不再支援 CircuitPython。
+        // 後端 resources/deploy/*.py 的 setup_stable_mode() 三個實作都只印一行訊息，
+        // 不寫入 boot.py、也不鎖定磁碟 —— 整條鏈是 no-op，index.html 也從未有對應按鈕。
 
         // --- 深度修復清空檔案 (Erase Filesystem) ---
         const eraseFsBtn = document.getElementById('btn-erase-filesystem');

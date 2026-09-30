@@ -409,18 +409,8 @@ export class BridgeTauri extends BaseBridge {
                     await this._refreshAnchor();
                     break;
 
-                case 'setupStableMode':
-                    try {
-                        window.CocoyaUI.showLoadingModal('Setting up stable mode...');
-                        const lang = (window.Blockly && Blockly.Msg['BKY_LANG']) || 'zh-hant';
-                        await this.tauriInvoke('setup_stable_mode', { port: data.serialPort, lang: lang });
-                        window.CocoyaUI.hideLoadingModal();
-                        this.alert('Stable mode enabled!');
-                    } catch (e) {
-                        window.CocoyaUI.hideLoadingModal();
-                        this.alert('Setup failed: ' + e);
-                    }
-                    break;
+                // 2026-09-30 移除 'setupStableMode' 事件處理。
+                // 原因：CircuitPython 遺留功能，後端 setup_stable_mode 三個實作皆為 no-op。
 
                 case 'resetFirmware':
                     try {
