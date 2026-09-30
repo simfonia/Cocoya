@@ -46,6 +46,11 @@
     "COLOUR_SPIKE_MOTOR": "#ee5b56",
     "COLOUR_SPIKE_MUSIC": "#de57ad",
     "COLOUR_SPIKE_LED": "#544eca",
+    // 2026-09-30 補：無後綴的 COLOUR_SPIKE_SENSOR。en.js 一直有，但 zh-hant 從未定義，
+    // 而 spike_blocks.js 的 SPIKE 主積木與 toolbox.xml 的 SPIKE／SPIKE_INIT／SPIKE_HUB
+    // 三個 category 都在使用它 → 中文版的 SPIKE 主分類同樣是無色的。
+    // 與 P0-1 的四個 SENSOR_* 鍵是對稱缺陷，兩邊都要補齊。
+    "COLOUR_SPIKE_SENSOR": "#b1b100",
     "COLOUR_SPIKE_SENSOR_COLOR": "#b1b100",
     "COLOUR_SPIKE_SENSOR_DISTANCE": "#014b70",
     "COLOUR_SPIKE_SENSOR_FORCE": "#712000",
@@ -108,6 +113,8 @@
     "TLB_SETTINGS_SERIAL_RAW_DUMP_TOOLTIP": "記錄序列埠原始位元組至目前 XML 專案根目錄的 raw_dump.log；只影響後續啟動的 MCU 上傳或監看。",
     "TLB_SETTINGS_ERASE_FS": "深度修復 (清空 MCU 檔案)",
     "TLB_SETTINGS_ERASE_FS_TOOLTIP": "強制停止無窮迴圈、清空 MCU 內部檔案。當程式卡死時使用。",
+    "TLB_SETTINGS_SERIAL_UPLOAD": "穩定教學模式 (僅序列埠上傳)",
+    "TLB_SETTINGS_SETUP_STABLE": "鎖定 USB 磁碟 (穩定教學模式)",
     "TLB_SETTINGS_RESET_FIRMWARE": "重置韌體 (燒錄系統)",
     "TLB_RUN": "執行程式",
     "TLB_RUN_PC": "執行 PC 端程式",
@@ -207,6 +214,9 @@
     // 對話框與訊息
     "MSG_SAVE_CONFIRM": "您要儲存對目前專案的變更嗎？",
     "MSG_SWITCH_CONFIRM": "切換模式將會清除目前的工作區並建立新專案。確定要切換到 %1 模式嗎？",
+    // 2026-09-30 P0-2 補（英文版原已有）。ui/base.js 以 `|| 英文` 當 fallback，
+    // 中文介面會顯示英文；補上後兩語系一致。換行語意比照 en.js 保留段落分隔。
+    "MSG_SETUP_STABLE_CONFIRM": "這會將 boot.py 寫入 MCU 以啟用穩定教學模式。\n\n【效果】：Windows 會將這個磁碟變成唯讀（避免檔案損壞），Cocoya 改以序列埠上傳程式。\n【復原】：日後要取回 Windows 寫入權限，請在插上 USB 線時按住「GP20 按鈕（Button 1）」。\n\n確定要繼續嗎？",
     "MSG_SAVE": "儲存",
     "MSG_DONT_SAVE": "不儲存",
     "MSG_OK": "確定",
@@ -248,6 +258,12 @@
     "PY_DEF": "def",
     "PY_RETURN": "return",
     "PY_GLOBAL": "global",
-    "PY_LOCAL": "local"
+    "PY_LOCAL": "local",
+    // 2026-09-30 補：積木內部的符號欄位。這兩個鍵被多個模組共用
+    // （PY_COLON：structure/loops/types/functions；PY_EQUAL：variables/functions），
+    // 因此放在根 i18n。屬設計值（符號本身），兩語系同值。
+    // 修正前兩個語系都沒有定義，導致 appendField 顯示 undefined。
+    "PY_COLON": ":",
+    "PY_EQUAL": "="
   });
 })(Blockly);

@@ -19,6 +19,9 @@
     "HW_I2C_SCAN": "I2C Scan",
     "HW_PIN_HIGH": "High",
     "HW_PIN_LOW": "Low",
+    // 2026-09-30 補：腳位選擇 shadow 積木有引用此 tooltip，但兩個語系都沒定義
+    //（程式碼內的 fallback 是中文，英文介面會顯示中文）。
+    "HW_PIN_SHADOW_TOOLTIP": "Choose a pin name on the development board.",
 
     // --- Simplified Tooltips ---
     "HW_DIGITAL_WRITE_TOOLTIP": "Digital Write: High (True) or Low (False)",

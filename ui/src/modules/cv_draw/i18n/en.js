@@ -9,6 +9,8 @@ Object.assign(Blockly.Msg, {
   "AI_DRAW_TEXT_ZH": "on %1 draw Chinese %2 pos %3 color %4 size %5",
   "AI_DRAW_TEXT_ZH_TOOLTIP": "Draw Chinese text on image using Pillow. Note: Pillow library must be installed.",
   "AI_DRAW_ANGLE_ARC": "on %1 draw angle arc center %2 start %3 end %4 radius %5 color %6 thick %7",
+  // 2026-09-30 補：py_ai_draw_angle_arc 有引用此 tooltip，但英文版從未定義（中文版有）。
+  "AI_DRAW_ANGLE_ARC_TOOLTIP": "Draw an arc between the angle formed by three points. The center is usually a joint (e.g. elbow).",
   "AI_DRAW_OVERLAY_IMAGE": "on %1 overlay image %2 center %3 width %4 angle %5",
   "AI_DRAW_OVERLAY_IMAGE_TOOLTIP": "Overlay an image with PNG transparency support.",
   "AI_DRAW_TOOLTIP": "Draw annotations on image. Color should be (B, G, R) format.",

@@ -254,14 +254,14 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
 - 主題切換採「存偏好 + reloadWebview」：VSIX 由 host 重建 HTML（cocoyaManager.ts reloadWebview case）、Tauri 為 location.reload()；新模組無需處理此機制
 
 ### 測試執行分層守門 (Test Gating, 2026-09-30)
-本專案 Node 測試共 34 檔 194 例，全量約 **1.1 秒**。**不同階段只跑該跑的層級**，避免浪費時間與 AI 對話 token。
+本專案 Node 測試共 34 檔 **197 例**（T2 新增 3 項 i18n 守門），全量約 **1.1 秒**。**不同階段只跑該跑的層級**，避免浪費時間與 AI 對話 token。
 
 | 層級 | 指令 | 適用時機 | 內容 |
 |---|---|---|---|
 | **L0** | `npm run test:fast` | 每次改完碼 | 依 `git diff` 自動挑必要測試（同名 → 同目錄 → 模組 glob），只輸出摘要 |
 | **L0 指定** | `npm run test:fast -- <檔案…>` | 明確知道改到哪 | 手動指定變更檔 |
 | **L1** | `npm run test:dm` / `npm run test:core` | 一個功能切片完成 | 單一模組 |
-| **L2** | `npm run test:ui` | 階段／Batch 收尾、提交前 | 全量 194 例 |
+| **L2** | `npm run test:ui` | 階段／Batch 收尾、提交前 | 全量 197 例 |
 | **L2 全閘** | `npm test` | 發布前 | compile + lint + 全量 |
 | **其他** | `npm run test:rust` / `cargo check` | Rust 異動 | 不併入 `npm test` |
 
@@ -269,4 +269,15 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
 - **自動挑測試的規則**（`scripts/test-related.cjs`）：`*_blocks.js`／`*_generators.js`／`toolbox.xml`／任何 `i18n/*.js`／`src/zh-hant.js`／`src/en.js`／`core_manifest.json`／`theme_manager/themes/*.js` 一律納入 `core_contract.test.mjs` 契約對帳。
 - **AI 協作紀律**：迭代中一律用 `npm run test:fast`，且不得把子行程完整測試輸出灌入對話（`test-related.cjs` 已於輸出落地前過濾為摘要 + 失敗明細）。
 - **計時器洩漏紅線**：測試中呼叫會啟動 `setTimeout` 的 API 時，必須傳明確 `duration` 或於測試結束前 `dispose()`。未清除的 timer 會吊住 Node event loop，單檔實測多等 5 秒（`ui/statusMessage.test.mjs` 曾因此讓全量測試 5.7s → 0.6s 失守）。
+
+### i18n 契約守門 (2026-09-30 T2)
+`ui/src/modules/core/core_contract.test.mjs` 已涵蓋 `core_manifest.json` **全部 22 模組**，並含 3 項 i18n 守門：
+1. blocks／generators 中 `Blockly.Msg['KEY']` 引用的鍵，雙語系皆有定義
+2. 根 `zh-hant.js` 與 `en.js` 鍵集合完全相同
+3. 各模組 `i18n/` 兩語系鍵集合相同
+
+- **新增積木／文案時必須讓這三項維持綠燈**；紅燈代表真的缺字，**處理方式是補鍵，不得放寬斷言**。
+- 白名單僅限**已查證的設計事實**且必須附原因（見檔內 `UNPUBLISHED_BLOCKS`／`ORPHAN_GENERATORS`／`BLOCKLY_BUILTIN`）。
+- **掃描 blocks／generators 的 i18n 鍵時，只認 `Msg['KEY']` 語法**：物件字串鍵（如 `mcu_car` 的 `note_map = {"CS":1,...}`）與產生 Python 的字串常數（如 `'V2'`）都不是 i18n 引用，會造成假陽性。
+- toolbox 公開集合**包含 `<shadow type="...">`**（影子積木刻意不置於頂層，但確實被 toolbox 引用）。
 
