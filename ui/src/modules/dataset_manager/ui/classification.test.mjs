@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createClassificationController } from './classification.js';
-import { makeEl, makeFakeDocument } from '../../../../test/fakeDom.js';
+import { makeEl } from '../../../../test/fakeDom.js';
 import { makeDeps } from '../../../../test/depsBuilder.js';
 import { makeSpecStub } from '../../../../test/fixtures.js';
 

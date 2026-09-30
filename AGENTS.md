@@ -266,9 +266,11 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
 | **L2 全閘** | `npm test` | 發布前 | compile + lint(ts) + lint:ui + 全量 |
 | **其他** | `npm run test:rust` / `cargo check` | Rust 異動 | 不併入 `npm test` |
 
-- **`lint:ui` 規則現況**（2026-09-30 建置）：`ui/.eslintrc.json` 以 `eslint:recommended` 為基底、掃描 154 檔，**現況 0 error**。
+- **`lint:ui` 規則現況**（2026-09-30 建置）：`ui/.eslintrc.json` 以 `eslint:recommended` 為基底、掃描 **191 檔**（154 個 `.js` ＋ **34 個 `.mjs` 測試檔** ＋ 3 個共用夾具），**現況 0 error**。
   - 必須宣告的 globals：`Blockly`／`CocoyaLoader`／`CocoyaUtils`／`CocoyaMediaUri`／`CocoyaBoard`／`acquireVsCodeApi`／`hljs`（缺了會噴 2401 個 `no-undef`）。
+  - `overrides`：`src/**/*.test.mjs` 與 `test/**` 加 `env: node`（測試在 Node 跑，會用到 `process`／`setImmediate`；漏了會噴 `no-undef`）。
   - `ignorePatterns: ["*.min.js"]` 排除第三方 vendored 資產（`highlight.min.js`／`python.min.js`）。
+  - **掃描範圍必須含 `.mjs`**：指令為 `eslint ui/src ui/test --ext .js,.mjs`。僅掃 `.js` 會漏掉全部 34 個測試檔，導致「IDE 有報、`npm test` 卻全綠」的守門缺口。
   - **三條刻意關閉，各有設計事實，不得為了「綠燈」打開**：
     - `no-control-regex` — `\u0001`／`\u0002` 不可見 ID 標記（見上方「字串語意比對前必先剝除不可見 ID 標記」段落），全專案 5 處刻意使用。
     - `no-regex-spaces` — `  # ID:`（2 空格）與 `/^(    )+/`（4 空格）是 ID 注入與 Python 基準縮排的**契約本身**，6 處刻意使用。

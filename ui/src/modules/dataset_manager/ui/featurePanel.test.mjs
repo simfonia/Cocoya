@@ -59,7 +59,7 @@ function makeHarness({ labelMap = {} } = {}) {
     const panel = createFeaturePanel({
         state,
         datasetBridge: {
-            request: (opts) => {
+            request: (_opts) => {
                 const msg = {
                     success: true, label: 'up', useZ: false,
                     hand: null, pose: null, handDetected: false, poseDetected: false
@@ -120,7 +120,6 @@ test('缺 MediaPipe：回傳 errorCode 顯示降級訊息，不累計樣本', as
     const h = makeHarness({ labelMap: { up: 0 } });
     // 覆寫 request 回缺裝錯誤
     h.panel = null;
-    const specData = { schema: { label_map: { up: 0 } } };
     const state = {
         tableRows: [],
         spec: makeSpecStub({ labelMap: { up: 0 }, live: true, noopUpdate: true })

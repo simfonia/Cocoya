@@ -57,7 +57,9 @@ test('新增類別寫入 label_map', async () => {
         id: '', innerHTML: '', _handlers: {},
         querySelector: (sel) => {
             if (sel === '.dataset-label-manager-select') return { value: '-1' };
-            return { onclick: null, set onclick(fn) { box._handlers[sel] = fn; } };
+            // 僅需 onclick setter（記錄到 _handlers）；不可同時寫 onclick: null
+            // —— 物件字面量中後定義的 accessor 會覆蓋前面的資料屬性。
+            return { set onclick(fn) { box._handlers[sel] = fn; } };
         }
     };
     h.prompts.push('cat');
