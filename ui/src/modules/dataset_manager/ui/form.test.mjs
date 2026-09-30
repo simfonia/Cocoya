@@ -1,40 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createFormPresenter } from './form.js';
-
-function el({ tag = 'input', value = '', name = '', attrs = {}, children = [] } = {}) {
-    return {
-        tagName: tag.toUpperCase(),
-        value,
-        name,
-        attrs,
-        children,
-        querySelector(sel) {
-            if (sel.startsWith('[name=')) {
-                const want = sel.slice(7, -2);
-                return this.find((n) => n.name === want) || null;
-            }
-            if (sel.startsWith('[data-field=')) {
-                const field = sel.slice(13, -2);
-                return this.find((n) => n.attrs['data-field'] === field) || null;
-            }
-            return null;
-        },
-        querySelectorAll(sel) {
-            if (sel === '.dataset-column-row') return this.children.filter((c) => c.attrs.class === 'dataset-column-row');
-            return [];
-        },
-        // 便利：往下層找
-        find(pred) {
-            for (const c of this.children) {
-                if (pred(c)) return c;
-                const r = c.find ? c.find(pred) : null;
-                if (r) return r;
-            }
-            return null;
-        }
-    };
-}
+import { makeTreeEl as el } from '../../../../test/fixtures.js';
 
 function makeModal() {
     const modal = el({ tag: 'div' });

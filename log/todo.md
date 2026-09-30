@@ -398,4 +398,7 @@
 - [x] 三條刻意關閉的規則（`no-control-regex`／`no-regex-spaces`／`no-empty`）已於 AGENTS.md 附設計原因。
 - [x] 驗收：`npm test` 197/197 全綠。
 - [ ] P2-6：`ui_components.js`（20.8KB）職責已被 `ui/panels.js`、`ui/thumbnails.js` 取代，本次僅移除 `index.js` 未用 import，**檔案本體仍待逐條比對呼叫端後刪除**。
-- [ ] T3 主線：共用測試夾具（`ui/test/fakeDom.js`／`depsBuilder.js`／`fixtures.js`），搬移 6 個 DM 測試檔的重複 DOM／依賴建構。
+- [x] T3 共用測試夾具：新增 `ui/test/{fakeDom,depsBuilder,fixtures}.js`，轉換 5 個 DM 測試檔；斷言零修改、197/197 全綠。
+- [ ] T4：Python／Rust 測試納入（`temp_scripts/e2e_*.py` 轉 pytest、Rust 補 `file.rs`／`python.rs` 測試）
+- [ ] T5：覆蓋率基準（c8，先產報告不設門檻）
+- [ ] T6：CI 與 pre-commit（GitHub Actions + husky）
