@@ -26,7 +26,9 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 test('顯示訊息：設定 textContent 與 visibility visible', () => {
     const { el, documentRef } = makeFakeDocument();
     const { showStatusMessage } = createStatusMessageUI(documentRef);
-    showStatusMessage('hello');
+    // duration:0 = 不自動清除。本測試只驗「顯示瞬間」，不需要計時器；
+    // 若沿用預設 5000ms，未清除的 setTimeout 會吊住 event loop 讓整個測試檔多等 5 秒。
+    showStatusMessage('hello', { duration: 0 });
     assert.equal(el.textContent, 'hello');
     assert.equal(el.style.visibility, 'visible');
 });
@@ -34,7 +36,7 @@ test('顯示訊息：設定 textContent 與 visibility visible', () => {
 test('空訊息：visibility hidden 清空文字（常駐列保留空間）', () => {
     const { el, documentRef } = makeFakeDocument();
     const { showStatusMessage } = createStatusMessageUI(documentRef);
-    showStatusMessage('hello');
+    showStatusMessage('hello', { duration: 0 });
     showStatusMessage('');
     assert.equal(el.textContent, '');
     assert.equal(el.style.visibility, 'hidden');

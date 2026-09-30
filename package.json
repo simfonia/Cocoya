@@ -56,8 +56,13 @@
         "compile:all": "tsc -p ./ && npm run build:slides",
         "watch": "tsc -watch -p ./",
         "lint": "eslint src --ext ts",
-        "test": "npm run test:unit",
+        "test": "npm run test:unit && npm run test:ui",
         "test:unit": "npm run compile && npm run lint",
+        "test:ui": "npm --prefix ui run test:unit",
+        "test:dm": "npm --prefix ui run test:dm",
+        "test:core": "npm --prefix ui run test:core",
+        "test:fast": "node scripts/test-related.cjs",
+        "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
         "test:integration": "node scripts/run-integration.cjs"
     },
     "devDependencies": {
