@@ -84,7 +84,6 @@
     "DSM_SAMPLER_START_CAM": "啟動預覽",
     "DSM_SAMPLER_STOP_CAM": "停止攝影機",
     "DSM_SAMPLER_STARTING": "啟動中...",
-    "DSM_SAMPLER_START_FAILED": "啟動失敗，再試一次",
     "DSM_SAMPLER_SNAPSHOT": "📸 拍攝快照",
     "DSM_SAMPLER_BURST": "⏯ 自動連拍",
     "DSM_SAMPLER_STOP_BURST": "⏹ 停止連拍",

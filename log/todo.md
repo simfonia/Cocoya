@@ -162,6 +162,7 @@
   - `ui/src/{en,zh-hant}.js` — 移除 `TLB_SETTINGS_SETUP_STABLE`／`TLB_SETTINGS_SERIAL_UPLOAD`／`MSG_SETUP_STABLE_CONFIRM` 三鍵
   - `docs/backend_api_manifest.md`（SSOT）— 移除兩處 command 條目
   - 保留 `serial_upload_only`（deploy_mcu 的參數，Rust 端有真實作用：加 `--no-monitor`）
+- [ ] **待決策（2026-09-30）`ui/` 的 eslint 守門**：根目錄 `.eslintrc.json` 有 `root: true` 但 IDE 未採用（該配置 `no-empty-function: off` 卻仍被報錯），且 `npm run lint` = `eslint src --ext ts` **只掃 VSIX 的 TS，完全不含 `ui/`** → `ui/` 的問題只會在 IDE 被動發現。已實測：全 `ui/src` 以 `no-case-declarations`／`no-empty-function`／`no-dupe-keys`／`no-unused-vars` 掃描，尚餘 **49** 項（`no-unused-vars` 41 集中於 `mcu_huskylens_generators.js` 14 個、`dataset_manager/` 7 個；`no-empty-function` 8）。**未擅自加入 `npm run lint`**（一開就會讓 `npm test` 紅），需先決定規則範圍（Blockly generator 簽名是否整體豁免等）
 - [ ] P0-3 確認 zh-hant 獨有 6 個 `BKY_*_VARIABLE*` 鍵是否真缺（Blockly 內建可能已提供）；若屬內建則列入 parity 白名單
 - [ ] P3-1 自動化守門：新增 `ui/src/i18n_parity.test.mjs`（全語系鍵集合一致＋白名單）、三主題 cssVars 鍵集合一致測試、接入 `temp_scripts/unused_export_scan.cjs`
 - [ ] P3-2／T7 前段 補高風險檔測試：`bridge/tauri.js`（93KB／0 測試）至少覆蓋 `capabilities` getter 與 anchor normalize；`app/persistence.js` 備份／recovering 路徑
