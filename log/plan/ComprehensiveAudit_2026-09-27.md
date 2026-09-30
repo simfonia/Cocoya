@@ -1,5 +1,15 @@
 # Cocoya 全面檢查計畫 (Comprehensive Audit Plan)
 
+> ⚠️ **2026-09-30 更正（實作時發現）**：本檔 §1 的 P0-1／P0-2 與 §9 的 T2 已完成，實作過程中發現以下偏差：
+> 1. **P0-1 的「刪除 `COLOUR_SPIKE_SENSOR`」建議是錯的** —— 該鍵被 `spike_blocks.js:20` 與 toolbox.xml 的三個 category 使用，刪掉會讓整個 SPIKE 主分類無色。
+> 2. **P0-1 有對稱缺陷**：不只英文版缺 4 個 `COLOUR_SPIKE_SENSOR_*`，**中文版也缺無後綴的 `COLOUR_SPIKE_SENSOR`** → 中文版 SPIKE 主分類同樣無色。
+> 3. **P0-2 的按鈕根本不存在**：`index.html` 沒有 `btn-setup-stable-mcu`，`base.js:484` 的綁定是 no-op。補了 i18n 鍵但功能未上架（待決策）。
+> 4. **審查未涵蓋的 5 個 i18n 缺漏**：`PY_COLON`／`PY_EQUAL`（兩語系皆缺，積木欄位顯示 undefined）、`AI_DRAW_ANGLE_ARC_TOOLTIP`（en 缺）、`CAR_HAND_BOTH`（en 缺）、`HW_PIN_SHADOW_TOOLTIP`（兩語系皆缺）。
+> 5. **§9.1 的量測數據需修正**：測試檔 32 → **34** 個、4,626 → **3,324** 行、e2e 腳本 8 → **4** 支。
+> 6. **§9.4 T3 所述的 `temp_scripts/unused_export_scan.cjs` 並不存在**，實際存在的是 `temp_scripts/parity_check.mjs`（DM i18n parity）。
+> 7. **§9 遺漏了最關鍵的發現**：全量測試 5.7 秒中有 5.1 秒是空轉（`statusMessage.test.js` 未清除計時器吊住 event loop），修正後降至 1.1 秒。
+> 詳見 `log/work/2026-09-30.md`。
+
 > 產出：2026-09-27（#task[cocoya 全面檢查]）
 > 性質：**只寫計畫，本檔產出過程未修改任何程式碼**。後續實作需另開任務並遵守 AGENTS.md 備份與驗證規範。
 > 檢查範圍：全專案（`ui/src`、`src`(VSIX)、`src-tauri`、`resources`、`docs`、`examples`）；Dataset Manager 限 **分類(image) / 偵測(object_detection) / 循跡(line_following) / table** 四類型。

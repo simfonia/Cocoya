@@ -33,6 +33,7 @@ Blockly.Msg["CAR_IN_POSITION"] = "%1 hands in position (Home)";
 Blockly.Msg["CAR_IN_POSITION_TOOLTIP"] = "Reset hands to initial position. Note: Does NOT wait for completion.";
 Blockly.Msg["CAR_MOVE_HANDS"] = "set %1 %2 swing ratio %3 %% at speed %4";
 Blockly.Msg["CAR_MOVE_HANDS_TOOLTIP"] = "Smoothly control hand swing ratio. This block WAITS until finished. Speed range 1-10 (1 slowest, 10 fastest).";
+Blockly.Msg["CAR_HAND_BOTH"] = "both hands";
 Blockly.Msg["CAR_HAND_LEFT"] = "left hand (GP12)";
 Blockly.Msg["CAR_HAND_RIGHT"] = "right hand (GP13)";
 

@@ -40,7 +40,15 @@
     "COLOUR_SPIKE_MOTOR": "#ee5b56",
     "COLOUR_SPIKE_MUSIC": "#de57ad",
     "COLOUR_SPIKE_LED": "#544eca",
+    // SPIKE 感測器細分色碼（與 zh-hant 同值；色碼屬設計值，非文案）
+    // 2026-09-30 P0-1：英文版原缺這 4 鍵，導致切英文時 4 個感測器分類 colour 為 undefined。
+    // 另注意：COLOUR_SPIKE_SENSOR（無後綴）不可刪——spike_blocks.js 的 SPIKE 主積木
+    // 與 toolbox.xml 的 3 個 category（SPIKE / SPIKE_INIT / SPIKE_HUB）都在使用它。
     "COLOUR_SPIKE_SENSOR": "#b1b100",
+    "COLOUR_SPIKE_SENSOR_COLOR": "#b1b100",
+    "COLOUR_SPIKE_SENSOR_DISTANCE": "#014b70",
+    "COLOUR_SPIKE_SENSOR_FORCE": "#712000",
+    "COLOUR_SPIKE_SENSOR_IMU": "#ac00a9",
     "COLOUR_SPIKE_BUTTON": "#0c8b03",
 
     // Category Names
@@ -245,6 +253,10 @@
     "PY_DEF": "def",
     "PY_RETURN": "return",
     "PY_GLOBAL": "global",
-    "PY_LOCAL": "local"
+    "PY_LOCAL": "local",
+    // 2026-09-30 補：積木內部的符號欄位（共用鍵，兩語系同值）。
+    // 修正前兩個語系都沒有定義，導致 appendField 顯示 undefined。
+    "PY_COLON": ":",
+    "PY_EQUAL": "="
   });
 })(Blockly);

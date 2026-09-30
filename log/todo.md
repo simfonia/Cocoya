@@ -138,14 +138,20 @@
   - ✅ 2026-09-30 實作：改用 `npm --prefix ui run test:unit`（消除 `cd ui &&` 的 cmd/pwsh 差異）；根 `test` = `test:unit && test:ui`；實測 `npm test` exit 0、194/194
 - [x] **T-fast（新增，2026-09-30）** 分層守門：`test:fast`／`test:dm`／`test:core`／`test:rust` ＋ `scripts/test-related.cjs` 自動挑測試；修掉 `statusMessage.test.mjs` 計時器洩漏（Node 測試 5722ms → 1091ms）
 - [ ] **T-scan（新增，2026-09-30）** 掃描其餘測試檔是否仍有「未清除計時器／未 await handle」導致 event loop 空轉；另注意 28 檔約 150ms 為 Node 啟動開銷非測試邏輯
-- [ ] **P0-1** 英文版 SPIKE 感測器積木無顏色：`spike_blocks.js` 用 `COLOUR_SPIKE_SENSOR_COLOR/_DISTANCE/_FORCE/_IMU`，`ui/src/en.js` 缺（僅有無後綴的 `COLOUR_SPIKE_SENSOR`）→ 補 4 鍵並確認刪除無人用鍵
-- [ ] **P0-2** `ui/src/zh-hant.js` 缺 Stable Mode 三鍵（`TLB_SETTINGS_SERIAL_UPLOAD`／`TLB_SETTINGS_SETUP_STABLE`／`MSG_SETUP_STABLE_CONFIRM`，`base.js:492` 有用）→ 補鍵
-- [ ] **T2** 契約測試全模組化：`ui/src/modules/core/core_contract.test.mjs` 目前只過濾 `core/` 前綴 → 改為涵蓋 `core_manifest.json` 全部模組，續對帳 blocks↔generators↔toolbox↔雙語 i18n↔`COLOUR_*`（**T2 會讓 spike／hardware／mcu_* 立刻現紅，屬預期且正確；處理方式是補鍵不是放寬斷言**）
+- [x] **P0-1** 英文版 SPIKE 感測器積木無顏色 ✅ 2026-09-30：`en.js` 補 `COLOUR_SPIKE_SENSOR_COLOR/_DISTANCE/_FORCE/_IMU`（與 zh-hant 同值）。**同時發現對稱缺陷**：`zh-hant.js` 缺無後綴的 `COLOUR_SPIKE_SENSOR`，但 `spike_blocks.js:20` 與 toolbox.xml 三個 category 都在用 → **中文版 SPIKE 主分類也是無色的**，一併補上。**注意：`COLOUR_SPIKE_SENSOR` 不可刪**（審查報告原建議刪除是錯的）
+- [x] **P0-2** `ui/src/zh-hant.js` 缺 Stable Mode 三鍵 ✅ 2026-09-30：補 `TLB_SETTINGS_SERIAL_UPLOAD`／`TLB_SETTINGS_SETUP_STABLE`／`MSG_SETUP_STABLE_CONFIRM`（保留英文版的換行段落語意）。**待決策**：`index.html` 沒有 `btn-setup-stable-mcu` 元素，`base.js:484` 的綁定目前是 no-op（`if (setupStableBtn)`）——按鈕是否要上架？
+- [x] **P0-3** Blockly 內建鍵確認 ✅ 2026-09-30：zh-hant 獨有 6 個 `BKY_*_VARIABLE*` 屬 Blockly 本體提供的內建文案，不補進 en.js，改在契約測試以 `BLOCKLY_BUILTIN` 白名單豁免
+- [x] **新缺陷（審查未涵蓋）**：5 個 i18n 缺漏 — `PY_COLON`／`PY_EQUAL`（**兩語系皆缺**，導致積木欄位顯示 undefined）、`AI_DRAW_ANGLE_ARC_TOOLTIP`（en 缺）、`CAR_HAND_BOTH`（en 缺）、`HW_PIN_SHADOW_TOOLTIP`（兩語系皆缺，程式碼內的 fallback 是中文 → 英文介面顯示中文）。全部補齊
+- [x] **T2** 契約測試全模組化 ✅ 2026-09-30：由 `filter(id => id.startsWith('core/'))` 改為涵蓋 `core_manifest.json` 全部 22 模組；並新增 3 個 i18n 守門（blocks/generators 引用鍵雙語系皆有定義、根 parity、模組 parity）。**8/8 全綠**，全專案 194 → 197 例
+  - 修正兩處規則本身的缺陷（非放寬斷言，是對齊設計事實）：① `<shadow type="...">` 影子積木納入 toolbox 公開集合（先前只抓 `<block>`，導致 py_ai_point／py_ai_color／mcu_pin_shadow 全被誤判）② blocks/generators 只用 `Msg['KEY']` 語法抓鍵（原本的正則會抓任何物件字串鍵，誤判 mcu_car 的 `note_map = {"CS":1,...}` 與 huskylens 的 `'V2'`）
+  - 白名單（附原因，未來新增仍會被擋）：`py_ai_draw_rect_alpha`／`py_ai_get_bbox_center`（已定義未上架，**待決策**）、`py_ai_train_init`（死碼 generator，待確認專案 XML 相容性後清理）
 - [ ] **T3** 共用測試夾具：新增 `ui/test/`（`fakeDom.js` makeEl/makeFakeDocument、`depsBuilder.js` makeDeps 預設注入**真** `t()`／`escapeHtml`、`fixtures.js` DatasetSpec 樣本）；消除 `annotation`(211 行)／`classification`(194)／`statusMessage`(84)／`panels`(102)／`labelManager`(65)／`samplerPanel`(102) 六檔重複 fake（**純搬移，驗收＝194→194 全綠且斷言未改**）
 - [ ] T2 前置盤點：統計全部模組在五項對帳上的現存缺口，估算紅燈規模
 - [ ] T3 前置盤點：列出六檔 fake DOM 差異點，確認最小抽象介面（getElementById／querySelector／classList／style／listeners／innerHTML／insertAdjacentHTML）
 
 #### Batch 0（無風險）
+- [ ] **待決策（2026-09-30 由 T2 浮現）**：`py_ai_draw_rect_alpha`（cv_draw）與 `py_ai_get_bbox_center`（ai_inference，有 helpUrl）已定義完整但未上架 toolbox；`py_ai_train_init` 是只有 generator 的死碼。三者目前列於契約測試白名單，是否上架／清理待決策
+- [ ] **待決策（2026-09-30）**：`index.html` 無 `btn-setup-stable-mcu` 元素，Stable Mode 功能實際未上架（`base.js:484` 的綁定為 no-op）。i18n 鍵已補齊，但按鈕是否要上架待確認
 - [ ] P0-3 確認 zh-hant 獨有 6 個 `BKY_*_VARIABLE*` 鍵是否真缺（Blockly 內建可能已提供）；若屬內建則列入 parity 白名單
 - [ ] P3-1 自動化守門：新增 `ui/src/i18n_parity.test.mjs`（全語系鍵集合一致＋白名單）、三主題 cssVars 鍵集合一致測試、接入 `temp_scripts/unused_export_scan.cjs`
 - [ ] P3-2／T7 前段 補高風險檔測試：`bridge/tauri.js`（93KB／0 測試）至少覆蓋 `capabilities` getter 與 anchor normalize；`app/persistence.js` 備份／recovering 路徑

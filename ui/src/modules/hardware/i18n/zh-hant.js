@@ -19,6 +19,9 @@
     "HW_I2C_SCAN": "I2C 掃描",
     "HW_PIN_HIGH": "高電位",
     "HW_PIN_LOW": "低電位",
+    // 2026-09-30 補：腳位選擇 shadow 積木有引用此 tooltip，但兩個語系都沒定義，
+    // 程式碼內的 `|| "選擇開發板腳位名稱。"` fallback 是中文 → 英文介面會顯示中文。
+    "HW_PIN_SHADOW_TOOLTIP": "選擇開發板的腳位名稱。",
     
     // --- 精簡版 Tooltip ---
     "HW_DIGITAL_WRITE_TOOLTIP": "數位輸出: 高電位 (True) 或 低電位 (False)",
