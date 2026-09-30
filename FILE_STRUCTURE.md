@@ -21,6 +21,16 @@ C:\Workspace\cocoya\
 │   ├── teaching/          # [NEW] 教學簡報資料夾（每主題一個子資料夾）
 │   │   └── py_ai_train_run/  # [NEW] AI 訓練積木參數教學簡報 (Reveal.js 離線版)
 │   │       ├── index.html   # 25 頁課程：類型/訓練主機/資料同步/驗證比/擴增/Dropout → 模型/Loss/交叉熵 → LR/Epoch/Batch → 預訓練/微調/DNN/優化器/輸出 + 小測驗（頁序對齊積木欄位）
+│   │   │       ├── build/       # [NEW] 打包工具（Moodle 上架用，支援增量）
+│   │   │       │   ├── build_all.cmd   # 一鍵重建（雙擊／npm run build:slides）
+│   │   │       │   ├── incremental.py # SHA256 增量判斷（來源未變則跳過）
+│   │   │       │   ├── pack_single.py  # 內嵌 CSS/JS → 單一獨立 HTML
+│   │   │       │   ├── html2pdf.py     # Edge/Chrome headless 列印 → A4 講義 PDF
+│   │   │       │   └── README.md       # 打包、增量與 Moodle 上傳說明
+│   │   │       ├── dist/        # [NEW] 打包產物（可上傳 Moodle）
+│   │   │       │   ├── AI訓練積木參數教學_單檔版.html  # 單檔離線版（含互動小測驗）
+│   │   │       │   ├── AI訓練積木參數教學.pdf          # A4 直向講義 PDF（42 頁）
+│   │   │       │   └── .buildstamp.json                # 增量建置雜湊戳記（勿手改）
 │   │       └── lib/reveal/  # [NEW] 離線 Reveal.js 資源 (reveal.css/js + beige 主題)
 │   ├── api_manifest.md    # 前端 API SSOT (Source of Truth)
 │   ├── backend_api_manifest.md # [NEW] 後端 Rust API SSOT

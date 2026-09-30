@@ -98,6 +98,8 @@
   .tip,.warn,.good{ padding:6px 10px; font-size:.86em; }
   ul,ol{ margin:.2em 0; padding-left:1.1em; }
   .grid2,.grid3{ gap:12px; }
+  /* ===== 區塊小間隔：同一頁內相鄰的卡片／提示框／表格區塊之間留白（統一由本規則控制，勿再各自加 inline margin）===== */
+  .reveal .slides section > * + *:is(.card,.grid2,.grid3,.warn,.tip,.good,.quiz){ margin-top:12px; }
   @media(max-width:900px){ .grid3{ grid-template-columns:1fr; } }
 </style>
 </head>
@@ -215,6 +217,11 @@
       <p>不能拿「讀過的題目」考自己——那只是背答案。<br>
       要留<strong>一部分不曾拿來讀的例題</strong>當<strong>模擬考</strong>，才知道「真的懂了沒」。</p>
       <p><strong>Validation Split (驗證比)</strong> = 從資料中抽出當作模擬考的比例（預設 20%）。</p>
+      <p><strong>把原始資料集切成 train / validation 兩份資料集</strong><br>
+      Dataset Manager 拍好的一整包照片只有<strong>一份</strong>，訓練前由程式<strong>切開成兩份</strong>：<br>
+      • <code>train</code>（80%）：作為課本 → 閱讀(訓練)後進行<strong>小考</strong>並<strong>更新權重（修正認知）</strong><br>
+      • <code>validation</code>（20%）：<strong>模擬考用，不可外洩</strong>。 → 課本讀完一次才進行<strong>模擬考</strong>一次，<strong>不更新權重（考題不進入認知學習）</strong><br>
+      兩份<strong>完全不重疊</strong>——所以模擬考才沒被「讀過」。</p>
     </div>
     <div class="card"><h3>🧪 實務：分層抽樣</h3>
       <p>「隨機抽 20% 當驗證」有缺點——若某分類數量很少，可能沒抽到，模擬考就沒考到它。<br>
@@ -225,8 +232,17 @@
 <span class="ok">  none:     train 26 / val 6</span>
 <span class="ok">  paper:    train 99 / val 25</span>
 <span class="ok">  rock:     train 86 / val 22</span>
-<span class="ok">  scissors: train 110 / val 28</span></div>
+<span class="ok">  scissors: train 110 / val 28</span>
+<span class="dim">  （train = 讀課本+小考 / val = 模擬考）</span></div>
     </div>
+  </div>
+  <div class="card">
+    <h3>📖 本文件之後的比喻用法（統一用語）</h3>
+    <table class="params"><tr><th style="width:110px;">比喻</th><th>指的是哪一份資料</th><th style="width:200px;">終端機欄位</th></tr>
+      <tr><td><span class="pill">小考</span></td><td>用 <strong>train 訓練資料集</strong> 檢測 —— 剛讀過的課本題，<strong>拿來更新權重</strong></td><td><code>accuracy</code> / <code>loss</code></td></tr>
+      <tr><td><span class="pill" style="background:var(--gold);">模擬考</span></td><td>用 <strong>validation 驗證資料集</strong> 檢測 —— 沒讀過的例題，<strong>只評分、不更新權重</strong></td><td><code>val_accuracy</code> / <code>val_loss</code></td></tr>
+    </table>
+    <p class="thin">後面每一頁提到「小考」＝在 train 上量；提到「模擬考」＝在 validation 上量。⚠️ 只有 <strong>模擬考</strong>能代表模型「真的學會了」；小考成績必然好看（讀過的題目），不能拿來判斷好壞。</p>
   </div>
   <div class="warn">💡 調校效果：變大（0.5）= 讀書資料變少、模擬考更嚴；變小（0.1）= 讀書多、但考得不夠。預設 0.2 平衡。</div>
   <div class="slide-footer">第 6 頁 · Validation Split (驗證比) · 分層抽樣</div>
@@ -522,7 +538,7 @@
   <div class="grid2">
     <div class="card"><h3>📖 定義</h3>
       <p><strong>Epoch (輪)</strong> = 把<strong>整份訓練資料從頭到尾讀一遍</strong>。</p>
-      <p>Epochs = 讀幾遍（預設 20）。電腦每一次輪，都把所有資料拿去更新權重一次。</p>
+      <p>Epochs = 讀幾遍。電腦每一輪，都把所有資料拿去更新權重一次。</p>
     </div>
     <div class="card"><h3>⚖️ 讀太少 vs 讀太多</h3>
       <table class="params"><tr><th>份數</th><th>後果</th><th>比喻</th></tr>
@@ -549,7 +565,7 @@
     </div>
     <div class="card"><h3>⚖️ 調校效果</h3>
       <table class="params"><tr><th>大小</th><th>下場</th></tr>
-        <tr><td><strong>小</strong><br>(1～16)</td><td>小考頻率高，修正快但有雜音；每輪迴圈多 → 稍慢</td></tr>
+        <tr><td><strong>小</strong><br>(1～16)</td><td>小考頻率高，修正快但有雜訊；每輪迴圈多 → 稍慢</td></tr>
         <tr><td><strong>中</strong><br>(32) 預設</td><td>穩定與速度平衡</td></tr>
         <tr><td><strong>大</strong><br>(128～512)</td><td>段考式，穩定但修正遲緩；<strong>需更多記憶體</strong></td></tr>
       </table>
@@ -570,7 +586,7 @@
 <section>
   <h2>🏗️ 預訓練 <span class="thin">Backbone (骨幹網路)</span>：站在巨人肩上</h2>
   <div class="card">
-    <p><strong>Backbone</strong> = 負責「看圖抓特徵」的網路骨架。它<strong>已用上千萬張圖預先訓練</strong>（預訓練，前備知識），懂得邊緣、形狀、紋理——你只要在它上面「補習」自己的類別。<span class="thin">（積木欄位即顯示為「預訓練:」）</span></p>
+    <p><strong>Backbone</strong> = 負責「看圖抓特徵」的網路骨架。它<strong>已用上千萬張圖預先訓練</strong>（預訓練，前備知識），懂得邊緣、形狀、紋理——你只要在它上面「補充」自己的類別。<span class="thin">（積木欄位即顯示為「預訓練:」）</span></p>
     <p>比喻：<strong>站在巨人肩上</strong>，不用從 0 發明怎麼「看」，只要微調它來認你的東西。</p>
   </div>
   <div class="grid3">
@@ -612,29 +628,36 @@
     <p>在骨幹抓完特徵後，後面可以加幾層「思考層」（隱藏層 Hidden Layers）來做最終判斷。<br>
     格式是<strong>逗號分隔的神經元數</strong>，如 <code>128,64</code>（兩層）：先 128 顆<strong>廣泛想</strong>，再縮到 64 顆<strong>聚焦結論</strong>。</p>
   </div>
-  <div class="card" style="text-align:center;">
+  <div class="card">
     <svg viewBox="0 0 520 150" style="width:100%;">
       <g fill="#9C27B0">
         <circle cx="80" cy="40" r="10"/><circle cx="80" cy="75" r="10"/><circle cx="80" cy="110" r="10"/>
         <circle cx="220" cy="25" r="10"/><circle cx="220" cy="55" r="10"/><circle cx="220" cy="85" r="10"/><circle cx="220" cy="115" r="10"/>
         <circle cx="360" cy="40" r="10"/><circle cx="360" cy="75" r="10"/><circle cx="360" cy="110" r="10"/>
-        <circle cx="470" cy="75" r="10"/>
+        <circle cx="470" cy="40" r="10"/><circle cx="470" cy="75" r="10"/><circle cx="470" cy="110" r="10"/>
       </g>
-      <g stroke="#B9B0CC" stroke-width="1" fill="none">
+      <g stroke="#C3BAD6" stroke-width="0.7" fill="none" opacity="0.9">
         <line x1="80" y1="40" x2="220" y2="25"/><line x1="80" y1="40" x2="220" y2="55"/><line x1="80" y1="40" x2="220" y2="85"/><line x1="80" y1="40" x2="220" y2="115"/>
+        <line x1="80" y1="75" x2="220" y2="25"/><line x1="80" y1="75" x2="220" y2="55"/><line x1="80" y1="75" x2="220" y2="85"/><line x1="80" y1="75" x2="220" y2="115"/>
         <line x1="80" y1="110" x2="220" y2="25"/><line x1="80" y1="110" x2="220" y2="55"/><line x1="80" y1="110" x2="220" y2="85"/><line x1="80" y1="110" x2="220" y2="115"/>
-        <line x1="220" y1="25" x2="360" y2="40"/><line x1="220" y1="55" x2="360" y2="40"/><line x1="220" y1="85" x2="360" y2="40"/><line x1="220" y1="115" x2="360" y2="40"/>
-        <line x1="220" y1="25" x2="360" y2="110"/><line x1="220" y1="55" x2="360" y2="110"/><line x1="220" y1="85" x2="360" y2="110"/><line x1="220" y1="115" x2="360" y2="110"/>
-        <line x1="360" y1="40" x2="470" y2="75"/><line x1="360" y1="75" x2="470" y2="75"/><line x1="360" y1="110" x2="470" y2="75"/>
+        <line x1="220" y1="25" x2="360" y2="40"/><line x1="220" y1="25" x2="360" y2="75"/><line x1="220" y1="25" x2="360" y2="110"/>
+        <line x1="220" y1="55" x2="360" y2="40"/><line x1="220" y1="55" x2="360" y2="75"/><line x1="220" y1="55" x2="360" y2="110"/>
+        <line x1="220" y1="85" x2="360" y2="40"/><line x1="220" y1="85" x2="360" y2="75"/><line x1="220" y1="85" x2="360" y2="110"/>
+        <line x1="220" y1="115" x2="360" y2="40"/><line x1="220" y1="115" x2="360" y2="75"/><line x1="220" y1="115" x2="360" y2="110"/>
+        <line x1="360" y1="40" x2="470" y2="40"/><line x1="360" y1="40" x2="470" y2="75"/><line x1="360" y1="40" x2="470" y2="110"/>
+        <line x1="360" y1="75" x2="470" y2="40"/><line x1="360" y1="75" x2="470" y2="75"/><line x1="360" y1="75" x2="470" y2="110"/>
+        <line x1="360" y1="110" x2="470" y2="40"/><line x1="360" y1="110" x2="470" y2="75"/><line x1="360" y1="110" x2="470" y2="110"/>
       </g>
       <g font-size="12" fill="#5A5473">
         <text x="48" y="140">輸入特徵</text>
         <text x="185" y="140">隱藏層 128</text>
         <text x="335" y="140">隱藏層 64</text>
-        <text x="450" y="140">輸出(分類)</text>
+        <text x="470" y="140" text-anchor="middle">輸出 ×分類數</text>
       </g>
     </svg>
-    <p class="thin">輸入（骨幹特徵）→ 128 → 64 → 輸出（每個分類的機率）</p>
+    <p class="thin">輸入（骨幹特徵）→ 128 → 64 → 輸出（每個分類的機率）<br>
+    每一顆神經元都<strong>接到下一層的每一顆</strong>，這種連法就叫「<strong>全連接</strong> Fully Connected」——線越多代表組合方式越多，思考能力越強。<br>
+    <span class="hl">有幾個分類，輸出就有幾顆</span>（<code>Softmax</code> 自動處理）——<strong>輸入層與輸出層都不在積木中設定</strong>，只填中間的隱藏層即可。</p>
   </div>
   <div class="tip">💡 層越多越能表達複雜規律，但<strong>越易過擬合、越慢</strong>、越吃記憶體。留空 = 跳過思考層直接輸出。初學者用預設 <code>128,64</code> 即可。</div>
   <div class="slide-footer">第 18 頁 · DNN Layers (自訂隱藏層)</div>
@@ -647,17 +670,84 @@
       <p>決定<strong>「這次該修多少」</strong>——怎麼把權重從舊值一步步推到更低的 Loss。</p>
       <p>基本公式（以 SGD 為例）：</p>
       <div class="formula">新權重 = 舊權重 − <strong>學習率</strong> × <strong>當下斜率 (Gradient)</strong></div>
-      <p class="thin">注意：<strong>固定的是學習率</strong>。步長 = 學習率 × 當下斜率；斜率大步伐大（陡坡快跑），靠近谷底斜率小步伐自動縮小（精細修正）。</p>
+      <p class="thin">注意：<strong>固定的是學習率</strong>（就是你填的 <code>lr</code> 欄位，全程不變）。步長 = 學習率 × 當下斜率；斜率大步伐大（陡坡快跑），靠近谷底斜率小步伐自動縮小（精細修正）。<br>
+      那 Adam 到底調什麼？它<strong>不動你的 <code>lr</code></strong>，改的是「斜率」那一端——把斜率換成<strong>自適應的步幅</strong>。</p>
     </div>
     <div class="card"><h3>📊 三種策略</h3>
       <table class="params"><tr><th>優化器</th><th>特性</th></tr>
-        <tr><td><strong>Adam</strong> <span class="pill">預設</span></td><td><strong>記憶過去幾次修正</strong>的方向與幅度，動態調整學習率與步伐 → 聰明、收斂快、普遍好用</td></tr>
+        <tr><td><strong>Adam</strong> <span class="pill">預設</span></td><td><strong>記憶過去幾次修正的<u>方向</u>與幅度</strong>，讓<strong>每個權重自動獲得適合自己的步幅</strong>（不只調快、也會調慢）→ 前期收斂快、對初學者友善</td></tr>
         <tr><td><strong>SGD</strong></td><td>固定學習率，步長全靠當下斜率 → 穩健踏實，但收斂較慢、易卡</td></tr>
         <tr><td><strong>RMSprop</strong></td><td>對每個權重<strong>個別調整</strong>步伐（除以歷史根均方）→ 對不齊的梯度較友善</td></tr>
       </table>
       <div class="good">✅ 初學者用預設 <strong>Adam</strong>，幾乎不用改。</div>
     </div>
   </div>
+  <div class="card">
+    <h3>🏔️ Adam 真正解決的難題：狹窄谷地</h3>
+    <svg viewBox="0 0 640 380" style="width:100%;">
+      <defs>
+        <marker id="arrSGD" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#E4572E"/>
+        </marker>
+        <marker id="arrADAM" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="#26A69A"/>
+        </marker>
+      </defs>
+      <!-- 左：SGD 原地打轉 -->
+      <text x="160" y="26" text-anchor="middle" font-size="16.5" font-weight="bold" fill="#C2411B">✕ 沒有記憶（SGD）：原地打轉</text>
+      <line x1="12" y1="300" x2="308" y2="300" stroke="#888" stroke-width="1.5"/>
+      <text x="300" y="314" text-anchor="end" font-size="12.5" fill="#666">權重 (w) →</text>
+      <polygon points="40,138 35,148 45,148" fill="#888"/>
+      <line x1="40" y1="148" x2="40" y2="175" stroke="#888" stroke-width="1.5"/>
+      <text x="50" y="168" font-size="12" fill="#666">Loss：愈往上愈糟</text>
+      <path d="M20,160 C65,225 130,287.5 160,287.5 C190,287.5 255,225 300,160" fill="none" stroke="#9C27B0" stroke-width="3"/>
+      <path d="M58,209 L262,209" fill="none" stroke="#E4572E" stroke-width="2.5" stroke-dasharray="7,5" marker-end="url(#arrSGD)"/>
+      <path d="M262,209 L66,218" fill="none" stroke="#E4572E" stroke-width="2.5" stroke-dasharray="7,5" marker-end="url(#arrSGD)"/>
+      <path d="M66,218 L254,218" fill="none" stroke="#E4572E" stroke-width="2.5" stroke-dasharray="7,5" marker-end="url(#arrSGD)"/>
+      <path d="M254,218 L74,227" fill="none" stroke="#E4572E" stroke-width="2.5" stroke-dasharray="7,5" marker-end="url(#arrSGD)"/>
+      <path d="M74,227 L238,235" fill="none" stroke="#E4572E" stroke-width="2.5" stroke-dasharray="7,5" marker-end="url(#arrSGD)"/>
+      <g fill="#5B4B8A">
+        <circle cx="58" cy="209" r="7"/>
+        <circle cx="262" cy="209" r="5"/>
+        <circle cx="66" cy="218" r="5"/>
+        <circle cx="254" cy="218" r="5"/>
+        <circle cx="74" cy="227" r="5"/>
+        <circle cx="238" cy="235" r="5"/>
+      </g>
+      <text x="64" y="201" font-size="12" fill="#5B4B8A">起點</text>
+      <text x="160" y="281" text-anchor="middle" font-size="12.5" fill="#8A6D00" stroke="#fff" stroke-width="3" paint-order="stroke">▼ 谷底 (Loss 最低)</text>
+      <!-- 右：Adam 持續下坡 -->
+      <text x="480" y="26" text-anchor="middle" font-size="16.5" font-weight="bold" fill="#15803D">✓ 記住方向（Adam）：持續下坡</text>
+      <line x1="332" y1="300" x2="628" y2="300" stroke="#888" stroke-width="1.5"/>
+      <text x="620" y="314" text-anchor="end" font-size="12.5" fill="#666">權重 (w) →</text>
+      <polygon points="360,138 355,148 365,148" fill="#888"/>
+      <line x1="360" y1="148" x2="360" y2="175" stroke="#888" stroke-width="1.5"/>
+      <text x="370" y="168" font-size="12" fill="#666">Loss：愈往上愈糟</text>
+      <path d="M340,160 C385,225 450,287.5 480,287.5 C510,287.5 575,225 620,160" fill="none" stroke="#9C27B0" stroke-width="3"/>
+      <path d="M378,209 L404,237 L434,264 L460,281 L480,287" fill="none" stroke="#26A69A" stroke-width="2.5" marker-mid="url(#arrADAM)" marker-end="url(#arrADAM)"/>
+      <g fill="#5B4B8A">
+        <circle cx="378" cy="209" r="7"/>
+        <circle cx="404" cy="237" r="5"/>
+        <circle cx="434" cy="264" r="5"/>
+        <circle cx="460" cy="281" r="5"/>
+        <circle cx="480" cy="287" r="5"/>
+      </g>
+      <text x="384" y="201" font-size="12" fill="#5B4B8A">起點</text>
+      <text x="480" y="281" text-anchor="middle" font-size="12.5" fill="#8A6D00" stroke="#fff" stroke-width="3" paint-order="stroke">▼ 谷底 (Loss 最低)</text>
+      <!-- 圖例 -->
+      <polyline points="40,330 92,330" fill="none" stroke="#E4572E" stroke-width="2.5" stroke-dasharray="7,5"/>
+      <text x="98" y="334" font-size="12.5" fill="#444">跨到對岸再跨回，前進極慢 (SGD)</text>
+      <circle cx="330" cy="330" r="5" fill="#5B4B8A"/>
+      <text x="340" y="334" font-size="12.5" fill="#444">目前位置 (權重)</text>
+      <line x1="40" y1="352" x2="92" y2="352" stroke="#26A69A" stroke-width="2.5"/>
+      <text x="98" y="356" font-size="12.5" fill="#444">沿谷底持續下坡 (Adam)</text>
+      <text x="324" y="357" font-size="15" fill="#8A6D00">▼</text>
+      <text x="340" y="356" font-size="12.5" fill="#444">谷底 (Loss 最低)</text>
+    </svg>
+    <p class="thin">谷地又<strong>深又窄</strong>時，SGD 只看「當下斜率」：一步往左、一步往右，<strong>梯度互相抵消、原地磨</strong>。Adam 記住前幾步的<strong>方向</strong>，左右搖擺平均掉之後<strong>仍持續往谷底走</strong>——這才是它「收斂快」的主因，不只是因為把步子放大。<br>
+    另外，Adam 對「梯度長期偏小」的權重自動<strong>放大</strong>步幅、對「梯度大」的<strong>縮小</strong>步幅 → 讓每個權重的步幅量級一致，而不是一視同仁地亂快亂慢。</p>
+  </div>
+
   <div class="slide-footer">第 19 頁 · Optimizer (優化器)</div>
 </section>
 <!-- ===================== 第 20 頁 模型輸出格式 ===================== -->
