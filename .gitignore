@@ -3,6 +3,8 @@ nul
 # 測試用
 mvp_hand_gesture/
 test/
+# ui/test/ 是 T3 共用測試夾具（正式產物，須進版控），與上面的根目錄 test/ 區隔
+!ui/test/
 
 # Dependency directories
 node_modules/

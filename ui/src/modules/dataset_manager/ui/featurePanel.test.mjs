@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createFeaturePanel } from './featurePanel.js';
 import { buildFeatureSchema, landmarksToRow, FEATURE_MEDIAPIPE_MISSING } from '../core/featureSchema.js';
+import { makeSpecStub } from '../../../../test/fixtures.js';
 
 function makeElement(id, overrides = {}) {
     const el = {
@@ -35,13 +36,13 @@ function makeView(initial = {}) {
 }
 
 function makeHarness({ labelMap = {} } = {}) {
-    const specData = { schema: { label_map: { ...labelMap } } };
+    // 單一 spec 假身：specData 與 state.spec 必須共用同一 backing 物件，
+    // 否則測試讀 h.specData 會與 panel 內部 state 脫鉤（語意改變）。
+    const specStub = makeSpecStub({ labelMap, live: true });
+    const specData = specStub.specData;
     const state = {
         tableRows: [],
-        spec: {
-            toJSON: () => JSON.parse(JSON.stringify(specData)),
-            updateSchema: (patch) => { Object.assign(specData.schema, patch); }
-        }
+        spec: specStub
     };
     const calls = { listed: 0, collected: [], status: [] };
     const Sampler = {
@@ -122,10 +123,7 @@ test('缺 MediaPipe：回傳 errorCode 顯示降級訊息，不累計樣本', as
     const specData = { schema: { label_map: { up: 0 } } };
     const state = {
         tableRows: [],
-        spec: {
-            toJSON: () => JSON.parse(JSON.stringify(specData)),
-            updateSchema: () => {}
-        }
+        spec: makeSpecStub({ labelMap: { up: 0 }, live: true, noopUpdate: true })
     };
     const calls = { collected: [], statusText: '' };
     const Sampler = {

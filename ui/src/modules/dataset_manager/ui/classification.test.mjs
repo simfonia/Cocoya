@@ -1,58 +1,23 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createClassificationController } from './classification.js';
+import { makeEl, makeFakeDocument } from '../../../../test/fakeDom.js';
+import { makeDeps } from '../../../../test/depsBuilder.js';
+import { makeSpecStub } from '../../../../test/fixtures.js';
 
 function makeFakeElement(id = '') {
-    const el = {
-        id, tabIndex: 0, textContent: '', innerHTML: '', src: '', className: '',
-        style: {}, onclick: null, handlers: {}, insertAdjacentHTMLCalls: [],
-        classList: {
-            _set: new Set(),
-            add(c) { this._set.add(c); },
-            remove(c) { this._set.delete(c); },
-            contains(c) { return this._set.has(c); }
-        },
-        addEventListener(type, fn) { (this.handlers[type] ||= []).push(fn); },
-        removeEventListener(type, fn) {
-            const list = this.handlers[type] || [];
-            const i = list.indexOf(fn);
-            if (i >= 0) list.splice(i, 1);
-        },
-        querySelector() { return null; },
-        focus() { el.focused = true; },
-        remove() { el.removed = true; },
-        insertAdjacentHTML(pos, html) { el.insertAdjacentHTMLCalls.push({ pos, html }); }
-    };
-    return el;
-}
-
-function makeFakeDocument(elementsById) {
-    return { getElementById: (id) => elementsById[id] || null };
+    return makeEl(id);
 }
 
 function baseDeps(elementsById, overrides = {}) {
     const state = {
         annotationMode: { isActive: false, currentIndex: -1, mode: null, originalBodyClass: '' },
         images: [],
-        spec: { toJSON: () => ({ schema: { label_map: {} } }) }
+        spec: makeSpecStub()
     };
-    return {
-        state,
-        t: (key, fallback) => fallback || key,
-        escapeHtml: (v) => String(v ?? ''),
-        getModal: () => overrides.modal || null,
-        UIComponents: { renderAnnotationThumbnails: () => {} },
-        saveGridScroll: () => {},
-        exitAnnotationMode: () => {},
-        navigateToImage: () => {},
-        setAnnotationHeaderActions: () => {},
-        handleExportDataset: () => {},
-        updateStatsFromImages: () => {},
-        updateThumbnailHighlight: () => {},
-        refreshPreview: () => {},
-        createLabelMapManager: () => {},
-        getDocument: () => makeFakeDocument(elementsById)
-    };
+    const { deps, events } = makeDeps({ state, elementsById, overrides });
+    deps.events = events;
+    return deps;
 }
 
 test('進入分類模式：設定狀態機、套用 fullscreen/body class、隱藏面板', () => {

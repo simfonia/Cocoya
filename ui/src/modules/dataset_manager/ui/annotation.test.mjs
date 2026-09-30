@@ -1,91 +1,26 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { createAnnotationController } from './annotation.js';
-
-/**
- * 極簡 fake document：以 id → element 註冊表支援 getElementById/querySelector，
- * 元素支援 dataset/classList/style/innerHTML/listeners/focus 等最小面。
- */
-function makeEl(id) {
-    const el = {
-        id, tagName: 'DIV', dataset: {}, style: {}, tabIndex: 0,
-        classes: new Set(),
-        classList: {
-            add: (...c) => c.forEach(x => el.classes.add(x)),
-            remove: (...c) => c.forEach(x => el.classes.delete(x)),
-            contains: (c) => el.classes.has(c)
-        },
-        listeners: {}, innerHTML: '', textContent: '', src: '', onclick: null,
-        insertAdjacentHTML(_pos, html) { el._insertedHTML = (el._insertedHTML || '') + html; },
-        addEventListener(type, fn) { (el.listeners[type] = el.listeners[type] || []).push(fn); },
-        removeEventListener(type, fn) {
-            const arr = el.listeners[type] || [];
-            const i = arr.indexOf(fn);
-            if (i >= 0) arr.splice(i, 1);
-        },
-        focus() { el._focused = true; },
-        remove() { el._removed = true; },
-        querySelector() { return null; },
-        querySelectorAll() { return []; }
-    };
-    return el;
-}
-
-function makeFakeDoc(ids) {
-    const registry = new Map();
-    for (const id of ids) registry.set(id, makeEl(id));
-    return {
-        getElementById: (id) => registry.get(id) || null,
-        querySelector: () => null,
-        querySelectorAll: () => []
-    };
-}
+import { makeEl, makeFakeDocument } from '../../../../test/fakeDom.js';
+import { makeDeps as makeSharedDeps } from '../../../../test/depsBuilder.js';
+import { makeSpecStub, OBJECT_DETECTION_LABELS } from '../../../../test/fixtures.js';
 
 function makeDeps(docOverrides = {}) {
-    const events = [];
-    return {
-        deps: {
-            state: {
-                images: [
-                    { blobUrl: 'blob:1', path: 'a.jpg', annotations: [] },
-                    { blobUrl: 'blob:2', path: 'b.jpg', annotations: [] }
-                ],
-                annotationMode: { isActive: false, currentIndex: -1, saveTimer: null },
-                spec: {
-                    toJSON: () => ({
-                        project: { type: 'object_detection' },
-                        schema: { label_map: { cat: 0, dog: 1 } }
-                    })
-                }
-            },
-            t: (key, fallback) => fallback || key,
-            escapeHtml: (v) => String(v),
-            getModal: () => docOverrides.modal || null,
-            UICanvas: {
-                state: { annotations: [], selectedAnnotationIndex: -1, handlers: {}, currentClassId: 0 },
-                init: (container, img, anns, opts) => events.push(['init', { container, img, anns, opts }]),
-                render: () => events.push(['render']),
-                setSelectedAnnotation: (i) => events.push(['select', i])
-            },
-            UIComponents: {
-                renderAnnotationThumbnails: (container, images, index, opts) => {
-                    events.push(['thumbs', { container, images, index, opts }]);
-                }
-            },
-            getFormValue: (name) => (name === 'projectType' ? 'object_detection' : ''),
-            saveGridScroll: () => events.push(['saveGridScroll']),
-            exitAnnotationMode: () => events.push(['exit']),
-            navigateToImage: (i) => events.push(['nav', i]),
-            setAnnotationHeaderActions: (hide) => events.push(['headerActions', hide]),
-            handleExportDataset: () => events.push(['export']),
-            updateStatsFromImages: () => events.push(['stats']),
-            updateThumbnailHighlight: () => events.push(['highlight']),
-            refreshPreview: () => events.push(['refresh']),
-            createLabelMapManager: (container) => events.push(['labelManager', container]),
-            getDocument: () => docOverrides.document
-        },
-        events
+    const state = {
+        images: [
+            { blobUrl: 'blob:1', path: 'a.jpg', annotations: [] },
+            { blobUrl: 'blob:2', path: 'b.jpg', annotations: [] }
+        ],
+        annotationMode: { isActive: false, currentIndex: -1, saveTimer: null },
+        spec: makeSpecStub({ type: 'object_detection', labelMap: OBJECT_DETECTION_LABELS })
     };
+    const { deps, events } = makeSharedDeps({
+        state,
+        modal: docOverrides.modal || null,
+        document: docOverrides.document,
+        record: true
+    });
+    return { deps, events };
 }
 
 describe('ui/annotation.js (Stage 4 切片 6)', () => {
@@ -105,7 +40,7 @@ describe('ui/annotation.js (Stage 4 切片 6)', () => {
             if (sel === '#dataset-annotation-back') return makeEl('back-btn');
             return null;
         };
-        const doc = makeFakeDoc(['annotation-thumbnails', 'annotation-export-btn', 'annotation-controls', 'annotation-container', 'annotation-target-img', 'annotation-progress']);
+        const doc = makeFakeDocument(['annotation-thumbnails', 'annotation-export-btn', 'annotation-controls', 'annotation-container', 'annotation-target-img', 'annotation-progress']);
         const { deps, events } = makeDeps({ modal, document: doc });
 
         const c = createAnnotationController(deps);
@@ -124,7 +59,7 @@ describe('ui/annotation.js (Stage 4 切片 6)', () => {
     });
 
     test('enterAnnotationMode：缺 preview 面板早退，不污染狀態', () => {
-        const doc = makeFakeDoc([]);
+        const doc = makeFakeDocument([]);
         const { deps } = makeDeps({ document: doc });
         const c = createAnnotationController(deps);
         c.enterAnnotationMode(deps.state.images[0], 0);
@@ -133,7 +68,7 @@ describe('ui/annotation.js (Stage 4 切片 6)', () => {
     });
 
     test('loadAnnotationImage：UICanvas.init 以 line mode + labelMap 注入，onUpdate 觸發 debounce', async () => {
-        const doc = makeFakeDoc(['annotation-container', 'annotation-target-img', 'annotation-controls', 'annotation-list-ui', 'annotation-progress', 'annotation-class-manager']);
+        const doc = makeFakeDocument(['annotation-container', 'annotation-target-img', 'annotation-controls', 'annotation-list-ui', 'annotation-progress', 'annotation-class-manager']);
         const { deps, events } = makeDeps({ document: doc });
         deps.getFormValue = (name) => (name === 'projectType' ? 'line_following' : '');
 
@@ -158,7 +93,7 @@ describe('ui/annotation.js (Stage 4 切片 6)', () => {
     });
 
     test('bindCanvasKeyboardEvents：↑/↓ 導航、Delete 刪除、Esc 退出；重複 bind 不累積 handler', () => {
-        const doc = makeFakeDoc(['annotation-container', 'annotation-controls', 'annotation-list-ui']);
+        const doc = makeFakeDocument(['annotation-container', 'annotation-controls', 'annotation-list-ui']);
         const { deps, events } = makeDeps({ document: doc });
         const container = doc.getElementById('annotation-container');
         const canvas = makeEl('canvas');
@@ -189,19 +124,19 @@ describe('ui/annotation.js (Stage 4 切片 6)', () => {
     });
 
     test('renderAnnotationControls：object_detection 顯示類別管理；無 controls 早退', () => {
-        const doc = makeFakeDoc(['annotation-controls', 'annotation-class-manager']);
+        const doc = makeFakeDocument(['annotation-controls', 'annotation-class-manager']);
         const { deps, events } = makeDeps({ document: doc });
         const c = createAnnotationController(deps);
         c.renderAnnotationControls();
         assert.ok(events.some(e => e[0] === 'labelManager'), 'createLabelMapManager 未被呼叫');
 
-        const emptyDoc = makeFakeDoc([]);
+        const emptyDoc = makeFakeDocument([]);
         const deps2 = makeDeps({ document: emptyDoc }).deps;
         createAnnotationController(deps2).renderAnnotationControls(); // 不拋錯
     });
 
     test('renderAnnotationListUI：bbox/line 項渲染；無 list 早退', () => {
-        const doc = makeFakeDoc(['annotation-list-ui']);
+        const doc = makeFakeDocument(['annotation-list-ui']);
         const { deps } = makeDeps({ document: doc });
         const list = doc.getElementById('annotation-list-ui');
         const c = createAnnotationController(deps);
@@ -213,7 +148,7 @@ describe('ui/annotation.js (Stage 4 切片 6)', () => {
         assert.ok(list.innerHTML.includes('線段'));
         assert.ok(list.innerHTML.includes('dog'));
 
-        const emptyDoc = makeFakeDoc([]);
+        const emptyDoc = makeFakeDocument([]);
         const deps2 = makeDeps({ document: emptyDoc }).deps;
         createAnnotationController(deps2).renderAnnotationListUI([]); // 不拋錯
     });

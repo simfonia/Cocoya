@@ -4,14 +4,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createSamplerPanel } from './samplerPanel.js';
+import { makeSpecStub } from '../../../../test/fixtures.js';
 
 function makeHarness({ labelMap = {}, targetLabel = '' } = {}) {
-    const specData = { schema: { label_map: { ...labelMap } } };
+    // 單一 spec 假身：specData 與 state.spec 共用 backing 物件（斷言讀 h.specData）。
+    const specStub = makeSpecStub({ labelMap, live: true });
+    const specData = specStub.specData;
     const state = {
-        spec: {
-            toJSON: () => JSON.parse(JSON.stringify(specData)),
-            updateSchema: (patch) => { Object.assign(specData.schema, patch); }
-        }
+        spec: specStub
     };
     const calls = { stats: 0, preview: 0, captured: 0, listed: 0 };
     const Sampler = {
