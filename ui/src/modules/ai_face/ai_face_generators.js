@@ -1,6 +1,6 @@
 // MediaPipe Face Mesh Generators: ai_face_generators.js
 
-Blockly.Python.forBlock['py_ai_face_init'] = function(block, generator) {
+Blockly.Python.forBlock['py_ai_face_init'] = function(block) {
   var maxFaces = block.getFieldValue('MAX_FACES');
   var minConf = block.getFieldValue('MIN_CONF');
   

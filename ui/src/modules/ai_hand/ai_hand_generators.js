@@ -1,6 +1,6 @@
 // MediaPipe Hand Generators: ai_hand_generators.js
 
-Blockly.Python.forBlock['py_ai_hand_init'] = function(block, generator) {
+Blockly.Python.forBlock['py_ai_hand_init'] = function(block) {
   var maxHands = block.getFieldValue('MAX_HANDS');
   var minConf = block.getFieldValue('MIN_CONF');
   

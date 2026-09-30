@@ -102,6 +102,7 @@ C:\Workspace\cocoya\
 
 ├── ui/                    # 雙模共用前端根目錄 (Vite Project)
 │   ├── index.html         # Webview 與 Tauri 共用入口（工具列韌體 Raw Dump 診斷開關）
+│   ├── .eslintrc.json     # 前端 ESLint 8 規則設定（npm run lint:ui，eslint:recommended + 3 條設計性關閉）
 │   ├── vite.config.js     # Vite 配置 (含資產同步外掛)
 │   ├── favicon.ico        # 本地圖示以解決 404 報錯
 │   ├── blockly/           # Blockly 核心庫與靜態插件

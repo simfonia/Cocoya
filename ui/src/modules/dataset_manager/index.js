@@ -11,8 +11,6 @@ import {
     refreshPreview,
     refreshI18n
 } from './ui_layout.js';
-import { UIComponents } from './ui_components.js';
-import { UICanvas } from './ui_canvas.js';
 
 const namespace = window.CocoyaDataset || {};
 

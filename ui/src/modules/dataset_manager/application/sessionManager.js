@@ -7,7 +7,9 @@
 export function createSessionManager(deps = {}) {
     const {
         confirmFn = async () => true,
-        notifyFn = () => {},
+        notifyFn = () => {
+            // 預設無通知管道（純邏輯測試時不注入 UI 依賴）。
+        },
         initialType = null
     } = deps;
 

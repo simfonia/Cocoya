@@ -57,7 +57,7 @@ export class BaseBridge {
      * @param {string} command 
      * @param {object} data 
      */
-    async send(command, data = {}) {
+    async send(command, _data = {}) {
         await this.ready;
         // 由子類別實作
     }

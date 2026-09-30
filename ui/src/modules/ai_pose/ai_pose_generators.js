@@ -1,6 +1,6 @@
 // MediaPipe Pose Generators: ai_pose_generators.js
 
-Blockly.Python.forBlock['py_ai_pose_init'] = function(block, generator) {
+Blockly.Python.forBlock['py_ai_pose_init'] = function(block) {
   var minConf = block.getFieldValue('MIN_CONF');
   var code = 'import cv2\n' +
              'import mediapipe as mp\n' +

@@ -262,8 +262,19 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
 | **L0 指定** | `npm run test:fast -- <檔案…>` | 明確知道改到哪 | 手動指定變更檔 |
 | **L1** | `npm run test:dm` / `npm run test:core` | 一個功能切片完成 | 單一模組 |
 | **L2** | `npm run test:ui` | 階段／Batch 收尾、提交前 | 全量 197 例 |
-| **L2 全閘** | `npm test` | 發布前 | compile + lint + 全量 |
+| **L1.5** | `npm run lint:ui` | 改了 `ui/src/**` 的 JS | ESLint（`ui/.eslintrc.json`） |
+| **L2 全閘** | `npm test` | 發布前 | compile + lint(ts) + lint:ui + 全量 |
 | **其他** | `npm run test:rust` / `cargo check` | Rust 異動 | 不併入 `npm test` |
+
+- **`lint:ui` 規則現況**（2026-09-30 建置）：`ui/.eslintrc.json` 以 `eslint:recommended` 為基底、掃描 154 檔，**現況 0 error**。
+  - 必須宣告的 globals：`Blockly`／`CocoyaLoader`／`CocoyaUtils`／`CocoyaMediaUri`／`CocoyaBoard`／`acquireVsCodeApi`／`hljs`（缺了會噴 2401 個 `no-undef`）。
+  - `ignorePatterns: ["*.min.js"]` 排除第三方 vendored 資產（`highlight.min.js`／`python.min.js`）。
+  - **三條刻意關閉，各有設計事實，不得為了「綠燈」打開**：
+    - `no-control-regex` — `\u0001`／`\u0002` 不可見 ID 標記（見上方「字串語意比對前必先剝除不可見 ID 標記」段落），全專案 5 處刻意使用。
+    - `no-regex-spaces` — `  # ID:`（2 空格）與 `/^(    )+/`（4 空格）是 ID 注入與 Python 基準縮排的**契約本身**，6 處刻意使用。
+    - `no-empty` — 27 處刻意 no-op 區塊（no-op 監聽、預設回呼），與根 `.eslintrc.json` 決策一致。
+  - `no-unused-vars` 用 `argsIgnorePattern: "^_"`：**對外 API 簽名不得刪參數**（如 `window.open(url, _name, _specs)` 必須維持瀏覽器 API 契約），此類加底線而非移除。
+- **Blockly generator 簽名慣例**：statement 型由 `statementToCode` 以 `generator(block)` 呼叫、value 型由 `valueToCode` 以 `(block, name, order)` 呼叫。**不引用 `generator` 的函式不宣告該參數**（專案已有 `function(block)` 先例）；此處不受 `argsIgnorePattern` 保護，寫 `(block, generator)` 卻不用會被 lint 擋下。
 
 - **測試 SSOT 執行方式**：`ui/` 目錄下 `node --test "src/**/*.test.mjs"`（**勿用目錄模式**，會誤把 `index.js` 當入口，見上文 DM 測試段落）。
 - **自動挑測試的規則**（`scripts/test-related.cjs`）：`*_blocks.js`／`*_generators.js`／`toolbox.xml`／任何 `i18n/*.js`／`src/zh-hant.js`／`src/en.js`／`core_manifest.json`／`theme_manager/themes/*.js` 一律納入 `core_contract.test.mjs` 契約對帳。

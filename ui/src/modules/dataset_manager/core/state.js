@@ -35,7 +35,9 @@ export class DatasetStore {
     }
 
     subscribe(listener) {
-        if (typeof listener !== 'function') return () => {};
+        if (typeof listener !== 'function') return () => {
+            // 訂閱者非函式：退化成永遠解除不了的 no-op unsubscribe。
+        };
         this.listeners.add(listener);
         return () => this.listeners.delete(listener);
     }

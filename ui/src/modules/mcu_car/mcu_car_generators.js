@@ -374,7 +374,7 @@ class MusicEngine:
 
     def parse_and_play(self, melody_str):
         import re
-        pattern = r"([A-GR][#S]?)([0-8])?([WHQEST\._T\+]+)"
+        pattern = r"([A-GR][#S]?)([0-8])?([WHQEST._T+]+)"
         dur_map = {"W":4.0, "H":2.0, "Q":1.0, "E":0.5, "S":0.25, "T":0.125}
         for part in melody_str.replace(",", " ").split():
             m = re.match(pattern, part.upper())

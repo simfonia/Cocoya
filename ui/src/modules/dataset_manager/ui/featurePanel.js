@@ -19,12 +19,11 @@ export const FEATURE_DOM_STATUS = 'feature-status';
 
 export function createFeaturePanel({
     state, datasetBridge, t,
-    Sampler, UIComponents, escapeHtml,
+    Sampler, escapeHtml,
     FEATURE_MEDIAPIPE_MISSING,
     buildFeatureSchema, landmarksToRow,
     nextLabelId,
     onFeatureCollected,
-    renderTablePreview,
     refreshStructurePanel
 }) {
     let currentUseZ = false;
@@ -79,7 +78,7 @@ export function createFeaturePanel({
             + '</div>'
             + '</div>';
     }
-    function bind(modal, view, labels) {
+    function bind(modal, view) {
         const cameraSelect = view.querySelector('#' + FEATURE_DOM_CAMERA_SELECT);
         const refreshBtn = view.querySelector('#feature-refresh-cameras');
         const toggleBtn = view.querySelector('#' + FEATURE_DOM_TOGGLE_CAM);
@@ -225,7 +224,7 @@ export function createFeaturePanel({
         const labels = Object.keys(state.spec.toJSON().schema.label_map || {});
         currentUseZ = false;
         view.innerHTML = buildDom(labels, labels.length ? labels[0] : '', Sampler.state.cameraList.length === 0);
-        bind(modal, view, labels);
+        bind(modal, view);
         if (Sampler.state.cameraList.length === 0) {
             // 背景列舉完成後只補下拉選單（不重建整面，避免焦點跳動＋閉包失效）
             refreshCameraSelect(view, Promise.resolve(Sampler.listCameras()));

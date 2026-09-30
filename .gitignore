@@ -18,6 +18,7 @@ src-tauri/bin/
 src-tauri/gen/
 
 # Cocoya Runtime / Temp
+temp/
 temp_scripts/
 *.tmp
 *.log

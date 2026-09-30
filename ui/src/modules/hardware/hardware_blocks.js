@@ -150,7 +150,6 @@ Blockly.Blocks['mcu_board_init'] = {
     // 帽子積木（如 Scratch 的「當啟動時」）：頂部無凹槽、不可從上方連接，
     // 渲染器支援 block.hat === 'cap'（不進 XML，重載後 init 重設即可）
     this.hat = 'cap';
-    var block = this;
     // field 變更 → 切換全域板子（工作區宣告為最高優先）
     this.getField('BOARD').setValidator(function(value) {
       if (value && window.CocoyaBoard) window.CocoyaBoard.setCurrent(value, 'workspace');

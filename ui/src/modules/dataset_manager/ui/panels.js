@@ -4,7 +4,7 @@
  *   表格預覽（renderPreviewTable）、欄位新增/全列渲染（addColumn/renderAllColumns）
  * - 唯讀/唯寫 DOM 呈現層：spec 建構與商業狀態（syncSpecFromUI）不在此；
  *   refreshDynamicPanels 為重度耦合協調編排（Sampler/label manager/註記入口），留 ui_layout
- * - 依賴全注入（t/escapeHtml/optionList/getModal/refreshPreview/getDocument），Node 可測
+ * - 依賴全注入（t/escapeHtml/optionList/getModal/refreshPreview），Node 可測
  * @param {object} options
  * @param {object} options.state 模組共用狀態（含 spec）
  * @param {Function} options.t i18n
@@ -14,16 +14,11 @@
  * @param {() => void} options.refreshPreview 欄位異動後刷新（debounce 落盤）
  * @param {object} options.DatasetSpec DatasetSpec 類別（normalizeColumn）
  * @param {object} options.DatasetSpecConstants COLUMN_TYPES / COLUMN_ROLES 常數
- * @param {() => Document} [options.getDocument] 取得 document（預設 globalThis.document）
  */
 export function createPanelsPresenter({
     state, t, escapeHtml, optionList, getModal, refreshPreview,
-    DatasetSpec, DatasetSpecConstants, getDocument = () => globalThis.document
+    DatasetSpec, DatasetSpecConstants
 }) {
-    function doc() {
-        return getDocument();
-    }
-
     /**
      * 渲染單一欄位列（schema 面板）
      */
@@ -116,6 +111,8 @@ export function createPanelsPresenter({
         addColumn,
         renderAllColumns,
         /** dispose：純呈現層無資源，no-op（介面一致性保留） */
-        dispose() {}
+        dispose() {
+            // 純呈現層，無事件監聽或計時器需釋放；保留方法僅為介面一致。
+        }
     };
 }

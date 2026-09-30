@@ -312,11 +312,11 @@ class HuskyLens:
   return setup;
 };
 
-Blockly.Python.forBlock['mcu_huskylens_request'] = function(block, generator) {
+Blockly.Python.forBlock['mcu_huskylens_request'] = function() {
   return 'if "husky" in globals(): husky.request_all()\n';
 };
 
-Blockly.Python.forBlock['mcu_huskylens_set_algorithm'] = function(block, generator) {
+Blockly.Python.forBlock['mcu_huskylens_set_algorithm'] = function(block) {
   var algo = block.getFieldValue('ALGO');
   return 'if "husky" in globals(): husky.set_algorithm(' + algo + ')\n';
 };
@@ -338,7 +338,7 @@ Blockly.Python.forBlock['mcu_huskylens_is_detected'] = function(block, generator
   return ['husky.is_detected(' + id + ')', Blockly.Python.ORDER_ATOMIC];
 };
 
-Blockly.Python.forBlock['mcu_huskylens_count'] = function(block, generator) {
+Blockly.Python.forBlock['mcu_huskylens_count'] = function() {
   return ['husky.count()', Blockly.Python.ORDER_ATOMIC];
 };
 
@@ -352,30 +352,30 @@ Blockly.Python.forBlock['mcu_huskylens_get_name'] = function(block, generator) {
   return ['husky.get_name(' + id + ')', Blockly.Python.ORDER_ATOMIC];
 };
 
-Blockly.Python.forBlock['mcu_huskylens_any_arrow'] = function(block, generator) {
+Blockly.Python.forBlock['mcu_huskylens_any_arrow'] = function() {
   return ['husky.any_arrow()', Blockly.Python.ORDER_ATOMIC];
 };
 
-Blockly.Python.forBlock['mcu_huskylens_learn'] = function(block, generator) {
+Blockly.Python.forBlock['mcu_huskylens_learn'] = function() {
   // learn 為 value 積木（output Number，回傳學到的 ID），故以三元運算式守門
   return ['(husky.learn() if "husky" in globals() else 0)', Blockly.Python.ORDER_ATOMIC];
 };
 
-Blockly.Python.forBlock['mcu_huskylens_forget'] = function(block, generator) {
+Blockly.Python.forBlock['mcu_huskylens_forget'] = function() {
   return 'if "husky" in globals(): husky.forget()\n';
 };
 
-Blockly.Python.forBlock['mcu_huskylens_save_knowledge'] = function(block, generator) {
+Blockly.Python.forBlock['mcu_huskylens_save_knowledge'] = function(block) {
   var kid = block.getFieldValue('KNOWLEDGE_ID');
   return 'if "husky" in globals(): husky.save_knowledge(' + kid + ')\n';
 };
 
-Blockly.Python.forBlock['mcu_huskylens_load_knowledge'] = function(block, generator) {
+Blockly.Python.forBlock['mcu_huskylens_load_knowledge'] = function(block) {
   var kid = block.getFieldValue('KNOWLEDGE_ID');
   return 'if "husky" in globals(): husky.load_knowledge(' + kid + ')\n';
 };
 
-Blockly.Python.forBlock['mcu_huskylens_set_name'] = function(block, generator) {
+Blockly.Python.forBlock['mcu_huskylens_set_name'] = function(block) {
   var id = block.getFieldValue('ID');
   var name = block.getFieldValue('NAME');
   var esc = String(name).replace(/\\/g, '\\\\').replace(/"/g, '\\"');

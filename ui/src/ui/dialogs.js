@@ -318,13 +318,13 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         // 觸控事件
         header.addEventListener('touchstart', (e) => {
             const touch = e.touches[0];
-            onMouseDown({ clientX: touch.clientX, clientY: touch.clientY, target: e.target, preventDefault: () => {} });
+            onMouseDown({ clientX: touch.clientX, clientY: touch.clientY, target: e.target, preventDefault: () => { /* 合成事件，無需阻止預設 */ } });
         }, { passive: false });
 
         document.addEventListener('touchmove', (e) => {
             if (!isDragging) return;
             const touch = e.touches[0];
-            onMouseMove({ clientX: touch.clientX, clientY: touch.clientY, preventDefault: () => {} });
+            onMouseMove({ clientX: touch.clientX, clientY: touch.clientY, preventDefault: () => { /* 合成事件，無需阻止預設 */ } });
         }, { passive: false });
 
         document.addEventListener('touchend', onMouseUp);
