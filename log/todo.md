@@ -125,6 +125,68 @@
 - [ ] 實機驗證：Tauri dev 下 deploy/ 正確打包、Serial Monitor 可啟動（無 ModuleNotFoundError）
 - [ ] 實機驗證：選擇序列埠後重新整理，label 不會被清空
 - [ ] 實機驗證：①拆鈕後偵測/監看各自行為 ②熱插拔 1.5s 自動換埠切板 ③拔 Maker Pi 插 SPIKE 正確更新 ④上傳含 print() 開頭不被吃、點點同行 ⑤microbit Pin(n) 語義與 P5/P11 共用腳位 ⑥新 MCU 檔三塊不重疊+帽子外觀 ⑦SSH Enter 連線 ⑧多視窗輪詢不污染
+
+### [2026-09-27] #task[cocoya 全面檢查] 全專案稽核計畫（僅計畫，尚未實作）
+> 計畫全文：`log/plan/ComprehensiveAudit_2026-09-27.md`（13 章節；Stage 0 TDD×8／P0×2／P1×6／P2×13／P3×4）
+> 範圍：全專案；DM 限 image／object_detection／line_following／table 四類型；特別檢查 i18n 與 3 主題。
+> 本次**未修改任何程式碼**，僅產出計畫。
+> **執行順序決策：先做 Stage 0（TDD 守門），再動任何重構批次。** 理由：Batch 1~6 全是拆檔重構，無測試門檻等於沒有安全網。
+> 基準（實測 2026-09-27）：`cd ui; node --test "src/**/*.test.mjs"` → tests 194 / pass 194 / fail 0（測試本體不差，問題是沒機制去跑）
+
+#### Stage 0（TDD 守門，最高優先；完成前不得動 Batch 1~6）
+- [ ] **T1**（最低成本最高回報）`package.json` 新增 `"test:ui": "cd ui && node --test \"src/**/*.test.mjs\""`，`test` 改為 `test:unit && test:ui`；確認 194 測試進入門檻（**勿用目錄模式**，會誤把 index.js 當入口）
+- [ ] **P0-1** 英文版 SPIKE 感測器積木無顏色：`spike_blocks.js` 用 `COLOUR_SPIKE_SENSOR_COLOR/_DISTANCE/_FORCE/_IMU`，`ui/src/en.js` 缺（僅有無後綴的 `COLOUR_SPIKE_SENSOR`）→ 補 4 鍵並確認刪除無人用鍵
+- [ ] **P0-2** `ui/src/zh-hant.js` 缺 Stable Mode 三鍵（`TLB_SETTINGS_SERIAL_UPLOAD`／`TLB_SETTINGS_SETUP_STABLE`／`MSG_SETUP_STABLE_CONFIRM`，`base.js:492` 有用）→ 補鍵
+- [ ] **T2** 契約測試全模組化：`ui/src/modules/core/core_contract.test.mjs` 目前只過濾 `core/` 前綴 → 改為涵蓋 `core_manifest.json` 全部模組，續對帳 blocks↔generators↔toolbox↔雙語 i18n↔`COLOUR_*`（**T2 會讓 spike／hardware／mcu_* 立刻現紅，屬預期且正確；處理方式是補鍵不是放寬斷言**）
+- [ ] **T3** 共用測試夾具：新增 `ui/test/`（`fakeDom.js` makeEl/makeFakeDocument、`depsBuilder.js` makeDeps 預設注入**真** `t()`／`escapeHtml`、`fixtures.js` DatasetSpec 樣本）；消除 `annotation`(211 行)／`classification`(194)／`statusMessage`(84)／`panels`(102)／`labelManager`(65)／`samplerPanel`(102) 六檔重複 fake（**純搬移，驗收＝194→194 全綠且斷言未改**）
+- [ ] T2 前置盤點：統計全部模組在五項對帳上的現存缺口，估算紅燈規模
+- [ ] T3 前置盤點：列出六檔 fake DOM 差異點，確認最小抽象介面（getElementById／querySelector／classList／style／listeners／innerHTML／insertAdjacentHTML）
+
+#### Batch 0（無風險）
+- [ ] P0-3 確認 zh-hant 獨有 6 個 `BKY_*_VARIABLE*` 鍵是否真缺（Blockly 內建可能已提供）；若屬內建則列入 parity 白名單
+- [ ] P3-1 自動化守門：新增 `ui/src/i18n_parity.test.mjs`（全語系鍵集合一致＋白名單）、三主題 cssVars 鍵集合一致測試、接入 `temp_scripts/unused_export_scan.cjs`
+- [ ] P3-2／T7 前段 補高風險檔測試：`bridge/tauri.js`（93KB／0 測試）至少覆蓋 `capabilities` getter 與 anchor normalize；`app/persistence.js` 備份／recovering 路徑
+
+#### Batch 1（低風險純重構）
+- [ ] P1-1 DM 類型判斷收斂：`ui_layout.js:226/880/956` 與 `ui_components.js:約41` 的 `projectType === 'image' || 'object_detection' || 'line_following'` 全數改 `typePolicy.isImageType()`；`spec.js` 的 `IMAGE_TYPES`/`PROJECT_TYPES` 與 typePolicy 收單一來源
+- [ ] P1-2 `ui_components.js` 的 `countHeader = projectType === 'object_detection'` 等單類型分支改走 `needsAnnotationCheck()`／`isClassificationType()`，補 `typePolicy.test.mjs` 斷言
+- [ ] P2-6 `ui_components.js`（20.8KB）與 `ui/panels.js`／`ui/thumbnails.js` 職責重疊：逐條比對呼叫端移除已無引用者；L19／L78 字串拼接 innerHTML 改走 `core/html.js` escape
+
+#### Batch 2（中風險視覺，需三主題目視）
+- [ ] P1-3 `dataset_manager.css` token 化：144 個 hex → 判定設計常數／主題值；優先 `#4CAF50`(7)、`#2d2d2d`/`#1e1e1e`、`#ff8fb3`(5)；新增 token 須三主題同步（維持各 46 鍵集合一致的不變式）
+- [ ] P1-4 `style.css` 242 hex／51 var：先量化分類（工具列／積木區／DM／dialog），挑非 Blockly 內部區塊分 2~3 批 token 化
+- [ ] P2-7 `getLabelColor` 改為主題 token 取色（`--dsm-series-1..8`），取代 HSL 公式生成（`h=(hash*137.508)%360` 等）
+- [ ] P2-16 確認 `cocoya_dark` 缺 `msgColours` 為刻意或疏漏（僅 candy 有）；若刻意則於 `theme_manager.js` 註解寫明，否則補上
+- [ ] P2-15 中文 fallback 風險：`ui_layout.js`(292)／`base.js`(188)／`tauri.js`(164) 等 `t('KEY','中文')` 改無 fallback 或英文 fallback，讓缺鍵在開發期被 parity 抓到
+
+#### Batch 3（中風險架構，多視窗／emit_to 高危）
+- [ ] P2-1 `ui/src/bridge/tauri.js`（93KB／70 處 invoke）拆 `bridge/tauri/{events,dataset,serial,files}.js`，`tauri.js` 退薄 façade＋`capabilities`；對外 API 不變，每搬一模組跑雙視窗實機
+- [ ] P2-2 `ui_layout.js`（80.5KB）階段一刪除約 20 個純委派薄包裝（`enterClassificationReviewMode` L668 等，呼叫端直接取 controller）；階段二協調邏輯搬 `ui/orchestrator/*`；**不得破壞** `#dataset-structure-content` 嚴禁覆寫 innerHTML 契約，`renderStructurePanel()`／`renderStatsPanels()`／`refreshThumbnailBadges()` 介面不變
+
+#### Batch 4（DM 四類型深化）
+- [ ] P2-10 產出 `docs/dataset_types_matrix.md` 為四類型能力 SSOT（模式/標註/匯出/訓練/推論/已知殘餘）
+- [ ] P2-11 **line_following 切分策略**：檢查 `line/*.txt`／`dataset.json` 是否有可作類別的欄位；有→依該欄位分層（重用 detector 分層函式）；無→維持隨機切但報告註明「回歸型」並回寫本條結論
+- [ ] P2-12 **table 是否新增 live 採集**（決策項）：A 維持 file-only／B 新增（可重用 `ui/featurePanel.js` 相機骨架）
+- [ ] P2-13 `spec.js` 直用 `t()` 42 處：`validate()` 先改回傳 `{code, params}`，文案上移 ui/application；分兩批
+- [ ] P2-17 盤點 `docs/help/` 中英文 help 缺漏（多數僅 `zh-hant`）
+
+#### Batch 5（後端／資源）
+- [ ] P1-5 **安全**：`dataset_sidecar.py:37-40` 匯入時自動 `pip install paramiko` → 改為缺套件回報明確錯誤碼（比照 `FEATURE_MEDIAPIPE_MISSING`），前端 i18n 顯示指引；或加使用者同意開關＋指向 venv
+- [ ] P1-6 逐條人工複核 Rust 15 處 `Command::new`（app 3／dataset 2／mcu 5／python 5）：確認無 shell 拼接、使用者輸入皆以 argv 陣列傳入，產出審查表
+- [ ] P1-7 核對 `dataset_sidecar.py` 3 處 Popen（L40／L967／L1099）的 `encoding/errors`，補齊 AGENTS.md 四件套鐵律
+- [ ] P2-3 `dataset_sidecar.py`（1138 行／19 def）拆分：內嵌 Python 字串腳本抽 `resources/dataset_manager/scripts/*.py`；`CameraService`／遠端訓練／TFLite 轉換各自成模組；維持 stdout 單一 JSON 回應契約
+- [ ] P2-5 Rust 拆檔（**先不動**，待 tauri-codegen 議題合併處理）：`mcu.rs`→`mcu/{serial,board,monitor}.rs`；`file.rs`→`file/{ops,anchor}.rs`
+- [ ] **T4** Python／Rust 測試納入：`temp_scripts/e2e_*.py` 轉 pytest（移除硬編碼路徑 `BALL = r'C:/Users/simfonia/Desktop/cocoya/dataset/ball'`，改 `tmp_path`／env）＋補 `sys.exit(1)`；Rust 補 `file.rs`／`python.rs` 測試（現全專案僅 3 個 `#[test]`）；`cargo test` 與 `pytest` 接入 `npm test`
+- [ ] T4 前置盤點：8 支 e2e 腳本的相依套件（numpy／tensorflow／PIL）與執行時間，評估轉 pytest 順序
+
+#### Batch 6（清理／收尾）
+- [ ] P2-9 repo 殘留：3 個 `cocoya-*.vsix`、`nul`、`DATASET_MANAGER_PLAN.md`（**需使用者確認**才刪／移）；`.gitignore` 涵蓋 `*.vsix` 與 `nul`；確認 `test/project2~6.xml` 是否仍被 `temp_scripts/e2e_*` 引用
+- [ ] P3-4 `FILE_STRUCTURE.md` 已有行號錯位（L18-19 處脫離樹狀縮排）→ 分段重排並去除行號；`log/COCOYA_STATE.md` §6 技術債合併指向本計畫
+- [ ] P3-3 死碼掃描：`index.js` 匯出的 `removeAnnotation`／`refreshDynamicPanels`／`refreshPreview` 等是否仍被 `window.CocoyaDataset` 外部呼叫；`sampler.js`／`ui_canvas.js` 與新 `ui/samplerPanel.js`／`ui/annotation.js` 是否職能重疊
+- [ ] **T5** 覆蓋率基準：加 c8，先只產報告不設門檻 → 連續兩週後依實際值收緊
+- [ ] **T6** CI 與 pre-commit：GitHub Actions workflow（`node --test`／`tsc --noEmit`／`lint`／`cargo check`／`cargo test`／`py_compile`）＋ husky pre-commit 跑快速子集（**待決策**：CI 平台是否採 GitHub Actions）
+- [ ] **T7** 高風險檔補契約測試（拆檔後）：`bridge/tauri.js` 拆檔後各子模組、sidecar 訊息協定（stdout 單一 JSON）
+- [ ] **T8** 測試分類標註：區分**契約測試**（守設計：manifest／i18n／色碼／主題 token）與**行為測試**（守重構：controller／use-case），禁止只有後者
 ---
 ## [已完成任務歸檔]（壓縮指針；詳細與每日異動一律見 log/work/ 與計畫文件）
 
