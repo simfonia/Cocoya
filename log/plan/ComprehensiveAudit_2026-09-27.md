@@ -617,29 +617,77 @@ subprocess.check_call([sys.executable, "-m", "pip", "install", "paramiko"], **_P
 
 **變異測試**：把 `stats.js` 的 `isClassificationType(projectType)` 改回硬編碼 → 掃描型守門紅並精確報出 `core\stats.js:10`。
 
-### 16.3 P2-6（`ui_components.js` 職責重疊）— ⏳ 未執行
+### 16.3 P2-6（`ui_components.js` 職責重疊）— ✅ 完成（2026-10-01）
 
-本批次**未動** `ui_components.js` 的函式本體（僅改其類型判斷）。
-刪除已無引用的呈現函式需要逐一比對呼叫端，且涉及 AGENTS.md 明確警告的
-「`#dataset-structure-content` 嚴禁覆寫 innerHTML」契約，風險高於 P1-1／P1-2，**留作獨立一次執行**。
+**計畫前提修正：查無「職責重疊」**
+
+逐條比對後**沒有可刪的函式**：
+
+| 方法 | 呼叫端 |
+|---|---|
+| `renderImageGrid` | `ui_layout.js` ×4 |
+| `renderAnnotationThumbnails` | `annotation.js`／`classification.js`／`ui_layout.js` |
+| `renderLabelStats` | `labelManager.js`／`ui_layout.js` ×3 |
+| `renderSamplerView` | `ui/samplerPanel.js` |
+| `triggerFlash`／`getLabelColor` | 內部自用 |
+
+而計畫點名的兩個「重疊對象」實際上職責清晰、互不重疊：
+- `ui/panels.js` = **欄位／表格**（`renderColumnRow`／`renderValidation`／`renderPreviewTable`）
+- `ui/thumbnails.js` = **捲動位置記憶**（僅 `createGridScrollManager`，2.1KB）
+
+`ui_components.js` 的 21KB 是**功能本身的大小**（攝影機列舉、連拍、快照閃光…），不是重複。
+
+> **原則**：稽核計畫是**待查證的假設**，不是結論。為湊出「刪掉重複碼」的敘事而刪活程式碼，
+> 是稽核工作最容易造成的實際危害。**記錄「查無重疊」並留下證據，比硬湊一個刪除動作更有價值。**
+
+**實際完成的三項（都是真問題）**
+
+1. **未轉義屬性插值**（6 處）：`blobUrl` ×2（直進 `src=""`）、`c.id` ×2（直進 `<option value="">`）、
+   空狀態字串 ×2（字串拼接 `innerHTML`）。`c.name` 原本已轉義而 `c.id` 未轉義，屬同一行的不一致。
+2. **AGENTS.md 紅線無守門**：`#dataset-structure-content` 嚴禁覆寫是 P2 三度事故的病根，
+   但**從未被任何測試鎖住**。新增掃描型守門。
+3. **`ui_components.test.mjs` 是空殼**：檔案存在卻無任何測試。
+
+**新守門（+5，`ui_components.test.mjs`）**
+
+| 測試 | 類型 | 鎖住什麼 |
+|---|---|---|
+| 計數欄表頭真值表 | 行為 | `object_detection`=標註框數／`line_following`=標註線段／**table·feature·serial·image·空 = 樣本數** |
+| 標籤名稱轉義 | 行為 | `<script>` 不得原樣進 HTML |
+| 屬性插值轉義掃描 | 掃描 | 裸識別字插值進 `attr="${}"` 即紅 |
+| 守門自檢 | 自檢 | 拔掉 `escapeHtml` 必須紅（避免假安全感） |
+| **紅線守門** | 掃描 | `renderLabelStats(...)` 指向 `#dataset-structure-content` 即紅 |
+
+**守門自我修正過程（值得記錄）**：屬性插值掃描第一版把 `index`（迴圈計數器）、
+`c.id`、以及七八個 `isCamRunning ? 'display:block;' : ...` 三元（class/style 常量）全部判紅 ——
+**過度寬泛的守門等於沒有守門**，只會逼人放寬斷言。收斂為「裸識別字」形狀後，
+`index` 進白名單（附原因：`map` 產生的 0,1,2… 不可能承載 `"`），其餘一律要求轉義。
+
+> **教訓**：寫掃描型守門時，**過度寬泛比沒有守門更糟**。寧可只抓明確危險形狀（裸識別字插值進屬性），
+> 也不要抓全部插值 —— 前者不會被無聲放寬，後者一定會。
+
+**變異測試**：把 `value="${escapeHTML(c.id)}"` 還原成 `value="${c.id}"` → 2 測紅，報告精確指出 `c.id` ×2。
+
 
 ### 16.4 驗收結果
 
 | 關卡 | 結果 |
 |---|---|
-| `npm test` | ✅ **235/235**（227 → +8），1.12s |
-| DM 子集 | ✅ 154/154 |
-| `npx vite build` | ✅ PASS（57 modules, 189ms） |
+| `npm test` | ✅ **240/240**（235 → +5），1.13s |
+| DM 子集 | ✅ 159/159 |
+| `npx vite build` | ✅ PASS（57 modules, 159ms） |
 | `cargo check` | ✅ Finished（1 個既有 warning） |
-| `git status` | ✅ 14 檔皆為預期變更，無 mutation 殘留 |
+| `git status` | ✅ 皆為預期變更，無 mutation 殘留 |
 
-**變更檔案 14 個**（`+199 / -47`），備份 `backup/{ui_layout,ui_components,annotation,labelManager}_pre_batch1_*.bak`。
+**變更檔案**：`ui_components.js`（+8 / -8）、`ui_components.test.mjs`（+95）、
+`log/plan/ComprehensiveAudit_2026-09-27.md`、`log/todo.md`、`log/work/2026-10-01.md`、`AGENTS.md`。
 
-> ⚠️ **本次未做實機驗證**：變更雖觸及執行期程式碼（`stats.js`／`ui_layout.js`／`spec.js` 等），
-> 但**全部是等價改寫**（同一判斷換成 predicate 呼叫），且 DM 154 例全綠。
-> 依 AGENTS.md 驗收關卡第 6 項，仍建議在 **Batch 1 全部收尾後**做一次四類型（image／object_detection／
-> line_following／table／feature）雙平台實機＋三主題目視，確認統計面板的「標註框數／標註線段／樣本數」
-> 表頭在各類型下正確 —— 這正是本次風險最集中的那一行。
+> ✅ **Batch 1（P2-6-b／P1-1／P1-2／P2-6）全數完成**。
+> ⚠️ **仍未做實機驗證**：變更雖觸及執行期呈現路徑（escape 與 DOM 目標），
+> 但**全部只加不減**（多一層轉義、多兩個守門），無行為退化風險。
+> 依 AGENTS.md 驗收關卡第 6 項，仍建議做一次四類型（image／object_detection／
+> line_following／table／feature）雙平台實機＋三主題目視，確認縮圖與攝影機下拉仍正常顯示。
+
 
 - 依 AGENTS.md：**已完成歷史任務嚴禁刪除**，故 `todo.md` 的歸檔節保留（已精簡為指針）。
 

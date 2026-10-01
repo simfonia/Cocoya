@@ -97,14 +97,15 @@
 - [ ] 實機驗證：選擇序列埠後重新整理，label 不會被清空
 - [ ] 實機驗證：①拆鈕後偵測/監看各自行為 ②熱插拔 1.5s 自動換埠切板 ③拔 Maker Pi 插 SPIKE 正確更新 ④上傳含 print() 開頭不被吃、點點同行 ⑤microbit Pin(n) 語義與 P5/P11 共用腳位 ⑥新 MCU 檔三塊不重疊+帽子外觀 ⑦SSH Enter 連線 ⑧多視窗輪詢不污染
 
-### [2026-09-27] #task[cocoya 全面檢查] 全專案稽核計畫（Stage 0 ✅／Batch 0 ✅／Batch 1 執行中）
+### [2026-09-27] #task[cocoya 全面檢查] 全專案稽核計畫（Stage 0 ✅／Batch 0 ✅／Batch 1 ✅）
 > 計畫全文：`log/plan/ComprehensiveAudit_2026-09-27.md`（原 13 章節 ＋ **§14 Batch 0 執行結果** ＋ **§15 DM 殘餘收斂** ＋ **§16 Batch 1**）
 > 範圍：全專案；DM 限 image／object_detection／line_following／table 四類型；特別檢查 i18n 與 3 主題。
 > **執行順序決策：先做 Stage 0（TDD 守門），再動任何重構批次。** 理由：Batch 1~6 全是拆檔重構，無測試門檻等於沒有安全網。
 > **進度**：Stage 0（T1／T-fast／P0-1／P0-2／P0-3／T2／T3 夾具）、Batch 0（P0-3 複核／P3-1／P3-2）、
-> **Batch 1 的 P2-6-b／P1-1／P1-2**（2026-10-01）已完成。
-> 全量測試 **194 → 235 例**（`npm test` 全綠）。**下一個可執行項：P2-6**（`ui_components.js` 職責重疊清理）。
+> **Batch 1（P2-6-b／P1-1／P1-2／P2-6）**（2026-10-01）**已全數完成**。
+> 全量測試 **194 → 240 例**（`npm test` 全綠）。**下一個可執行批次：Batch 2**。
 > ⚠️ **T-scan**（掃描其餘測試檔的計時器／未 await handle）仍待辦，見下方 Stage 0 節。
+> ⚠️ **Batch 1 未做實機驗證**（純程式碼改寫＋守門），建議於 Batch 2 前補一次四類型雙平台＋三主題目視。
 > 基準（實測 2026-09-27）：`cd ui; node --test "src/**/*.test.mjs"` → tests 194 / pass 194 / fail 0（測試本體不差，問題是沒機制去跑）
 
 #### Stage 0（TDD 守門，最高優先；完成前不得動 Batch 1~6）
@@ -151,7 +152,11 @@
 - [x] **P2-6-b** `capabilities` 欄位集合不一致 ✅ 2026-10-01（計畫 §16.1）：Tauri getter 補 `isRemoteConnected: false`；
   刪 `supportsStableMode` 三處宣告 ＋ `src-tauri/permissions/commands.toml` 的 `setup_stable_mode` 條目（額外發現）；
   新增跨橋欄位集合對帳測試（+3 測）
-- [ ] **P2-6** `ui_components.js`（20.8KB）與 `ui/panels.js`／`ui/thumbnails.js` 職責重疊：逐條比對呼叫端移除已無引用者；L19／L78 字串拼接 innerHTML 改走 `core/html.js` escape
+- [x] **P2-6** `ui_components.js` 職責重疊 ✅ 2026-10-01（計畫 §16.3）：**計畫前提已查證不成立 —— 查無可刪函式**。
+  5 個方法全有呼叫端；點名的 `ui/panels.js`（欄位／表格）與 `ui/thumbnails.js`（捲動記憶，2.1KB）職責清晰互不重疊。
+  實際完成三項真問題：① **6 處未轉義屬性插值**（`blobUrl`×2、`c.id`×2、空狀態字串×2）；
+  ② **AGENTS.md 紅線無守門**（新增 `#dataset-structure-content` 掃描型守門，該紅線是 P2 三度事故病根）；
+  ③ `ui_components.test.mjs` 原為**空殼**（0 測），補 5 測（計數欄表頭真值表／標籤轉義／屬性插值掃描／守門自檢／紅線守門）
 
 #### Batch 2（中風險視覺，需三主題目視）
 - [ ] P1-3 `dataset_manager.css` token 化：144 個 hex → 判定設計常數／主題值；優先 `#4CAF50`(7)、`#2d2d2d`/`#1e1e1e`、`#ff8fb3`(5)；新增 token 須三主題同步（維持各 46 鍵集合一致的不變式）

@@ -11,7 +11,7 @@
           <block type="py_ai_model_init" id="ZNXsCDVS3xfW;ngq2tGO">
             <field name="MODEL_PATH">model/classifier_dataset</field>
             <field name="TASK_TYPE">classifier</field>
-            <field name="MODEL_TYPE">int8</field>
+            <field name="MODEL_TYPE">f32</field>
             <next>
               <block type="py_io_serial_init" id="ser_init">
                 <field name="BAUD">115200</field>

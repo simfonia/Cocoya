@@ -254,14 +254,14 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
 - 主題切換採「存偏好 + reloadWebview」：VSIX 由 host 重建 HTML（cocoyaManager.ts reloadWebview case）、Tauri 為 location.reload()；新模組無需處理此機制
 
 ### 測試執行分層守門 (Test Gating, 2026-09-30／2026-10-01 更新)
-本專案 Node 測試共 **37 檔 235 例**（Batch 0 +30；Batch 1 P1-1/P1-2 新增 typePolicy 單一來源守門 5＋P2-6-b 跨橋 capabilities 對帳 3），全量約 **1.1 秒**。**不同階段只跑該跑的層級**，避免浪費時間與 AI 對話 token。
+本專案 Node 測試共 **37 檔 240 例**（Batch 0 +30；Batch 1 P1-1/P1-2 新增 typePolicy 單一來源守門 5＋P2-6-b 跨橋 capabilities 對帳 3＋P2-6 ui_components 呈現路徑守門 5），全量約 **1.1 秒**。**不同階段只跑該跑的層級**，避免浪費時間與 AI 對話 token。
 
 | 層級 | 指令 | 適用時機 | 內容 |
 |---|---|---|---|
 | **L0** | `npm run test:fast` | 每次改完碼 | 依 `git diff` 自動挑必要測試（同名 → 同目錄 → 模組 glob），只輸出摘要 |
 | **L0 指定** | `npm run test:fast -- <檔案…>` | 明確知道改到哪 | 手動指定變更檔 |
 | **L1** | `npm run test:dm` / `test:core` / `test:theme` | 一個功能切片完成 | 單一模組 |
-| **L2** | `npm run test:ui` | 階段／Batch 收尾、提交前 | 全量 235 例 |
+| **L2** | `npm run test:ui` | 階段／Batch 收尾、提交前 | 全量 240 例 |
 | **L1.5** | `npm run lint:ui` | 改了 `ui/src/**` 的 JS | ESLint（`ui/.eslintrc.json`） |
 | **L2 全閘** | `npm test` | 發布前 | compile + lint(ts) + lint:ui + 全量 |
 | **其他** | `npm run test:rust` / `cargo check` | Rust 異動 | 不併入 `npm test` |
@@ -288,6 +288,9 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
 - **清單式守門 vs 掃描型守門（2026-10-01 確立）**：清單式（列幾個檔案、檢查幾個字串）永遠只等於「當初想到的範圍」；掃描型（遍歷目錄、對整條不變式斷言）才會持續生效。P1-1 依計畫原文改了 4 個檔案，實際有 7 個檔案 16 處 —— 漏掉的 `core/stats.js` 是被新增的掃描型守門抓出來的。
 - **跨端檢索鐵則（2026-10-01）**：判定「某符號無使用點」必須同時檢索**前端 `ui/src` ＋ VSIX Host `src` ＋ Rust `src-tauri`**。混合架構中同一份邏輯分散三處，只掃一端會得出假陰性（`isRemoteConnected` 的誤判即為此例）。
 - **等價改寫必須逐一列舉真值表（2026-10-01）**：把 `A === 'x' ? P1 : (B === 'y' ? P2 : P3)` 改寫為 predicate 時，先列出原表每一列再比對。三段式的**預設分支**最易改錯，且新 predicate 通常仍能通過大部分測試（多數測試只覆蓋兩三種類型）。
+- **掃描型守門不可過度寬泛（2026-10-01）**：**過寬比沒有守門更糟** —— 只會逼人無聲放寬斷言。`ui_components` 的屬性插值掃描第一版把 `index`（計數器）、`c.id`、七八個 class/style 三元全判紅，收斂為只抓「裸識別字插值進 `attr="${}"`」才可用。白名單項**必須附原因**（如 `index` 是 `map` 產生的 0,1,2…，不可能承載 `"`）。
+- **稽核計畫是待查證的假設，不是結論（2026-10-01）**：P2-6 寫「`ui_components.js` 與 `panels.js`／`thumbnails.js` 職責重疊」，逐一比對後**查無可刪函式**（5 方法全有呼叫端，兩個對象職責清晰互不重疊）。**記錄「查無重疊」並留下證據，比硬湊一個刪除動作更有價值** —— 為湊敘事而刪活程式碼，是稽核最容易造成的實際危害。
+- **既有檔案可能是空殼（2026-10-01）**：`ui_components.test.mjs` 檔案存在卻**無任何測試**，先前因「檔案存在」而誤以為已有覆蓋。新增守門前先確認測試檔真的非空。
 
 ### i18n 契約守門 (2026-09-30 T2)
 `ui/src/modules/core/core_contract.test.mjs` 已涵蓋 `core_manifest.json` **全部 22 模組**，並含 3 項 i18n 守門：
