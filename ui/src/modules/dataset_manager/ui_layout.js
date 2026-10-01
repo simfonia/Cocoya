@@ -185,10 +185,16 @@ function optionList(values, selected) {
 /**
  * 同步 state.spec 的 label_map 到 UICanvas.state.labelMap
  * 確保畫布能即時顯示最新的類別名稱
+ *
+ * 2026-10-01：舊實作只更新 state.labelMap 卻不重繪，導致標籤管理器改名後
+ * 畫布上的標註文字要切換影像（UICanvas.init → render）才更新。
+ * 這裡補上 render()：label_map 變動屬於純顯示變更，立即重繪即可。
  */
 function syncLabelMap() {
     const labelMap = state.spec.toJSON().schema.label_map || {};
     UICanvas.state.labelMap = labelMap;
+    // 畫布尚未初始化時（沒有 ctx）render 會自行 no-op，不需額外防護
+    UICanvas.render();
 }
 
 function getModal() {

@@ -19,9 +19,19 @@ export const UICanvas = {
         currentClassId: 0, // 目前選擇的類別 ID（由外部 UI 設定）
         selectedAnnotationIndex: -1, // -1 = 無選中
         labelMap: {}, // class_id → 類別名稱對照表
+        // 2026-10-01：跨畫面十字尺規。pointer 為滑鼠在畫布內的像素座標；
+        // null = 游標不在畫布上（不繪製）。bbox 模式專用，方便對齊物件範圍。
+        pointerX: null,
+        pointerY: null,
         onUpdate: null,
         handlers: {} // 存放事件處理器以便清理
     },
+
+    // 標註文字樣式（畫布像素單位，非 CSS px）
+    // 2026-10-01：原為 10px/11px，在高解析截圖上過小幾乎不可讀，放大為 15px/17px。
+    LABEL_FONT_SIZE: 15,
+    LABEL_FONT_SIZE_SELECTED: 17,
+    CROSSHAIR_COLOR: 'rgba(255, 255, 255, 0.75)',
 
     init(parentContainer, imgElement, annotations = [], options = {}) {
         this.state.img = imgElement;
@@ -32,6 +42,8 @@ export const UICanvas = {
         this.state.drawingState = 0; // 重置點擊兩點狀態機
         this.state.isDrawing = false;
         this.state.selectedAnnotationIndex = -1; // 重置選中狀態
+        this.state.pointerX = null; // 重置十字尺規
+        this.state.pointerY = null;
 
         const oldCanvas = parentContainer.querySelector('canvas.dataset-annotation-canvas');
         if (oldCanvas) {
@@ -125,7 +137,6 @@ export const UICanvas = {
                 }
             } else {
                 // 畫矩形框 bbox 中
-                if (!this.state.isDrawing) return;
                 const x = Math.min(this.state.startX, currX);
                 const y = Math.min(this.state.startY, currY);
                 const w = Math.abs(currX - this.state.startX);
@@ -137,8 +148,19 @@ export const UICanvas = {
                     w / canvas.width,
                     h / canvas.height
                 ];
+                // 2026-10-01：更新十字尺規位置（非拉框時也要重繪，讓尺規跟隨游標）
+                this.state.pointerX = currX;
+                this.state.pointerY = currY;
                 this.render();
             }
+        };
+
+        // 2026-10-01：游標離開畫布 → 收起十字尺規，避免留下過期的線
+        this.state.handlers.mouseleave = () => {
+            this.state.pointerX = null;
+            this.state.pointerY = null;
+            if (this.state.isDrawing) return; // 拉框中不重繪，避免中斷預覽
+            this.render();
         };
 
         this.state.handlers.mouseup = (e) => {
@@ -192,6 +214,7 @@ export const UICanvas = {
         };
 
         canvas.addEventListener('mousedown', this.state.handlers.mousedown);
+        canvas.addEventListener('mouseleave', this.state.handlers.mouseleave);
         window.addEventListener('mousemove', this.state.handlers.mousemove);
         window.addEventListener('mouseup', this.state.handlers.mouseup);
     },
@@ -200,6 +223,7 @@ export const UICanvas = {
         const canvas = this.state.canvas;
         const h = this.state.handlers;
         if (h.mousedown && canvas) canvas.removeEventListener('mousedown', h.mousedown);
+        if (h.mouseleave && canvas) canvas.removeEventListener('mouseleave', h.mouseleave);
         if (h.mousemove) window.removeEventListener('mousemove', h.mousemove);
         if (h.mouseup) window.removeEventListener('mouseup', h.mouseup);
         if (h.keydown && canvas) canvas.removeEventListener('keydown', h.keydown);
@@ -239,7 +263,35 @@ export const UICanvas = {
             if (currentBbox) {
                 this.drawBox(currentBbox, '#00CCFF', 'New');
             }
+
+            // 2026-10-01：跨畫面十字尺規（最後繪製 → 疊在框之上，便於對齊邊界）
+            this.drawCrosshair();
         }
+    },
+
+    /**
+     * 繪製跨整個畫面的十字尺規（水平 + 垂直虛線）。
+     * 游標不在畫布上時不繪製；線模式不繪製（線段模式原本就有橡皮筋預覽）。
+     */
+    drawCrosshair() {
+        const { ctx, canvas, mode, pointerX, pointerY } = this.state;
+        if (mode !== 'bbox') return;
+        if (pointerX === null || pointerY === null) return;
+        if (!ctx || !canvas || !canvas.width || !canvas.height) return;
+
+        ctx.save();
+        ctx.strokeStyle = this.CROSSHAIR_COLOR;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        // 水平線：貫穿整個寬度，位於游標列
+        ctx.moveTo(0, Math.round(pointerY) + 0.5);
+        ctx.lineTo(canvas.width, Math.round(pointerY) + 0.5);
+        // 垂直線：貫穿整個高度，位於游標欄
+        ctx.moveTo(Math.round(pointerX) + 0.5, 0);
+        ctx.lineTo(Math.round(pointerX) + 0.5, canvas.height);
+        ctx.stroke();
+        ctx.restore();
     },
 
     drawBox(bbox, color, label, isSelected = false) {
@@ -255,9 +307,42 @@ export const UICanvas = {
         ctx.lineWidth = isSelected ? 4 : 2;
         ctx.strokeRect(px, py, pw, ph);
 
+        this.drawLabelChip(label, px, py > 22 ? py - 6 : py + 18, color, isSelected);
+    },
+
+    /**
+     * 繪製標註文字：深色底板 + 白字，確保在任何影像背景上都清晰可讀。
+     * 2026-10-01：原為無底板的 10px 純色文字，於高解析截圖上幾乎不可讀。
+     * @param {string} text 文字內容
+     * @param {number} x 文字基準 x
+     * @param {number} y 文字基準 y
+     * @param {string} color 原標註色（用於底板左側色條）
+     * @param {boolean} isSelected 是否為選中狀態（字體略大）
+     */
+    drawLabelChip(text, x, y, color, isSelected = false) {
+        const { ctx } = this.state;
+        const fontSize = isSelected ? this.LABEL_FONT_SIZE_SELECTED : this.LABEL_FONT_SIZE;
+        ctx.save();
+        ctx.font = `${isSelected ? 'bold ' : ''}${fontSize}px sans-serif`;
+        ctx.textBaseline = 'alphabetic';
+
+        const metrics = ctx.measureText(text);
+        const padX = 4;
+        const padY = 3;
+        const w = metrics.width + padX * 2;
+        const h = fontSize + padY * 2;
+
+        // 深色底板（半透明黑），疊在任何背景上都可讀
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
+        ctx.fillRect(x - padX, y - fontSize - padY, w, h);
+
+        // 左側色條標示類別色
         ctx.fillStyle = color;
-        ctx.font = isSelected ? 'bold 11px sans-serif' : '10px sans-serif';
-        ctx.fillText(label, px, py > 15 ? py - 5 : py + 15);
+        ctx.fillRect(x - padX, y - fontSize - padY, 3, h);
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillText(text, x, y);
+        ctx.restore();
     },
 
     /**
@@ -333,8 +418,6 @@ export const UICanvas = {
         }
 
         // 5. 標註文字
-        ctx.fillStyle = color;
-        ctx.font = 'bold 11px sans-serif';
-        ctx.fillText(label, px1 + 10, py1 - 5);
+        this.drawLabelChip(label, px1 + 10, py1 - 5, color, false);
     }
 };
