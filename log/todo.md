@@ -9,45 +9,19 @@
 
 ---
 ## [進行中 / 待辦]
-### [2026-09-10] Dataset Manager 類型鎖定改造（M1 完成，M2 待辦）
-- [x] M1：卡片入口＋類型鎖定＋dev 徽章/banner（typePolicy／entryCards／sessionManager＋9 新測試；layout/modal/i18n/CSS/三主題；45/45＋tsc＋cargo check＋vite＋parity 142/142）——計畫 `log/plan/DatasetManagerTypeLockedWorkflow.md`，日誌 `log/work/2026-09-10.md`
-- [ ] M2：重構收斂（R4 去重＋html.js／R5 labelManager／R6 samplerPanel／R7 表格落盤／R8 匯出分流／R9 後端實機）＋雙平台實機＋三主題目視
-  - [x] R4：`core/html.js`＋5 測試；三處去重＋修損壞轉義（86/86＋check×4＋vite PASS；備份 `backup/*pre_R4*`＋`*20260911_120000.bak`）
-  - [x] R5：`ui/labelManager.js`＋2 測試；上帝函式抽出＋委派（88/88＋check×4＋vite PASS；備份 `backup/*pre_R5*`）
-  - [x] R6：`ui/samplerPanel.js`＋3 測試；live 段抽出＋委派（91/91＋check×2＋vite PASS；備份 `backup/*pre_R6*`）
-  - [x] R7：表格 samples 落盤——spec.js `buildTableSamples(rows,limit)`＋`stats.samples_truncated` 契約＋`TABLE_SAMPLES_PERSIST_LIMIT=2000`；syncSpecFromUI 非影像系落盤 samples（舊一律 [] 修正）；spec.test 6 測（97/97＋check×3＋vite PASS；備份 `backup/*pre_R7*`）
-  - [x] R8：匯出按類型分流——typePolicy `isDevType/needsAnnotationCheck/needsUnclassifiedCheck`；feature/serial 擋下＋`ERROR_EXPORT_DEV_UNAVAILABLE`；exportUseCases.test 2 測；i18n parity 147/147（99/99＋check×4＋vite PASS；備份 `backup/*pre_R8*`）
-  - [x] R9 後端對齊：後端零 command 改動（spec.type/stats.samples_truncated 透傳不解讀）；cargo check（3 既有 warning）＋cargo test 1/0＋tsc＋npm run compile＋vite 全綠
-  - [ ] R9 雙平台實機（VSIX+Tauri 每類卡→徽章→匯出/存讀各一次）＋三主題目視（entry 卡片＋banner＋徽章＋dev 擋下訊息）——使用者 backlog
-- [ ] M3：表格＋循線模板跑通（M-T1 table / M-L1 line_following）——計畫 `log/plan/DatasetManagerTypeLockedWorkflow.md` §10，日誌 `log/work/2026-09-12.md`
-  - [x] T-1：`common/table_dataset.py`（label 欄 type 判定分類/回歸；分類依 label 值分層＋教學保護；回歸隨機切＋報告註明）
-  - [x] T-2：`table/table_train.py`（MLP 頭依任務：Dense(n,softmax)／Dense(1,linear)；TFLite＋labels.txt＋報告；RESULT 契約相容）
-  - [x] T-3：sidecar 匯出 table 分流（spec.samples＋schema.columns→`data.csv`，UTF-8；truncated 警告）
-  - [x] T-4：訓練映射——sidecar `trainLocal` 依 task_type 映射檔名（修硬編碼 classifier＋誤傳 `--model_type`）；遠端 script_rel 對齊實檔（`detector/detector_train.py`、`line_follower/line_follower_train.py`，修幽靈 `object_detection/`）
-  - [x] L-1：sidecar 匯出 line 分流（annotations→`lines/` 同名 .txt，`x1 y1 x2 y2`；未標註跳過＋>50% 警告）
-  - [x] L-2：`common/line_dataset.py`（images/＋lines/；隨機切＋報告註明；<2 樣本報錯）
-  - [x] L-3：`line_follower/line_follower_train.py`（重用 detector Dense(4,sigmoid) 回歸頭，語意為端點；MSE＋報告）
-  - [x] 實機：table 分類/回歸訓練跑通＋f32 TFLite＋labels.txt；line 訓練跑通＋f32 TFLite；sidecar exportDataset e2e（`temp_scripts/m3_export_e2e.py`，含逗號 CSV 引號＋未標註跳過）全 PASS
-  - [ ] T-5/L-5 殘：table int8 量化本機驗證（命令逾時，背景 job 執行中）；VSIX+Tauri 雙平台 GUI 實機（UI 匯出→訓練維）——使用者 backlog
-- [ ] M4：特徵最小可用（M-F1）；M5：文件＋清理——計畫 `log/plan/DatasetManagerFeatureMinimalM4.md`（Phase 0~5＋風險評估，2026-09-12 定稿；決策 2026-09-14 拍板）
-  - [x] ✅ 決策拍板：①採集=納入完整 Phase 4 live 採集 panel ②點維度=採集時選含 z 與否（動態 schema）③訓練檔=新建 feature/feature_train.py
-  - [x] Phase 1：sidecar 特徵提取（media_pipe_service.py 重寫 extract_landmarks(frame, use_z)）＋collectFeature＋缺裝降級 FEATURE_MEDIAPIPE_MISSING
-  - [x] Phase 2：匯出分流（feature→data.csv）＋解封 exportUseCases/typePolicy/entryCards（feature 轉 stable，modes live+file）
-  - [x] Phase 3：訓練管線 feature_train.py（動態 num_features）＋trainLocal/trainRemote 幽靈映射收斂
-  - [x] Phase 4：DM 前端 live 採集 panel（ui/featurePanel.js＋相機＋特徵擷取＋含 z 開關＋依標籤累計 row）
-  - [x] Phase 5：i18n（DSM_FEATURE_* zh/en parity）/測試 116/116＋vite build＋cargo check＋py_compile／文件（FILE_STRUCTURE/plan §8）
-  - [x] Phase 5 補修：feature live 警示仍顯示 file 模式訊息——spec.js validate() 新增 isFeatureLive 豁免分支＋DSM_VALIDATE_NO_SAMPLES_FEATURE（119/119 PASS）
-  - [ ] 雙平台 GUI 實機（VSIX+Tauri live 採集→匯出→訓練整鏈）＋三主題目視——使用者 backlog
-  - [x] 徽章復原（2026-09-14）：實測問題多，entryCards feature 標回 dev 徽章（typePolicy 維持 stable，匯出/訓練可繼續除錯）；entryCards.test 同步（119/119 PASS）
-- [ ] M4-FEATURE 除錯任務（使用者實測回報，待逐項處理）
-  - [ ] 實測問題盤點：請使用者提供具體問題清單（操作步驟／預期 vs 實際／截圖），逐項登記為子任務
-  - [ ] 已知線索 ①：live 模式警示訊息（已修 isFeatureLive 豁免，需複驗含 z 開關、採集後欄位/統計同步）
-  - [ ] 已知線索 ②：live 採集整鏈實機驗證——相機預覽→擷取特徵點→依標籤累計 row→表格預覽→存讀進度（dataset.json samples/schema 一致性）
-  - [ ] 已知線索 ③：匯出分流——feature spec（動態 columns 108/162 維）→ sidecar exportDataset→data.csv 欄序/UTF-8/truncated 警告
-  - [ ] 已知線索 ④：訓練整鏈——feature_train.py 動態 num_features、分類/回歸分層切分、TFLite 產出
-  - [ ] 已知線索 ⑤：MediaPipe 缺裝降級路徑（FEATURE_MEDIAPIPE_MISSING 提示＋file 模式回退）與相機燈點狀態
-  - [ ] 已知線索 ⑥：file 模式（CSV/JSON 匯入）與 live 混用情境的欄位衝突防護（spec.js 註記：file 匯入表格樣本不與 live 混用）
 
+### Dataset Manager 重構（主體已完成；殘餘待辦已收斂至稽核計畫）
+> **精簡說明（2026-10-01，#task[cocoya 架構強化]）**：本檔原兩節 DM 內容（類型鎖定改造 M1~M4、三層重構收尾）
+> 與稽核計畫大量重疊，已收斂為下列指針。屬工作記錄的完成條目以 `log/work/2026-09-*.md` 為 SSOT。
+> **未刪除任何已完成歷史任務**（AGENTS.md 鐵律）；完整原版備份 `backup/todo_pre_batch0_20261001_090452.bak`。
+- **計畫 SSOT**：`log/plan/ComprehensiveAudit_2026-09-27.md` §6（四類型專項）／§15.3（實機 backlog）／§15.4（孤立技術債）；
+  另見 `log/plan/DatasetManagerTypeLockedWorkflow.md`、`DatasetManagerFeatureMinimalM4.md`、`DatasetManagerDarkThemeFinish.md`。
+- **已完成**：三層重構 Stage 0~6（core/io/ui/application 四層＋`--dsm-*` token 化＋i18n parity）、
+  M1 類型鎖定、M2 R4~R9、M3 T-1~L-4（table/line 模板與分流）、M4 Phase 1~5（feature 最小可用）。
+- **併入稽核計畫的長遠債**：`--dsm-*` dark/token 收斂 → §2 P1-3；`spec.js` 直用 `t()` → §6 P2-13；
+  `ui_components.js` 職責重疊 → §5 P2-6；M4-FEATURE 除錯線索①~⑥ → §2 P1-1/P1-2 與 §6 P2-10。
+- **仍待使用者實機**（完整表見計畫 §15.3）：R9 雙平台＋三主題目視、table int8 量化本機驗證、
+  line/feature 整鏈 GUI 實機、DM 第二輪 UI、M4b 存讀混合、Stage 6 Gate 簽核、Stage 7 總驗證。
 
 ### tauri-codegen 產生 typed invoke (待辦, 2026-08-19)
 - [ ] 評估 tauri-codegen / @tauri-apps/types：自動從 #[tauri::command] 簽名生成 TS invoke<cmd>(args)
@@ -76,15 +50,12 @@
 - [ ] M4b dataset.json 存讀混合資料（Live+File）套回回驗證（雙平台）
 - [ ] [NEW 2026-09-08] code→積木 反向定位實機驗證（點擊 code 行 → 捲動並選取對應積木；實作於 renderer.js locateBlockByLineIndex，VSIX+Tauri 雙平台）
 
-### Dataset Manager 三層重構 - 收尾（Stage 1-6 已完成；僅剩下項）
+### Dataset Manager 三層重構收尾（殘餘項已併入上方 DM 節）
 - [ ] 手動測試 backlog（log/plan/DatasetManagerManualTestBacklog.md：A2-1~A2-4、C1、U3-*、UI4-*）
 - [ ] Stage 6 Gate 簽核（§9.3 六項）＋ D6-2/B0-1 公開 API 實機對照（console Object.keys(window.CocoyaDataset).sort()）
-- [ ] Stage 7 總驗證（compile/lint/cargo check+test/tauri build + E2E 矩陣 §10）
-- （長遠債）--dsm-* dark/token 收斂（vscode-dark CSS 覆寫與 cocoya_dark 主題 cssVars 各持一份，非 SSOT；見 log/plan/DatasetManagerDarkThemeFinish.md）
-- （長遠債）spec.js 直用 t() transitional boundary（core 層文案耦合 i18n）
-- （長遠債）Tauri dev 模式 sidecar 路徑優先序（get_sidecar_dir Resource 目錄優先於專案根原始檔）
-- （長遠債）Tauri 深色 prompt hover 白底（--dsm-btn-hover-bg 深色值未定義→fallback 白）
-- （低優先）Tauri webview 下 .serial-dropdown-label query 為 null 的環境因素（已被鐵壁版繞過）
+- [ ] Stage 7 總驗證（compile/lint/cargo check+test/tauri build ＋ E2E 矩陣 §10）
+- 剩餘長遠債已併入計畫、不再重複追蹤：`--dsm-*` dark/token → 計畫 §2 P1-3；`spec.js` 直用 `t()` → §6 P2-13；`ui_components.js` 職責重疊 → §5 P2-6
+- 脫離 DM 範圍的孤立技術債（Tauri dev sidecar 路徑優先序、深色 prompt hover 白底、`.serial-dropdown-label` null）已收於計畫 §15.4，於此不重複追蹤。
 
 ### [2026-09-05] Lego SPIKE Prime 多層分類（模組/部署已完成，未完項）
 - [ ] 實機驗證：切換 MicroPython 模式 → toolbox 顯示「Lego SPIKE Prime」外層分類 → 展開 7 子分類 → 子分類可展開顯示積木
@@ -126,11 +97,13 @@
 - [ ] 實機驗證：選擇序列埠後重新整理，label 不會被清空
 - [ ] 實機驗證：①拆鈕後偵測/監看各自行為 ②熱插拔 1.5s 自動換埠切板 ③拔 Maker Pi 插 SPIKE 正確更新 ④上傳含 print() 開頭不被吃、點點同行 ⑤microbit Pin(n) 語義與 P5/P11 共用腳位 ⑥新 MCU 檔三塊不重疊+帽子外觀 ⑦SSH Enter 連線 ⑧多視窗輪詢不污染
 
-### [2026-09-27] #task[cocoya 全面檢查] 全專案稽核計畫（僅計畫，尚未實作）
-> 計畫全文：`log/plan/ComprehensiveAudit_2026-09-27.md`（13 章節；Stage 0 TDD×8／P0×2／P1×6／P2×13／P3×4）
+### [2026-09-27] #task[cocoya 全面檢查] 全專案稽核計畫（Stage 0 ✅／Batch 0 ✅／Batch 1~6 待執行）
+> 計畫全文：`log/plan/ComprehensiveAudit_2026-09-27.md`（原 13 章節 ＋ **§14 Batch 0 執行結果** ＋ **§15 DM 殘餘收斂**）
 > 範圍：全專案；DM 限 image／object_detection／line_following／table 四類型；特別檢查 i18n 與 3 主題。
-> 本次**未修改任何程式碼**，僅產出計畫。
 > **執行順序決策：先做 Stage 0（TDD 守門），再動任何重構批次。** 理由：Batch 1~6 全是拆檔重構，無測試門檻等於沒有安全網。
+> **進度**：Stage 0（T1／T-fast／P0-1／P0-2／P0-3／T2／T3 夾具）與 Batch 0（P0-3 複核／P3-1／P3-2）已完成。
+> 全量測試 **194 → 227 例**（`npm test` 全綠）。**下一個可執行批次為 Batch 1**（P1-1／P1-2 類型判斷收斂、P2-6 移除 `ui_components.js` 冗餘）。
+> ⚠️ **T-scan**（掃描其餘測試檔的計時器／未 await handle）仍待辦，見下方 Stage 0 節。
 > 基準（實測 2026-09-27）：`cd ui; node --test "src/**/*.test.mjs"` → tests 194 / pass 194 / fail 0（測試本體不差，問題是沒機制去跑）
 
 #### Stage 0（TDD 守門，最高優先；完成前不得動 Batch 1~6）
@@ -162,10 +135,10 @@
   - `ui/src/{en,zh-hant}.js` — 移除 `TLB_SETTINGS_SETUP_STABLE`／`TLB_SETTINGS_SERIAL_UPLOAD`／`MSG_SETUP_STABLE_CONFIRM` 三鍵
   - `docs/backend_api_manifest.md`（SSOT）— 移除兩處 command 條目
   - 保留 `serial_upload_only`（deploy_mcu 的參數，Rust 端有真實作用：加 `--no-monitor`）
-- [ ] **待決策（2026-09-30）`ui/` 的 eslint 守門**：根目錄 `.eslintrc.json` 有 `root: true` 但 IDE 未採用（該配置 `no-empty-function: off` 卻仍被報錯），且 `npm run lint` = `eslint src --ext ts` **只掃 VSIX 的 TS，完全不含 `ui/`** → `ui/` 的問題只會在 IDE 被動發現。已實測：全 `ui/src` 以 `no-case-declarations`／`no-empty-function`／`no-dupe-keys`／`no-unused-vars` 掃描，尚餘 **49** 項（`no-unused-vars` 41 集中於 `mcu_huskylens_generators.js` 14 個、`dataset_manager/` 7 個；`no-empty-function` 8）。**未擅自加入 `npm run lint`**（一開就會讓 `npm test` 紅），需先決定規則範圍（Blockly generator 簽名是否整體豁免等）
-- [ ] P0-3 確認 zh-hant 獨有 6 個 `BKY_*_VARIABLE*` 鍵是否真缺（Blockly 內建可能已提供）；若屬內建則列入 parity 白名單
-- [ ] P3-1 自動化守門：新增 `ui/src/i18n_parity.test.mjs`（全語系鍵集合一致＋白名單）、三主題 cssVars 鍵集合一致測試、接入 `temp_scripts/unused_export_scan.cjs`
-- [ ] P3-2／T7 前段 補高風險檔測試：`bridge/tauri.js`（93KB／0 測試）至少覆蓋 `capabilities` getter 與 anchor normalize；`app/persistence.js` 備份／recovering 路徑
+- [x] ~~**待決策（2026-09-30）`ui/` 的 eslint 守門**~~ ✅ 已於 2026-09-30 解決：新建 `ui/.eslintrc.json` ＋ `npm run lint:ui`（掃 191 檔含 34 個 `.mjs`），49 項問題清零並接入 `test:unit`。三條刻意關閉規則（`no-control-regex`／`no-regex-spaces`／`no-empty`）的原因已寫入 AGENTS.md
+- [x] **P0-3** 確認 zh-hant 獨有 6 個 `BKY_*_VARIABLE*` 鍵 ✅ 2026-09-30（Stage 0 T2）：屬 Blockly 內建，以 `BLOCKLY_BUILTIN` 白名單豁免。**2026-10-01 Batch 0 再確認一次**，處理已完整覆蓋，無需變更（計畫 §14.1）
+- [x] **P3-1** 自動化守門 ✅ 2026-10-01（Batch 0，計畫 §14.2）：i18n parity **已被 T2 取代**（原「新增 `i18n_parity.test.mjs`」取消，避免同一規則兩處維護）；`unused_export_scan.cjs` **不存在故取消**（§9.4 更正）；**新增 `ui/src/modules/theme_manager/theme_contract.test.mjs`**（4 測）守住 P2-16「三主題 cssVars 鍵集合一致」，並新增 `test:theme`（根＋`ui/`）與 `test-related.cjs` 的 `THEME_CONTRACT_TEST` 接線
+- [x] **P3-2／T7 前段** 補高風險檔測試 ✅ 2026-10-01（Batch 0，計畫 §14.3，+30 例）：`ui/src/bridge/tauri_anchor.test.mjs`（13 測，`_normalizeAnchor` serde 雙保險／`capabilities` 欄位集合與即時反映／`_refreshAnchor` 三分支）＋`ui/src/app/persistence_snapshot.test.mjs`（13 測，reload 快照一次性語意／debounce 以 `mock.timers` 驗證／`setDirty` 原子化同步）。兩支皆經**變異測試**確認會紅（非假綠）。全量 197 → **227** 例
 
 #### Batch 1（低風險純重構）
 - [ ] P1-1 DM 類型判斷收斂：`ui_layout.js:226/880/956` 與 `ui_components.js:約41` 的 `projectType === 'image' || 'object_detection' || 'line_following'` 全數改 `typePolicy.isImageType()`；`spec.js` 的 `IMAGE_TYPES`/`PROJECT_TYPES` 與 typePolicy 收單一來源
@@ -205,8 +178,14 @@
 - [ ] P3-3 死碼掃描：`index.js` 匯出的 `removeAnnotation`／`refreshDynamicPanels`／`refreshPreview` 等是否仍被 `window.CocoyaDataset` 外部呼叫；`sampler.js`／`ui_canvas.js` 與新 `ui/samplerPanel.js`／`ui/annotation.js` 是否職能重疊
 - [ ] **T5** 覆蓋率基準：加 c8，先只產報告不設門檻 → 連續兩週後依實際值收緊
 - [ ] **T6** CI 與 pre-commit：GitHub Actions workflow（`node --test`／`tsc --noEmit`／`lint`／`cargo check`／`cargo test`／`py_compile`）＋ husky pre-commit 跑快速子集（**待決策**：CI 平台是否採 GitHub Actions）
-- [ ] **T7** 高風險檔補契約測試（拆檔後）：`bridge/tauri.js` 拆檔後各子模組、sidecar 訊息協定（stdout 單一 JSON）
+- [ ] **T7** 高風險檔補契約測試（拆檔後）：`bridge/tauri.js` 拆檔後各子模組、sidecar 訊息協定（stdout 單一 JSON）。**Batch 0 已補前段**（anchor ＋ capabilities ＋ 快照／備份），拆檔後仍需逐子模組補
 - [ ] **T8** 測試分類標註：區分**契約測試**（守設計：manifest／i18n／色碼／主題 token）與**行為測試**（守重構：controller／use-case），禁止只有後者
+
+#### 待決策（2026-10-01 Batch 0 浮現；詳見計畫 §14.5）
+- [ ] **P2-16 `cocoya_dark` 缺 `msgColours` 是刻意或疏漏**：Batch 0 已依 AGENTS.md「新增積木模組檢查清單」第 2/3 點判定為**符合設計**（根 `zh-hant.js`/`en.js` 的 `COLOUR_*` 才是預設色 SSOT，主題 `msgColours` 為選配覆寫），並把此判斷**釘進 `theme_contract.test.mjs` 第 4 測**。⚠️ 若使用者認為應是疏漏，需推翻該測試改為要求 dark 有覆寫
+- [x] **`isRemoteConnected` 在 Tauri `capabilities` 未回傳** ✅ 2026-10-01 使用者決策：**併入 P2-6-b 處理**（Tauri getter 補 `isRemoteConnected: false`）。
+  ⚠️ **Batch 0 原判斷「無讀取點」是錯的** —— `src/cocoyaManager.ts:397` 有生產者（`vscode.env.remoteName !== undefined`），VSIX 路徑是活的。當時只掃 `ui/src` 沒掃 VSIX Host `src`，漏了生產端
+- [x] **`supportsStableMode` 死欄位** ✅ 2026-10-01 使用者決策：**併入 P2-6-b 處理**（刪除 `base.js`／`tauri.js`／`vsix.js` 三處宣告 ＋ 更新欄位集合守門）
 ---
 ## [已完成任務歸檔]（壓縮指針；詳細與每日異動一律見 log/work/ 與計畫文件）
 

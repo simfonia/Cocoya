@@ -62,6 +62,7 @@
         "test:ui": "npm --prefix ui run test:unit",
         "test:dm": "npm --prefix ui run test:dm",
         "test:core": "npm --prefix ui run test:core",
+    "test:theme": "npm --prefix ui run test:theme",
         "test:fast": "node scripts/test-related.cjs",
         "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
         "test:integration": "node scripts/run-integration.cjs"

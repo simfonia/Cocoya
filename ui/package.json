@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test:unit": "node --test \"src/**/*.test.mjs\"",
     "test:dm": "node --test \"src/modules/dataset_manager/**/*.test.mjs\"",
+    "test:theme": "node --test \"src/modules/theme_manager/*.test.mjs\"",
     "test:core": "node --test \"src/modules/core/*.test.mjs\""
   },
   "devDependencies": {

@@ -149,10 +149,35 @@ subprocess.check_call([sys.executable, "-m", "pip", "install", "paramiko"], **_P
 
 ## 5. P2：死碼與冗餘
 
-### P2-6 `ui_components.js` 與 `ui/panels.js` / `ui/thumbnails.js` 職責重疊
+### P2-6 `ui_components.js` 與 `ui/panels.js` / `ui/thumbnails.js` 職責重疊 ＋ capabilities 死欄位
 - `ui_components.js`（20.8KB）仍持有 `renderAnnotationListUI` 類的空狀態與縮圖相關實作（L19、L78 的 `dataset-empty-state` innerHTML 拼字串），而新架構已由 `ui/panels.js`（Presenter）與 `ui/thumbnails.js`（grid scroll）承接。
 - 計畫：逐條比對呼叫端，移除 `ui_components.js` 中已無引用的呈現函式；保留純樣式/工具類（`getLabelColor` 等）。
 - **注意**：L19/L78 為字串拼接 innerHTML（非樣板化），需一併改走 `core/html.js` 的 escape 慣例（與 R4 成果一致）。
+
+#### P2-6-b `capabilities` 死欄位／缺漏欄位（2026-10-01 併入，Batch 0 浮現）
+> 兩者都是 `bridge.capabilities` 的**欄位集合不一致**問題，同屬 SSOT 違反，一併清理。
+
+**(1) `supportsStableMode` — 死欄位，應刪**
+- 背景：Stable Mode 死鏈已於 2026-09-30 **整條移除**（8 檔／9 處，見 `todo.md` Batch 0 記錄），但三處仍宣告此欄位：`base.js:21`（`false`）、`tauri.js:29`（`false`）、`vsix.js:19`（`true`）。
+- 實測：**全專案無任何讀取點**（僅 `ui/src/bridge/tauri_anchor.test.mjs` 的欄位集合守門列出）。
+- 處置：刪除三處宣告 ＋ 從 `tauri_anchor.test.mjs` 的欄位集合清單移除。
+- ⚠️ 注意 `vsix.js` 目前是 `true`：這是 Stable Mode 移除前的殘值，**若誤以為 VSIX 還有 Stable Mode 功能，會誤刪仍有用途的程式碼** —— 實作前須再確認一次全專案無讀取點。
+
+**(2) `isRemoteConnected` — 缺漏欄位，應補 Tauri getter**
+- 背景：`base.js:25` 有宣告，但 `tauri.js` 的 `capabilities` getter **未回傳** → Tauri 環境下該欄位恆為 `undefined`。
+- **修正先前判斷（2026-10-01 Batch 0 的錯誤）**：Batch 0 §14.5 曾記「全專案無讀取點、現況無影響」。重新檢索後確認**這是錯的** —— `src/cocoyaManager.ts:397` **有實際生產者**：
+  ```typescript
+  const capabilities = {
+      isRemoteAware: true,
+      isRemoteConnected: vscode.env.remoteName !== undefined,   // ← VSIX 遠端偵測的真實來源
+      remoteName: vscode.env.remoteName,
+      ...
+  };
+  ```
+  該物件經 `manifestData` 訊息 → `controller.js:29` 的 `bridge.updateCapabilities(m.capabilities)` 合併進 `_caps`，故 **VSIX 路徑是活的**（遠端 SSH/WSL 開發時 `isRemoteConnected` 為 `true`）。
+- 處置：在 `tauri.js` 的 getter 補 `isRemoteConnected: false`（Tauri 目前沒有 VS Code remote 概念，故固定 `false` 而非省略），並補進 `tauri_anchor.test.mjs` 的欄位集合清單。
+- **為何不在 getter 中乾脆不列**：兩橋的 `capabilities` 契約應有**同一組鍵**，否則前端「Tauri vs VSIX 走不同分支」會在欄位缺失時靜默失效。`isRemoteAware` 已是此設計的實例（兩邊都列，值不同）。
+- 附帶：`remoteName` 亦只在 VSIX manifest 出現、Tauri 未回傳；本次**不處理**（前端無讀取點），待有使用需求再說。
 
 ### P2-7 `getLabelColor` 以 HSL 程式生成標籤色（主動硬編碼）
 - `ui_components.js`：`h = (hash*137.508)%360; s=65+(hash%20); l=40+(hash%15)` → 同一標籤在三主題下**永遠同色**，與主題 token 系統脫鉤；且無對比保證。
@@ -400,6 +425,154 @@ subprocess.check_call([sys.executable, "-m", "pip", "install", "paramiko"], **_P
 ---
 
 *本檔為計畫，尚未實作任何變更。實作時請逐批更新本檔狀態欄位並在 `log/work/` 留下執行日誌。*
+
+---
+
+## 14. Batch 0 執行結果（2026-10-01）
+
+> 本節為**追加**記錄，不修改 §1~§13 原文（保留計畫原貌以對照實作偏差）。
+> 執行細節見 `log/work/2026-10-01.md`。
+
+### 14.1 P0-3 Blockly 內建鍵確認 — ✅ 已確認（Stage 0 T2 已落實）
+
+- 結論與 §1 P0-3 的「先確認是否真缺」一致：zh-hant 獨有 6 個 `BKY_*_VARIABLE*` **屬 Blockly 本體提供的內建文案**，不補進 `en.js`。
+- 落地位置：`ui/src/modules/core/core_contract.test.mjs` 的 `BLOCKLY_BUILTIN` 白名單（附原因註解）。
+- **本節無新增程式碼**；僅確認 T2 的處理已完整覆蓋 P0-3。
+
+### 14.2 P3-1 自動化守門 — ✅ 部分原已被 T2 涵蓋，補上缺口
+
+| P3-1 條目 | 狀態 | 說明 |
+|---|---|---|
+| 1. i18n parity 測試 | ✅ **已被 T2 取代** | T2 已把「根 parity ＋ 模組 parity ＋ blocks/generators 引用鍵」三項 i18n 守門納入 `core_contract.test.mjs`（全 22 模組）。**§7 P3-1 第 1 點的「新增 `ui/src/i18n_parity.test.mjs`」已無必要**，獨立檔案會造成同一規則兩處维护。 |
+| 2. 未使用 export 掃描 | ❌ **取消（依賴對象不存在）** | §9.4 更正已註明 `temp_scripts/unused_export_scan.cjs` 不存在；實際存在的是 `parity_check.mjs`（只掃 DM i18n，已被 T2 全模組 parity 完整取代）。**不新建此腳本**。 |
+| 3. 主題 token 一致性測試 | ✅ **本次新增** | `ui/src/modules/theme_manager/theme_contract.test.mjs`（4 測），把 P2-16 的「三主題各 46 鍵、集合一致」從一次性量測升級為守門。 |
+| 4. package.json scripts 串接 | ✅ **已由 Stage 0 T1／T-fast 完成** | 另本次新增 `test:theme`（根與 `ui/` 兩層）。 |
+
+**新增守門：`theme_contract.test.mjs` 鎖住四條**
+
+1. 三主題 `cssVars` 鍵集合完全相同（缺漏／多餘都紅）。
+2. 鍵無重複（重複宣告會靜默覆寫前者）。
+3. 鍵名格式 `--[A-Za-z0-9_-]+`。
+4. `msgColours` 為**選配**覆寫：light／dark 不宣告時解析器回 `null` 而非報錯（見 §14.5 決策）。
+
+**防假綠驗證**（重要：新守門必須證明會紅）
+- 從 `cocoya_dark.js` 移除 `--dsm-brand` → 測試 1 紅，回報 `missing.cocoya_dark: ['--dsm-brand']`。
+- 兩處 mutation 後皆已 `git checkout` 還原，`git status` 乾淨。
+
+**接線**：`scripts/test-related.cjs` 新增 `THEME_CONTRACT_TEST`，動到任一 `themes/*.js` 時自動納入（實測 `--dry` 正確挑中 2 個契約測試）。
+
+### 14.3 P3-2 高風險檔補測試 — ✅ 本次新增 30 例
+
+#### (a) `bridge/tauri.js`（93KB／原 0 測試）→ `ui/src/bridge/tauri_anchor.test.mjs`（13 測）
+
+審查計畫只要求「至少覆蓋 `capabilities` getter 與 anchor normalize」，實作時把範圍拉到**兩條真實踩坑路徑**：
+
+- **`_normalizeAnchor`（6 測）**：這是 AGENTS.md serde 坑的**前端保險絲**。若後端漏加 `#[serde(rename_all = "camelCase")]`，只靠 camelCase 讀取會得到「物件存在但 `projectRoot` 為 undefined」→ Tauri live 影像 `savePath` 無法生成、拍照不落盤（2026-08-10 實踩）。測試鎖住：camelCase／snake_case 雙讀、**camelCase 優先**（不被後端殘留舊鍵蓋掉）、falsy 收斂、`isAnchored` 一律 boolean、空字串 `projectRoot` 收斂為 `null`。
+- **`capabilities` getter（4 測）**：欄位集合**逐鍵比對**（新增／移除能力欄位會紅，刻意不放寬）、`_anchor` 更新後即時反映（含換專案後舊路徑不殘留）、`isAnchored=true` 但缺 `projectRoot` 時回 `null` 而非洩漏 `undefined`、**每次取值回傳新物件**（呼叫端誤改不污染 bridge 內部）。
+- **`_refreshAnchor`（3 測）**：snake_case 回應也能刷新、後端拋錯時 `_anchor` 設 `null`（**過期快照比未錨定更危險**）、回傳 `null` 亦收斂。
+
+**防假綠驗證**：把 `(a.projectRoot ?? a.project_root)` 改為 `a.projectRoot` → 3 測紅（正是 serde 坑的具體症狀）。已還原。
+
+> **設計決策**：不呼叫 `init()`。`init()` 會 `await import('@tauri-apps/api/*')`，Node 環境無此模組；只驗純邏輯 getter 與 anchor 路徑。`isRemoteConnected` 欄位在 `base.js` 有宣告但 Tauri getter 未回傳（實測確認）——**未擅自補**，列入 §14.5 待決策。
+
+#### (b) `app/persistence.js` → `ui/src/app/persistence_snapshot.test.mjs`（13 測）
+
+審查計畫寫「備份／recovering 路徑」，實作時對應到三條**「資料會不見」**的路徑：
+
+- **reload 快照一次性語意（6 測）**：`snapshotWorkspaceForReload` 忠實記錄 `isDirty`（否則還原後髒狀態錯誤）、`consumeReloadSnapshot` **取出即刪除**（不刪則使用者按「捨棄」後，下次 reload 會被殘留快照復活）、壞 JSON／缺 xml／空白 xml 一律安全回 `null` **且清掉殘留**、序列化拋錯時清殘留、無 workspace 不寫入空快照。
+- **自動備份 debounce（3 測）**：**刻意用 `t.mock.timers` 而非真等 2 秒** —— 真等待會讓本檔耗時被 debounce 測試綁死（實測初版 6.4s，違反 AGENTS.md 計時器洩漏紅線的精神）；mock 化後全檔 **112ms**，且能在同一 tick 內驗「1999ms 不送、2000ms 送一份」這個 debounce 本質。
+- **`setDirty` 原子化同步（4 測）**：必須回傳 **真 Promise**（AGENTS.md 多視窗完整性規範要求 await 完成才 `close_window`，回傳 undefined 會競態）、值未變不重複通知、**轉 false 一律通知**（否則多視窗殘留 stale dirty）、初始化期間不標髒。
+  - 註：測試替身 `CocoyaBridge.send` 必須回傳 Promise，否則這條契約無法成立 —— 這正是「假 deps 抓不到真 bug」的具體例證，與 §9.2 的診斷互相印證。
+
+**互補關係**：與既有 `platform_restore.test.mjs` 不重疊 —— 後者守「切平台先於 `domToWorkspace`」的**順序**，本檔守**狀態與一次性語意**。
+
+### 14.4 驗收結果
+
+| 關卡 | 結果 |
+|---|---|
+| `npm test`（compile + lint + lint:ui + 全量 Node） | ✅ **227/227**（原 197 → **+30**），1.58s |
+| `npx vite build`（ui/） | ✅ PASS（57 modules, 292ms） |
+| `npx tsc --noEmit -p tsconfig.json` | ✅ exit 0 |
+| `node --check`（變更 JS） | ✅ 由 `lint:ui` 覆蓋（0 error） |
+| 變更檔 `git status` | ✅ 僅 3 個新增測試檔 + 3 個設定/文件檔，**無意外殘留** |
+
+新增 npm scripts：`test:theme`（根 + `ui/`）。
+
+### 14.5 本次產生的待決策事項（併入 §12）
+
+1. **P2-16 `cocoya_dark` 缺 `msgColours` 是刻意或疏漏**（§12 第 4 項原已列，現已有守門釘住現狀）。
+   - 本次處理：依 AGENTS.md「新增積木模組檢查清單」第 2/3 點，**根 `zh-hant.js`/`en.js` 的 `COLOUR_*` 是預設色 SSOT、主題 `msgColours` 只是選配覆寫** → 現況（僅 candy 有覆寫）**符合設計**。
+   - `theme_contract.test.mjs` 第 4 測把這點**釘成契約**（不宣告合法，解析器須回 `null`）。若使用者日後拍板「dark 也要有覆寫」，改動是**新增覆寫物件**，不會與守門衝突。
+   - ⚠️ **此舉等於我替 §12 第 4 項做了「刻意」的判斷並寫進守門**。若使用者認為應是疏漏，需明確推翻本條，屆時把該測試改為要求 dark 有 msgColours 即可。
+2. ~~**`isRemoteConnected` 在 Tauri `capabilities` 未回傳**~~ → **已併入 §5 P2-6-b，2026-10-01 使用者決策。**
+   - ⚠️ **本節原文的判斷有誤，已更正**：原記「全專案無讀取點、現況無影響」是錯的。
+     `src/cocoyaManager.ts:397` **有生產者**（`isRemoteConnected: vscode.env.remoteName !== undefined`），
+     經 `manifestData` → `controller.js:29` 的 `updateCapabilities()` 合併進 `_caps`，**VSIX 路徑是活的**。
+   - Batch 0 當時只檢索了 `ui/src/**` 與 Bridge 檔案，未檢索 `src/`（VSIX Host），漏了生產端。
+     **教訓**：判定「某欄位無讀取點」時，必須涵蓋 **前端 `ui/src` ＋ VSIX Host `src` ＋ Rust `src-tauri`** 三端，只掃一端會得出假陰性結論。
+   - 處置（見 §5 P2-6-b）：Tauri getter 補 `isRemoteConnected: false`。
+3. **`supportsStableMode` 已是死欄位**（Stable Mode 死鏈已於 2026-09-30 整條移除，但 `base.js:21` / `tauri.js:29` / `vsix.js:19` 三處仍宣告）。
+   - ✅ **2026-10-01 使用者決策：併入 §5 P2-6-b**（與 `isRemoteConnected` 同屬 capabilities 欄位集合不一致問題）。
+
+---
+
+## 15. DM 重構殘餘待辦收斂（2026-10-01）
+
+> **目的**：`log/todo.md` 的「Dataset Manager 類型鎖定改造」與「Dataset Manager 三層重構 - 收尾」兩節，
+> 與本計畫 §6／§2／§5 的條目**大量重疊**（同一件事寫在兩處，日後必然 drift）。
+> 本節把它們**合併到單一來源**：本計畫為準，`todo.md` 改為指针。
+> **原則：功能未變、決策已定者留本計畫；實機／待決策者列 §15.3 清單。**
+
+### 15.1 已可判定為「完成」或「併入本計畫」的項目
+
+| todo.md 原條目 | 處置 | 理由 |
+|---|---|---|
+| M2 R9 雙平台實機 ＋ 三主題目視 | → **§15.3 使用者 backlog** | 純實機驗證，非本計畫任何條目能涵蓋 |
+| M3 T-5／L-5 殘（table int8 量化本機驗證） | → **§15.3** | 同上 |
+| M4 Phase 1~5（特徵最小可用） | ✅ **已完成**（todo.md 記錄 PASS） | 屬工作記錄，非待辦 |
+| M4-FEATURE 除錯任務 ①~⑥ | → **併入 §2 P1-1／P1-2** | 線索①（live 警示）已於 2026-09-14 修（`isFeatureLive` 豁免）；②③④⑤⑥ 均是 §6 P2-10 的四類型矩陣盤點範圍 |
+| 三層重構 Stage 6 Gate 簽核 ＋ D6-2 公開 API 對照 | → **§15.3** | 需 `window.CocoyaDataset` 實機 console 對照 |
+| Stage 7 總驗證（tauri build ＋ E2E 矩陣） | → **§15.3** | 依賴實機環境 |
+| 長遠債：`--dsm-*` dark/token 收斂 | → **§2 P1-3 ＋ §7 P1-3** | 同一件事，本計畫已有更完整描述（144 hex 量化＋優先序） |
+| 長遠債：`spec.js` 直用 `t()` | → **§6 P2-13** | 已重複記載於 COCOYA_STATE §6，**本計畫為唯一去處** |
+| 長遠債：Tauri dev sidecar 路徑優先序 | → **§14 附錄（下方 15.4）** | 與本計畫其他條目無關，保留在本計畫末尾以免再散落 |
+| 長遠債：Tauri 深色 prompt hover 白底 | → **§15.4** | 同上 |
+| 低優先：Tauri webview `.serial-dropdown-label` null | → **§15.4** | 同上（已被鐵壁版繞過，僅記錄） |
+| P3-3 死碼掃描（`ui_components.js` 重疊） | → **§5 P2-6** | 本計畫已有逐條比對計畫 |
+
+### 15.2 明確標記為「已完成，僅記錄」者（不需再動）
+
+- DM 三層重構 Stage 0~6（2026-08-24 ~ 09-01）、M1（類型鎖定）、M2 R4~R9、M3 T-1~L-4、M4 Phase 1~5 —— 詳細摘要見 `todo.md` Archive A／Archive C 與 `log/work/2026-09-*.md`，**不在本計畫重複列**。
+- 依 AGENTS.md：**已完成歷史任務嚴禁刪除**，故 `todo.md` 的歸檔節保留（已精簡為指針）。
+
+### 15.3 使用者 backlog（需實機／硬體，非本計畫可執行）
+
+| 項目 | 來源 |
+|---|---|
+| R9 雙平台實機：VSIX+Tauri 每類卡→徽章→匯出/存讀 ＋ 三主題目視 | todo M2 |
+| table int8 量化本機驗證（初跑命令逾時，改背景 job） | todo M3 T-5 |
+| line_following 雙平台 GUI 實機（UI 匯出→訓練整鏈） | todo M3 L-5 |
+| feature live 採集整鏈雙平台實機（含 z 開關、欄位/統計同步） | todo M4 |
+| DM 第二輪 UI（統計同步、label id、三處標籤管理器一致性、排序與顏色） | todo 實機彙整 |
+| M4b `dataset.json` 存讀混合資料（Live+File）套回回驗證 | todo 實機彙整 |
+| Startup Home 開新專案流程雙平台（dirty 提示、另存錨定、取消零副作用） | todo 實機彙整 |
+| Tauri 多視窗：雙視窗 run/serial 不污染、失焦釋放/聚焦重取 | todo 實機彙整 |
+| Stage 6 Gate 簽核（§9.3 六項）＋ D6-2 公開 API 實機對照 | todo DM 收尾 |
+| Stage 7 總驗證（compile/lint/cargo check+test/tauri build ＋ E2E 矩陣） | todo DM 收尾 |
+
+### 15.4 與本計畫無關但需保留的孤立技術債（脫離 DM 範圍，暫不併章節）
+
+- **Tauri dev 模式 sidecar 路徑優先序**：`get_sidecar_dir` 在 Resource 目錄優先於專案根原始檔 → 開發時改 `resources/` 未必即時生效。修正應改為 dev 優先專案根（比照 `AGENTS.md` 資源路徑處理規範「開發模式優先使用原始檔」）。
+- **Tauri 深色 prompt hover 白底**：`--dsm-btn-hover-bg` 深色值未定義 → fallback 白。
+- **Tauri webview `.serial-dropdown-label` query 為 null**：環境因素（已由「鐵壁版」繞過，僅記錄）。
+
+### 15.5 todo.md 精簡結果
+
+- DM 兩節（`[2026-09-10] Dataset Manager 類型鎖定改造`、`Dataset Manager 三層重構 - 收尾`）**改為指針**，細節指向本計畫 §6／§15.3 與 `log/plan/DatasetManager*.md`。
+- 屬**工作記錄**的完成條目保留在 `log/work/2026-09-*.md`（SSOT），`todo.md` 只留摘要與指針。
+- **未刪除任何已完成歷史任務**（AGENTS.md 鐵律），僅合併重複敘述。
+- 整檔覆寫前已備份 `backup/todo_pre_batch0_20261001_090452.bak`。
+
 
 
 

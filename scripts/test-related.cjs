@@ -20,6 +20,8 @@
  *   2. 只挑必要的測試檔：同名優先，其次同目錄，最後才用模組 glob。
  *   3. 契约測試（core_contract.test.mjs）守的是「全專案架構不變」，
  *      只要動到任何積木／產生器／i18n／主題檔就必須納入。
+ *      同理，theme_contract.test.mjs 守「三主題 cssVars 鍵集合一致」，
+ *      動到任一 themes/*.js 都必須納入（2026-10-01 Audit P3-1）。
  *   4. 選不到任何測試時，明確提示該跑什麼，不猜測。
  * ---------------------------------------------------------------------------
  */
@@ -30,6 +32,7 @@ const fs = require('fs');
 const ROOT = path.resolve(__dirname, '..');
 const UI = path.join(ROOT, 'ui');
 const CONTRACT_TEST = 'src/modules/core/core_contract.test.mjs';
+const THEME_CONTRACT_TEST = 'src/modules/theme_manager/theme_contract.test.mjs';
 const DM_GLOB = 'src/modules/dataset_manager/**/*.test.mjs';
 
 /** 取得本次需要關注的檔案清單（相對 repo 根、forward slash）。 */
@@ -80,6 +83,9 @@ function selectTests(files) {
             /^src\/modules\/theme_manager\/themes\/.+\.js$/.test(rel);
 
         if (isContractSensitive) add(CONTRACT_TEST, `契約對帳：${file}`);
+        if (/^src\/modules\/theme_manager\/themes\/.+\.js$/.test(rel)) {
+            add(THEME_CONTRACT_TEST, `三主題 token 一致性：${file}`);
+        }
 
         // 測試挑選：同名優先（改 ui/xxx.js → ui/xxx.test.mjs），無同名測試才回退整個資料夾
         const dir = path.posix.dirname(rel);
