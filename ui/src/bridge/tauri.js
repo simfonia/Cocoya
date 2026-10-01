@@ -32,6 +32,8 @@ export class BridgeTauri extends BaseBridge {
             supportsFirmwareReset: true,
             supportsEnvironmentCheck: true,
             supportsEraseFS: false,
+            // 2026-10-01：Tauri 具備 restore_examples command（Resource → AppData 強制覆寫）
+            supportsRestoreExamples: true,
             isTauri: true,
             isRemoteAware: true, // Tauri 亦保留雲端/SSH 擴充可能性
             isRemoteConnected: false,
@@ -1815,6 +1817,22 @@ export class BridgeTauri extends BaseBridge {
         this._listeners.forEach(cb => cb(message));
         // window message event（相容 sampler.js 的 window.addEventListener('message') 監聽）
         window.postMessage(message, '*');
+    }
+
+    /**
+     * 還原內建範例檔（Tauri 專屬，2026-10-01）。
+     *
+     * 走 Tauri command `restore_examples`，強制以 Resource 內的原始 examples
+     * 覆寫 AppData 播種目錄（注意：與啟動時的 ensure_examples_seeded 不同，
+     * 後者只補缺檔、保護使用者自建檔；本指令是使用者主動要求還原，故強制覆寫）。
+     *
+     * 後端 struct 已加 #[serde(rename_all = "camelCase")]，
+     * 故回傳欄位為 restoredCount / examplesPath（不是 snake_case）。
+     *
+     * @returns {Promise<{restoredCount:number, examplesPath:string}>}
+     */
+    async restoreExamples() {
+        return this.tauriInvoke('restore_examples');
     }
 
     // 覆寫父類別方法以使用 Tauri 特有的 UI

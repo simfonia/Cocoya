@@ -2,7 +2,7 @@ use std::fs;
 use tauri::{AppHandle, State, Window, Manager};
 use tauri_plugin_dialog::DialogExt;
 use crate::state::AppState;
-use crate::utils::{get_resource_path, get_examples_path, copy_dir_merge};
+use crate::utils::{get_resource_path, get_examples_path, copy_dir_merge, copy_dir_overwrite, get_examples_seed_dir};
 
 #[derive(serde::Serialize)]
 pub struct OpenFileResult {
@@ -238,6 +238,50 @@ pub async fn open_examples(window: Window, handle: AppHandle, state: State<'_, A
     } else {
         Err("Canceled".into())
     }
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RestoreExamplesResult {
+    /// 實際覆寫/寫回的檔案數
+    pub restored_count: u64,
+    /// 還原後 examples 的實際位置（AppData 播種目錄）
+    pub examples_path: String
+}
+
+/// 還原內建範例：把 Resource 內的原始 examples 強制覆寫回 AppData 播種目錄。
+///
+/// 與 `ensure_examples_seeded` 的差異（不可混用）：
+///   - 啟動播種：**只補缺檔**（copy_dir_merge），保護使用者自行加入的檔案
+///   - 使用者主動還原：**強制覆寫**（copy_dir_overwrite），把被改壞的檔案救回來
+///
+/// Dev 模式（is_dev_examples_dir）直接回 0：此時 examples 就是 repo 原始檔，
+/// 本來就沒有「被搞壞的副本」可還原。
+#[tauri::command]
+pub fn restore_examples(handle: AppHandle) -> Result<RestoreExamplesResult, String> {
+    if crate::utils::is_dev_examples_dir() {
+        return Ok(RestoreExamplesResult {
+            restored_count: 0,
+            examples_path: get_examples_path(&handle).to_string_lossy().to_string(),
+        });
+    }
+
+    let src = handle
+        .path()
+        .resolve("examples", tauri::path::BaseDirectory::Resource)
+        .map_err(|e| format!("無法解析範例資源目錄: {}", e))?;
+    if !src.exists() {
+        return Err(format!("找不到內建範例資源目錄: {}", src.display()));
+    }
+    let src = crate::utils::strip_extended_prefix_public(src);
+
+    let dst = get_examples_seed_dir(&handle);
+    let count = copy_dir_overwrite(&src, &dst)?;
+
+    Ok(RestoreExamplesResult {
+        restored_count: count,
+        examples_path: dst.to_string_lossy().to_string(),
+    })
 }
 
 #[tauri::command]

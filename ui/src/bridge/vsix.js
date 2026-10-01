@@ -19,6 +19,9 @@ export class BridgeVSIX extends BaseBridge {
             // 2026-10-01（P2-6-b）移除 supportsStableMode：Stable Mode 死鏈已於 2026-09-30 整條移除，
             // 全專案三端（ui/src、src、src-tauri）皆無讀取點。
             supportsEraseFS: true,
+            // 2026-10-01：VSIX 尚未實作「還原範例檔」（extensionPath 為唯讀，
+            // 無 Tauri 的 Resource→AppData 播種機制）→ false，前端據此隱藏選單項。
+            supportsRestoreExamples: false,
             isTauri: false,
             isRemoteAware: true // VSIX 版具備雲端感知能力
         });

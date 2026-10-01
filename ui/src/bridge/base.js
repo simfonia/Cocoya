@@ -22,6 +22,10 @@ export class BaseBridge {
             // 死鏈已於 2026-09-30 整條移除（command／事件處理／i18n／deploy 腳本），
             // 此欄位三端皆無讀取點，僅為殘留宣告。
             supportsEraseFS: false,
+            // 2026-10-01：是否支援「還原範例檔」（restoreExamples）。
+            // 目前只有 Tauri 有後端 command（Tauri 才有 Resource/AppData 播種機制），
+            // VSIX 尚未實作 → false，前端據此隱藏選單項。
+            supportsRestoreExamples: false,
             isTauri: false,
             isRemoteAware: false,
             isRemoteConnected: false,
@@ -278,6 +282,21 @@ export class BaseBridge {
             this.onMessage(handler);
             this.send('getProjectAnchor', { requestId });
         });
+    }
+
+    /**
+     * 還原內建範例檔（把被改壞的 examples 強制覆寫回原始版本）。
+     *
+     * 2026-10-01：目前**只有 Tauri 實作**（後端 restore_examples command，
+     * Resource → AppData 播種目錄的強制覆寫）。VSIX 的 extensionPath 為唯讀，
+     * 沒有對應的播種機制，故 base 實作明確拋錯而非靜默 no-op ——
+     * 靜默回傳會讓呼叫端誤以為還原成功。
+     *
+     * 前端應先以 capabilities.supportsRestoreExamples 判斷是否顯示選單項。
+     * @returns {Promise<{restoredCount:number, examplesPath:string}>}
+     */
+    async restoreExamples() {
+        throw new Error('restoreExamples 尚未於本平台實作（目前僅支援 Tauri）');
     }
 
     /**

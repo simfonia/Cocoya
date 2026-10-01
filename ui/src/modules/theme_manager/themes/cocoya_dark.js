@@ -64,6 +64,8 @@
             '--dsm-disabled-bg': '#3a3a3a',
             '--dsm-disabled-text': '#797979',
             '--dsm-disabled-border': '#444444',
+    // 2026-10-01：縮圖改 object-fit: contain 後的留白底色（暗色下不可用淺灰，否則縮圖會浮出一圈亮邊）
+    '--dsm-thumb-bg': '#1e1e1e',
             '--dsm-error-bg': '#2d1515',
             '--dsm-warning-bg': '#2d1520',
             '--dsm-list-item-bg': '#444444',

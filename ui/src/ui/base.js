@@ -807,6 +807,57 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             };
         }
 
+        // 綁定「還原範例檔」（2026-10-01，僅 Tauri）
+        // 位置：設定下拉第 2 項，緊接在「Python 環境設定」之下。
+        const restoreBtn = document.getElementById('btn-restore-examples');
+        if (restoreBtn) {
+            const bridge = window.CocoyaBridge;
+            const M = window.Blockly?.Msg || {};
+            const t = (k, fallback) => M[k] || fallback;
+
+            // VSIX 不支援 → 隱藏整個選單項（capabilities 為單一事實來源）
+            if (!bridge || !bridge.capabilities?.supportsRestoreExamples) {
+                restoreBtn.style.display = 'none';
+            } else {
+                restoreBtn.onclick = async () => {
+                    // 1) 目前專案有未儲存變更時，先警告：還原後「範例檔」會被覆寫，
+                    //    但更關鍵的是使用者可能正靠髒狀態保留未存檔的工作 —— 明確要求先另存。
+                    if (window.CocoyaApp && window.CocoyaApp.isDirty) {
+                        const proceed = await bridge.confirm(
+                            t('TLB_SETTINGS_RESTORE_EXAMPLES_DIRTY',
+                                '目前專案有尚未儲存的變更。\n\n請先另存至其他位置，否則還原後內容會遺失。')
+                        );
+                        if (!proceed) return;
+                    }
+
+                    // 2) 二次確認（強制覆寫，無法復原）
+                    const ok = await bridge.confirm(
+                        t('TLB_SETTINGS_RESTORE_EXAMPLES_CONFIRM',
+                           '確定要還原範例檔嗎？\n\n內建範例將被「強制覆寫」回原始版本。\n你對這些範例做過的修改將會遺失，且無法復原。')
+                    );
+                    if (!ok) return;
+
+                    // 3) 執行
+                    try {
+                        const r = await bridge.restoreExamples();
+                        const n = r && typeof r.restoredCount === 'number' ? r.restoredCount : 0;
+                        await bridge.alert(
+                            n > 0
+                                ? t('TLB_SETTINGS_RESTORE_EXAMPLES_DONE', '✅ 已還原 %1 個範例檔').replace('%1', n)
+                                : t('TLB_SETTINGS_RESTORE_EXAMPLES_NONE',
+                                     '沒有需要還原的範例檔（開發模式直接使用原始檔）。')
+                        );
+                    } catch (err) {
+                        console.error('[restoreExamples] failed', err);
+                        await bridge.alert(
+                            t('TLB_SETTINGS_RESTORE_EXAMPLES_FAILED', '❌ 還原範例檔失敗：%1')
+                                .replace('%1', (err && err.message) || String(err))
+                        );
+                    }
+                };
+            }
+        }
+
         // 綁定複製程式碼按鈕
         const copyBtn = document.getElementById('btn-copy-code');
         if (copyBtn) {

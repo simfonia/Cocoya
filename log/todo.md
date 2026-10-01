@@ -394,3 +394,19 @@
 - [ ] T4：Python／Rust 測試納入（`temp_scripts/e2e_*.py` 轉 pytest、Rust 補 `file.rs`／`python.rs` 測試）
 - [ ] T5：覆蓋率基準（c8，先產報告不設門檻）
 - [ ] T6：CI 與 pre-commit（GitHub Actions + husky）
+
+### [2026-10-01] #task[尺規/標註畫布/還原範例檔/LF 根治] 使用者回報批次
+- [x] 十字尺規顏色即時更新：根因只掛 `onchange`（關閉取色面板才觸發），補 `oninput`。
+- [x] bbox 框線依 P2 類別色上色：新增 `UICanvas.resolveBoxColor()`，注入 `UIComponents.getLabelColor`；選取中維持醒目青色（與類別色脫鉤）。
+- [x] P3 標註頁移除「匯出資料集」按鈕（`annotation.js` ＋ `classification.js`）；匯出僅存在 P2。同步移除已無消費者的 `handleExportDataset` 注入。
+- [x] 補齊尺規 i18n 鍵，並改正前綴（`ANNOTATION_*` → `DSM_ANNOTATION_*`，符合模組 `DSM_` 慣例）。
+- [x] 修復 `dataset_theme_contract` 兩個失效自檢 + `typePolicy` 註解略過（根因：CRLF 的 `\r` 使替換無效，自檢恆不紅）。
+- [x] 還原範例檔前端全鏈路（Tauri）：`index.html` 選單第 2 項（Python 環境設定之下）、`ui/base.js` 綁定、三橋 capability ＋ 方法、中英 i18n；VSIX 以 `supportsRestoreExamples:false` 隱藏。
+- [x] 補 `capabilities` **值**守門（既有契約只比 key，誤設 VSIX 為 true 時 16 測全綠 → 假安全感）。
+- [x] 新增 `.gitattributes`（`* text=auto eol=crlf` ＋ 二進位／vendored／產物例外）根治 LF/CRLF 混雜。
+- [x] 驗收：272/272 測試綠、eslint 0 error、9 檔行尾全 CRLF；變異測試（尺規 `oninput`、`resolveBoxColor`、CSS 暗色守門、capabilities 值）皆報紅。
+- [ ] **還原範例檔實機驗收**（需 Tauri release build）：選單位置、還原能救回被改壞的範例、VSIX 確實不顯示。`cargo check` 不保證 Release 權限註冊正確。
+- [ ] `temp/` 殘留 3 個更早暫存檔待清：`_print_variant.html`、`print_variant.html`、`scan_t3.py`。
+- [ ] `.gitattributes` 已於本次 commit 納入版控；後續若新增 `.sh` 腳本需另加 `eol=lf` 例外。
+
+- [ ] T6：CI 與 pre-commit（GitHub Actions + husky）

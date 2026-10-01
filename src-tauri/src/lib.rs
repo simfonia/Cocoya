@@ -31,6 +31,7 @@ pub fn run() {
             commands::get_module_toolbox,
             commands::open_file,
             commands::open_examples,
+            commands::restore_examples,
             commands::save_file,
             commands::get_serial_ports,
             commands::deploy_mcu,

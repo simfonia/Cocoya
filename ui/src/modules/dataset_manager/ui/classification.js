@@ -16,17 +16,19 @@
  * @param {() => void} options.exitAnnotationMode 返回列表（返回鈕/Esc）
  * @param {(index: number) => void} options.navigateToImage 縮圖/鍵盤切換圖片
  * @param {(hide: boolean) => void} options.setAnnotationHeaderActions 預覽 header 動作切換
- * @param {() => void} options.handleExportDataset 工具列匯出
  * @param {() => void} options.updateStatsFromImages label 變更後重算統計
  * @param {() => void} options.updateThumbnailHighlight 縮圖高亮同步
  * @param {() => void} options.refreshPreview debounce 落盤（寫回 samples）
  * @param {(container: Element, statsContainer?: Element|null) => void} options.createLabelMapManager 標籤管理器
  * @param {() => Document} [options.getDocument] 取得 document（預設 globalThis.document）
+ *
+ * 2026-10-01：不再注入 handleExportDataset —— 匯出按鈕已從 P3 工具列移除
+ *   （匯出僅存在於 P2 資料集管理頁）。ui_layout.js 仍會傳入該鍵，JS 會忽略未解構的參數。
  */
 export function createClassificationController({
     state, t, escapeHtml, getModal, UIComponents,
     saveGridScroll, exitAnnotationMode, navigateToImage,
-    setAnnotationHeaderActions, handleExportDataset,
+    setAnnotationHeaderActions,
     updateStatsFromImages, updateThumbnailHighlight, refreshPreview,
     createLabelMapManager, onDeleteImage, getDocument = () => globalThis.document
 }) {
@@ -92,7 +94,6 @@ export function createClassificationController({
                         <span class="dataset-annotation-progress" id="annotation-progress"></span>
                         <span class="dataset-annotation-shortcuts-hint">${t('CLASSIFY_SHORTCUTS_HINT', '↑/↓ 切換圖片 · Esc 退出')}</span>
                         <span class="dataset-annotation-export-status" id="annotation-export-status"></span>
-                        <button type="button" id="annotation-export-btn" class="dataset-small-btn">${t('EXPORT', '匯出資料集')}</button>
                     </div>
                     <div class="dataset-annotation-image-container" id="annotation-image-container">
                         <div id="annotation-classify-container" tabindex="0" style="position: relative; display: inline-block; outline: none;">
@@ -115,10 +116,9 @@ export function createClassificationController({
         // 載入目前圖片
         loadClassificationImage(index);
 
-        // 標註模式：隱藏預覽 header 的驗證/匯出，改用標註工具列的匯出（含即時狀態回饋）
+        // 標註模式：切換預覽 header 的按鈕組
         setAnnotationHeaderActions(true);
-        const exportBtn = doc().getElementById('annotation-export-btn');
-        if (exportBtn) exportBtn.onclick = handleExportDataset;
+        // 2026-10-01：工具列匯出鈕已移除（匯出僅存在於 P2），故不再綁 #annotation-export-btn。
     }
 
     /**

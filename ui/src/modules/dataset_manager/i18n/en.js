@@ -67,6 +67,8 @@
     "DSM_ANNOTATION_EXPORT_UNANNOTATED_WARNING": "%1 images unannotated, export anyway?",
     "DSM_ANNOTATION_UNANNOTATED_WARNING": "%1 images unannotated, leave anyway?",
     "DSM_ANNOTATION_SHORTCUTS_HINT": "↑/↓ navigate · Delete remove · Esc back to Dataset Management",
+    "DSM_ANNOTATION_CROSSHAIR": "Crosshair",
+    "DSM_ANNOTATION_CROSSHAIR_COLOR": "Crosshair color",
     "DSM_ANNOTATION_MODE_TITLE": "Annotation — Object Detection",
 
     // Sampler view

@@ -77,6 +77,8 @@
             '--dsm-disabled-bg': '#FFEFF7',
             '--dsm-disabled-text': '#B08AC0',
             '--dsm-disabled-border': '#FFD0E8',
+    // 2026-10-01：縮圖改 object-fit: contain 後的留白底色
+    '--dsm-thumb-bg': '#F3E0EA',
             '--dsm-list-item-bg': '#FFE3F0',
             '--dsm-success-bg': '#FFEFF7',
             '--dsm-success-border': '#FFC0E0',

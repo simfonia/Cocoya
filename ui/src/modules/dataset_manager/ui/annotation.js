@@ -29,17 +29,19 @@ import { needsUnclassifiedCheck } from '../core/typePolicy.js';
  * @param {() => void} options.exitAnnotationMode 返回列表（返回鈕/Esc）
  * @param {(index: number) => void} options.navigateToImage 縮圖/鍵盤切換圖片
  * @param {(hide: boolean) => void} options.setAnnotationHeaderActions 預覽 header 動作切換
- * @param {() => void} options.handleExportDataset 工具列匯出
  * @param {() => void} options.updateStatsFromImages 標註變更後重算統計
  * @param {() => void} options.updateThumbnailHighlight 縮圖高亮同步
  * @param {() => void} options.refreshPreview debounce 落盤
  * @param {(container: Element, statsContainer?: Element|null) => void} options.createLabelMapManager 標籤管理器
  * @param {() => Document} [options.getDocument] 取得 document（預設 globalThis.document）
+ *
+ * 2026-10-01：不再注入 handleExportDataset —— 匯出按鈕已從 P3 工具列移除
+ *   （匯出僅存在於 P2 資料集管理頁）。ui_layout.js 仍會傳入該鍵，JS 會忽略未解構的參數。
  */
 export function createAnnotationController({
     state, t, escapeHtml, getModal, UICanvas, UIComponents, getFormValue,
     saveGridScroll, exitAnnotationMode, navigateToImage,
-    setAnnotationHeaderActions, handleExportDataset,
+    setAnnotationHeaderActions,
     updateStatsFromImages, updateThumbnailHighlight, refreshPreview,
     createLabelMapManager, onDeleteImage, getDocument = () => globalThis.document
 }) {
@@ -105,7 +107,16 @@ export function createAnnotationController({
                         <span class="dataset-annotation-progress" id="annotation-progress"></span>
                         <span class="dataset-annotation-shortcuts-hint">${t('ANNOTATION_SHORTCUTS_HINT', '↑/↓ 切換圖片 · Delete 刪除標註 · Esc 退出')}</span>
                         <span class="dataset-annotation-export-status" id="annotation-export-status"></span>
-                        <button type="button" id="annotation-export-btn" class="dataset-small-btn">${t('EXPORT', '匯出資料集')}</button>
+                        <!-- 2026-10-01：十字尺規調色（固定色在淺色照片上看不清）。
+                             僅 bbox 模式顯示；line 模式本來就沒有尺規。
+                             註：原本這裡另有一顆「匯出資料集」按鈕，已依使用者指示移除 ——
+                             匯出僅存在於 P2 資料集管理頁（視窗標頭），P3 標註頁不提供匯出。 -->
+                        <label class="dataset-annotation-crosshair-picker" id="annotation-crosshair-picker"
+                               title="${t('DSM_ANNOTATION_CROSSHAIR_COLOR', '十字尺規顏色')}">
+                            <span class="dataset-annotation-crosshair-label">${t('DSM_ANNOTATION_CROSSHAIR', '尺規')}</span>
+                            <input type="color" id="annotation-crosshair-color" value="#00ff88"
+                                   aria-label="${t('DSM_ANNOTATION_CROSSHAIR_COLOR', '十字尺規顏色')}">
+                        </label>
                     </div>
                     <div class="dataset-annotation-image-container" id="annotation-image-container">
                         <div id="annotation-container" style="position: relative; display: inline-block;">
@@ -130,10 +141,12 @@ export function createAnnotationController({
         // 載入目前圖片
         loadAnnotationImage(index);
 
-        // 標註模式：隱藏預覽 header 的驗證/匯出，改用標註工具列的匯出（含即時狀態回饋）
+        // 十字尺規調色（bbox 模式才有尺規）
+        setupCrosshairColorPicker(getFormValue('projectType'));
+
+        // 標註模式：切換預覽 header 的按鈕組（只影響驗證鈕／自動儲存指示燈）
         setAnnotationHeaderActions(true);
-        const exportBtn = doc().getElementById('annotation-export-btn');
-        if (exportBtn) exportBtn.onclick = handleExportDataset;
+        // 2026-10-01：工具列匯出鈕已移除（P3 不提供匯出，匯出僅在 P2），故無需綁 #annotation-export-btn。
     }
 
     /**
@@ -178,6 +191,9 @@ export function createAnnotationController({
         UICanvas.init(container, img, image.annotations || [], {
             mode: mode,
             labelMap: labelMap,
+            // 2026-10-01：bbox 框線改依 P2 給各標籤的顏色上色，
+            // 讓標註畫布與 P2 縮圖／統計的顏色一致（同一類別看起來就是同一個顏色）。
+            getLabelColor: (label) => UIComponents.getLabelColor(label),
             onUpdate: (anns) => {
                 image.annotations = anns;
                 renderAnnotationListUI(anns);
@@ -272,6 +288,35 @@ export function createAnnotationController({
         if (UICanvas.state.onUpdate) UICanvas.state.onUpdate(anns);
         UICanvas.render();
         renderAnnotationListUI(anns);
+    }
+
+    /**
+     * 十字尺規調色 UI（2026-10-01 使用者回報：固定白色在白色照片上看不清）。
+     * - 僅 bbox 模式顯示（line 模式本來就沒有尺規）
+     * - 顏色存於 localStorage，跨工作階段保留（UICanvas.loadCrosshairColor 還原）
+     */
+    function setupCrosshairColorPicker(projectType) {
+        const picker = doc().getElementById('annotation-crosshair-picker');
+        const input = doc().getElementById('annotation-crosshair-color');
+        if (!picker || !input) return;
+
+        const isBbox = projectType !== 'line_following';
+        picker.style.display = isBbox ? 'inline-flex' : 'none';
+        if (!isBbox) return;
+
+        // 顯示目前生效的顏色（可能來自上次設定）
+        input.value = UICanvas.loadCrosshairColor();
+
+        // 2026-10-01 修：原本用 onchange —— 該事件只在關閉取色面板時觸發，
+        // 使用者拖曳／點選顏色的當下畫布不會更新，必須再按一次左鍵關閉才換色。
+        // oninput 會在選色過程中持續觸發，故尺規可即時跟隨變色。
+        input.oninput = () => {
+            UICanvas.setCrosshairColor(input.value);
+        };
+        // 部分 webview 只發 change 不發 input，保險起見兩者都掛（setCrosshairColor 冪等）。
+        input.onchange = () => {
+            UICanvas.setCrosshairColor(input.value);
+        };
     }
 
     /**

@@ -1,6 +1,7 @@
 C:\Workspace\cocoya\
 ├── .vscodeignore          # VSIX 打包過濾清單
 ├── .eslintrc.json         # ESLint 8 + TypeScript 規則設定（npm run lint）
+├── .gitattributes         # [2026-10-01] 行尾規範：* text=auto eol=crlf ＋二進位/vendored/產物例外（根治 LF/CRLF 混雜）
 ├── docs/                  # 專案文檔
 │   ├── help/              # 積木說明文件與腳位圖（右鍵 Help 統一位置）
 │   │   ├── hardware_pins_en.html        # 硬體腳位說明（英文）
@@ -230,7 +231,9 @@ C:\Workspace\cocoya\
 │   │   │       ├── sampler.js # [Stage 2 重構] 攝影機採集核心、連拍邏輯（通訊改經 io/bridge.js：request correlation + timeout + dispose）
 │   │   │       ├── ui_layout.js # 協調層（Stage 4＋M1 類型鎖定 entry/session/typePolicy＋P1/P2/P3 導航；轉義/路徑改吃 core/html.js 與 pathPolicy SSOT；[2026-09-17] 拍照/刪圖不再覆寫結構面板 innerHTML、renderStatsPanels 加管理器保護、改名對帳走 labelRenameReconcile＋重繪縮圖、資料集名稱漂移提示 applyDatasetNameDriftHint）
 │   │   │       ├── ui_components.js # 動態視圖組件 (影像網格、字典序標籤統計、標註縮圖欄、getLabelColor FNV-1a+黃金角色相；轉義經 core/html.js，前損壞實作已刪)
-│   │   │       ├── ui_canvas.js # 標註互動畫布 (物件偵測拉框與自駕循線畫線，支援座標限幅防護、bbox 高亮與雙模互動)
+│   │   │       ├── ui_canvas.js # 標註互動畫布 (物件偵測拉框與自駕循線畫線，座標限幅防護、bbox 高亮與雙模互動；[2026-10-01] 跨畫面十字尺規可調色、框線依 P2 類別色上色 resolveBoxColor)
+│   │   │       ├── ui_canvas.test.mjs # [2026-10-01] 標註畫布呈現守門（24 測：尺規、標註文字、labelMap 即時重繪、resolveBoxColor、掃描型自檢）
+│   │   │       ├── dataset_theme_contract.test.mjs # [2026-10-01] DM 樣式表契約守門（7 測：暗色 class 對齊、縮圖 contain、狀態變體暗色覆寫；含自檢）
 │   │   │       └── i18n/      # 語系檔目錄
 │   │   │           ├── zh-hant.js # 繁體中文 i18n 鍵值 (VALIDATE_*/ANNOTATION_*/ENTRY_*/PAGE_*/DEV_BANNER_*/SWITCH_TYPE_*；142 key 與 en parity)
 │   │   │           └── en.js      # 英文 i18n 鍵值 (同 zh-hant 142 key 全對齊)

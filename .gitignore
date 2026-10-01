@@ -49,3 +49,4 @@ src-tauri/.env*
 # Examples 使用者產生的資料集/模型（不入版控）
 examples/**/dataset/
 examples/**/model/
+resources/examples_pristine/

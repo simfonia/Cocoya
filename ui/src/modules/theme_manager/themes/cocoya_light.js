@@ -47,6 +47,8 @@
             '--dsm-disabled-bg': '#f0f0f0',
             '--dsm-disabled-text': '#aaaaaa',
             '--dsm-disabled-border': '#e0e0e0',
+    // 2026-10-01：縮圖改 object-fit: contain 後的留白底色
+    '--dsm-thumb-bg': '#eeeeee',
             '--dsm-error-bg': '#fff5f5',
             '--dsm-warning-bg': '#fff0f5',
             '--dsm-list-item-bg': '#eeeeee',

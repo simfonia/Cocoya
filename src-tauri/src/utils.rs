@@ -3,6 +3,11 @@ use std::fs;
 use tauri::{AppHandle, Manager};
 
 /// 剝除 BaseDirectory::Resource resolve() 可能回傳的 canonicalized 前綴（\\?\）
+/// 公開供 commands 層使用（Tauri canonicalize 會加前綴，會影響後續路徑比對與 IO）。
+pub fn strip_extended_prefix_public(p: PathBuf) -> PathBuf {
+    strip_extended_prefix(p)
+}
+
 fn strip_extended_prefix(p: PathBuf) -> PathBuf {
     let s = p.to_string_lossy().to_string();
     match s.strip_prefix(r"\\?\") {
@@ -14,14 +19,25 @@ fn strip_extended_prefix(p: PathBuf) -> PathBuf {
 /// 遞迴合併複製：將 src 內容複製到 dst，已存在的檔案跳過（不覆寫），回傳複製的檔案數。
 /// （原 file.rs 內部函式，2026-09-17 移至 utils 供 examples seeding 共用）
 pub fn copy_dir_merge(src: &std::path::Path, dst: &std::path::Path) -> Result<u64, String> {
+    copy_dir(src, dst, false)
+}
+
+/// 遞迴複製並**強制覆寫**既有檔案（還原範例用）。
+/// 與 copy_dir_merge 的差別只有 overwrite 旗標；啟動播種必須維持「只補缺檔」，
+/// 否則使用者自行加入的檔案會在每次啟動被洗掉。
+pub fn copy_dir_overwrite(src: &std::path::Path, dst: &std::path::Path) -> Result<u64, String> {
+    copy_dir(src, dst, true)
+}
+
+fn copy_dir(src: &std::path::Path, dst: &std::path::Path, overwrite: bool) -> Result<u64, String> {
     fs::create_dir_all(dst).map_err(|e| format!("IO_ERROR: Failed to create dir {}: {}", dst.display(), e))?;
     let mut copied: u64 = 0;
     let entries = fs::read_dir(src).map_err(|e| format!("IO_ERROR: Failed to read {}: {}", src.display(), e))?;
     for entry in entries.flatten() {
         let target = dst.join(entry.file_name());
         if entry.path().is_dir() {
-            copied += copy_dir_merge(&entry.path(), &target)?;
-        } else if !target.exists() {
+            copied += copy_dir(&entry.path(), &target, overwrite)?;
+        } else if overwrite || !target.exists() {
             fs::copy(entry.path(), &target)
                 .map_err(|e| format!("IO_ERROR: Failed to copy {}: {}", entry.path().display(), e))?;
             copied += 1;

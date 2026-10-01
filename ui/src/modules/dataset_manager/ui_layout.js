@@ -77,7 +77,6 @@ const classificationController = createClassificationController({
     exitAnnotationMode: () => exitAnnotationMode(),
     navigateToImage: (index) => navigateToImage(index),
     setAnnotationHeaderActions: (hide) => setAnnotationHeaderActions(hide),
-    handleExportDataset: () => handleExportDataset(),
     updateStatsFromImages: () => updateStatsFromImages(),
     updateThumbnailHighlight: () => updateThumbnailHighlight(),
     refreshPreview: () => refreshPreview(),
@@ -96,7 +95,6 @@ const annotationController = createAnnotationController({
     exitAnnotationMode: () => exitAnnotationMode(),
     navigateToImage: (index) => navigateToImage(index),
     setAnnotationHeaderActions: (hide) => setAnnotationHeaderActions(hide),
-    handleExportDataset: () => handleExportDataset(),
     updateStatsFromImages: () => updateStatsFromImages(),
     updateThumbnailHighlight: () => updateThumbnailHighlight(),
     refreshPreview: () => refreshPreview(),
@@ -892,9 +890,13 @@ export function refreshDynamicPanels() {
     // 3. 更新預覽面板
     const previewContent = modal.querySelector('#dataset-preview-content');
     previewContent.innerHTML = `
-        <div id="dataset-sampler-view" style="display: none; background: white; border-radius: 8px; margin-bottom: 12px;"></div>
+        <!-- 2026-10-01：移除行內 background: white。行內樣式優先於所有樣式表規則，
+             導致 #dataset-sampler-view 的 dark 覆寫（樣式表裡有 body.cocoya-dark-mode）
+             永遠不生效 —— 使用者回報 dark 主題下預覽上下出現白底即為此故。
+             底色改由樣式表/token 決定。 -->
+        <div id="dataset-sampler-view" style="display: none; border-radius: 8px; margin-bottom: 12px;"></div>
         <div id="dataset-image-preview" style="display: none;"></div>
-        <div id="dataset-table-preview" style="background: white; border-bottom: 1px solid #ddd; max-height: 400px; overflow: auto; display: none;"></div>
+        <div id="dataset-table-preview" style="background: var(--dsm-surface); border-bottom: 1px solid var(--dsm-border-light); max-height: 400px; overflow: auto; display: none;"></div>
         <pre id="dataset-json-preview"></pre>
     `;
 
@@ -1712,7 +1714,13 @@ function showEntryPhase(modal) {
     if (subtitle) subtitle.textContent = t('PAGE_NEW_DATASET', '建立新資料集');
 }
 
-/** 頁面級 header 按鈕顯隱（P1：全隱 / P2：匯出資料集＋清除資料＋重新選擇類型 / P3：全隱） */
+/**
+ * 頁面級 header 按鈕顯隱（P1：全隱 / P2：匯出資料集＋清除資料＋重新選擇類型 / P3：全隱）
+ *
+ * 2026-10-01：P3（標註模式）不提供匯出 —— 匯出僅存在於 P2 資料集管理頁。
+ *   P3 原本靠中欄工具列自帶的匯出鈕，該鈕已一併移除（與標頭語意重複）。
+ *   故維持「showClear 同時控制匯出」的原語意：P3 傳 false 即三顆全隱。
+ */
 function setHeaderButtons(showClear, showEntry) {
     const modal = getModal();
     if (!modal) return;

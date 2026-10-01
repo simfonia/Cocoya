@@ -19,10 +19,14 @@ export const UICanvas = {
         currentClassId: 0, // 目前選擇的類別 ID（由外部 UI 設定）
         selectedAnnotationIndex: -1, // -1 = 無選中
         labelMap: {}, // class_id → 類別名稱對照表
+        // 2026-10-01：由呼叫端注入的標籤取色函式（來自 P2 的 UIComponents.getLabelColor），
+        // 讓 bbox 框線與 P2 縮圖／統計同色。未注入時退回舊的單色。
+        getLabelColor: null,
         // 2026-10-01：跨畫面十字尺規。pointer 為滑鼠在畫布內的像素座標；
         // null = 游標不在畫布上（不繪製）。bbox 模式專用，方便對齊物件範圍。
         pointerX: null,
         pointerY: null,
+        crosshairColor: '#00ff88', // 尺規顏色（可由 UI 改色，預設亮綠以免在淺色照片上消失）
         onUpdate: null,
         handlers: {} // 存放事件處理器以便清理
     },
@@ -31,7 +35,44 @@ export const UICanvas = {
     // 2026-10-01：原為 10px/11px，在高解析截圖上過小幾乎不可讀，放大為 15px/17px。
     LABEL_FONT_SIZE: 15,
     LABEL_FONT_SIZE_SELECTED: 17,
-    CROSSHAIR_COLOR: 'rgba(255, 255, 255, 0.75)',
+    CROSSHAIR_DEFAULT_COLOR: '#00ff88',
+    CROSSHAIR_STORAGE_KEY: 'cocoya_dm_crosshair_color',
+
+    // bbox / 線段框線顏色（2026-10-01）
+    // 選取中的框固定用醒目青色：選取狀態必須與類別色脫鉤，
+    // 否則同一類別有多個框時分不出目前選到哪一個。
+    SELECTED_COLOR: '#00CCFF',
+    // 未注入 P2 標籤取色時的退 fallback 色（維持舊的單色行為）。
+    DEFAULT_BOX_COLOR: '#FE2F89',
+
+    /**
+     * 設定十字尺規顏色並立即重繪。
+     * 2026-10-01 使用者回報：固定白色在白色照片上看不清 → 提供可調色。
+     * @param {string} color CSS 顏色字串（#rgb / #rrggbb / rgba(...)）
+     * @param {boolean} [persist] 是否寫入 localStorage（預設 true）
+     * @returns {boolean} 是否設定成功（空字串／非字串 → false，不污染狀態）
+     */
+    setCrosshairColor(color, persist = true) {
+        if (typeof color !== 'string' || !color.trim()) return false;
+        this.state.crosshairColor = color.trim();
+        if (persist) {
+            try {
+                localStorage.setItem(this.CROSSHAIR_STORAGE_KEY, this.state.crosshairColor);
+            } catch (e) { /* 隱私模式忽略 */ }
+        }
+        this.render();
+        return true;
+    },
+
+    /**
+     * 讀取已儲存的尺規顏色（無儲存值時回傳預設色）。由 init() 呼叫，跨工作階段保留。
+     */
+    loadCrosshairColor() {
+        let saved = null;
+        try { saved = localStorage.getItem(this.CROSSHAIR_STORAGE_KEY); } catch (e) { /* 忽略 */ }
+        this.state.crosshairColor = saved || this.CROSSHAIR_DEFAULT_COLOR;
+        return this.state.crosshairColor;
+    },
 
     init(parentContainer, imgElement, annotations = [], options = {}) {
         this.state.img = imgElement;
@@ -39,11 +80,13 @@ export const UICanvas = {
         this.state.onUpdate = options.onUpdate;
         this.state.mode = options.mode || 'bbox';
         this.state.labelMap = options.labelMap || {};
+        this.state.getLabelColor = options.getLabelColor || null;
         this.state.drawingState = 0; // 重置點擊兩點狀態機
         this.state.isDrawing = false;
         this.state.selectedAnnotationIndex = -1; // 重置選中狀態
         this.state.pointerX = null; // 重置十字尺規
         this.state.pointerY = null;
+        this.loadCrosshairColor(); // 還原使用者上次選的尺規顏色（2026-10-01 可調色）
 
         const oldCanvas = parentContainer.querySelector('canvas.dataset-annotation-canvas');
         if (oldCanvas) {
@@ -137,20 +180,25 @@ export const UICanvas = {
                 }
             } else {
                 // 畫矩形框 bbox 中
-                const x = Math.min(this.state.startX, currX);
-                const y = Math.min(this.state.startY, currY);
-                const w = Math.abs(currX - this.state.startX);
-                const h = Math.abs(currY - this.state.startY);
-
-                this.state.currentBbox = [
-                    x / canvas.width,
-                    y / canvas.height,
-                    w / canvas.width,
-                    h / canvas.height
-                ];
-                // 2026-10-01：更新十字尺規位置（非拉框時也要重繪，讓尺規跟隨游標）
+                // 2026-10-01：尺規需在「非拉框」時也更新（否則只在拉框中出現）。
+                // 但 currentBbox（預覽框）必須守在 isDrawing 保護內 ——
+                // 否則滑鼠一移動就會用殘留的 startX/startY(=0) 從左上角憑空拉出藍框，
+                // 且 mouseup 會把它當成正式標註送出。
                 this.state.pointerX = currX;
                 this.state.pointerY = currY;
+                if (this.state.isDrawing) {
+                    const x = Math.min(this.state.startX, currX);
+                    const y = Math.min(this.state.startY, currY);
+                    const w = Math.abs(currX - this.state.startX);
+                    const h = Math.abs(currY - this.state.startY);
+
+                    this.state.currentBbox = [
+                        x / canvas.width,
+                        y / canvas.height,
+                        w / canvas.width,
+                        h / canvas.height
+                    ];
+                }
                 this.render();
             }
         };
@@ -241,13 +289,13 @@ export const UICanvas = {
             // 繪製循線線段
             annotations.forEach((ann) => {
                 if (ann.line) {
-                    this.drawLine(ann.line, '#FE2F89', 'Line');
+                    this.drawLine(ann.line, UICanvas.DEFAULT_BOX_COLOR, 'Line');
                 }
             });
 
             // 繪製當前拉伸中或等待點擊中的預覽線
             if (currentBbox) {
-                this.drawLine(currentBbox, '#00CCFF', 'Pending');
+                this.drawLine(currentBbox, UICanvas.SELECTED_COLOR, 'Pending');
             }
         } else {
             // 繪製既有矩形框
@@ -255,13 +303,13 @@ export const UICanvas = {
                 if (ann.bbox) {
                     const isSelected = (idx === this.state.selectedAnnotationIndex);
                     const label = this.getAnnotationLabel(ann.class_id, idx);
-                    this.drawBox(ann.bbox, isSelected ? '#00CCFF' : '#FE2F89', label, isSelected);
+                    this.drawBox(ann.bbox, this.resolveBoxColor(label, isSelected), label, isSelected);
                 }
             });
 
             // 繪製當前拉框
             if (currentBbox) {
-                this.drawBox(currentBbox, '#00CCFF', 'New');
+                this.drawBox(currentBbox, UICanvas.SELECTED_COLOR, 'New');
             }
 
             // 2026-10-01：跨畫面十字尺規（最後繪製 → 疊在框之上，便於對齊邊界）
@@ -280,7 +328,7 @@ export const UICanvas = {
         if (!ctx || !canvas || !canvas.width || !canvas.height) return;
 
         ctx.save();
-        ctx.strokeStyle = this.CROSSHAIR_COLOR;
+        ctx.strokeStyle = this.state.crosshairColor || this.CROSSHAIR_DEFAULT_COLOR;
         ctx.lineWidth = 1;
         ctx.setLineDash([5, 4]);
         ctx.beginPath();
@@ -365,6 +413,31 @@ export const UICanvas = {
         if (classId === -1) return 'Unclassified';
         const name = Object.keys(labelMap).find(k => labelMap[k] === classId);
         return name || `Obj ${idx}`;
+    },
+
+    /**
+     * 決定 bbox 框線的顏色（2026-10-01）。
+     *
+     * 規則：
+     *  - 選取中 → 一律用醒目青色（SELECTED_COLOR），與類別色無關。
+     *  - 未選取 → 用注入的 P2 標籤色（UIComponents.getLabelColor），
+     *    與 P2 縮圖徽章／統計的顏色一致。
+     *  - 未注入取色函式或取色失敗 → 退回舊的單色，避免整個畫布變成無色。
+     *
+     * @param {string} label 類別名稱
+     * @param {boolean} isSelected 是否為目前選取的框
+     * @returns {string} CSS 顏色字串
+     */
+    resolveBoxColor(label, isSelected) {
+        if (isSelected) return UICanvas.SELECTED_COLOR;
+        if (typeof this.state.getLabelColor !== 'function') return UICanvas.DEFAULT_BOX_COLOR;
+        try {
+            const color = this.state.getLabelColor(label);
+            // getLabelColor 對空值回傳 '#999'；仍防禦一次非空字串，避免 strokeStyle 被設成 undefined。
+            return (typeof color === 'string' && color) ? color : UICanvas.DEFAULT_BOX_COLOR;
+        } catch (e) {
+            return UICanvas.DEFAULT_BOX_COLOR;
+        }
     },
 
     drawLine(lineCoords, color, label) {
