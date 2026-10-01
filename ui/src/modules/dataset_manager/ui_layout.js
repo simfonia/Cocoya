@@ -25,20 +25,12 @@ import { createLabelManager } from './ui/labelManager.js';
 import { createSamplerPanel } from './ui/samplerPanel.js';
 import { createFeaturePanel } from './ui/featurePanel.js';
 import { buildEntryTemplate } from './ui/entryCards.js';
-import { allowedModes, isDevType } from './core/typePolicy.js';
+import { allowedModes, isDevType, isImageType, isFeatureType } from './core/typePolicy.js';
 import { createSessionManager } from './application/sessionManager.js';
 import { buildFeatureSchema, landmarksToRow, FEATURE_MEDIAPIPE_MISSING } from './core/featureSchema.js';
 
 const MODAL_ID = 'dataset-manager-modal';
 
-const TYPE_TO_MODES_MAP = {
-    'table': ['file'],
-    'feature': ['live', 'file'],
-    'serial': ['file'],
-    'image': ['live', 'file'],
-    'object_detection': ['live', 'file'],
-    'line_following': ['live', 'file']
-};
 
 const datasetStore = new DatasetStore(createInitialDatasetState(
     DatasetSpec.createDefault({ name: 'dataset', type: 'table', mode: 'file' })
@@ -223,12 +215,12 @@ function buildLabelMap(columns) {
 function syncSpecFromUI(includeSamples = true) {
     const projectType = getFormValue('projectType');
     const projectName = getFormValue('projectName') || 'dataset';
-    const isImage = projectType === 'image' || projectType === 'object_detection' || projectType === 'line_following';
+    const isImage = isImageType(projectType);
 
     let columns = getColumnsFromUI();
     // 影像模式下，如果 UI 上沒有欄位列表（因為切換到了統計視圖），保留現有的 Spec 欄位定義。
     // M4：feature 亦然——live 採集時 UI 顯示標籤+統計（無欄位列），欄位由 featureSchema 動態建立。
-    if ((isImage || projectType === 'feature') && columns.length === 0 && state.spec.toJSON().schema.columns.length > 0) {
+    if ((isImage || isFeatureType(projectType)) && columns.length === 0 && state.spec.toJSON().schema.columns.length > 0) {
         columns = state.spec.toJSON().schema.columns;
     }
 
@@ -877,7 +869,7 @@ export function refreshDynamicPanels() {
 
     const projectType = getFormValue('projectType');
     const sourceMode = getFormValue('sourceMode');
-    const isImage = projectType === 'image' || projectType === 'object_detection' || projectType === 'line_following';
+    const isImage = isImageType(projectType);
     const isLive = sourceMode === 'live';
 
     // 1. 更新匯入/採集區域顯示
@@ -907,7 +899,7 @@ export function refreshDynamicPanels() {
         // Ctrl+R 後前端狀態重置但 sidecar 可能殘留 running；進 live 先對帳一次，
         // 事件遺失時由 sampler 內部 syncCameraStatus→onStatusChanged→重建校正。
         Sampler.syncCameraStatus().catch(() => undefined);
-        if (projectType === 'feature') {
+        if (isFeatureType(projectType)) {
             featurePanel.setupFeatureLiveView(modal, modal.querySelector('#dataset-sampler-view'));
         } else {
             samplerPanel.setupLiveSamplerView(modal, modal.querySelector('#dataset-sampler-view'));
@@ -953,7 +945,7 @@ function renderStructurePanel(structureTitle, structureActions, structureContent
 
     const projectType = getFormValue('projectType');
     const sourceMode = getFormValue('sourceMode');
-    const isImage = projectType === 'image' || projectType === 'object_detection' || projectType === 'line_following';
+    const isImage = isImageType(projectType);
     const isLive = sourceMode === 'live';
 
     if (isImage || isLive) {
@@ -1385,7 +1377,7 @@ function addFeatureRow({ row, _useZ, schema }) {
  */
 function buildStatsViewOptions() {
     const projectType = state.spec.toJSON().project.type || getFormValue('projectType') || 'table';
-    if (projectType !== 'image' && projectType !== 'object_detection' && projectType !== 'line_following') {
+    if (!isImageType(projectType)) {
         return {};
     }
     const images = Array.isArray(state.images) ? state.images : [];
@@ -1618,7 +1610,7 @@ function createModal() {
         t,
         optionList,
         projectTypes: DatasetSpecConstants.PROJECT_TYPES,
-        sourceModes: TYPE_TO_MODES_MAP['table']
+        sourceModes: allowedModes('table')
     });
 
     document.body.appendChild(modal);

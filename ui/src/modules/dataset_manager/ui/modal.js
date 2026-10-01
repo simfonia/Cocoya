@@ -14,7 +14,7 @@
  * @param {Function} deps.t i18n 翻譯函式（fallback 語法同 ui_layout 的 t()）
  * @param {Function} deps.optionList 產生 <option> HTML 的純函式
  * @param {string[]} deps.projectTypes 專案類型清單（DatasetSpecConstants.PROJECT_TYPES）
- * @param {string[]} deps.sourceModes 初始來源模式清單（TYPE_TO_MODES_MAP['table']）
+ * @param {string[]} deps.sourceModes 初始來源模式清單（typePolicy.allowedModes('table')）
  * @returns {string} modal innerHTML
  */
 export function buildModalTemplate({ t, optionList, projectTypes, sourceModes }) {

@@ -3,10 +3,17 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
     isImageType, needsAnnotationCheck, needsUnclassifiedCheck,
-    isClassificationType, isDevType, allowedModes
+    isClassificationType, isFeatureType, isDevType, isKnownType,
+    allowedModes, projectTypes, imageTypes, devTypes, stableTypes
 } from './typePolicy.js';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const dmRoot = path.join(here, '..');
 
 test('影像系判定：image/object_detection/line_following', () => {
     assert.equal(isImageType('image'), true);
@@ -39,4 +46,79 @@ test('allowedModes：影像系 live+file，feature live+file，表格系 file；
     assert.deepEqual(allowedModes('feature'), ['live', 'file']);
     assert.deepEqual(allowedModes('serial'), ['file']);
     assert.deepEqual(allowedModes('unknown'), ['file']);
+});
+
+// ---------------------------------------------------------------------------
+// 2026-10-01（P1-1）新增：單一來源不變式
+// ---------------------------------------------------------------------------
+
+test('projectTypes：為全部合法類型，且與 imageTypes ∪ devTypes ∪ {table} 吻合', () => {
+    assert.deepEqual(projectTypes(),
+        ['image', 'object_detection', 'feature', 'serial', 'table', 'line_following']);
+    assert.deepEqual(projectTypes().sort(),
+        [...new Set([...imageTypes(), ...devTypes(), ...stableTypes(), 'table', 'serial'])].sort());
+    for (const type of projectTypes()) assert.equal(isKnownType(type), true, `${type} 應為合法類型`);
+    assert.equal(isKnownType('unknown'), false);
+    assert.equal(isKnownType(''), false);
+    assert.equal(isKnownType(undefined), false);
+});
+
+test('isFeatureType：僅 feature（P1-1 新增，供 spec.js feature live 豁免與 ui_layout 分流）', () => {
+    assert.equal(isFeatureType('feature'), true);
+    for (const other of ['image', 'object_detection', 'line_following', 'table', 'serial', undefined]) {
+        assert.equal(isFeatureType(other), false, `${other} 不應被視為 feature`);
+    }
+});
+
+test('回傳的陣列一律是複本（呼叫端改動不得污染 SSOT）', () => {
+    const a = projectTypes();
+    a.push('injected');
+    assert.equal(isKnownType('injected'), false, 'projectTypes() 必須回傳複本');
+    const b = allowedModes('image');
+    b.push('injected');
+    assert.deepEqual(allowedModes('image'), ['live', 'file'], 'allowedModes() 必須回傳複本');
+});
+
+test('單一來源不變式：object_detection 字面量只允許出現在 typePolicy.js', () => {
+    // 這是 P1-1 的驗收條件（稽核計畫 §2 P1-1）。
+    // 硬編碼 `projectType === 'object_detection'` 散落各處時，新增類型或改語意必然漏改；
+    // 收斂到 typePolicy 後，改類型只需動一個檔案。
+    const offenders = [];
+    const walk = (dir) => {
+        for (const name of fs.readdirSync(dir)) {
+            const full = path.join(dir, name);
+            if (fs.statSync(full).isDirectory()) { walk(full); continue; }
+            if (!name.endsWith('.js') || name.endsWith('.test.mjs')) continue;
+            if (name === 'typePolicy.js') continue;
+            const src = fs.readFileSync(full, 'utf8');
+            src.split('\n').forEach((line, i) => {
+                const code = line.replace(/^\s*(\*|\/\/).*$/, ''); // 略過註解行
+                if (/projectType\s*[!=]==?\s*'object_detection'/.test(code)
+                    || /projectType\s*[!=]==?\s*'image'/.test(code)
+                    || /projectType\s*[!=]==?\s*'feature'/.test(code)) {
+                    offenders.push(`${path.relative(dmRoot, full)}:${i + 1}`);
+                }
+            });
+        }
+    };
+    walk(dmRoot);
+    assert.deepEqual(offenders, [], '類型判斷須走 core/typePolicy.js，不得硬編碼');
+});
+
+test('單一來源不變式：MODE_TO_TYPES 對應表不得在他檔重複定義', () => {
+    // ui_layout.js 曾自持一份 TYPE_TO_MODES_MAP（與 typePolicy 重複），已於 P1-1 移除。
+    const offenders = [];
+    const walk = (dir) => {
+        for (const name of fs.readdirSync(dir)) {
+            const full = path.join(dir, name);
+            if (fs.statSync(full).isDirectory()) { walk(full); continue; }
+            if (!name.endsWith('.js') || name.endsWith('.test.mjs')) continue;
+            if (name === 'typePolicy.js') continue;
+            if (/TYPE_TO_MODES_MAP/.test(fs.readFileSync(full, 'utf8'))) {
+                offenders.push(path.relative(dmRoot, full));
+            }
+        }
+    };
+    walk(dmRoot);
+    assert.deepEqual(offenders, [], 'allowed modes 對應表只允許存在於 typePolicy.js');
 });

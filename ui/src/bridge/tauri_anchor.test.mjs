@@ -18,6 +18,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BridgeTauri } from './tauri.js';
+import { BridgeVSIX } from './vsix.js';
+import { BaseBridge } from './base.js';
 
 const makeBridge = () => new BridgeTauri();
 
@@ -81,11 +83,53 @@ test('capabilities：未 init 前為未錨定，欄位齊全且 isTauri 為 true
     assert.deepEqual(
         Object.keys(caps).sort(),
         [
-            'canClose', 'hasTerminal', 'isAnchored', 'isRemoteAware', 'isTauri',
-            'projectRoot', 'supportsAutoUpdate', 'supportsEnvironmentCheck',
-            'supportsEraseFS', 'supportsFirmwareReset', 'supportsStableMode'
+            'canClose', 'hasTerminal', 'isAnchored', 'isRemoteAware', 'isRemoteConnected',
+            'isTauri', 'projectRoot', 'supportsAutoUpdate', 'supportsEnvironmentCheck',
+            'supportsEraseFS', 'supportsFirmwareReset'
         ].sort()
     );
+});
+
+test('capabilities 契約：Tauri 與 VSIX 必須回傳同一組鍵（值可不同）', () => {
+    // 為什麼要這條：兩橋若各缺欄位，前端「Tauri vs VSIX 走不同分支」會在欄位缺失時
+    // 靜默失效（讀到 undefined 而非 false），且不會有任何錯誤。
+    // 2026-10-01（P2-6-b）修的 isRemoteConnected 缺漏就是這類問題。
+    const vsix = new BridgeVSIX();
+    const tauri = makeBridge();
+    const tauriKeys = Object.keys(tauri.capabilities).sort();
+    const vsixKeys = Object.keys(vsix.capabilities).sort();
+
+    const missingInVsix = tauriKeys.filter((key) => !vsixKeys.includes(key));
+    const missingInTauri = vsixKeys.filter((key) => !tauriKeys.includes(key));
+    assert.deepEqual(
+        { missingInVsix, missingInTauri },
+        { missingInVsix: [], missingInTauri: [] }
+    );
+    // VSIX 的 _caps 由基類預設 + 覆寫組成，Tauri getter 為寫死物件；
+    // 兩者都必須涵蓋 base.js 宣告的全部鍵（否則 updateCapabilities 會寫進不存在的欄位）
+    const baseKeys = Object.keys(new BaseBridge().capabilities).sort();
+    assert.deepEqual(
+        {
+            baseMissingInVsix: baseKeys.filter((k) => !vsixKeys.includes(k)),
+            baseMissingInTauri: baseKeys.filter((k) => !tauriKeys.includes(k))
+        },
+        { baseMissingInVsix: [], baseMissingInTauri: [] }
+    );
+});
+
+test('capabilities 契約：supportsStableMode 不得再回傳（Stable Mode 死鏈已移除）', () => {
+    // 2026-09-30 Stable Mode 整條移除後，此欄位三端皆無讀取點；
+    // 2026-10-01（P2-6-b）刪除宣告，並以本測試鎖住「不會被無聲加回」。
+    assert.equal('supportsStableMode' in makeBridge().capabilities, false);
+    assert.equal('supportsStableMode' in new BridgeVSIX().capabilities, false);
+    assert.equal('supportsStableMode' in new BaseBridge().capabilities, false);
+});
+
+test('capabilities 契約：isRemoteConnected 在 Tauri 固定 false（無 VS Code remote 環境）', () => {
+    // VSIX 端由 cocoyaManager.ts 依 vscode.env.remoteName 注入 _caps；
+    // Tauri 沒有對應概念，但**必須回傳此鍵**（false），不可省略 ——
+    // 省略會讓前端讀到 undefined，與 false 在條件判斷中行為不同。
+    assert.equal(makeBridge().capabilities.isRemoteConnected, false);
 });
 
 test('capabilities：_anchor 更新後即時反映（isAnchored / projectRoot 不得停留在預設值）', () => {

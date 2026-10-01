@@ -1,11 +1,13 @@
 import { cleanLabelMap, nextLabelId } from './labelMap.js';
+// 2026-10-01（P1-1）：分類判定改走 typePolicy.js（SSOT）
+import { isClassificationType } from './typePolicy.js';
 
 export function calculateStats(projectType, images, existingLabelMap) {
     const sourceImages = Array.isArray(images) ? images : [];
     const labelMap = cleanLabelMap(existingLabelMap);
     const labelCounts = {};
 
-    if (projectType === 'image') {
+    if (isClassificationType(projectType)) {
         sourceImages.forEach((image) => {
             const key = String((image && image.label) || 'unlabeled').trim() || 'unlabeled';
             labelCounts[key] = (labelCounts[key] || 0) + 1;
@@ -52,6 +54,6 @@ export function calculateStats(projectType, images, existingLabelMap) {
  */
 export function countAnnotatedImages(projectType, images) {
     const list = Array.isArray(images) ? images : [];
-    if (projectType === 'image') return list.length;
+    if (isClassificationType(projectType)) return list.length;
     return list.filter((img) => Array.isArray(img && img.annotations) && img.annotations.length > 0).length;
 }

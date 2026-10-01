@@ -1,10 +1,11 @@
 import { t } from './i18n.js';
+import { projectTypes, isKnownType, isImageType as typeIsImageType, isFeatureType } from './core/typePolicy.js';
 
 const SPEC_VERSION = '1.0';
 
-const PROJECT_TYPES = new Set(['image', 'object_detection', 'feature', 'serial', 'table', 'line_following']);
-// 影像類專案：schema.columns 為匯入/採集時自動生成，不需使用者手動定義欄位
-const IMAGE_TYPES = new Set(['image', 'object_detection', 'line_following']);
+// 2026-10-01（P1-1）：專案類型清單改由 core/typePolicy.js 單一來源提供，
+// 本檔不再自持一份 PROJECT_TYPES／IMAGE_TYPES（避免兩處漂移）。
+const PROJECT_TYPES = new Set(projectTypes());
 const SOURCE_MODES = new Set(['live', 'file', 'hybrid']);
 const COLUMN_TYPES = new Set(['float', 'int', 'string', 'boolean', 'image_path', 'timestamp']);
 const COLUMN_ROLES = new Set(['feature', 'label', 'id', 'timestamp', 'metadata', 'ignore']);
@@ -129,7 +130,7 @@ export class DatasetSpec {
         const project = isPlainObject(source.project) ? source.project : {};
         const dataSource = isPlainObject(source.data_source) ? source.data_source : {};
         const name = toSafeName(project.name || source.name, 'dataset');
-        const type = PROJECT_TYPES.has(project.type || source.type) ? (project.type || source.type) : 'table';
+        const type = isKnownType(project.type || source.type) ? (project.type || source.type) : 'table';
         const mode = SOURCE_MODES.has(dataSource.mode || source.mode) ? (dataSource.mode || source.mode) : 'file';
 
         this.version = source.version || SPEC_VERSION;
@@ -178,14 +179,14 @@ export class DatasetSpec {
         if (!spec.project.name) {
             errors.push(t('VALIDATE_PROJECT_NAME_REQUIRED', 'Project name is required.'));
         }
-        if (!PROJECT_TYPES.has(spec.project.type)) {
+        if (!isKnownType(spec.project.type)) {
             errors.push(t('VALIDATE_PROJECT_TYPE_INVALID', 'Project type must be one of: %1.', Array.from(PROJECT_TYPES).join(', ')));
         }
         if (!SOURCE_MODES.has(spec.data_source.mode)) {
             errors.push(t('VALIDATE_SOURCE_MODE_INVALID', 'Data source mode must be one of: %1.', Array.from(SOURCE_MODES).join(', ')));
         }
-        const isImageType = IMAGE_TYPES.has(spec.project.type);
-        const isFeatureLive = spec.project.type === 'feature' && spec.data_source.mode === 'live';
+        const isImageType = typeIsImageType(spec.project.type);
+        const isFeatureLive = isFeatureType(spec.project.type) && spec.data_source.mode === 'live';
         const sampleCount = spec.stats.sample_count
             || (Array.isArray(spec.data_source.samples) ? spec.data_source.samples.length : 0);
 
@@ -262,7 +263,7 @@ export class DatasetSpec {
 
     static createDefault(options = {}) {
         const name = toSafeName(options.name, 'dataset');
-        const type = PROJECT_TYPES.has(options.type) ? options.type : 'table';
+        const type = isKnownType(options.type) ? options.type : 'table';
         const mode = SOURCE_MODES.has(options.mode) ? options.mode : 'file';
 
         return new DatasetSpec({
