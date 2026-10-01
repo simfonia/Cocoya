@@ -253,15 +253,15 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
 ### 注意
 - 主題切換採「存偏好 + reloadWebview」：VSIX 由 host 重建 HTML（cocoyaManager.ts reloadWebview case）、Tauri 為 location.reload()；新模組無需處理此機制
 
-### 測試執行分層守門 (Test Gating, 2026-09-30)
-本專案 Node 測試共 34 檔 **197 例**（T2 新增 3 項 i18n 守門），全量約 **1.1 秒**。**不同階段只跑該跑的層級**，避免浪費時間與 AI 對話 token。
+### 測試執行分層守門 (Test Gating, 2026-09-30／2026-10-01 更新)
+本專案 Node 測試共 **37 檔 227 例**（2026-10-01 Batch 0 新增 3 檔 30 例：主題 token 守門 4＋Tauri 錨定 13＋Persistence 快照 13），全量約 **1.6 秒**。**不同階段只跑該跑的層級**，避免浪費時間與 AI 對話 token。
 
 | 層級 | 指令 | 適用時機 | 內容 |
 |---|---|---|---|
 | **L0** | `npm run test:fast` | 每次改完碼 | 依 `git diff` 自動挑必要測試（同名 → 同目錄 → 模組 glob），只輸出摘要 |
 | **L0 指定** | `npm run test:fast -- <檔案…>` | 明確知道改到哪 | 手動指定變更檔 |
-| **L1** | `npm run test:dm` / `npm run test:core` | 一個功能切片完成 | 單一模組 |
-| **L2** | `npm run test:ui` | 階段／Batch 收尾、提交前 | 全量 197 例 |
+| **L1** | `npm run test:dm` / `test:core` / `test:theme` | 一個功能切片完成 | 單一模組 |
+| **L2** | `npm run test:ui` | 階段／Batch 收尾、提交前 | 全量 227 例 |
 | **L1.5** | `npm run lint:ui` | 改了 `ui/src/**` 的 JS | ESLint（`ui/.eslintrc.json`） |
 | **L2 全閘** | `npm test` | 發布前 | compile + lint(ts) + lint:ui + 全量 |
 | **其他** | `npm run test:rust` / `cargo check` | Rust 異動 | 不併入 `npm test` |
@@ -279,9 +279,12 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
 - **Blockly generator 簽名慣例**：statement 型由 `statementToCode` 以 `generator(block)` 呼叫、value 型由 `valueToCode` 以 `(block, name, order)` 呼叫。**不引用 `generator` 的函式不宣告該參數**（專案已有 `function(block)` 先例）；此處不受 `argsIgnorePattern` 保護，寫 `(block, generator)` 卻不用會被 lint 擋下。
 
 - **測試 SSOT 執行方式**：`ui/` 目錄下 `node --test "src/**/*.test.mjs"`（**勿用目錄模式**，會誤把 `index.js` 當入口，見上文 DM 測試段落）。
-- **自動挑測試的規則**（`scripts/test-related.cjs`）：`*_blocks.js`／`*_generators.js`／`toolbox.xml`／任何 `i18n/*.js`／`src/zh-hant.js`／`src/en.js`／`core_manifest.json`／`theme_manager/themes/*.js` 一律納入 `core_contract.test.mjs` 契約對帳。
+- **自動挑測試的規則**（`scripts/test-related.cjs`）：`*_blocks.js`／`*_generators.js`／`toolbox.xml`／任何 `i18n/*.js`／`src/zh-hant.js`／`src/en.js`／`core_manifest.json`／`theme_manager/themes/*.js` 一律納入 `core_contract.test.mjs` 契約對帳；`theme_manager/themes/*.js` 另納入 `theme_manager/theme_contract.test.mjs`（三主題 cssVars 鍵集合一致，2026-10-01 Batch 0 新增）。
 - **AI 協作紀律**：迭代中一律用 `npm run test:fast`，且不得把子行程完整測試輸出灌入對話（`test-related.cjs` 已於輸出落地前過濾為摘要 + 失敗明細）。
 - **計時器洩漏紅線**：測試中呼叫會啟動 `setTimeout` 的 API 時，必須傳明確 `duration` 或於測試結束前 `dispose()`。未清除的 timer 會吊住 Node event loop，單檔實測多等 5 秒（`ui/statusMessage.test.mjs` 曾因此讓全量測試 5.7s → 0.6s 失守）。
+- **禁止真等待驗 debounce（2026-10-01 踩坑）**：要驗「N 毫秒後才觸發」**必須用 `t.mock.timers.enable({ apis: ['setTimeout'] })` ＋ `t.mock.timers.tick(N)`**，不可 `await new Promise(r => setTimeout(r, N+100))`。`node --test` 會**並發**執行同一檔內的測試，真等待會疊在同一時間軸上：3 個 2.1 秒的 debounce 測試曾讓單檔耗時 6.4 秒。改 mock 後 112ms，且能在同一 tick 內驗「1999ms 不送／2000ms 送一份」這個真等待根本驗不到的邊界。
+- **新守門一律做變異測試（2026-10-01 確立）**：新增契約測試後，必須**刻意破壞來源碼確認測試會紅**，再還原（`git status` 確認乾淨）。只驗「綠燈」無法區分有效守門與假安全感 —— 稽核計畫 §9.2 正是本專案「測試很多但抓不到 bug」的病根。
+- **測試替身必須反映真實介面契約（2026-10-01 踩坑）**：替身方法的**回傳型別**也是契約。例：`persistence.setDirty` 直接回傳 `CocoyaBridge.send()` 的結果，替身若回傳 `undefined` 則 `await setDirty` 不構成任何保證。寫替身前先讀被測函式的回傳路徑。
 
 ### i18n 契約守門 (2026-09-30 T2)
 `ui/src/modules/core/core_contract.test.mjs` 已涵蓋 `core_manifest.json` **全部 22 模組**，並含 3 項 i18n 守門：

@@ -114,6 +114,7 @@ C:\Workspace\cocoya\
 │   │   ├── bridge/      # 通訊橋樑子模組
 │   │   │   ├── base.js    # 橋接基底類別 (含 saveDatasetProgress/loadDatasetProgress 便捷方法 [NEW])
 │   │   │   ├── tauri.js   # Tauri 專屬橋接 (含介面適配；datasetSaveProgress/datasetLoadProgress 路由 [NEW])
+│   │   │   ├── tauri_anchor.test.mjs # [2026-10-01] BridgeTauri 錨定與 capabilities 契約測試（13 測；_normalizeAnchor 的 serde camelCase/snake_case 雙保險、capabilities getter 欄位集合與即時反映、_refreshAnchor 成功/拋錯/null 三分支）
 │   │   │   └── vscode.js  # VS Code 專屬橋接
 │   │   ├── ui/          # UI 功能子模組
 │   │   │   ├── terminal.js # 終端機邏輯（有界隊列、rAF 批次 flush、1000 行保護、單節點字元長度防護）
@@ -130,6 +131,7 @@ C:\Workspace\cocoya\
 │   │   │   ├── workspace.js # Blockly 與 Minimap 管理（_describeCodegenError 降噪；_installZombieTrap/_repairZombieBlocks：空積木取證與自癒 [2026-09-22]）
 │   │   │   ├── lifecycle.js # 初始化與通訊生命週期（_restoreReloadSnapshot：reload 快照還原，先切平台 [2026-09-22]；__bootedAt：模組載入 cache-busting 戳記）
 │   │   │   ├── platform_restore.test.mjs # [2026-09-22] 平台切換→積木還原順序契約測試（3 測；node --test "src/app/*.test.mjs"）
+│   │   │   ├── persistence_snapshot.test.mjs # [2026-10-01] 自動備份/reload 快照/髒狀態橋接契約測試（13 測；快照一次性語意、debounce 以 mock.timers 驗證、setDirty 原子化同步回傳 Promise）
 │   │   │   └── block_jsoninit.test.mjs # [2026-09-22] 全模組 jsonInit 佔位符契約測試（messageN %N 必須涵蓋 argsN，含 %{BKY_*} 展開；空積木事故回歸防護）
 │   │   ├── utils/         # 通用工具子模組
 │   │   │   ├── core.js      # DOM 攔截、ID 提取與縮排修復
@@ -141,9 +143,11 @@ C:\Workspace\cocoya\
 │   │   │   ├── core/      # Python／MicroPython 核心語法積木；`core_contract.test.mjs` 對帳 block、generator、toolbox、i18n、主題與平台契約（2026-09-30 T2 起涵蓋 core_manifest.json 全部 22 模組，含 3 項 i18n 守門）
 │   │   │   ├── theme_manager/ # [NEW] 主題管理模組（registry + 模式切換 + 系統深淺色偵測）
 │   │   │   │   ├── theme_manager.js # 核心：registerTheme/getThemes/setMode/getMode/apply/startWatching (window.CocoyaTheme)
-│   │   │   │   └── themes/    # 內建主題（一主題一檔，載入時 registerTheme）
-│   │   │   │       ├── cocoya_light.js # 淺色主題 (Blockly Classic + 淺色 cssVars)
-│   │   │   │       └── cocoya_dark.js  # 深色主題 (Blockly Theme componentStyles + 深色 cssVars, hideGrid)
+│   │   │   │   ├── theme_contract.test.mjs # [2026-10-01] 三主題契約測試（4 測；cssVars 鍵集合三主題一致／無重複／鍵名格式、msgColours 選配語意；守住 P2-16 不變式，npm run test:theme）
+│   │   │   │   └── themes/    # 內建主題（一主題一檔，載入時 registerTheme；cssVars 鍵集合須三主題同步，由 theme_contract.test.mjs 守門）
+│   │   │   │       ├── cocoya_light.js # 淺色主題 (Blockly Classic + 淺色 cssVars；msgColours 不宣告＝沿用根 zh-hant/en 的 COLOUR_* 預設色)
+│   │   │   │       ├── cocoya_dark.js  # 深色主題 (Blockly Theme componentStyles + 深色 cssVars, hideGrid)
+│   │   │   │       └── cocoya_candy.js # 糖果主題 (多色 cssVars + 唯一有 msgColours 覆寫者)
 │   │   │   ├── ai_inference/ # AI 訓練與推論積木模組
 │   │   │   │   ├── ai_inference_blocks.js      # 積木定義（訓練 1 + 推論 2 + 解析 8；含循線 4 塊 py_ai_get_line/_end/_offset/_angle [2026-09-19]）
 │   │   │   │   ├── ai_inference_generators.js  # 訓練/推論積木 Python 產生器（多候選路徑搜尋，候選 0 讀 COCOYA_TRAIN_TEMPLATES env）；注入 _ModelInference 類，含 _follow_line 線段端點回歸與 int8 輸出還原
