@@ -16,9 +16,9 @@ export const UIComponents = {
      */
     renderImageGrid(container, images, options = {}) {
         if (!container) return;
-        
+
         if (!images || images.length === 0) {
-            container.innerHTML = '<div class="dataset-empty-state">' + t('NO_IMAGES', '尚無影像資料') + '</div>';
+            container.innerHTML = `<div class="dataset-empty-state">${escapeHTML(t('NO_IMAGES', '尚無影像資料'))}</div>`;
             return;
         }
 
@@ -32,7 +32,7 @@ export const UIComponents = {
                     <div class="dataset-image-item ${isAnnotated ? 'annotated' : ''}" data-index="${index}" title="${escapeHTML(img.path)}">
                         <button type="button" class="dataset-image-delete-btn" data-index="${index}" title="${t('DELETE_IMAGE', '刪除照片')}">×</button>
                         <div class="dataset-image-thumb" data-index="${index}">
-                            ${img.blobUrl ? `<img src="${img.blobUrl}">` : '<div class="dataset-thumb-placeholder">?</div>'}
+                            ${img.blobUrl ? `<img src="${escapeHTML(img.blobUrl)}">` : '<div class="dataset-thumb-placeholder">?</div>'}
                         </div>
                         ${isAnnotated ? '<span class="dataset-image-check">✓</span>' : ''}
                         <div class="dataset-image-info">
@@ -77,7 +77,7 @@ export const UIComponents = {
         if (!container) return;
 
         if (!images || images.length === 0) {
-            container.innerHTML = '<div class="dataset-empty-state">' + t('NO_IMAGES', '尚無影像資料') + '</div>';
+            container.innerHTML = `<div class="dataset-empty-state">${escapeHTML(t('NO_IMAGES', '尚無影像資料'))}</div>`;
             return;
         }
 
@@ -95,7 +95,7 @@ export const UIComponents = {
                     return `
                     <div class="dataset-annotation-thumb-item ${itemClass}" data-index="${index}" title="${escapeHTML(img.path || img.name || '')}">
                         <button type="button" class="dataset-image-delete-btn" data-index="${index}" title="${t('DELETE_IMAGE', '刪除照片')}">×</button>
-                        ${img.blobUrl ? `<img src="${img.blobUrl}" class="dataset-annotation-thumb">` : '<div class="dataset-thumb-placeholder">?</div>'}
+                        ${img.blobUrl ? `<img src="${escapeHTML(img.blobUrl)}" class="dataset-annotation-thumb">` : '<div class="dataset-thumb-placeholder">?</div>'}
                         ${badgeHtml}
                     </div>
                     `;
@@ -215,7 +215,7 @@ export const UIComponents = {
                             <label style="display: flex; align-items: center; gap: 5px; margin-bottom: 0; font-size: calc(11px * var(--dsm-font-scale, 1));">
                                 <span>${t('SAMPLER_CAMERA', '📷 攝影機:')}</span>
                                 <select id="dataset-sampler-camera-select" style="font-size: calc(11px * var(--dsm-font-scale, 1)); padding: 2px 4px;" ${cameraScanning ? 'disabled' : ''}>
-                                    ${cameraScanning ? `<option value="" disabled selected>${t('SAMPLER_SCANNING', '⏳ 掃描攝影機中...')}</option>` : cameraList.map(c => `<option value="${c.id}" ${c.id === selectedDeviceId ? 'selected' : ''}>${escapeHTML(c.name)}</option>`).join('')}
+                                    ${cameraScanning ? `<option value="" disabled selected>${t('SAMPLER_SCANNING', '⏳ 掃描攝影機中...')}</option>` : cameraList.map(c => `<option value="${escapeHTML(c.id)}" ${c.id === selectedDeviceId ? 'selected' : ''}>${escapeHTML(c.name)}</option>`).join('')}
                                 </select>
                             </label>
                             <button type="button" id="dataset-sampler-refresh-cameras" class="dataset-icon-btn" title="${t('SAMPLER_REFRESH_CAMERAS', '重新掃描攝影機')}" style="font-size: calc(14px * var(--dsm-font-scale, 1));">🔄</button>
@@ -286,8 +286,8 @@ export const UIComponents = {
                 console.log('[UIComponents] Refreshing camera list...');
                 const cameras = await Sampler.listCameras();
                 if (cameraSelect) {
-                    cameraSelect.innerHTML = cameras.map(c => 
-                        `<option value="${c.id}" ${c.id === Sampler.state.selectedDeviceId ? 'selected' : ''}>${escapeHTML(c.name)}</option>`
+                    cameraSelect.innerHTML = cameras.map(c =>
+                        `<option value="${escapeHTML(c.id)}" ${c.id === Sampler.state.selectedDeviceId ? 'selected' : ''}>${escapeHTML(c.name)}</option>`
                     ).join('');
                 }
                 refreshCamerasBtn.disabled = false;
