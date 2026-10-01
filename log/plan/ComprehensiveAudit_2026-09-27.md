@@ -543,6 +543,104 @@ subprocess.check_call([sys.executable, "-m", "pip", "install", "paramiko"], **_P
 ### 15.2 明確標記為「已完成，僅記錄」者（不需再動）
 
 - DM 三層重構 Stage 0~6（2026-08-24 ~ 09-01）、M1（類型鎖定）、M2 R4~R9、M3 T-1~L-4、M4 Phase 1~5 —— 詳細摘要見 `todo.md` Archive A／Archive C 與 `log/work/2026-09-*.md`，**不在本計畫重複列**。
+
+---
+
+## 16. Batch 1 執行結果：P2-6-b／P1-1／P1-2（2026-10-01）
+
+> 使用者於 Batch 0 收尾時裁示：`isRemoteConnected` 併入 P2-6，隨即執行 Batch 1。
+> 本節記錄三項完成項與一項**新發現的守門盲點**。
+
+### 16.1 P2-6-b `capabilities` 欄位集合不一致 — ✅ 完成
+
+**變更**
+
+| 檔案 | 變更 |
+|---|---|
+| `ui/src/bridge/tauri.js` | getter 補 `isRemoteConnected: false`；刪 `supportsStableMode` |
+| `ui/src/bridge/base.js` | 刪 `supportsStableMode` |
+| `ui/src/bridge/vsix.js` | 刪 `supportsStableMode` |
+| `src-tauri/permissions/commands.toml` | **刪 `setup_stable_mode` 條目（額外發現）** |
+
+**額外發現**：`commands.toml` 的 `commands.allow` 仍列著 `setup_stable_mode`，但該 command 已於 2026-09-30 移除。
+依 AGENTS.md「Tauri 2.0 權限二階段定義」，這是**定義端與實作端不同步**——多數情況下只是冗餘，
+但若日後有人依此以為 command 仍存在而撰寫前端呼叫，會得到執行期錯誤。
+
+**新增守門（+3 測）**：`tauri_anchor.test.mjs` 新增三條 capabilities 契約 ——
+
+1. **跨橋欄位集合對帳**：Tauri 與 VSIX 必須回傳**同一組鍵**（值可不同），且兩者都必須涵蓋 `base.js` 宣告的全部鍵。
+2. **`supportsStableMode` 不得再回傳**：鎖住「不會被無聲加回」。
+3. **`isRemoteConnected` 在 Tauri 固定 `false`**：不可省略（省略會讓前端讀到 `undefined` 而非 `false`）。
+
+> **設計要點**：第 1 條的「跨橋對帳」**不足以單獨**守住欄位增刪 —— 若三個檔案同時漏掉一個鍵，
+> 對帳仍會通過。真正的錨點是**欄位集合字面值斷言**（`Object.keys(caps).sort()` 比對明文清單）。
+> 變異測試已驗證：從 `base.js` 刪 `isRemoteConnected` → 由字面值斷言抓到（對帳測試放行）。
+
+### 16.2 P1-1／P1-2 類型判斷收斂到 typePolicy — ✅ 完成
+
+**`typePolicy.js` 新增**：`ALL_TYPES`、`projectTypes()`、`isKnownType()`、`isFeatureType()`。
+
+**收斂明細（共 16 處硬編碼判斷）**
+
+| 檔案 | 處數 | 改為 |
+|---|---|---|
+| `spec.js` | 5 | `projectTypes()`／`isKnownType()`／`isImageType()`／`isFeatureType()`（**刪除自持的 `PROJECT_TYPES`／`IMAGE_TYPES`**） |
+| `ui_layout.js` | 5 | `isImageType()`×4、`isFeatureType()`×1；**刪除重複的 `TYPE_TO_MODES_MAP`** |
+| `ui/labelManager.js` | 6 | `isClassificationType()`×4、`needsUnclassifiedCheck()`×2 |
+| `core/stats.js` | 2 | `isClassificationType()` |
+| `ui_components.js` | 2 | `isImageType()`、`needsUnclassifiedCheck()` |
+| `ui/annotation.js` | 2 | `needsUnclassifiedCheck()` |
+
+**P1-2 的 `countHeader` 等價性（本次唯一有實質風險的改寫）**
+
+原式：`object_detection → BOX_COUNT`；`line_following → LINE_COUNT`；**其餘 → SAMPLE_COUNT**。
+
+改寫時我一度寫成 `isClassificationType(t) ? SAMPLE_COUNT : (line ? LINE_COUNT : BOX_COUNT)`，
+這會讓 **`table`／`feature` 誤顯示「標註框數」** —— 屬功能退化。已改用
+`needsUnclassifiedCheck(t)`（語意**恰為** `t === 'object_detection'`）取代第一分支，確保完全等價。
+
+> **教訓**：把 `A === 'x' ? P1 : (B === 'y' ? P2 : P3)` 改寫成既有 predicate 時，
+> **必須逐一列舉原表的真值**再對照新 predicate，不能憑「感覺等價」。三段式條件特別容易改錯預設分支。
+
+**新守門（+5 測）**：`typePolicy.test.mjs` 補五條，其中兩條是**全目錄掃描型不變式**：
+
+- `projectTypes()` 與 `imageTypes ∪ devTypes ∪ {table}` 吻合；`isKnownType` 對未知／空字串／undefined 皆 false。
+- `isFeatureType()` 僅 feature。
+- 回傳陣列一律是**複本**（呼叫端 `push` 不得污染 SSOT）。
+- **掃描型**：遍歷 `dataset_manager/` 全部 `.js`（略過 `typePolicy.js` 與 `*.test.mjs`、略過註解行），
+  出現 `projectType === 'object_detection'|'image'|'feature'` 即紅。
+- **掃描型**：`TYPE_TO_MODES_MAP` 只允許存在於 `typePolicy.js`。
+
+> **這個守門立刻抓到兩處我漏掉的**：`core/stats.js:8/55` 兩處 `projectType === 'image'`，
+> 與 `ui/modal.js` 註解中過期的 `TYPE_TO_MODES_MAP` 引用。
+> 若只照計畫原文列的 4 個檔案改，這兩處會漏掉 —— **掃描型守門的價值正在於此**。
+
+**變異測試**：把 `stats.js` 的 `isClassificationType(projectType)` 改回硬編碼 → 掃描型守門紅並精確報出 `core\stats.js:10`。
+
+### 16.3 P2-6（`ui_components.js` 職責重疊）— ⏳ 未執行
+
+本批次**未動** `ui_components.js` 的函式本體（僅改其類型判斷）。
+刪除已無引用的呈現函式需要逐一比對呼叫端，且涉及 AGENTS.md 明確警告的
+「`#dataset-structure-content` 嚴禁覆寫 innerHTML」契約，風險高於 P1-1／P1-2，**留作獨立一次執行**。
+
+### 16.4 驗收結果
+
+| 關卡 | 結果 |
+|---|---|
+| `npm test` | ✅ **235/235**（227 → +8），1.12s |
+| DM 子集 | ✅ 154/154 |
+| `npx vite build` | ✅ PASS（57 modules, 189ms） |
+| `cargo check` | ✅ Finished（1 個既有 warning） |
+| `git status` | ✅ 14 檔皆為預期變更，無 mutation 殘留 |
+
+**變更檔案 14 個**（`+199 / -47`），備份 `backup/{ui_layout,ui_components,annotation,labelManager}_pre_batch1_*.bak`。
+
+> ⚠️ **本次未做實機驗證**：變更雖觸及執行期程式碼（`stats.js`／`ui_layout.js`／`spec.js` 等），
+> 但**全部是等價改寫**（同一判斷換成 predicate 呼叫），且 DM 154 例全綠。
+> 依 AGENTS.md 驗收關卡第 6 項，仍建議在 **Batch 1 全部收尾後**做一次四類型（image／object_detection／
+> line_following／table／feature）雙平台實機＋三主題目視，確認統計面板的「標註框數／標註線段／樣本數」
+> 表頭在各類型下正確 —— 這正是本次風險最集中的那一行。
+
 - 依 AGENTS.md：**已完成歷史任務嚴禁刪除**，故 `todo.md` 的歸檔節保留（已精簡為指針）。
 
 ### 15.3 使用者 backlog（需實機／硬體，非本計畫可執行）

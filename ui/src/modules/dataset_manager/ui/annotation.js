@@ -13,6 +13,8 @@
 import {
     countAnnotated, resolveDeleteIndex, removeAnnotationAt, setAnnotationClassId
 } from '../application/annotationMutations.js';
+// 2026-10-01（P1-2）：類型判斷改走 core/typePolicy.js（SSOT）。
+import { needsUnclassifiedCheck } from '../core/typePolicy.js';
 
 /**
  * @param {object} options
@@ -283,7 +285,7 @@ export function createAnnotationController({
 
         // 類別選擇器（僅物件偵測模式顯示；標籤管理由共用 createLabelMapManager 處理）
         let classSelectorHtml = '';
-        if (projectType === 'object_detection') {
+        if (needsUnclassifiedCheck(projectType)) {
             classSelectorHtml = `
                 <div class="dataset-annotation-class-section">
                     <div class="dataset-annotation-section-title">${t('ANNOTATION_CLASS', '類別')}</div>
@@ -301,7 +303,7 @@ export function createAnnotationController({
         `;
 
         // 類別管理（標註模式，共用 createLabelMapManager，與檢視/分類一致）
-        if (projectType === 'object_detection') {
+        if (needsUnclassifiedCheck(projectType)) {
             createLabelMapManager(doc().getElementById('annotation-class-manager'));
         }
 

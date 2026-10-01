@@ -8,6 +8,8 @@ import {
     countImagesWithLabel, countBoxesWithClassId,
     removeAnnotationsByClassId, reassignLabelsToUnlabeled
 } from '../application/annotationMutations.js';
+// 2026-10-01（P1-1/P1-2）：類型判斷改走 core/typePolicy.js（SSOT）。
+import { isClassificationType, needsUnclassifiedCheck } from '../core/typePolicy.js';
 
 export function createLabelManager({
     state, t, escapeHtml, UIComponents, UICanvas, getFormValue,
@@ -47,13 +49,13 @@ export function createLabelManager({
             const v = parseInt(select.value, 10);
             return Number.isInteger(v) ? v : -1;
         };
-        if (projectType === 'object_detection') {
+        if (needsUnclassifiedCheck(projectType)) {
             select.onchange = () => { UICanvas.state.currentClassId = currentId(); };
         }
 
         const reRender = () => {
             if (state.annotationMode && state.annotationMode.isActive) {
-                if (projectType === 'image') renderClassificationControls();
+                if (isClassificationType(projectType)) renderClassificationControls();
                 else renderAnnotationControls();
                 updateThumbnailHighlight();
             } else {
@@ -84,7 +86,7 @@ export function createLabelManager({
             const sel = freshContainer().querySelector('.dataset-label-manager-select');
             if (sel) {
                 sel.value = map[trimmed];
-                if (projectType === 'object_detection') UICanvas.state.currentClassId = map[trimmed];
+                if (needsUnclassifiedCheck(projectType)) UICanvas.state.currentClassId = map[trimmed];
             }
         };
 
@@ -99,7 +101,7 @@ export function createLabelManager({
                 const map = state.spec.toJSON().schema.label_map || {};
                 delete map[entry[0]];
                 map[trimmed] = id;
-                if (projectType === 'image') {
+                if (isClassificationType(projectType)) {
                     state.images.forEach((img) => { if (img.label === entry[0]) img.label = trimmed; });
                 }
                 state.spec.updateSchema({ label_map: map });
@@ -116,7 +118,7 @@ export function createLabelManager({
             const id = currentId();
             const entry = entries.find(([, v]) => v === id);
             if (!entry) return;
-            const count = (projectType === 'image')
+            const count = (isClassificationType(projectType))
                 ? countImagesWithLabel(state.images, entry[0])
                 : countBoxesWithClassId(state.images, id);
             const confirmed = await bridge.confirm(
@@ -126,7 +128,7 @@ export function createLabelManager({
             if (confirmed) {
                 const map = state.spec.toJSON().schema.label_map || {};
                 delete map[entry[0]];
-                if (projectType === 'image') {
+                if (isClassificationType(projectType)) {
                     reassignLabelsToUnlabeled(state.images, entry[0]);
                 } else {
                     removeAnnotationsByClassId(state.images, id);

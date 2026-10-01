@@ -18,7 +18,9 @@ export class BaseBridge {
             supportsAutoUpdate: false,
             supportsFirmwareReset: false,
             supportsEnvironmentCheck: false,
-            supportsStableMode: false,
+            // 2026-10-01（P2-6-b）移除 supportsStableMode：CircuitPython 時代的「Stable Mode」
+            // 死鏈已於 2026-09-30 整條移除（command／事件處理／i18n／deploy 腳本），
+            // 此欄位三端皆無讀取點，僅為殘留宣告。
             supportsEraseFS: false,
             isTauri: false,
             isRemoteAware: false,

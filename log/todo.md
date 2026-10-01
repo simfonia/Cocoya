@@ -97,12 +97,13 @@
 - [ ] 實機驗證：選擇序列埠後重新整理，label 不會被清空
 - [ ] 實機驗證：①拆鈕後偵測/監看各自行為 ②熱插拔 1.5s 自動換埠切板 ③拔 Maker Pi 插 SPIKE 正確更新 ④上傳含 print() 開頭不被吃、點點同行 ⑤microbit Pin(n) 語義與 P5/P11 共用腳位 ⑥新 MCU 檔三塊不重疊+帽子外觀 ⑦SSH Enter 連線 ⑧多視窗輪詢不污染
 
-### [2026-09-27] #task[cocoya 全面檢查] 全專案稽核計畫（Stage 0 ✅／Batch 0 ✅／Batch 1~6 待執行）
-> 計畫全文：`log/plan/ComprehensiveAudit_2026-09-27.md`（原 13 章節 ＋ **§14 Batch 0 執行結果** ＋ **§15 DM 殘餘收斂**）
+### [2026-09-27] #task[cocoya 全面檢查] 全專案稽核計畫（Stage 0 ✅／Batch 0 ✅／Batch 1 執行中）
+> 計畫全文：`log/plan/ComprehensiveAudit_2026-09-27.md`（原 13 章節 ＋ **§14 Batch 0 執行結果** ＋ **§15 DM 殘餘收斂** ＋ **§16 Batch 1**）
 > 範圍：全專案；DM 限 image／object_detection／line_following／table 四類型；特別檢查 i18n 與 3 主題。
 > **執行順序決策：先做 Stage 0（TDD 守門），再動任何重構批次。** 理由：Batch 1~6 全是拆檔重構，無測試門檻等於沒有安全網。
-> **進度**：Stage 0（T1／T-fast／P0-1／P0-2／P0-3／T2／T3 夾具）與 Batch 0（P0-3 複核／P3-1／P3-2）已完成。
-> 全量測試 **194 → 227 例**（`npm test` 全綠）。**下一個可執行批次為 Batch 1**（P1-1／P1-2 類型判斷收斂、P2-6 移除 `ui_components.js` 冗餘）。
+> **進度**：Stage 0（T1／T-fast／P0-1／P0-2／P0-3／T2／T3 夾具）、Batch 0（P0-3 複核／P3-1／P3-2）、
+> **Batch 1 的 P2-6-b／P1-1／P1-2**（2026-10-01）已完成。
+> 全量測試 **194 → 235 例**（`npm test` 全綠）。**下一個可執行項：P2-6**（`ui_components.js` 職責重疊清理）。
 > ⚠️ **T-scan**（掃描其餘測試檔的計時器／未 await handle）仍待辦，見下方 Stage 0 節。
 > 基準（實測 2026-09-27）：`cd ui; node --test "src/**/*.test.mjs"` → tests 194 / pass 194 / fail 0（測試本體不差，問題是沒機制去跑）
 
@@ -141,9 +142,16 @@
 - [x] **P3-2／T7 前段** 補高風險檔測試 ✅ 2026-10-01（Batch 0，計畫 §14.3，+30 例）：`ui/src/bridge/tauri_anchor.test.mjs`（13 測，`_normalizeAnchor` serde 雙保險／`capabilities` 欄位集合與即時反映／`_refreshAnchor` 三分支）＋`ui/src/app/persistence_snapshot.test.mjs`（13 測，reload 快照一次性語意／debounce 以 `mock.timers` 驗證／`setDirty` 原子化同步）。兩支皆經**變異測試**確認會紅（非假綠）。全量 197 → **227** 例
 
 #### Batch 1（低風險純重構）
-- [ ] P1-1 DM 類型判斷收斂：`ui_layout.js:226/880/956` 與 `ui_components.js:約41` 的 `projectType === 'image' || 'object_detection' || 'line_following'` 全數改 `typePolicy.isImageType()`；`spec.js` 的 `IMAGE_TYPES`/`PROJECT_TYPES` 與 typePolicy 收單一來源
-- [ ] P1-2 `ui_components.js` 的 `countHeader = projectType === 'object_detection'` 等單類型分支改走 `needsAnnotationCheck()`／`isClassificationType()`，補 `typePolicy.test.mjs` 斷言
-- [ ] P2-6 `ui_components.js`（20.8KB）與 `ui/panels.js`／`ui/thumbnails.js` 職責重疊：逐條比對呼叫端移除已無引用者；L19／L78 字串拼接 innerHTML 改走 `core/html.js` escape
+- [x] **P1-1** DM 類型判斷收斂 ✅ 2026-10-01（計畫 §16.2）：`typePolicy.js` 補 `ALL_TYPES`／`projectTypes()`／`isKnownType()`／`isFeatureType()`；
+  `spec.js` 改 import（移除自持的 `PROJECT_TYPES`／`IMAGE_TYPES`）；`ui_layout.js` 4 處、`ui_components.js` 2 處、`core/stats.js` 2 處、
+  `ui/annotation.js` 2 處、`ui/labelManager.js` 6 處全數改走 typePolicy；刪除 `ui_layout.js` 重複的 `TYPE_TO_MODES_MAP`。
+  **新守門**：`typePolicy.test.mjs` 掃描全 DM 目錄，硬編碼 `projectType === '...'` 或 `TYPE_TO_MODES_MAP` 即紅（+5 測）
+- [x] **P1-2** 單類型分支改走 typePolicy ✅ 2026-10-01（計畫 §16.2）：`countHeader` 用 `needsUnclassifiedCheck()`（語意等價於「僅物件偵測」），
+  `feature` 分流用 `isFeatureType()`，分類專屬行為用 `isClassificationType()`
+- [x] **P2-6-b** `capabilities` 欄位集合不一致 ✅ 2026-10-01（計畫 §16.1）：Tauri getter 補 `isRemoteConnected: false`；
+  刪 `supportsStableMode` 三處宣告 ＋ `src-tauri/permissions/commands.toml` 的 `setup_stable_mode` 條目（額外發現）；
+  新增跨橋欄位集合對帳測試（+3 測）
+- [ ] **P2-6** `ui_components.js`（20.8KB）與 `ui/panels.js`／`ui/thumbnails.js` 職責重疊：逐條比對呼叫端移除已無引用者；L19／L78 字串拼接 innerHTML 改走 `core/html.js` escape
 
 #### Batch 2（中風險視覺，需三主題目視）
 - [ ] P1-3 `dataset_manager.css` token 化：144 個 hex → 判定設計常數／主題值；優先 `#4CAF50`(7)、`#2d2d2d`/`#1e1e1e`、`#ff8fb3`(5)；新增 token 須三主題同步（維持各 46 鍵集合一致的不變式）

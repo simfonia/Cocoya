@@ -18,6 +18,11 @@ export class BridgeTauri extends BaseBridge {
 
     /**
      * 獲取環境功能清單 (Tauri)
+     *
+     * 契約：兩個橋的 capabilities 必須回傳**同一組鍵**（值可不同），
+     * 否則前端「Tauri vs VSIX 走不同分支」會在欄位缺失時靜默失效。
+     * 2026-10-01（P2-6-b）：補上 isRemoteConnected（Tauri 固定 false —— 沒有 VS Code
+     * remote 環境；VSIX 端由 cocoyaManager.ts 依 vscode.env.remoteName 注入 _caps）。
      */
     get capabilities() {
         return {
@@ -26,10 +31,10 @@ export class BridgeTauri extends BaseBridge {
             supportsAutoUpdate: true,
             supportsFirmwareReset: true,
             supportsEnvironmentCheck: true,
-            supportsStableMode: false,
             supportsEraseFS: false,
             isTauri: true,
             isRemoteAware: true, // Tauri 亦保留雲端/SSH 擴充可能性
+            isRemoteConnected: false,
             isAnchored: !!(this._anchor && this._anchor.isAnchored),
             projectRoot: (this._anchor && this._anchor.projectRoot) || null
         };

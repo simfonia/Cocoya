@@ -5,6 +5,8 @@
 import { Sampler } from './sampler.js';
 import { t } from './i18n.js';
 import { escapeHtml as escapeHTML } from './core/html.js';
+// 2026-10-01（P1-1/P1-2）：類型判斷改走 core/typePolicy.js（SSOT），不再在本檔自持硬編碼類型清單。
+import { isImageType, needsUnclassifiedCheck } from './core/typePolicy.js';
 
 export const UIComponents = {
     /**
@@ -135,12 +137,12 @@ export const UIComponents = {
         const counts = (stats && stats.label_counts) || {};
         const labels = Object.keys(counts).sort((a, b) => a.localeCompare(b));
         const projectType = options.projectType || '';
-        const isImageTask = projectType === 'image' || projectType === 'object_detection' || projectType === 'line_following';
+        const isImageTask = isImageType(projectType);
         const imageCount = Number.isInteger(options.imageCount)
             ? options.imageCount
             : (Number.isInteger(stats && stats.sample_count) ? stats.sample_count : 0);
         const annotatedCount = Number.isInteger(options.annotatedCount) ? options.annotatedCount : null;
-        const countHeader = projectType === 'object_detection'
+        const countHeader = needsUnclassifiedCheck(projectType)
             ? t('BOX_COUNT', '標註框數')
             : (projectType === 'line_following' ? t('LINE_COUNT', '標註線段') : t('SAMPLE_COUNT', '樣本數'));
 
