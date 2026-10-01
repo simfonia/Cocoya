@@ -28,6 +28,7 @@ commands.allow = [
   "close_window",
   "check_startup_backup",
   "open_examples",
+  "restore_examples",
   "start_sidecar",
   "sidecar_send",
   "stop_sidecar",

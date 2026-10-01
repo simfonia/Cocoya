@@ -44,6 +44,8 @@
     --dsm-disabled-bg: #f0f0f0;
     --dsm-disabled-text: #aaaaaa;
     --dsm-disabled-border: #e0e0e0;
+    /* 縮圖底板（2026-10-01：object-fit 改 contain 後，上下/左右留白會露出此底色） */
+    --dsm-thumb-bg: #eeeeee;
     /* 類型入口卡片（2026-09-10 M1：類型鎖定入口）*/
     --dsm-card-bg: #ffffff;
     --dsm-card-border: #dddddd;
@@ -55,7 +57,9 @@
 
 /* dark / high-contrast token 覆寫（Stage 5 切片 4）：值與既有 dark 區塊原值等值 */
 body.vscode-dark,
-body.vscode-high-contrast {
+body.vscode-high-contrast,
+body.cocoya-dark-mode,
+body.cocoya-dark-mode  {
     --dsm-text: #e0e0e0;
     --dsm-text-secondary: #aaaaaa;
     --dsm-text-muted: #888888;
@@ -232,7 +236,9 @@ body.vscode-high-contrast {
 }
 
 body.vscode-dark .dataset-panel-divider,
-body.vscode-high-contrast .dataset-panel-divider {
+body.vscode-high-contrast .dataset-panel-divider,
+body.cocoya-dark-mode .dataset-panel-divider,
+body.cocoya-dark-mode .dataset-panel-divider  {
     background: #444444;
 }
 
@@ -258,7 +264,17 @@ body.vscode-high-contrast .dataset-source-panel input:focus,
 body.vscode-high-contrast .dataset-source-panel select:focus,
 body.vscode-high-contrast .dataset-source-panel textarea:focus,
 body.vscode-high-contrast .dataset-column-row input:focus,
-body.vscode-high-contrast .dataset-column-row select:focus {
+body.vscode-high-contrast .dataset-column-row select:focus,
+body.cocoya-dark-mode .dataset-source-panel input:focus,
+body.cocoya-dark-mode .dataset-source-panel select:focus,
+body.cocoya-dark-mode .dataset-source-panel textarea:focus,
+body.cocoya-dark-mode .dataset-column-row input:focus,
+body.cocoya-dark-mode .dataset-column-row select:focus,
+body.cocoya-dark-mode .dataset-source-panel input:focus,
+body.cocoya-dark-mode .dataset-source-panel select:focus,
+body.cocoya-dark-mode .dataset-source-panel textarea:focus,
+body.cocoya-dark-mode .dataset-column-row input:focus,
+body.cocoya-dark-mode .dataset-column-row select:focus  {
     border-color: var(--dsm-brand);
     box-shadow: 0 0 0 2px var(--dsm-brand-strong);
 }
@@ -301,7 +317,9 @@ body.vscode-high-contrast .dataset-column-row select:focus {
 }
 
 body.vscode-dark .dataset-icon-btn:hover,
-body.vscode-high-contrast .dataset-icon-btn:hover {
+body.vscode-high-contrast .dataset-icon-btn:hover,
+body.cocoya-dark-mode .dataset-icon-btn:hover,
+body.cocoya-dark-mode .dataset-icon-btn:hover  {
     background: #4a2a35;
     color: var(--dsm-brand);
 }
@@ -328,7 +346,11 @@ body.vscode-high-contrast .dataset-icon-btn:hover {
 body.vscode-dark .dataset-small-btn:hover,
 body.vscode-dark .dataset-secondary-btn:hover,
 body.vscode-high-contrast .dataset-small-btn:hover,
-body.vscode-high-contrast .dataset-secondary-btn:hover {
+body.vscode-high-contrast .dataset-secondary-btn:hover,
+body.cocoya-dark-mode .dataset-small-btn:hover,
+body.cocoya-dark-mode .dataset-secondary-btn:hover,
+body.cocoya-dark-mode .dataset-small-btn:hover,
+body.cocoya-dark-mode .dataset-secondary-btn:hover  {
     border-color: var(--dsm-brand);
     color: var(--dsm-brand);
     background: #4a2a35;
@@ -361,21 +383,42 @@ body.vscode-high-contrast .dataset-secondary-btn:hover {
 }
 
 body.vscode-dark .dataset-validation.ok,
-body.vscode-high-contrast .dataset-validation.ok {
+body.vscode-high-contrast .dataset-validation.ok,
+body.cocoya-dark-mode .dataset-validation.ok,
+body.cocoya-dark-mode .dataset-validation.ok  {
     border-color: #388e3c;
     background: #1b3d1b;
     color: #81c784;
 }
 
 body.vscode-dark .dataset-validation.error,
-body.vscode-high-contrast .dataset-validation.error {
+body.vscode-high-contrast .dataset-validation.error,
+body.cocoya-dark-mode .dataset-validation.error,
+body.cocoya-dark-mode .dataset-validation.error  {
     border-color: #c62828;
     background: var(--dsm-error-bg);
     color: #ef9a9a;
 }
 
+/* 2026-10-01：補上 .warn 的暗色覆寫。
+ * 問題：.warn 只有淺色定義（米色 #fdf6e3）且未設 color，導致 dark 主題下
+ *      出現「亮底 + 繼承到的淺灰文字」= 幾乎看不清（使用者回報）。
+ *      .ok / .error 原本就有暗色覆寫，唯獨 .warn 被漏掉。
+ *      （注意：dark class 對齊只救「已存在」的規則，救不了「根本沒寫」的規則。）
+ */
+body.vscode-dark .dataset-validation.warn,
+body.vscode-high-contrast .dataset-validation.warn,
+body.cocoya-dark-mode .dataset-validation.warn,
+body.cocoya-dark-mode .dataset-validation.warn  {
+    border-color: #8a6d2f;
+    background: #3a3320;
+    color: #e0c878;
+}
+
 body.vscode-dark .dataset-validation .dataset-warnings,
-body.vscode-high-contrast .dataset-validation .dataset-warnings {
+body.vscode-high-contrast .dataset-validation .dataset-warnings,
+body.cocoya-dark-mode .dataset-validation .dataset-warnings,
+body.cocoya-dark-mode .dataset-validation .dataset-warnings  {
     color: #ffb74d;
 }
 
@@ -421,7 +464,9 @@ body.vscode-high-contrast .dataset-validation .dataset-warnings {
 }
 
 body.vscode-dark .dataset-manager-dialog,
-body.vscode-high-contrast .dataset-manager-dialog {
+body.vscode-high-contrast .dataset-manager-dialog,
+body.cocoya-dark-mode .dataset-manager-dialog,
+body.cocoya-dark-mode .dataset-manager-dialog  {
     background: var(--dsm-surface);
     color: var(--dsm-text);
     border-color: var(--dsm-border-light);
@@ -430,13 +475,19 @@ body.vscode-high-contrast .dataset-manager-dialog {
 body.vscode-dark .dataset-manager-header,
 body.vscode-dark .dataset-manager-footer,
 body.vscode-high-contrast .dataset-manager-header,
-body.vscode-high-contrast .dataset-manager-footer {
+body.vscode-high-contrast .dataset-manager-footer,
+body.cocoya-dark-mode .dataset-manager-header,
+body.cocoya-dark-mode .dataset-manager-footer,
+body.cocoya-dark-mode .dataset-manager-header,
+body.cocoya-dark-mode .dataset-manager-footer  {
     background: var(--dsm-surface-alt);
     border-color: var(--dsm-border-light);
 }
 
 body.vscode-dark .dataset-panel,
-body.vscode-high-contrast .dataset-panel {
+body.vscode-high-contrast .dataset-panel,
+body.cocoya-dark-mode .dataset-panel,
+body.cocoya-dark-mode .dataset-panel  {
     background: var(--dsm-surface-alt);
     border-color: var(--dsm-border-light);
 }
@@ -448,7 +499,15 @@ body.vscode-dark .dataset-manager-header span,
 body.vscode-high-contrast .dataset-panel h3,
 body.vscode-high-contrast .dataset-source-panel label span,
 body.vscode-high-contrast .dataset-column-head,
-body.vscode-high-contrast .dataset-manager-header span {
+body.vscode-high-contrast .dataset-manager-header span,
+body.cocoya-dark-mode .dataset-panel h3,
+body.cocoya-dark-mode .dataset-source-panel label span,
+body.cocoya-dark-mode .dataset-column-head,
+body.cocoya-dark-mode .dataset-manager-header span,
+body.cocoya-dark-mode .dataset-panel h3,
+body.cocoya-dark-mode .dataset-source-panel label span,
+body.cocoya-dark-mode .dataset-column-head,
+body.cocoya-dark-mode .dataset-manager-header span  {
     color: var(--dsm-text-secondary);
 }
 
@@ -461,7 +520,17 @@ body.vscode-high-contrast .dataset-source-panel input,
 body.vscode-high-contrast .dataset-source-panel select,
 body.vscode-high-contrast .dataset-source-panel textarea,
 body.vscode-high-contrast .dataset-column-row input,
-body.vscode-high-contrast .dataset-column-row select {
+body.vscode-high-contrast .dataset-column-row select,
+body.cocoya-dark-mode .dataset-source-panel input,
+body.cocoya-dark-mode .dataset-source-panel select,
+body.cocoya-dark-mode .dataset-source-panel textarea,
+body.cocoya-dark-mode .dataset-column-row input,
+body.cocoya-dark-mode .dataset-column-row select,
+body.cocoya-dark-mode .dataset-source-panel input,
+body.cocoya-dark-mode .dataset-source-panel select,
+body.cocoya-dark-mode .dataset-source-panel textarea,
+body.cocoya-dark-mode .dataset-column-row input,
+body.cocoya-dark-mode .dataset-column-row select  {
     background: #1e1e1e;
     border-color: var(--dsm-border-strong);
     color: var(--dsm-text);
@@ -470,14 +539,20 @@ body.vscode-high-contrast .dataset-column-row select {
 body.vscode-dark .dataset-small-btn,
 body.vscode-dark .dataset-secondary-btn,
 body.vscode-high-contrast .dataset-small-btn,
-body.vscode-high-contrast .dataset-secondary-btn {
+body.vscode-high-contrast .dataset-secondary-btn,
+body.cocoya-dark-mode .dataset-small-btn,
+body.cocoya-dark-mode .dataset-secondary-btn,
+body.cocoya-dark-mode .dataset-small-btn,
+body.cocoya-dark-mode .dataset-secondary-btn  {
     background: #3c3c3c;
     border-color: var(--dsm-border-strong);
     color: var(--dsm-text);
 }
 
 body.vscode-dark #dataset-json-preview,
-body.vscode-high-contrast #dataset-json-preview {
+body.vscode-high-contrast #dataset-json-preview,
+body.cocoya-dark-mode #dataset-json-preview,
+body.cocoya-dark-mode #dataset-json-preview  {
     background: #1e1e1e;
     border-color: var(--dsm-border-light);
     color: #d4d4d4;
@@ -504,7 +579,9 @@ body.vscode-high-contrast #dataset-json-preview {
 }
 
 body.vscode-dark .dataset-image-item,
-body.vscode-high-contrast .dataset-image-item {
+body.vscode-high-contrast .dataset-image-item,
+body.cocoya-dark-mode .dataset-image-item,
+body.cocoya-dark-mode .dataset-image-item  {
     background: #333333;
 }
 
@@ -514,7 +591,9 @@ body.vscode-high-contrast .dataset-image-item {
 }
 
 body.vscode-dark .dataset-image-item:hover,
-body.vscode-high-contrast .dataset-image-item:hover {
+body.vscode-high-contrast .dataset-image-item:hover,
+body.cocoya-dark-mode .dataset-image-item:hover,
+body.cocoya-dark-mode .dataset-image-item:hover  {
     border-color: var(--dsm-brand);
     box-shadow: 0 4px 12px var(--dsm-brand-strong);
 }
@@ -525,7 +604,9 @@ body.vscode-high-contrast .dataset-image-item:hover {
 }
 
 body.vscode-dark .dataset-image-item.annotated,
-body.vscode-high-contrast .dataset-image-item.annotated {
+body.vscode-high-contrast .dataset-image-item.annotated,
+body.cocoya-dark-mode .dataset-image-item.annotated,
+body.cocoya-dark-mode .dataset-image-item.annotated  {
     border-color: #4CAF50;
 }
 
@@ -546,7 +627,9 @@ body.vscode-high-contrast .dataset-image-item.annotated {
 }
 
 body.vscode-dark .dataset-image-check,
-body.vscode-high-contrast .dataset-image-check {
+body.vscode-high-contrast .dataset-image-check,
+body.cocoya-dark-mode .dataset-image-check,
+body.cocoya-dark-mode .dataset-image-check  {
     background: rgba(0, 0, 0, 0.7);
 }
 
@@ -561,7 +644,9 @@ body.vscode-high-contrast .dataset-image-check {
 }
 
 body.vscode-dark .dataset-autosave-indicator,
-body.vscode-high-contrast .dataset-autosave-indicator {
+body.vscode-high-contrast .dataset-autosave-indicator,
+body.cocoya-dark-mode .dataset-autosave-indicator,
+body.cocoya-dark-mode .dataset-autosave-indicator  {
     color: #6fdd8a;
 }
 
@@ -607,18 +692,24 @@ body.vscode-high-contrast .dataset-autosave-indicator {
 }
 
 body.vscode-dark .dataset-export-progress,
-body.vscode-high-contrast .dataset-export-progress {
+body.vscode-high-contrast .dataset-export-progress,
+body.cocoya-dark-mode .dataset-export-progress,
+body.cocoya-dark-mode .dataset-export-progress  {
     background: var(--dsm-success-bg);
     border-bottom-color: var(--dsm-success-border);
 }
 
 body.vscode-dark .dataset-export-progress-label,
-body.vscode-high-contrast .dataset-export-progress-label {
+body.vscode-high-contrast .dataset-export-progress-label,
+body.cocoya-dark-mode .dataset-export-progress-label,
+body.cocoya-dark-mode .dataset-export-progress-label  {
     color: var(--dsm-success-text);
 }
 
 body.vscode-dark .dataset-export-progress-bar,
-body.vscode-high-contrast .dataset-export-progress-bar {
+body.vscode-high-contrast .dataset-export-progress-bar,
+body.cocoya-dark-mode .dataset-export-progress-bar,
+body.cocoya-dark-mode .dataset-export-progress-bar  {
     background: #444444;
 }
 
@@ -650,7 +741,9 @@ body.vscode-high-contrast .dataset-export-progress-bar {
 }
 
 body.vscode-dark .dataset-manager-message.is-visible,
-body.vscode-high-contrast .dataset-manager-message.is-visible {
+body.vscode-high-contrast .dataset-manager-message.is-visible,
+body.cocoya-dark-mode .dataset-manager-message.is-visible,
+body.cocoya-dark-mode .dataset-manager-message.is-visible  {
     background: #3a2b32;
     border-color: #6b4455;
     color: #ff8fb3;
@@ -670,13 +763,48 @@ body.vscode-high-contrast .dataset-manager-message.is-visible {
 }
 
 body.vscode-dark .dataset-name-warning,
-body.vscode-high-contrast .dataset-name-warning {
+body.vscode-high-contrast .dataset-name-warning,
+body.cocoya-dark-mode .dataset-name-warning,
+body.cocoya-dark-mode .dataset-name-warning  {
     border-color: #ff8fb3 !important;
     background: var(--dsm-warning-bg) !important;
     box-shadow: 0 0 0 2px rgba(255, 143, 179, 0.35) !important;
 }
 
 /* 標註工具列的匯出按鈕與狀態回饋 */
+/* 十字尺規調色（2026-10-01）：固定白色在淺色照片上看不清 → 提供可調色 */
+.dataset-annotation-crosshair-picker {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: calc(11px * var(--dsm-font-scale, 1));
+    color: var(--dsm-text-secondary);
+    cursor: pointer;
+}
+
+.dataset-annotation-crosshair-label {
+    white-space: nowrap;
+}
+
+.dataset-annotation-crosshair-picker input[type="color"] {
+    width: 22px;
+    height: 18px;
+    padding: 0;
+    border: 1px solid var(--dsm-border-light);
+    border-radius: 3px;
+    background: transparent;
+    cursor: pointer;
+}
+
+.dataset-annotation-crosshair-picker input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 1px;
+}
+
+.dataset-annotation-crosshair-picker input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 2px;
+}
+
 .dataset-annotation-toolbar .dataset-annotation-export-status {
     flex: 1 1 auto;
     text-align: right;
@@ -691,7 +819,9 @@ body.vscode-high-contrast .dataset-name-warning {
 }
 
 body.vscode-dark .dataset-annotation-toolbar .dataset-annotation-export-status,
-body.vscode-high-contrast .dataset-annotation-toolbar .dataset-annotation-export-status {
+body.vscode-high-contrast .dataset-annotation-toolbar .dataset-annotation-export-status,
+body.cocoya-dark-mode .dataset-annotation-toolbar .dataset-annotation-export-status,
+body.cocoya-dark-mode .dataset-annotation-toolbar .dataset-annotation-export-status  {
     color: #ff8fb3;
 }
 
@@ -729,21 +859,25 @@ body.vscode-high-contrast .dataset-annotation-toolbar .dataset-annotation-export
     aspect-ratio: 1;
     overflow: hidden;
     border-radius: 2px;
-    background: #eee;
+    /* 2026-10-01：object-fit 改 contain 後會露出底色，改走 token 讓三主題一致 */
+    background: var(--dsm-thumb-bg);
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 body.vscode-dark .dataset-image-thumb,
-body.vscode-high-contrast .dataset-image-thumb {
+body.vscode-high-contrast .dataset-image-thumb,
+body.cocoya-dark-mode .dataset-image-thumb,
+body.cocoya-dark-mode .dataset-image-thumb  {
     background: #444;
 }
 
 .dataset-image-thumb img {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    /* 2026-10-01：cover 會裁切掉原圖上下/左右，無法完整檢視畫面全貌 → 改 contain */
+    object-fit: contain;
 }
 
 .dataset-image-info {
@@ -781,7 +915,9 @@ body.vscode-high-contrast .dataset-image-thumb {
 }
 
 body.vscode-dark .dataset-label-row,
-body.vscode-high-contrast .dataset-label-row {
+body.vscode-high-contrast .dataset-label-row,
+body.cocoya-dark-mode .dataset-label-row,
+body.cocoya-dark-mode .dataset-label-row  {
     background: #333333;
 }
 
@@ -793,7 +929,9 @@ body.vscode-high-contrast .dataset-label-row {
 }
 
 body.vscode-dark .dataset-label-color,
-body.vscode-high-contrast .dataset-label-color {
+body.vscode-high-contrast .dataset-label-color,
+body.cocoya-dark-mode .dataset-label-color,
+body.cocoya-dark-mode .dataset-label-color  {
     border-color: rgba(255,255,255,0.2);
 }
 
@@ -810,7 +948,9 @@ body.vscode-high-contrast .dataset-label-color {
 }
 
 body.vscode-dark .dataset-label-summary,
-body.vscode-high-contrast .dataset-label-summary {
+body.vscode-high-contrast .dataset-label-summary,
+body.cocoya-dark-mode .dataset-label-summary,
+body.cocoya-dark-mode .dataset-label-summary  {
     background: #333333;
 }
 
@@ -828,7 +968,9 @@ body.vscode-high-contrast .dataset-label-summary {
 }
 
 body.vscode-dark .dataset-empty-state,
-body.vscode-high-contrast .dataset-empty-state {
+body.vscode-high-contrast .dataset-empty-state,
+body.cocoya-dark-mode .dataset-empty-state,
+body.cocoya-dark-mode .dataset-empty-state  {
     color: var(--dsm-text-muted);
 }
 
@@ -859,7 +1001,9 @@ body.vscode-high-contrast .dataset-empty-state {
 }
 
 body.vscode-dark .dataset-annotation-sidebar,
-body.vscode-high-contrast .dataset-annotation-sidebar {
+body.vscode-high-contrast .dataset-annotation-sidebar,
+body.cocoya-dark-mode .dataset-annotation-sidebar,
+body.cocoya-dark-mode .dataset-annotation-sidebar  {
     background: #333333;
     border-color: #444;
 }
@@ -876,7 +1020,9 @@ body.vscode-high-contrast .dataset-annotation-sidebar {
 }
 
 body.vscode-dark .dataset-annotation-item,
-body.vscode-high-contrast .dataset-annotation-item {
+body.vscode-high-contrast .dataset-annotation-item,
+body.cocoya-dark-mode .dataset-annotation-item,
+body.cocoya-dark-mode .dataset-annotation-item  {
     background: var(--dsm-list-item-bg);
 }
 
@@ -893,7 +1039,9 @@ body.vscode-high-contrast .dataset-annotation-item {
 }
 
 body.vscode-dark .dataset-annotation-item button:hover,
-body.vscode-high-contrast .dataset-annotation-item button:hover {
+body.vscode-high-contrast .dataset-annotation-item button:hover,
+body.cocoya-dark-mode .dataset-annotation-item button:hover,
+body.cocoya-dark-mode .dataset-annotation-item button:hover  {
     color: var(--dsm-brand);
 }
 
@@ -909,7 +1057,9 @@ body.vscode-high-contrast .dataset-annotation-item button:hover {
 }
 
 body.vscode-dark .dataset-label-head,
-body.vscode-high-contrast .dataset-label-head {
+body.vscode-high-contrast .dataset-label-head,
+body.cocoya-dark-mode .dataset-label-head,
+body.cocoya-dark-mode .dataset-label-head  {
     color: var(--dsm-text-secondary);
 }
 
@@ -966,12 +1116,16 @@ body.vscode-high-contrast .dataset-label-head {
     white-space: nowrap;
 }
 body.vscode-dark .dataset-preview-table th,
-body.vscode-high-contrast .dataset-preview-table th {
+body.vscode-high-contrast .dataset-preview-table th,
+body.cocoya-dark-mode .dataset-preview-table th,
+body.cocoya-dark-mode .dataset-preview-table th  {
     background: #333;
     border-color: var(--dsm-border-strong);
 }
 body.vscode-dark .dataset-preview-table td,
-body.vscode-high-contrast .dataset-preview-table td {
+body.vscode-high-contrast .dataset-preview-table td,
+body.cocoya-dark-mode .dataset-preview-table td,
+body.cocoya-dark-mode .dataset-preview-table td  {
     border-color: var(--dsm-border-strong);
 }
 
@@ -1025,7 +1179,9 @@ body.vscode-high-contrast .dataset-preview-table td {
 }
 
 body.vscode-dark .dataset-sampler-controls,
-body.vscode-high-contrast .dataset-sampler-controls {
+body.vscode-high-contrast .dataset-sampler-controls,
+body.cocoya-dark-mode .dataset-sampler-controls,
+body.cocoya-dark-mode .dataset-sampler-controls  {
     background: #333;
 }
 
@@ -1064,7 +1220,9 @@ body.vscode-high-contrast .dataset-sampler-controls {
 }
 
 body.vscode-dark .dataset-sampler-settings,
-body.vscode-high-contrast .dataset-sampler-settings {
+body.vscode-high-contrast .dataset-sampler-settings,
+body.cocoya-dark-mode .dataset-sampler-settings,
+body.cocoya-dark-mode .dataset-sampler-settings  {
     color: #999;
 }
 
@@ -1089,11 +1247,15 @@ body.vscode-high-contrast .dataset-sampler-settings {
 
 .dataset-sampler-controls {
     padding: 12px;
-    border-top: 1px solid #eee;
+    /* 2026-10-01：原為 #eee（淺灰白）。該值在 dark 主題下會在預覽黑框與
+       攝影機下拉之間形成一道突兀的白邊（使用者回報）——改用 token 讓暗色自動變暗。 */
+    border-top: 1px solid var(--dsm-border-light);
 }
 
 body.vscode-dark .dataset-sampler-controls,
-body.vscode-high-contrast .dataset-sampler-controls {
+body.vscode-high-contrast .dataset-sampler-controls,
+body.cocoya-dark-mode .dataset-sampler-controls,
+body.cocoya-dark-mode .dataset-sampler-controls  {
     border-top-color: #444;
 }
 
@@ -1129,10 +1291,16 @@ body.vscode-high-contrast .dataset-sampler-controls {
     min-height: 450px;
     display: flex;
     flex-direction: column;
+    /* 2026-10-01：原本沒有底色，底色來自 ui_layout.js 的行內 style="background: white"
+       （行內樣式優先於一切樣式表規則，導致下方 dark 覆寫形同虛設）。
+       行內 white 移除後，底色改由這裡的 token 決定。 */
+    background: var(--dsm-surface-alt);
 }
 
 body.vscode-dark #dataset-sampler-view,
-body.vscode-high-contrast #dataset-sampler-view {
+body.vscode-high-contrast #dataset-sampler-view,
+body.cocoya-dark-mode #dataset-sampler-view,
+body.cocoya-dark-mode #dataset-sampler-view  {
     background: #2d2d2d;
 }
 
@@ -1194,7 +1362,9 @@ body.vscode-high-contrast #dataset-sampler-view {
 }
 
 body.vscode-dark .dataset-manager-body.dataset-annotation-mode .dataset-panel-title,
-body.vscode-high-contrast .dataset-manager-body.dataset-annotation-mode .dataset-panel-title {
+body.vscode-high-contrast .dataset-manager-body.dataset-annotation-mode .dataset-panel-title,
+body.cocoya-dark-mode .dataset-manager-body.dataset-annotation-mode .dataset-panel-title,
+body.cocoya-dark-mode .dataset-manager-body.dataset-annotation-mode .dataset-panel-title  {
     border-bottom-color: var(--dsm-border-light);
     background: #2d2d2d;
 }
@@ -1234,7 +1404,9 @@ body.vscode-high-contrast .dataset-manager-body.dataset-annotation-mode .dataset
 }
 
 body.vscode-dark .dataset-annotation-thumbnails,
-body.vscode-high-contrast .dataset-annotation-thumbnails {
+body.vscode-high-contrast .dataset-annotation-thumbnails,
+body.cocoya-dark-mode .dataset-annotation-thumbnails,
+body.cocoya-dark-mode .dataset-annotation-thumbnails  {
     border-right-color: var(--dsm-border-light);
     background: #2d2d2d;
 }
@@ -1280,14 +1452,17 @@ body.vscode-high-contrast .dataset-annotation-thumbnails {
 
 /* 深色主題沿用 --dsm token（.dataset-image-delete-btn 既有規則已 token 化，僅補對比） */
 body.vscode-dark .dataset-annotation-thumb-item:hover .dataset-image-delete-btn,
-body.vscode-high-contrast .dataset-annotation-thumb-item:hover .dataset-image-delete-btn {
+body.vscode-high-contrast .dataset-annotation-thumb-item:hover .dataset-image-delete-btn,
+body.cocoya-dark-mode .dataset-annotation-thumb-item:hover .dataset-image-delete-btn,
+body.cocoya-dark-mode .dataset-annotation-thumb-item:hover .dataset-image-delete-btn  {
     background: var(--dsm-danger, #F44336);
 }
 
 .dataset-annotation-thumb {
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    /* 2026-10-01：cover 會裁切掉原圖 → 改 contain（與 P2 網格縮圖一致） */
+    object-fit: contain;
     display: block;
 }
 
@@ -1308,7 +1483,9 @@ body.vscode-high-contrast .dataset-annotation-thumb-item:hover .dataset-image-de
 }
 
 body.vscode-dark .dataset-annotation-thumb-item.annotated::after,
-body.vscode-high-contrast .dataset-annotation-thumb-item.annotated::after {
+body.vscode-high-contrast .dataset-annotation-thumb-item.annotated::after,
+body.cocoya-dark-mode .dataset-annotation-thumb-item.annotated::after,
+body.cocoya-dark-mode .dataset-annotation-thumb-item.annotated::after  {
     background: rgba(0, 0, 0, 0.7);
 }
 
@@ -1340,7 +1517,9 @@ body.vscode-high-contrast .dataset-annotation-thumb-item.annotated::after {
 }
 
 body.vscode-dark .dataset-annotation-info,
-body.vscode-high-contrast .dataset-annotation-info {
+body.vscode-high-contrast .dataset-annotation-info,
+body.cocoya-dark-mode .dataset-annotation-info,
+body.cocoya-dark-mode .dataset-annotation-info  {
     color: #a0a0a0;
 }
 /* 類型鎖定入口（2026-09-10 M1）：卡片＋徽章＋banner＋工作區類型條 */
@@ -1439,7 +1618,9 @@ body.vscode-high-contrast .dataset-annotation-info {
 }
 
 body.vscode-dark .dataset-annotation-toolbar,
-body.vscode-high-contrast .dataset-annotation-toolbar {
+body.vscode-high-contrast .dataset-annotation-toolbar,
+body.cocoya-dark-mode .dataset-annotation-toolbar,
+body.cocoya-dark-mode .dataset-annotation-toolbar  {
     border-bottom-color: var(--dsm-border-light);
     background: #2d2d2d;
 }
@@ -1455,7 +1636,9 @@ body.vscode-high-contrast .dataset-annotation-toolbar {
 }
 
 body.vscode-dark .dataset-annotation-shortcuts-hint,
-body.vscode-high-contrast .dataset-annotation-shortcuts-hint {
+body.vscode-high-contrast .dataset-annotation-shortcuts-hint,
+body.cocoya-dark-mode .dataset-annotation-shortcuts-hint,
+body.cocoya-dark-mode .dataset-annotation-shortcuts-hint  {
     color: var(--dsm-text-muted);
 }
 
@@ -1494,7 +1677,9 @@ body.vscode-high-contrast .dataset-annotation-shortcuts-hint {
 }
 
 body.vscode-dark .dataset-annotation-controls,
-body.vscode-high-contrast .dataset-annotation-controls {
+body.vscode-high-contrast .dataset-annotation-controls,
+body.cocoya-dark-mode .dataset-annotation-controls,
+body.cocoya-dark-mode .dataset-annotation-controls  {
     border-left-color: var(--dsm-border-light);
     background: #333333;
 }
@@ -1507,7 +1692,9 @@ body.vscode-high-contrast .dataset-annotation-controls {
 }
 
 body.vscode-dark .dataset-annotation-section-title,
-body.vscode-high-contrast .dataset-annotation-section-title {
+body.vscode-high-contrast .dataset-annotation-section-title,
+body.cocoya-dark-mode .dataset-annotation-section-title,
+body.cocoya-dark-mode .dataset-annotation-section-title  {
     color: var(--dsm-text-secondary);
 }
 
@@ -1530,7 +1717,9 @@ body.vscode-high-contrast .dataset-annotation-section-title {
 }
 
 body.vscode-dark .dataset-annotation-class-select,
-body.vscode-high-contrast .dataset-annotation-class-select {
+body.vscode-high-contrast .dataset-annotation-class-select,
+body.cocoya-dark-mode .dataset-annotation-class-select,
+body.cocoya-dark-mode .dataset-annotation-class-select  {
     background: var(--dsm-input-bg);
     border-color: var(--dsm-border-strong);
     color: var(--dsm-text);
@@ -1548,7 +1737,9 @@ body.vscode-high-contrast .dataset-annotation-class-select {
 }
 
 body.vscode-dark .dataset-annotation-item.selected,
-body.vscode-high-contrast .dataset-annotation-item.selected {
+body.vscode-high-contrast .dataset-annotation-item.selected,
+body.cocoya-dark-mode .dataset-annotation-item.selected,
+body.cocoya-dark-mode .dataset-annotation-item.selected  {
     background: #1a3a4a;
     border-color: #00CCFF;
 }
@@ -1571,7 +1762,9 @@ body.vscode-high-contrast .dataset-annotation-item.selected {
 }
 
 body.vscode-dark .dataset-annotation-item .dataset-annotation-item-class,
-body.vscode-high-contrast .dataset-annotation-item .dataset-annotation-item-class {
+body.vscode-high-contrast .dataset-annotation-item .dataset-annotation-item-class,
+body.cocoya-dark-mode .dataset-annotation-item .dataset-annotation-item-class,
+body.cocoya-dark-mode .dataset-annotation-item .dataset-annotation-item-class  {
     background: #1e1e1e;
     border-color: var(--dsm-border-strong);
     color: var(--dsm-text);

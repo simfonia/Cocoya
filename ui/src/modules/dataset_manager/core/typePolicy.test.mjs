@@ -90,9 +90,10 @@ test('單一來源不變式：object_detection 字面量只允許出現在 typeP
             if (fs.statSync(full).isDirectory()) { walk(full); continue; }
             if (!name.endsWith('.js') || name.endsWith('.test.mjs')) continue;
             if (name === 'typePolicy.js') continue;
-            const src = fs.readFileSync(full, 'utf8');
-            src.split('\n').forEach((line, i) => {
-                const code = line.replace(/^\s*(\*|\/\/).*$/, ''); // 略過註解行
+            fs.readFileSync(full, 'utf8').split('\n').forEach((line, i) => {
+                // 先去掉行尾 \r（CRLF 檔案），否則 /^\s*(\*|\/\/).*$/ 會因結尾 \r 失配，
+                // 導致純註解行沒被略過，誤報硬編碼。
+                const code = line.replace(/\r$/, '').replace(/^\s*(\*|\/\/).*$/, '');
                 if (/projectType\s*[!=]==?\s*'object_detection'/.test(code)
                     || /projectType\s*[!=]==?\s*'image'/.test(code)
                     || /projectType\s*[!=]==?\s*'feature'/.test(code)) {

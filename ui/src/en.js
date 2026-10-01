@@ -102,6 +102,15 @@
     "TLB_SAVE_AS": "Save As...",
     "TLB_SETTINGS": "Settings",
     "TLB_SETTINGS_PYTHON_ENV": "Python Environment (Path & Modules)",
+    // 2026-10-01: Restore built-in examples (Tauri only; hidden on VSIX via
+    // supportsRestoreExamples=false)
+    "TLB_SETTINGS_RESTORE_EXAMPLES": "Restore Example Files",
+    "TLB_SETTINGS_RESTORE_EXAMPLES_TOOLTIP": "Force-overwrite the built-in example files with their original versions, recovering examples that were edited or deleted. Files you added yourself are overwritten too.",
+    "TLB_SETTINGS_RESTORE_EXAMPLES_CONFIRM": "Restore example files?\n\nBuilt-in examples will be force-overwritten with their original versions.\nYour changes to them will be lost and cannot be undone.",
+    "TLB_SETTINGS_RESTORE_EXAMPLES_DIRTY": "The current project has unsaved changes.\n\nPlease save it elsewhere first, otherwise the content will be lost after restoring.",
+    "TLB_SETTINGS_RESTORE_EXAMPLES_FAILED": "❌ Failed to restore example files: %1",
+    "TLB_SETTINGS_RESTORE_EXAMPLES_DONE": "✅ Restored %1 example file(s)",
+    "TLB_SETTINGS_RESTORE_EXAMPLES_NONE": "Nothing to restore (dev mode uses the original files directly).",
     "TLB_SETTINGS_FIRMWARE_GROUP": "Firmware Settings",
     "TLB_SETTINGS_SERIAL_RAW_DUMP": "MCU Serial Raw Dump",
     "TLB_SETTINGS_SERIAL_RAW_DUMP_TOOLTIP": "Records raw serial bytes to raw_dump.log in the current XML project root. Applies to the next MCU upload or monitor session.",

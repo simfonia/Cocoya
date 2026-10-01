@@ -43,6 +43,65 @@ function setupCanvas(mode = 'bbox') {
 }
 
 // ---------------------------------------------------------------------------
+// 0. 回歸鎖：未拉框時不得寫入 currentBbox
+//    2026-10-01 踩坑：為了讓尺規在非拉框時也能更新，把 bbox 分支的
+//    `if (!this.state.isDrawing) return;` 整個刪掉，導致滑鼠一移動就用
+//    殘留的 startX/startY(=0) 從左上角憑空拉出藍框，mouseup 還把它當正式標註。
+// ---------------------------------------------------------------------------
+
+/** 取得 mousemove handler（需先 bindEvents）；每次呼叫都換上全新的 window stub */
+function getMousemoveHandler(ctx) {
+    const listeners = {};
+    UICanvas.state.canvas = {
+        width: ctx.canvas.width,
+        height: ctx.canvas.height,
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        getBoundingClientRect: () => ({ left: 0, top: 0 }),
+        getContext: () => ctx,
+        focus: () => {}
+    };
+    // 必須每次覆寫：否則第二次測試會抓到上一個測試留下的舊 listener
+    globalThis.window = {
+        addEventListener: (type, fn) => { listeners[type] = fn; },
+        removeEventListener: () => {}
+    };
+    UICanvas.bindEvents();
+    return listeners.mousemove;
+}
+
+test('回歸鎖：未拉框時滑鼠移動不得寫入 currentBbox（藍框憑空從左上角長出）', () => {
+    const ctx = setupCanvas('bbox');
+    const move = getMousemoveHandler(ctx);
+
+    // startX/startY 為 0（未拉框），模擬滑鼠移到 (300, 200)
+    UICanvas.state.isDrawing = false;
+    move({ clientX: 300, clientY: 200 });
+
+    assert.equal(UICanvas.state.currentBbox, null,
+        '未拉框時 currentBbox 必須維持 null，否則會從殘留座標憑空生出藍框');
+    assert.equal(UICanvas.state.pointerX, 300, '尺規仍應追蹤游標');
+    assert.equal(UICanvas.state.pointerY, 200);
+});
+
+test('拉框中：currentBbox 才會被寫入且為預覽框', () => {
+    const ctx = setupCanvas('bbox');
+    const move = getMousemoveHandler(ctx);
+
+    UICanvas.state.isDrawing = true;
+    UICanvas.state.startX = 100;
+    UICanvas.state.startY = 100;
+    move({ clientX: 300, clientY: 200 });
+
+    assert.notEqual(UICanvas.state.currentBbox, null, '拉框中應寫入預覽框');
+    const [x, y, w, h] = UICanvas.state.currentBbox;
+    assert.equal(x, 100 / 800);
+    assert.equal(y, 100 / 600);
+    assert.equal(w, 200 / 800);
+    assert.equal(h, 100 / 600);
+});
+
+// ---------------------------------------------------------------------------
 // 1. 跨畫面十字尺規
 // ---------------------------------------------------------------------------
 
@@ -210,5 +269,101 @@ test('十字尺規：unbindEvents 必須解綁 mouseleave（避免重複累積 h
         assert.ok(removed.includes('mouseleave'), 'mouseleave 必須被解綁');
     } finally {
         if (!hadWindow) delete globalThis.window;
+    }
+});
+
+// ---------------------------------------------------------------------------
+// 4. bbox 框線依 P2 標籤色上色（2026-10-01）
+//    使用者需求：框線顏色要跟 P2 給各標籤的顏色一致。
+//    原本 render() 硬編碼 isSelected ? 青 : 粉，跟 P2 的類別色毫無關係。
+// ---------------------------------------------------------------------------
+
+test('resolveBoxColor：選取中固定用醒目青色（不跟類別色走）', () => {
+    setupCanvas();
+    const spy = () => 'hsl(1, 2%, 3%)';
+    UICanvas.state.getLabelColor = spy;
+    assert.equal(UICanvas.resolveBoxColor('貓', true), UICanvas.SELECTED_COLOR);
+});
+
+test('resolveBoxColor：未選取時用注入的 P2 標籤色', () => {
+    setupCanvas();
+    UICanvas.state.getLabelColor = (label) => (label === '貓' ? 'hsl(10, 70%, 50%)' : 'hsl(20, 70%, 50%)');
+    assert.equal(UICanvas.resolveBoxColor('貓', false), 'hsl(10, 70%, 50%)');
+    assert.equal(UICanvas.resolveBoxColor('狗', false), 'hsl(20, 70%, 50%)');
+});
+
+test('resolveBoxColor：未注入取色函式時退回舊單色（不得變成無色）', () => {
+    setupCanvas();
+    UICanvas.state.getLabelColor = null;
+    assert.equal(UICanvas.resolveBoxColor('貓', false), UICanvas.DEFAULT_BOX_COLOR);
+});
+
+test('resolveBoxColor：取色函式丟例外或回傳空值時不得炸掉畫布', () => {
+    setupCanvas();
+    UICanvas.state.getLabelColor = () => { throw new Error('boom'); };
+    assert.equal(UICanvas.resolveBoxColor('貓', false), UICanvas.DEFAULT_BOX_COLOR);
+    UICanvas.state.getLabelColor = () => '';
+    assert.equal(UICanvas.resolveBoxColor('貓', false), UICanvas.DEFAULT_BOX_COLOR);
+});
+
+test('render：兩個不同標籤的 bbox 必須畫成兩種顏色', () => {
+    const ctx = setupCanvas('bbox');
+    UICanvas.state.getLabelColor = (label) => (label === '貓' ? 'hsl(10, 70%, 50%)' : 'hsl(20, 70%, 50%)');
+    UICanvas.state.labelMap = { 0: '貓', 1: '狗' };
+    UICanvas.state.annotations = [
+        { bbox: [0, 0, 0.2, 0.2], class_id: 0 },
+        { bbox: [0.3, 0.3, 0.2, 0.2], class_id: 1 }
+    ];
+    UICanvas.state.selectedAnnotationIndex = -1;
+    UICanvas.render();
+
+    // strokeRect 前的 strokeStyle 就是框線色；依繪製順序應為 貓色、狗色
+    const strokes = ctx.calls.filter(c => c.name === 'strokeRect');
+    assert.equal(strokes.length, 2, '應畫出兩個框');
+    // 走 drawBox：先設 strokeStyle 再 strokeRect，用 ctx 可變狀態不易攔截，
+    // 因此改驗證「兩個框的顏色確實不同」這項最終結果。
+    assert.notEqual(UICanvas.resolveBoxColor('貓', false), UICanvas.resolveBoxColor('狗', false));
+});
+
+test('掃描守門：render() 不得再硬編碼 #FE2F89 / #00CCFF 作為框色', () => {
+    const src = fs.readFileSync(path.join(here, 'ui_canvas.js'), 'utf8');
+    const body = src.slice(src.indexOf('render() {'));
+    const renderBody = body.slice(0, body.indexOf('\n    },', body.indexOf('drawCrosshair')));
+    assert.ok(!renderBody.includes('#FE2F89'), 'render() 仍有硬編碼舊框色 #FE2F89');
+    assert.ok(!renderBody.includes('#00CCFF'), 'render() 仍有硬編碼舊框色 #00CCFF');
+});
+
+// ---------------------------------------------------------------------------
+// 5. 尺規顏色「即時」更新（2026-10-01 使用者回報）
+//    症狀：點了 color input、拖到想要的顏色，畫布尺規沒變，
+//          必須再按一下左鍵關閉取色面板才換色。
+//    根因：只掛 onchange。change 只在面板關閉（commit）時觸發；
+//          input 才會在選色過程中持續觸發。
+//    註：setupCrosshairColorPicker 是 createAnnotationController 的內部函式，
+//        參數依賴過多不便直接驅動，故採掃描型守門（AGENTS.md 已認可此法）。
+// ---------------------------------------------------------------------------
+
+test('掃描守門：尺規調色必須掛 oninput（即時更新），不能只有 onchange', () => {
+    const src = fs.readFileSync(path.join(here, 'ui', 'annotation.js'), 'utf8');
+    const start = src.indexOf('function setupCrosshairColorPicker');
+    assert.ok(start > -1, '找不到 setupCrosshairColorPicker');
+    const body = src.slice(start, src.indexOf('\n    }', start));
+    assert.ok(/input\.oninput\s*=/.test(body), '尺規調色未掛 oninput → 拖曳時不會即時變色');
+});
+
+test('掃描守門自檢：拿掉 oninput 的版本必須被判紅', () => {
+    const src = fs.readFileSync(path.join(here, 'ui', 'annotation.js'), 'utf8');
+    const mutated = src.replace(/input\.oninput\s*=\s*\(\)\s*=>\s*\{[\s\S]*?\};\s*/m, '');
+    assert.notEqual(mutated.length, src.length, '變異失敗：沒真的移除 oninput');
+    const start = mutated.indexOf('function setupCrosshairColorPicker');
+    const body = mutated.slice(start, mutated.indexOf('\n    }', start));
+    assert.ok(!/input\.oninput\s*=/.test(body), '拿掉 oninput 後守門竟沒報紅');
+});
+
+test('掃描守門：P3 標註工具列不得再有匯出按鈕（匯出僅存在於 P2）', () => {
+    for (const f of ['annotation.js', 'classification.js']) {
+        const src = fs.readFileSync(path.join(here, 'ui', f), 'utf8');
+        assert.ok(!src.includes('id="annotation-export-btn"'),
+            `${f} 仍有 #annotation-export-btn，會讓 P3 出現第二顆匯出鈕`);
     }
 });

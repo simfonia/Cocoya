@@ -106,6 +106,14 @@
                                 <img src="src/icons/python.png" style="width: 16px; height: 16px; margin-right: 8px;">
                                 <span>%{BKY_TLB_SETTINGS_PYTHON_ENV}</span>
                             </div>
+                            <!-- 2026-10-01：還原範例檔。僅 Tauri 支援（restore_examples command）；
+                                 VSIX 由 capabilities.supportsRestoreExamples=false 於啟動時隱藏。
+                                 位置：緊接在「Python 環境設定」之下。 -->
+                            <div class="dropdown-item" id="btn-restore-examples"
+                                 title="%{BKY_TLB_SETTINGS_RESTORE_EXAMPLES_TOOLTIP}">
+                                <img src="src/icons/round-restore.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                <span>%{BKY_TLB_SETTINGS_RESTORE_EXAMPLES}</span>
+                            </div>
                             <div class="dropdown-item" id="btn-toggle-language" title="%{BKY_STARTUP_LANG}">
                                 <img src="src/icons/language.png" style="width: 16px; height: 16px; margin-right: 8px;">
                                 <span class="lang-switch" id="language-toggle-switch" role="switch" aria-label="%{BKY_STARTUP_LANG}">

@@ -85,7 +85,9 @@ test('capabilities：未 init 前為未錨定，欄位齊全且 isTauri 為 true
         [
             'canClose', 'hasTerminal', 'isAnchored', 'isRemoteAware', 'isRemoteConnected',
             'isTauri', 'projectRoot', 'supportsAutoUpdate', 'supportsEnvironmentCheck',
-            'supportsEraseFS', 'supportsFirmwareReset'
+            'supportsEraseFS', 'supportsFirmwareReset',
+            // 2026-10-01：還原範例檔（僅 Tauri 有後端 command；VSIX 為 false 並隱藏選單項）
+            'supportsRestoreExamples'
         ].sort()
     );
 });
@@ -115,6 +117,19 @@ test('capabilities 契約：Tauri 與 VSIX 必須回傳同一組鍵（值可不�
         },
         { baseMissingInVsix: [], baseMissingInTauri: [] }
     );
+});
+
+test('capabilities 契約：supportsRestoreExamples 只有 Tauri 為 true（VSIX 必須 false）', () => {
+    // 為什麼要補這條「值」守門（2026-10-01）：
+    //   既有的「兩橋鍵集合相同」契約只比 key，不比 value。
+    //   實測把 VSIX 的 supportsRestoreExamples 誤設為 true 時，所有既有測試仍全綠 ——
+    //   但 VSIX 根本沒有 restore_examples 後端 command，選單會顯示、點下去必然失敗。
+    //   這正是 AGENTS.md 說的「假安全感」：守門看起來在，實際擋不住。
+    //   故對「兩端值必須不同」的欄位明確斷言。
+    assert.equal(makeBridge().capabilities.supportsRestoreExamples, true,
+        'Tauri 有 restore_examples command，必須為 true');
+    assert.equal(new BridgeVSIX().capabilities.supportsRestoreExamples, false,
+        'VSIX 尚無後端實作，必須為 false（前端據此隱藏選單項）');
 });
 
 test('capabilities 契約：supportsStableMode 不得再回傳（Stable Mode 死鏈已移除）', () => {

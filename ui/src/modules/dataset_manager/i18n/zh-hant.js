@@ -67,6 +67,8 @@
     "DSM_ANNOTATION_EXPORT_UNANNOTATED_WARNING": "仍有 %1 張圖片未標註，確定要匯出嗎？",
     "DSM_ANNOTATION_UNANNOTATED_WARNING": "尚有 %1 張圖片未標註，確定要離開？",
     "DSM_ANNOTATION_SHORTCUTS_HINT": "↑/↓ 切換圖片 · Delete 刪除標註 · Esc 回資料集管理",
+    "DSM_ANNOTATION_CROSSHAIR": "尺規",
+    "DSM_ANNOTATION_CROSSHAIR_COLOR": "十字尺規顏色",
     "DSM_ANNOTATION_MODE_TITLE": "標註 — 物件偵測",
 
     // 採集視圖 (Sampler)
