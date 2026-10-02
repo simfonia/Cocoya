@@ -144,7 +144,7 @@ C:\Workspace\cocoya\
 │   │   │   ├── core/      # Python／MicroPython 核心語法積木；`core_contract.test.mjs` 對帳 block、generator、toolbox、i18n、主題與平台契約（2026-09-30 T2 起涵蓋 core_manifest.json 全部 22 模組，含 3 項 i18n 守門）
 │   │   │   ├── theme_manager/ # [NEW] 主題管理模組（registry + 模式切換 + 系統深淺色偵測）
 │   │   │   │   ├── theme_manager.js # 核心：registerTheme/getThemes/setMode/getMode/apply/startWatching (window.CocoyaTheme)
-│   │   │   │   ├── theme_contract.test.mjs # [2026-10-01／2026-10-02] 主題契約守門（6 測：cssVars 鍵集合三主題一致／無重複／鍵名格式、msgColours 選配語意；[2026-10-02] 增守門 6「vscode 深色選擇器必須帶 :not(.cocoya-light-mode)」全專案掃描 ui/src/**/*.css ＋自檢；守住 P2-16 與「VS Code 深色越權」bug 不變式，npm run test:theme）
+│   │   │   │   ├── theme_contract.test.mjs # [2026-10-01／2026-10-02] 主題契約守門（9 測：cssVars 鍵集合三主題一致／無重複／鍵名格式、msgColours 選配語意；[2026-10-02] 增守門 6「vscode 深色選擇器必須帶 :not(.cocoya-light-mode)」＋守門 7「全專案 CSS 結構健全性（註解不得提前閉合、大括號平衡）」——兩者皆掃描 ui/src 下所有 .css 且含自檢；守住 P2-16、VS Code 深色越權、CSS 語法壞掉三項不變式，npm run test:theme）
 │   │   │   │   └── themes/    # 內建主題（一主題一檔，載入時 registerTheme；cssVars 鍵集合須三主題同步，由 theme_contract.test.mjs 守門）
 │   │   │   │       ├── cocoya_light.js # 淺色主題 (Blockly Classic + 淺色 cssVars；msgColours 不宣告＝沿用根 zh-hant/en 的 COLOUR_* 預設色)
 │   │   │   │       ├── cocoya_dark.js  # 深色主題 (Blockly Theme componentStyles + 深色 cssVars, hideGrid)
@@ -223,7 +223,7 @@ C:\Workspace\cocoya\
 │   │   │       │   ├── modal.test.mjs # buildModalTemplate Node 測試（node --test 執行）
 │   │   │       │   ├── statusMessage.js # [Stage 4 切片 1] 集中式狀態訊息 Presenter（createStatusMessageUI→{showStatusMessage,dispose}；計時器重置/dispose 語意自 ui_layout 抽出，契約不變）
 │   │   │       │   └── statusMessage.test.mjs # statusMessage 行為契約 Node 測試（node --test 執行）
-│   │   │       ├── dataset_manager.css # Dataset Manager Modal、縮圖牆與標註畫布樣式 (含 3 欄標註模式、.dataset-name-warning 名稱衝突警示；檔尾 P1/P2/P3 字級映射；43 處 font-size 皆 calc(Npx * var(--dsm-font-scale)))
+│   │   │       ├── dataset_manager.css # Dataset Manager Modal、縮圖牆與標註畫布樣式 (含 3 欄標註模式、.dataset-name-warning 名稱衝突警示；檔尾 P1/P2/P3 字級映射；43 處 font-size 皆 calc(Npx * var(--dsm-font-scale))；[2026-10-02] P1-3：30 組 dark 覆寫改走雙主題 token（三主題各 +13 個 --dsm-* token），1710→1607 行；dark 段剩餘硬編碼 B 5／C 12 處)
 │   │   │       ├── i18n.js # [NEW] 共享 i18n t() 函式庫 (支援佔位符替換)
 │   │   │       ├── index.js # 靜態 ESM 入口與 window.CocoyaDataset API 掛載（loadI18n 以 in-flight promise 防 locale race，Stage 5 收尾）
 │   │   │       ├── spec.js  # DatasetSpec 類別、Schema 偵測、強健型 CSV 解析與驗證邏輯 (i18n 化)（R7：buildTableSamples 表格落盤組裝＋TABLE_SAMPLES_PERSIST_LIMIT＋stats.samples_truncated 契約）
@@ -233,7 +233,7 @@ C:\Workspace\cocoya\
 │   │   │       ├── ui_components.js # 動態視圖組件 (影像網格、字典序標籤統計、標註縮圖欄、getLabelColor FNV-1a+黃金角色相；轉義經 core/html.js，前損壞實作已刪)
 │   │   │       ├── ui_canvas.js # 標註互動畫布 (物件偵測拉框與自駕循線畫線，座標限幅防護、bbox 高亮與雙模互動；[2026-10-01] 跨畫面十字尺規可調色、框線雙色描邊（白外框＋標籤色內框）且不依主題變明度（框線畫在照片上）、標註列表 hover 時的 2Hz 閃爍虛線高亮)
 │   │   │       ├── ui_canvas.test.mjs # [2026-10-01] 標註畫布呈現守門（24 測：尺規、標註文字、labelMap 即時重繪、resolveBoxColor、掃描型自檢）
-│   │   │       ├── dataset_theme_contract.test.mjs # [2026-10-01／2026-10-02] DM 樣式表契約守門（8 測：暗色 class 對齊、縮圖 contain、狀態變體暗色覆寫；[2026-10-02] P1-3 增守門 5「dark 不得重複宣告 light 已有 var」＋自檢；含自檢）
+│   │   │       ├── dataset_theme_contract.test.mjs # [2026-10-01／2026-10-02] DM 樣式表契約守門（8 測：暗色 class 對齊、縮圖 contain、縮圖底色走 token、狀態變體**有效值**；[2026-10-02] P1-3 增守門 5「dark 不得重複宣告 light 已有 var」；守門 4 判準升級為「dark 主題有效值不得沿用淺色值」（解析 var→主題 cssVars 真值）；守門 7「註解提前閉合」已移交 theme_contract.test.mjs 全專案版）
 │   │   │       └── i18n/      # 語系檔目錄
 │   │   │           ├── zh-hant.js # 繁體中文 i18n 鍵值 (VALIDATE_*/ANNOTATION_*/ENTRY_*/PAGE_*/DEV_BANNER_*/SWITCH_TYPE_*；142 key 與 en parity)
 │   │   │           └── en.js      # 英文 i18n 鍵值 (同 zh-hant 142 key 全對齊)

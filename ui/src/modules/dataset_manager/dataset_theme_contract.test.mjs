@@ -54,64 +54,18 @@ test('大括號平衡（改寫樣式表的健全性前提）', () => {
 });
 
 /**
- * 守門 7：CSS 註解不得提前閉合（註解區塊外不該殘留註解結束符）。
+ * 註解提前閉合的檢查已於 2026-10-02 移至「全專案」版守門
+ * （theme_contract.test.mjs 守門 7，掃描 ui/src 下所有 .css）。
  *
- * ★ 真實事故（2026-10-02）：我在註解裡寫了 src 後接「兩層斜線再接 .css」的 glob，
- *   其中的「星號＋斜線」被解析器當成**註解結束符** → 註解提前中斷，
- *   後面的文字被當成選擇器解析 → VS Code 報
- *   「L44 必須是 {」「L52 預期為 at-rule 或選取器」，整個樣式表從該處起解析異常。
- *   （⚠ 本處刻意不寫出該 glob 的字面：連這行「說明它」的註解也會被同一個
- *     結束符序列截斷 —— 我就是這樣讓這個 .mjs 檔案當場語法錯誤的。）
- *
- * ★ 為何「大括號平衡」抓不到：註解提前閉合後，後半段雖然語法錯誤，
- *   但大括號總數仍可能平衡 → 平衡測試全綠（假安全感）。
- *
- * 判準：CSS 註解在第一個「星號＋斜線」序列就結束，因此**合法**的樣式表在
- *       「剝除所有註解後」不可能再出現該序列。只要還有，就是提前閉合。
+ * 原因（實測結論，非憑感覺）：
+ *   · CSS 語法錯誤**只有 vite build（lightningcss）會抓**；
+ *     npm test = test:unit + test:ui，而 lint:ui 只掃 .js/.mjs，**不含 .css**
+ *     → 只跑 npm test 完全抓不到 CSS 壞掉。
+ *   · JS 側則已完整覆蓋：實測在 .mjs 的區塊註解裡製造提前閉合，
+ *     eslint 立刻報 Parsing error。故此問題**只有 CSS 側需要守門**，
+ *     為 JS 再做一份只會是重複造輪子。
+ *   · 單檔守門只覆蓋 dataset_manager.css，漏掉 style.css 等其他樣式表。
  */
-test('守門 7：CSS 註解不得提前閉合（註解區塊外不該殘留註解結束符）', () => {
-    // 前置：確認樣式表真的含註解，避免守門在「沒有註解可剝」時靜默空跑。
-    assert.ok(src.includes('/*') && src.includes('*/'),
-        '樣式表應含有註解；若真的沒有，代表檔案結構已變，請重新檢討本守門的前提');
-    // 依 CSS 語意配對註解：開頭到第一個結束序列；配對後剩下的才是真正的程式碼。
-    let rest = src, guard = 0;
-    for (;;) {
-        const open = rest.indexOf('/*');
-        if (open < 0) break;
-        const close = rest.indexOf('*/', open + 2);
-        if (close < 0) break;
-        rest = rest.slice(0, open) + rest.slice(close + 2);
-        if (++guard > 1000) throw new Error('註解配對未收斂，解析邏輯有誤');
-    }
-
-    const stray = [...rest.matchAll(/\*\//g)].map((m) => {
-        const line = rest.slice(0, m.index).split(/\r?\n/).length;
-        return `L${line}: …${rest.slice(Math.max(0, m.index - 40), m.index + 2).replace(/\s+/g, ' ')}`;
-    });
-    assert.deepEqual(stray, [],
-        '註解外出現 */ → 某處註解被提前閉合（例如在註解內寫了 src/**/*.css 這類 glob），'
-        + '其後內容會被當成選擇器解析');
-});
-
-test('守門 7 自檢：註解內寫入 glob 使註解提前閉合後，本守門必須報紅', () => {
-    // 真實回歸形狀：在註解裡寫 glob —— 就是 2026-10-02 造成語法錯誤的那個動作。
-    const broken = src.replace(
-        '防復發：dataset_theme_contract.test.mjs 的「守門 5」',
-        '掃描 ui/src/**/*.css（bug');
-    assert.notEqual(broken, src, '自檢失效：模擬回歸的取代沒有生效（註解文字可能已變，請更新本自檢）');
-
-    let rest = broken, guard = 0;
-    for (;;) {
-        const open = rest.indexOf('/*');
-        if (open < 0) break;
-        const close = rest.indexOf('*/', open + 2);
-        if (close < 0) break;
-        rest = rest.slice(0, open) + rest.slice(close + 2);
-        if (++guard > 1000) break;
-    }
-    assert.ok((rest.match(/\*\//g) || []).length > 0,
-        '守門必須能抓到註解被提前閉合（註解外殘留 */）的情形');
-});
 
 test('守門 1：每個 vscode-dark 選擇器群組都必須包含 cocoya-dark-mode', () => {
     const offenders = [];
@@ -166,7 +120,7 @@ test('守門 3：縮圖底色走 token，不可硬寫（contain 後的留白會�
 });
 
 /**
- * 守門 4：狀態類元件的每個狀態都必須有暗色覆寫。
+ * 守門 4：狀態類元件在 dark 主題的**有效值**不得沿用淺色值。
  *
  * 2026-10-01 踩坑：`.dataset-validation` 的 `.ok` / `.error` 都有暗色覆寫，
  * 唯獨 `.warn` 沒有 → dark 主題下出現「米色亮底 + 繼承到的淺灰文字」幾乎看不清。
@@ -175,6 +129,13 @@ test('守門 3：縮圖底色走 token，不可硬寫（contain 後的留白會�
  *   對齊只能救「已存在但選不到」的規則，救不了「根本沒寫」的規則。
  *   .warn 正是後者 —— 這是本守門存在的唯一理由。
  *
+ * ★ 2026-10-02 P1-3 升級：原版檢查「有沒有 body.cocoya-dark-mode 覆寫」，
+ *   那只是「dark 不會沿用淺色」的**代理指標**，token 化後會誤報：
+ *   若某狀態的色彩全部走 var(--dsm-*)，而 token 本身就有 light/dark 兩值，
+ *   那麼「不需要暗色覆寫」就已經正確 —— 多寫一條反而是守門 5 要刪的冗餘。
+ *   改為直接驗證真正的不變式（見 assertStateDarkHandled 的演算法註解）。
+ *   新版同時更強：原版放行「有覆寫但覆寫成同一個值」，新版會擋下。
+ *
  * 範圍刻意收窄：只檢查這一組明確的狀態變體，避免變成過度寬泛的掃描
  * （過寬的守門只會逼人無聲放寬斷言，反而放行真正的漏洞）。
  */
@@ -182,18 +143,94 @@ const STATE_COMPONENTS = [
     { base: '.dataset-validation', states: ['ok', 'warn', 'error'] }
 ];
 
-test('守門 4：每個狀態變體都必須有暗色覆寫（缺一個就會在 dark 主題淺底淺字）', () => {
-    const missing = [];
+/** 主題 token 表：把 var(--dsm-x) 解析成某個主題下的實際值，才能真的比對「有效值」 */
+const THEME_DIR = path.join(here, '..', 'theme_manager', 'themes');
+function loadTokens(name) {
+    const s = fs.readFileSync(path.join(THEME_DIR, `${name}.js`), 'utf8');
+    // ⚠ 不可用 indexOf('cssVars')：主題檔開頭的註解就含這個字樣（P1-3 踩坑）
+    const at = s.indexOf('cssVars: {');
+    assert.ok(at >= 0, `${name}.js 應有 cssVars 區塊`);
+    let depth = 0, end = -1;
+    for (let i = s.indexOf('{', at); i < s.length; i++) {
+        if (s[i] === '{') depth++;
+        else if (s[i] === '}' && --depth === 0) { end = i; break; }
+    }
+    const body = s.slice(s.indexOf('{', at), end + 1);
+    const out = {};
+    for (const m of body.matchAll(/'(--dsm-[a-z0-9-]+)'\s*:\s*'([^']*)'/g)) out[m[1]] = m[2];
+    assert.ok(Object.keys(out).length > 0, `${name}.js cssVars 應解析出 token`);
+    return out;
+}
+const TOKENS = { light: loadTokens('cocoya_light'), dark: loadTokens('cocoya_dark') };
+
+/** 切出 { 選擇器, 主體 }（先移除註解；做法與上方 rules() 一致） */
+function rulePairs(text) {
+    const out = [];
+    for (const chunk of text.replace(/\/\*[\s\S]*?\*\//g, '').split('}')) {
+        const idx = chunk.indexOf('{');
+        if (idx >= 0) out.push({ sel: chunk.slice(0, idx).trim(), body: chunk.slice(idx + 1) });
+    }
+    return out;
+}
+
+const declsOf = (body) => [...body.matchAll(/([\w-]+)\s*:\s*([^;{}]*)/g)]
+    .map((m) => [m[1], m[2].trim()]);
+
+/** 該規則的選擇器清單（已拆逗號）是否指向 sel；dark=true 時另要求帶 body. 前綴 */
+function targets(selText, sel, dark) {
+    return selText.split(',').map((s) => s.trim()).filter(Boolean).some((p) => {
+        if (dark) return /^body\./.test(p) && p.replace(/^body\.[^\s]+ /, '') === sel;
+        return !/^body\./.test(p) && p === sel;
+    });
+}
+
+/** 只有會決定顏色的屬性才參與比對（padding 之類兩主題必然相同，與本守門無關） */
+const COLOR_PROP = /^(color|background|background-color|border|border-[a-z-]*color|box-shadow|outline|outline-color|text-shadow|fill|stroke)$/;
+
+/** 把 var(--dsm-x) 換成該主題的值；非 token（字面值等）原樣保留 */
+const resolve = (v, theme) => v.replace(/var\((--dsm-[\w-]+)\)/g, (m, k) => TOKENS[theme][k] ?? m);
+
+/**
+ * 演算法：
+ *   1. 收集該狀態的淺色規則宣告，以及暗色規則宣告（同一屬性後者覆蓋前者）
+ *   2. 淺色有效值 = 淺色宣告；dark 有效值 = 淺色宣告再疊上暗色宣告
+ *   3. 逐個「顏色屬性」比對 resolve(值, light) 與 resolve(值, dark)
+ *   4. 只要有任一個顏色屬性兩邊相同 → dark 下會沿用淺色值 → 違規
+ *
+ * ★ 為什麼是「任一相同就違規」而非「全部相同才違規」：
+ *   回歸原形是「.warn 完全沒有暗色規則」。此時 border-color 走 token 會換值，
+ *   但 background: #fdf6e3 不會 —— 若採「全部相同才違規」就會放行這個真 bug。
+ *   真正的危害是「淺底淺字」的那一個屬性，故必須逐屬性要求兩邊不同。
+ */
+function stateDarkOffenders(text) {
+    const pairs = rulePairs(text);
+    const out = [];
     for (const { base, states } of STATE_COMPONENTS) {
         for (const st of states) {
-            const selector = `${base}.${st}`;
-            const darkRe = new RegExp(
-                'body\\.cocoya-dark-mode\\s+' + selector.replace(/\./g, '\\.'));
-            if (!darkRe.test(src)) missing.push(selector);
+            const sel = `${base}.${st}`;
+            const light = new Map(), dark = new Map();
+            for (const r of pairs) {
+                const target = targets(r.sel, sel, false) ? light
+                    : (targets(r.sel, sel, true) ? dark : null);
+                if (target) for (const [p, v] of declsOf(r.body)) target.set(p, v);
+            }
+            assert.ok(light.size > 0, `${sel} 應有淺色基礎規則（選擇器打錯會讓本守門靜默失效）`);
+            const effDark = new Map(light);
+            for (const [p, v] of dark) effDark.set(p, v);
+            const same = [];
+            for (const [prop, lv] of light) {
+                if (!COLOR_PROP.test(prop)) continue;
+                if (resolve(lv, 'light') === resolve(effDark.get(prop), 'dark')) same.push(`${prop}: ${lv}`);
+            }
+            if (same.length) out.push(`${sel}（${same.join('、')}）`);
         }
     }
-    assert.deepEqual(missing, [],
-        '下列狀態缺少 body.cocoya-dark-mode 覆寫，dark 主題下會退回淺色定義');
+    return out;
+}
+
+test('守門 4：狀態變體在 dark 主題的有效值不得沿用淺色值（淺底淺字）', () => {
+    assert.deepEqual(stateDarkOffenders(src), [],
+        '下列狀態在 dark 主題會沿用淺色值，需走雙主題 token 或補上暗色覆寫');
 });
 
 /**
@@ -310,29 +347,28 @@ test('守門 5 自檢：重複宣告一旦出現，本守門必須報紅', () =>
         '守門必須能抓到 dark 區塊重複宣告 light 已有 var 的情形');
 });
 
-test('守門 4 自檢：移除 .warn 的暗色覆寫後本測試必須紅', () => {
-    const detect = (text) => {
-        const out = [];
-        for (const { base, states } of STATE_COMPONENTS) {
-            for (const st of states) {
-                const re = new RegExp('body\\.cocoya-dark-mode\\s+' +
-                    `${base}.${st}`.replace(/\./g, '\\.'));
-                if (!re.test(text)) out.push(`${base}.${st}`);
-            }
-        }
-        return out;
-    };
-    assert.deepEqual(detect(src), []);
-    // 模擬回歸：把 .warn 的暗色覆寫整段刪掉。
-    // 2026-10-01 修：原寫法的 regex 以 `\n\}` 結尾，但 CSS 是 CRLF → 整段沒被刪掉，
-    // broken 與 src 相同，detect(broken) 找不到缺項，這個「自檢」就永遠不會紅。
-    // 同時原本還硬編碼了 `color: #e0c878;`，改個色值就會靜默失效。
-    // 改為：找出所有 .warn 暗色規則的選擇器行並刪除該整段，不依賴行尾與色值。
-    const broken = src.replace(
-        /^body\.[^\n]*\.dataset-validation\.warn[^\n]*\n/gm, '').replace(
-        /body\.cocoya-dark-mode \.dataset-validation\.warn\s*\{[^}]*\}/, '');
-    assert.notEqual(broken, src, '自檢失效：模擬回歸的刪除沒有生效（多半是行尾不符）');
-    assert.ok(detect(broken).includes('.dataset-validation.warn'),
-        '守門必須能抓到缺少暗色覆寫的狀態');
+test('守門 4 自檢：dark 沿用淺色值時本測試必須紅', () => {
+    // ⚠ 直接呼叫被測函式本身，別在自己重寫一份 detect ——
+    //   舊版自檢照抄了偵測邏輯，等於只驗到複製品：真函式壞掉時自檢仍全綠（假安全感）。
+    assert.deepEqual(stateDarkOffenders(src), [], '現況應為零違規，否則後面的變異無意義');
+
+    // 變異一：dark 主題沿用淺色底（= 2026-10-01 真 bug 的**效果**：米色亮底淺字）
+    const regressed = src +
+        '\nbody.cocoya-dark-mode .dataset-validation.warn { background: #fdf6e3; }\n';
+    assert.notEqual(regressed, src, '自檢失效：變異沒有生效');
+    assert.ok(stateDarkOffenders(regressed).some((o) => o.includes('.dataset-validation.warn')),
+        '守門必須能抓到「dark 沿用淺色底」的狀態');
+
+    // 變異二：整組淺色值被沿用（模擬「完全沒有暗色規則」的原形）
+    const regressed2 = src +
+        '\nbody.cocoya-dark-mode .dataset-validation.ok ' +
+        '{ border-color: #b7dfbd; background: #f1f8f2; color: #226b2b; }\n';
+    assert.ok(stateDarkOffenders(regressed2).some((o) => o.includes('.dataset-validation.ok')),
+        '守門必須能抓到「dark 全組沿用淺色」的狀態');
+
+    // ★ 變異一同時是**舊實作的盲點**：舊版只檢查「有沒有 body.cocoya-dark-mode 覆寫」，
+    //   上面兩條變異都補了覆寫 → 舊版會放行。這正是本升級要修掉的假綠。
+    //   （不採「整段刪除暗色規則」的變異法：選擇器跨多行＋CRLF，2026-10-01 已吃過
+    //     刪不乾淨導致自檢永不報紅的虧；改用「效果等價」的追加變異更穩固。）
 });
 

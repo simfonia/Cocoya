@@ -87,7 +87,7 @@
             '--dsm-list-item-bg': '#FFE3F0',
             '--dsm-success-bg': '#FFEFF7',
             '--dsm-success-border': '#FFC0E0',
-            '--dsm-success-text': '#8A4A6A',
+            '--dsm-success-text': '#2F6B3C',
             '--dsm-success-accent': '#FE2F89',
             '--dsm-error-bg': '#FFF0F0',
             '--dsm-warning-bg': '#FFE8F0',
@@ -96,7 +96,20 @@
             '--dsm-card-hover-border': '#FE2F89',
             '--dsm-dev-badge-bg': '#FFE3F0',
             '--dsm-dev-badge-text': '#8A4A6A',
-            '--dsm-type-badge-bg': '#FFE9F3'
+            '--dsm-type-badge-bg': '#FFE9F3',
+            '--dsm-error-border': '#D9537F',
+            '--dsm-error-text': '#A82F55',
+            '--dsm-warning-border': '#B87615',
+            '--dsm-warning-text': '#7A4A12',
+            '--dsm-surface-raised': '#FFE9F3',
+            '--dsm-surface-sunken': '#FFD0E8',
+            '--dsm-scrim': 'rgba(90, 40, 70, 0.55)',
+            '--dsm-border-subtle': 'rgba(138, 74, 106, 0.18)',
+            '--dsm-focus-ring': 'rgba(254, 47, 137, 0.3)',
+            '--dsm-shadow-brand': 'rgba(254, 47, 137, 0.3)',
+            '--dsm-autosave-indicator': '#2F6B3C',
+            '--dsm-select-border': '#D6417E',
+            '--dsm-select-bg': '#FFE3F0'
         }
     });
 })();

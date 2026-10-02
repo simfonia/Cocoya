@@ -61,7 +61,20 @@
             '--dsm-card-hover-border': '#FE2F89',
             '--dsm-dev-badge-bg': '#fff0f5',
             '--dsm-dev-badge-text': '#c2185b',
-            '--dsm-type-badge-bg': '#fdf2f7'
+            '--dsm-type-badge-bg': '#fdf2f7',
+            '--dsm-error-border': '#efb7b7',
+            '--dsm-error-text': '#9b2222',
+            '--dsm-warning-border': '#e6c26a',
+            '--dsm-warning-text': '#8a6500',
+            '--dsm-surface-raised': '#f0f0f0',
+            '--dsm-surface-sunken': '#e0e0e0',
+            '--dsm-scrim': 'rgba(255, 255, 255, 0.85)',
+            '--dsm-border-subtle': 'rgba(138, 74, 106, 0.15)',
+            '--dsm-focus-ring': 'rgba(254, 47, 137, 0.15)',
+            '--dsm-shadow-brand': 'rgba(254, 47, 137, 0.15)',
+            '--dsm-autosave-indicator': '#4CAF50',
+            '--dsm-select-border': '#FE2F89',
+            '--dsm-select-bg': '#FFF0F6'
         }
     });
 })();
