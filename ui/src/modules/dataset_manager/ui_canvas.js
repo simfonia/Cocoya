@@ -226,8 +226,10 @@ export const UICanvas = {
 
         this.state.handlers.mousemove = (e) => {
             const rect = canvas.getBoundingClientRect();
-            const currX = clamp(e.clientX - rect.left, canvas.width);
-            const currY = clamp(e.clientY - rect.top, canvas.height);
+            const rawX = e.clientX - rect.left;
+            const rawY = e.clientY - rect.top;
+            const currX = clamp(rawX, canvas.width);
+            const currY = clamp(rawY, canvas.height);
 
             if (this.state.mode === 'line') {
                 // 拖曳拉線中，或是點選起點後正在等待終點 (橡皮筋線預覽)
@@ -246,8 +248,18 @@ export const UICanvas = {
                 // 但 currentBbox（預覽框）必須守在 isDrawing 保護內 ——
                 // 否則滑鼠一移動就會用殘留的 startX/startY(=0) 從左上角憑空拉出藍框，
                 // 且 mouseup 會把它當成正式標註送出。
-                this.state.pointerX = currX;
-                this.state.pointerY = currY;
+                //
+                // 2026-10-02（使用者回報「mouse 不在影像上尺規也會出現」）：
+                // mousemove 掛在 window（拉框拖出畫布仍要追蹤），游標到影像之外一樣觸發，
+                // 而 currX/currY 被 clamp 釘在邊界 → 尺規黏在影像邊緣不消失；
+                // canvas.mouseleave 雖會把 pointer 清掉，但下一次 window mousemove
+                // 又立刻設回去，等於永遠清不掉。故改以「未 clamp 的 raw 座標」判定
+                // 游標是否真的在影像上，出界一律收起（拉框中的預覽框不受影響，
+                // currentBbox 仍用 clamp 後的座標，拖出畫布會停在邊界）。
+                const inside = rawX >= 0 && rawY >= 0
+                    && rawX <= canvas.width && rawY <= canvas.height;
+                this.state.pointerX = inside ? currX : null;
+                this.state.pointerY = inside ? currY : null;
                 if (this.state.isDrawing) {
                     const x = Math.min(this.state.startX, currX);
                     const y = Math.min(this.state.startY, currY);
