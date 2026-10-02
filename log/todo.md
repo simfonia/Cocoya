@@ -440,6 +440,174 @@
 - [x] 附帶修掉真實缺陷：`rules()` 未排除 CSS 註解 → 檔頭註解含 `body.cocoya-dark-mode` 字樣與 `{` 會被當成選擇器項（假陰性來源）。已改為先移除註解再切分。
 - [x] 驗收：dataset_theme_contract 6/6、全專案 271/271、ESLint 0 error、vite build PASS、使用者目視正常。
 - [ ] **P1-3 未涵蓋範圍**：本次只刪 token 定義，**未處理正文硬編碼** —— 仍有 268 個 `body.cocoya-dark-mode` 規則塊（含 88 處硬編碼 hex）存在且生效。若日後要處理，那些規則直接寫屬性、與 token 無關，影響面需另行評估。
+### [2026-10-02] #task[cocoya dark主題 token] P1-3 主題硬編碼：A 類（零視覺影響）收斂
+
+#### 1. 先回答「這件事有沒有必要做」——重新量化後結論變了
+
+上一輪（`d958cf4`）已刪掉三套並存的 token **定義**，但日誌 §15.3 明寫未涵蓋範圍：
+`dataset_manager.css` 仍有 dark 覆寫規則直接寫字面值。
+
+我實測後得到關鍵數字（先前計畫書寫的「144 hex」把 token 定義值也算進去了，不準）：
+
+| 區段 | 規則數 | `var()` | 硬編碼 hex |
+|---|---|---|---|
+| light 基礎規則 | 154 | 138 | **43 處** |
+| dark 覆寫規則 | 53 | 43 | **44 處** |
+
+**真正的成本不是「難看」，是「不可達」**：dark 覆寫寫的是字面值，
+而 `theme_manager.js:179` 是把 cssVars 寫在 `body` 行內樣式 —— 字面值不會被 cssVars 覆蓋。
+故 `theme_manager.js:8` 宣稱的「自訂主題只需 `registerTheme({id, cssVars, blockly})` 即插即用」
+在 Dataset Manager 這一塊**不成立**：新主題作者有 **87 個顏色摸不到**。
+
+#### 2. 分類與本輪範圍（使用者決定）
+
+| 類 | 數 | 意義 | 本輪 |
+|---|---|---|---|
+| **A** | 23 | dark 值與 light **同一個 `var()`** → 純冗餘，刪掉視覺零影響 | ✅ **本輪執行** |
+| A? | 18 | dark 用 var 但 light 缺該屬性 → 需逐條判定 | ⏸ 不動 |
+| B | 17 | dark 值 = 某 token 的 dark 值，light 端寫死別的值 | ⏸ 不動 |
+| C | 31 | 無對應 token（`#00ccff` 選取高亮、`rgba(0,0,0,0.7)` 遮罩等） | ⏸ 不動 |
+
+**B/C 類不做的理由（誠實記錄）**：C 類 token 化需新增 12~15 個變數 × 3 主題 = 40+ 個新值要維護，
+收益只有「未來的第 4、第 5 個主題」才吃得到。若實際不會再做新主題，這部分是淨虧損。
+故使用者選擇只做 A 類，B/C 留待真正要新增主題時再處理。
+
+#### 3. 執行結果
+
+- **58 行純刪除、0 行修改**（diff 全為 `-`，本身即安全訊號）：6 條規則整條刪、13 條規則各刪部分屬性行
+- 檔案 1737 → 1679 行；CRLF 行尾保留；大括號 215/215 平衡
+
+#### 4. 踩坑：變異測試**兩次失敗**，抓到的是「假安全感」
+
+本次最重要產出不是那 58 行，而是下列三個真實 bug —— 全部靠「刻意破壞確認測試會紅」才浮現：
+
+| # | 破壞方式 | 預期 | 實際 |
+|---|---|---|---|
+| ① | 刪 dark 規則時刪除範圍從 `{` 行起算 | 自檢報紅 | ❌ **報「自檢通過」並寫入壞 CSS** |
+| ② | 守門 5 的 `parseRules` 把 `selStart` 設在 `{` 之後 | 抓到冗餘 | ❌ **靜默回傳空 = 假綠** |
+| ③ | 守門 5 的 light map 只留**第一條**同名規則 | 抓到冗餘 | ❌ **漏放（自檢報紅才發現）** |
+
+**根因①**：選擇器跨多行時，只刪 `{` 行起算會留下裸選擇器行。
+但更關鍵的體認是 —— **裸選擇器行在語法上是合法的**：它會被「下一條規則的選擇器」接續起來，
+只是讓該元素在 dark 下多吃到一條不該有的規則（靜默視覺回歸）。
+所以「大括號平衡」「sel 是否以逗號結尾」等**語法層自檢都抓不到**，
+判準只能落在語意上：「dark 有無重複宣告 light 已有的 var」。
+
+**根因②③**：寫守門時複製了有 bug 的解析器。①②一起說明——
+選擇器在 `{` **之前**；且規則是在 `}` 分支 push，`sel` 必須 `slice(selStart, openIdx)`
+而非 `slice(selStart, i)`（`i` 此刻是閉合大括號，會把整個規則體吞進「選擇器」）。
+
+#### 5. 新增守門 5（掃描型，已變異測試驗證有效）
+
+`dataset_theme_contract.test.mjs` 新增 2 例（277/277 全綠）：
+- **守門 5**：dark 區塊不得重複宣告 light 已有的同一個 `var()`
+- **守門 5 自檢**：寫回一條冗餘 dark 規則 → 必須報紅（已實測 ✅ 紅）
+
+自檢刻意**採用真實回歸形狀**（就是本輪刪掉的 6 條規則那種），不是憑空構造的變異。
+
+#### 6. 驗收
+
+```
+dataset_theme_contract   8/8 綠（守門 5 +2）
+全專案測試               275 → 277 綠
+ESLint                   0 error
+vite build               PASS (306ms)
+變異測試                 寫回冗餘規則 → 守門 5 報紅 ✅
+備份                     backup/dataset_manager_20261002_143159.css.bak
+```
+
+#### 4b. ⚠ 修正 4. 的「87 個」說法（2026-10-02 補，使用者提問後查證）
+
+「淺色主題作者摸不到 87 個顏色」**對 candy 不成立**，勿沿用此數字。精確版本：
+
+| 主題類型 | 受約束的硬編碼 | 原因 |
+|---|---|---|
+| **深色**（cocoya_dark） | 43（light 段）+ 44（dark 段）= **87** | 同時吃兩段 |
+| **淺色**（cocoya_light / **cocoya_candy**） | **僅 43**（light 段） | dark 段選擇器是 `body.cocoya-dark-mode`，candy 不會命中 |
+
+candy 之所以看起來正常，是 light 段那些值本身偏中性淺色，**淺色值疊淺色主題不刺眼**
+—— 屬「意外正確」而非「架構正確」。實際仍有明顯走樣處，例如：
+`.dataset-primary-btn:hover` = `#e91e63`（紅粉，candy 應為 `#FFE3F0`）、
+`.dataset-annotation-item.selected` = `#00CCFF`（青，candy 是粉紫系統）。
+
+#### 4c. ✅ 已實測確認並修復（2026-10-02）
+
+**使用者實測結果：推論正確 —— VSIX ＋ VS Code 深色 ＋ candy 確實錯亂。**
+
+每條 dark 覆寫的選擇器群組皆含 `body.vscode-dark` / `body.vscode-high-contrast`，
+而這兩個 class **不由 Cocoya 控制** —— 是 VS Code webview 依使用者 VS Code 色彩主題注入的
+（`theme_manager.js:141-142` 明確把它們當「外來訊號」讀取；
+`theme_manager.js:173` 只切換 `cocoya-*`，從不主動增減 `vscode-*`）。
+
+> **VSIX 模式 ＋ VS Code 深色 ＋ 選 candy**
+> → body 同時帶 `vscode-dark` 與 `cocoya-light-mode`
+> → 44 處 dark 字面值照樣生效，蓋掉 candy 的淺色 token
+
+**為何深色主題從未暴露此 bug**：VS Code 深色 ＋ Cocoya dark 時兩套都生效**且都是深色**，
+結果正確 —— 衝突被掩蓋。bug 一直躲在「看起來正常」的組合裡。
+
+**修法**：在 vscode 選擇器加 `:not(.cocoya-light-mode)`，語意為
+「VS Code 是深色，**且**使用者沒有明確選淺色主題」。
+
+```css
+body.vscode-dark:not(.cocoya-light-mode) X,   /* 新 */
+body.vscode-dark X,                           /* 舊 */
+```
+
+| 檔案 | 選擇器處數 |
+|---|---|
+| `ui/src/style.css` | 42 |
+| `ui/src/modules/dataset_manager/dataset_manager.css` | 122 |
+| **合計** | **164** |
+
+**為何不採「JS 移除 vscode class」**：
+① `theme_manager.js:141-142` 的 `_detectSystemDark()` 正是讀這個 class 判定 auto 模式，
+   移除會讓 auto 在 VSIX 失效；
+② 不碰 VS Code 注入的 class → 不影響 VS Code 自身對它的使用。
+
+**FOUC Guard 特別驗證**（`style.css` L1896-1909，作用於 body 本身）：
+加條件**不影響防閃白目的** —— FOUC 階段 JS 尚未執行，body 上還沒有 `cocoya-light-mode`
+→ `:not()` 成立 → 8 個變數照常定義；JS 執行後由主題檔 cssVars 經 `setProperty`
+寫入行內樣式接手（行內樣式特異度高於該規則）。
+
+**新增守門 6**（`theme_contract.test.mjs`，2 例，全專案掃描型）：掃遍 `ui/src/**/*.css`，
+任何 `body.vscode-(dark|high-contrast)` 選擇器未帶 `:not(.cocoya-light-mode)` 即報紅。
+變異測試：實際從 `style.css` 拿掉一個 `:not()` → 守門精確抓出 `style.css:101` ✅
+
+**本次第三次「守門判準過寬／誤判」踩坑**（與前兩次同型，已寫進註解）：
+初版判準是「行首去空白為 `body.`」→ 但我自己在 FOUC Guard 說明文字裡寫了
+「`body.vscode-dark` 由 VS Code 注入且長駐…」這一行，被誤判成漏改，守門一開始就紅。
+改為先剝除 CSS 註解再逐行比對（保留換行以維持行號）。
+
+**⚠ 提交後立刻發現並修正的錯誤（2026-10-02，使用者回報 VS Code 語法錯誤）**
+
+在 CSS 註解裡寫了 glob `ui/src/**/*.css` —— 其中的「星號＋斜線」兩字元序列被
+CSS 解析器當成**註解結束符** → 檔頭註解提前中斷 → 後文被當選擇器解析 →
+VS Code 報「L44 必須是 {」「L52 預期為 at-rule 或選取器」，整份樣式表從該處起解析異常。
+
+- 同一個錯誤在 `.mjs` 的 JSDoc 註解裡**重演一次**：我為了記錄這件事而寫的說明文字，
+  本身就含該序列 → 讓 `dataset_theme_contract.test.mjs` 當場語法錯誤
+  （`node --check` 報 `Invalid regular expression`）。
+- **CSS 與 JS 的註解是同一個陷阱**，且寫說明時特別容易再犯
+  （要描述那個 glob 就得寫出那個 glob）。凡需舉例一律改用「星號＋斜線序列」
+  這類描述性文字，不寫字面。
+
+新增**守門 7**（`dataset_theme_contract.test.mjs`，2 例）：以「剝除所有註解後是否殘留
+結束符」判斷註解是否提前閉合 —— 合法樣式表在剝除註解後不可能再出現該序列。
+變異測試：於註解內注入 glob → 守門報紅 ✅
+
+順帶修掉一個**既存的測試缺陷**：「大括號平衡」原本**不排除註解**就計數，
+註解裡若出現大括號（例如引用編輯器錯誤訊息「必須是 {」）就會誤報。
+本次因此誤報 216 / 215，一度讓我懷疑整份樣式表壞掉 —— 實際去註解後是 215 / 215。
+已改為先剝除註解再計數。
+
+#### 下次啟動方向 (Next Steps)
+- **待實測（修後驗收）**：① VSIX ＋ VS Code 深色 ＋ candy（本 bug 正解）
+  ② auto ＋ VS Code 深色（`:not` 應成立、維持深色）③ Tauri ＋ candy（無 vscode class，應無變化）
+  ④ VS Code 執行中切換色彩主題（`theme_manager.js:225` MutationObserver 會重跑 `apply()`）
+- B/C 類（light 段 43 + dark 段 44 處硬編碼）**下次處理**（使用者決定），屆時需先決定 candy 的新配色
+- 可考慮比照 P1-3 的方法，盤點 `style.css` 其餘硬編碼（P1-4，242 hex）
+
 ### [2026-10-01] #task[Batch 2 完成] P2-7 標籤色主題化 ＋ hover 高亮（使用者目視確認成功）
 - [x] P2-7 起點用數據論證：實測 12 個常見標籤的 WCAG 對比度，舊實作（單一 HSL L=40~55%）**11 個低於 3.0**（7 淺底不足、4 深底不足）。單一明度不可能同時滿足兩種底色。
 - [x] **關鍵設計**：框線與徽章分開處理。徽章畫在 UI 上 → 明度依主題（light 42／dark 62／candy 44）；框線畫在**照片上** → 明度**固定 52**（照片明暗與主題無關）。此問題由使用者提出「影像偏暗但淺色主題會有影響嗎」才浮現，若未提出會做出錯誤方案。
@@ -457,4 +625,19 @@
 - [x] P1-3 主題 token 收斂（`d958cf4`）— 使用者目視正常
 - [x] P2-16 dark msgColours（`0b59329`）— 使用者目視確認並手動再調 8 鍵
 - [x] P2-7 標籤色主題化 ＋ hover 高亮（本次）— 使用者目視成功
-- [ ] **P1-3 未涵蓋範圍**：僅刪 token 定義；仍有 268 個 `body.cocoya-dark-mode` 規則塊（含 88 處硬編碼 hex）存在且生效。那些規則直接寫屬性、與 token 無關，影響面需另行評估。
+- [x] **P1-3 A 類已於 2026-10-02 收斂**：刪除 dark 區塊中「與 light 重複宣告同一個 var()」的 23 處屬性（58 行純刪除、視覺零影響），並新增守門 5 掃描型測試防止復發。
+- [x] **VS Code 深色越權 bug 已實測確認並修復（2026-10-02）**：`body.vscode-dark`／`body.vscode-high-contrast`
+  由 VS Code webview 注入且長駐，與 `theme_manager.js:173` 的 `cocoya-*`（互斥）並聯寫在同一批選擇器中，
+  導致「VSIX ＋ VS Code 深色 ＋ 選 candy／light」時深色字面值蓋掉淺色主題（**使用者實測確認**）。
+  修法：164 個 vscode 選擇器加 `:not(.cocoya-light-mode)`（`style.css` 42 ＋ `dataset_manager.css` 122）；
+  不採 JS 移除 class，因 `_detectSystemDark()` 依賴它判定 auto 模式。新增守門 6（全專案掃描型）。
+- [ ] **P1-3 B/C 類刻意不處理**（使用者決定）：light 段仍有 43 處、dark 段仍有 44 處硬編碼字面值。
+  ⚠ **勿用「87 個」概括**（2026-10-02 修正）：dark 段掛在 `body.cocoya-dark-mode`，淺色主題不命中，
+  故**深色**主題受約束 43+44=87 處、**淺色**主題（light／candy）僅受約束 light 段 43 處。
+  candy 看似正常是「淺色值疊淺色底不刺眼」的意外正確，仍走樣處如 `.dataset-primary-btn:hover` = `#e91e63`。
+  B 類 17 處、C 類 31 處需 token 化，但 C 類要新增 12~15 變數 × 3 主題 = 40+ 新值，**收益只有真的要做第 4 個主題才吃得到**。
+  → 待「確實要新增主題」時再啟動，屆時需先決定 candy 的新配色。
+- [ ] **待實測（新發現）**：dark 區塊選擇器含 `body.vscode-dark`／`body.vscode-high-contrast`，
+  該 class 由 VS Code webview 注入、非 Cocoya 控制。需實測「VSIX ＋ VS Code 深色 ＋ 選 candy」
+  是否會讓 44 處 dark 字面值蓋掉 candy 的淺色 token（尚未確認，非已驗證缺陷）。
+- [ ] P1-4 `style.css` 242 hex：可比照 P1-3 的分類法（設計常數／主題值／純冗餘）處理

@@ -144,7 +144,7 @@ C:\Workspace\cocoya\
 │   │   │   ├── core/      # Python／MicroPython 核心語法積木；`core_contract.test.mjs` 對帳 block、generator、toolbox、i18n、主題與平台契約（2026-09-30 T2 起涵蓋 core_manifest.json 全部 22 模組，含 3 項 i18n 守門）
 │   │   │   ├── theme_manager/ # [NEW] 主題管理模組（registry + 模式切換 + 系統深淺色偵測）
 │   │   │   │   ├── theme_manager.js # 核心：registerTheme/getThemes/setMode/getMode/apply/startWatching (window.CocoyaTheme)
-│   │   │   │   ├── theme_contract.test.mjs # [2026-10-01] 三主題契約測試（4 測；cssVars 鍵集合三主題一致／無重複／鍵名格式、msgColours 選配語意；守住 P2-16 不變式，npm run test:theme）
+│   │   │   │   ├── theme_contract.test.mjs # [2026-10-01／2026-10-02] 主題契約守門（6 測：cssVars 鍵集合三主題一致／無重複／鍵名格式、msgColours 選配語意；[2026-10-02] 增守門 6「vscode 深色選擇器必須帶 :not(.cocoya-light-mode)」全專案掃描 ui/src/**/*.css ＋自檢；守住 P2-16 與「VS Code 深色越權」bug 不變式，npm run test:theme）
 │   │   │   │   └── themes/    # 內建主題（一主題一檔，載入時 registerTheme；cssVars 鍵集合須三主題同步，由 theme_contract.test.mjs 守門）
 │   │   │   │       ├── cocoya_light.js # 淺色主題 (Blockly Classic + 淺色 cssVars；msgColours 不宣告＝沿用根 zh-hant/en 的 COLOUR_* 預設色)
 │   │   │   │       ├── cocoya_dark.js  # 深色主題 (Blockly Theme componentStyles + 深色 cssVars, hideGrid)
@@ -233,7 +233,7 @@ C:\Workspace\cocoya\
 │   │   │       ├── ui_components.js # 動態視圖組件 (影像網格、字典序標籤統計、標註縮圖欄、getLabelColor FNV-1a+黃金角色相；轉義經 core/html.js，前損壞實作已刪)
 │   │   │       ├── ui_canvas.js # 標註互動畫布 (物件偵測拉框與自駕循線畫線，座標限幅防護、bbox 高亮與雙模互動；[2026-10-01] 跨畫面十字尺規可調色、框線雙色描邊（白外框＋標籤色內框）且不依主題變明度（框線畫在照片上）、標註列表 hover 時的 2Hz 閃爍虛線高亮)
 │   │   │       ├── ui_canvas.test.mjs # [2026-10-01] 標註畫布呈現守門（24 測：尺規、標註文字、labelMap 即時重繪、resolveBoxColor、掃描型自檢）
-│   │   │       ├── dataset_theme_contract.test.mjs # [2026-10-01] DM 樣式表契約守門（7 測：暗色 class 對齊、縮圖 contain、狀態變體暗色覆寫；含自檢）
+│   │   │       ├── dataset_theme_contract.test.mjs # [2026-10-01／2026-10-02] DM 樣式表契約守門（8 測：暗色 class 對齊、縮圖 contain、狀態變體暗色覆寫；[2026-10-02] P1-3 增守門 5「dark 不得重複宣告 light 已有 var」＋自檢；含自檢）
 │   │   │       └── i18n/      # 語系檔目錄
 │   │   │           ├── zh-hant.js # 繁體中文 i18n 鍵值 (VALIDATE_*/ANNOTATION_*/ENTRY_*/PAGE_*/DEV_BANNER_*/SWITCH_TYPE_*；142 key 與 en parity)
 │   │   │           └── en.js      # 英文 i18n 鍵值 (同 zh-hant 142 key 全對齊)
