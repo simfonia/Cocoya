@@ -410,3 +410,14 @@
 - [ ] `.gitattributes` 已於本次 commit 納入版控；後續若新增 `.sh` 腳本需另加 `eol=lf` 例外。
 
 - [ ] T6：CI 與 pre-commit（GitHub Actions + husky）
+
+### [2026-10-01] #task[T-scan] 測試計時器洩漏掃描（Stage 0 殘項）
+- [x] 新增 `temp_scripts/t_scan.cjs`：40 個測試檔靜態掃描（計時器／handle／無 await 三級線索）。刻意只報「線索」不報「錯誤」——實測 4 筆中 2 筆為誤報，判定須人工確認。
+- [x] 修正 `annotation.test.mjs` 真等待 `sleep(350)` → mock timers，並補邊界斷言（299ms 不觸發／300ms 觸發）。單檔 544 → 190ms。
+- [x] 修正 `statusMessage.test.mjs` 真等待 ×5（30/60/70/80/70）→ mock timers，補 4 個邊界斷言。單檔 511 → 173ms，並移除已無使用者的 `sleep()` 死碼。
+- [x] 變異測試兩項皆報紅：debounce 300→100 觸發「299ms 不應觸發」；移除 `clearTimeout` 觸發「舊計時器提前隱藏了新訊息」。
+- [x] 誤報確認無害：`platform_restore.test.mjs` 的 `realSetTimeout`（try/finally 成對還原）、`bridge.test.mjs` 的 async 多餘。
+- [x] 刻意保留 `bridge.test.mjs` 的 `TICK`（5ms ×3，跨微任務用途而非計時器，僅多 56ms）。
+- [x] 驗收：272/272 綠（3 次取樣 1435/1080/1134ms）、eslint 0 error。
+- [x] 使用者拍板 Batch 2 範圍：P1-3 CSS token 化、P2-7 標籤色主題化、P2-16 dark 補 msgColours。
+- [ ] **Batch 2 執行**（待指示）：P1-3 + P2-7 + P2-16。P2-16 配色採「做法 1：沿用預設色相與飽和、僅降亮度」，並須推翻 `theme_contract.test.mjs` 第 4 測（該測試是 Batch 0 我替使用者判定「刻意」所寫，此次經使用者明確推翻）。candy 配色為淺底設計，不可直接沿用深底。

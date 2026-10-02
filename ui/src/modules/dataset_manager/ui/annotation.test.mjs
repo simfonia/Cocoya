@@ -67,7 +67,15 @@ describe('ui/annotation.js (Stage 4 切片 6)', () => {
         assert.equal(deps.state.annotationMode.currentIndex, -1);
     });
 
-    test('loadAnnotationImage：UICanvas.init 以 line mode + labelMap 注入，onUpdate 觸發 debounce', async () => {
+    test('loadAnnotationImage：UICanvas.init 以 line mode + labelMap 注入，onUpdate 觸發 debounce', async (t) => {
+        // 2026-10-01（T-scan）：原寫法為 `await new Promise(r => setTimeout(r, 350))` 真等待。
+        // 真等待的兩個問題：
+        //   1. 單檔多等 350ms（本檔實測 544ms，為全專案最慢）
+        //   2. `node --test` 會**並發**執行同一檔內的測試，真等待疊在同一時間軸上，
+        //      無法驗「299ms 不觸發／300ms 觸發」這種精確邊界
+        // 改用 mock timers：0ms 耗時，且能驗真等待根本做不到的邊界。
+        t.mock.timers.enable({ apis: ['setTimeout'] });
+
         const doc = makeFakeDocument(['annotation-container', 'annotation-target-img', 'annotation-controls', 'annotation-list-ui', 'annotation-progress', 'annotation-class-manager']);
         const { deps, events } = makeDeps({ document: doc });
         deps.getFormValue = (name) => (name === 'projectType' ? 'line_following' : '');
@@ -86,7 +94,15 @@ describe('ui/annotation.js (Stage 4 切片 6)', () => {
         assert.equal(deps.state.images[1].annotations, anns);
         assert.ok(deps.state.annotationMode.saveTimer, 'debounce timer 未建立');
 
-        await new Promise(r => setTimeout(r, 350));
+        // 邊界斷言：debounce 為 300ms（annotation.js:202）。
+        // 299ms 必須尚未觸發，300ms 才觸發 —— 真等待（350ms）只能驗到後者。
+        t.mock.timers.tick(299);
+        assert.ok(
+            !events.map(e => e[0]).includes('stats'),
+            '299ms 時 debounce 不應觸發（邊界錯誤）'
+        );
+
+        t.mock.timers.tick(1); // 累計 300ms
         const order = events.map(e => e[0]);
         assert.ok(order.includes('stats') && order.includes('refresh'), 'debounce 未觸發 stats+refresh');
         // 原行為：debounce 觸發後不主動清空 saveTimer 參考（僅切圖/儲存時 clearTimeout）
