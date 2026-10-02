@@ -1,93 +1,27 @@
 /*
- * Dataset Manager 樣式 Token（Stage 5 切片 2，§8.2 步驟 2）
- * - light 預設值定義於 :root（不得掛 .dataset-manager-dialog——自訂屬性以最近定義者為準，
- *   掛 dialog 會覆蓋 body 層級的 theme_manager cssVars，導致 candy/dark 換膚失效）
- * - 主題覆寫：theme_manager cssVars（body inline style）> :root 預設
- * - 鐵律：token 化不改視覺值；本切片僅品牌粉 + disabled；灰階待切片 3 與 dark 區塊收斂
+ * Dataset Manager 樣式 Token
+ *
+ * ★ 2026-10-01（P1-3 收斂）：本檔原本有兩個 token 區塊，已刪除 —
+ *   ① :root            （light 預設，35 鍵）
+ *   ② body.cocoya-dark-mode / body.vscode-dark / body.vscode-high-contrast（28 鍵）
+ *
+ *   原因：兩者都是**死碼**。theme_manager.js:179 以
+ *     document.body.style.setProperty(v, theme.cssVars[v])
+ *   把三主題檔的 cssVars 寫在 **body 行內樣式**，其層級優先於
+ *   :root 與 body.cocoya-dark-mode → 只要該鍵在三主題檔有定義（47 鍵），
+ *   這兩個區塊的值永遠不會生效。
+ *
+ *   如今 **三主題檔（cocoya_light / cocoya_dark / cocoya_candy 的 cssVars）
+ *   是 --dsm-* 與 --cocoya-* 的唯一 SSOT**。要改配色請改那三個檔案。
+ *
+ *   已驗證：主題檔聯集 47 鍵 ⊇ 原本 CSS 兩區塊的全部鍵，唯一例外是
+ *   --dsm-font-scale（下方保留）。
  */
 :root {
-    /* 字級縮放（下游唯讀；上游 SSOT 為 ui/src/font_scale.css 的 --fs-p1/p2/p3，映射規則見檔尾） */
+    /* 字級縮放（下游唯讀；上游 SSOT 為 ui/src/font_scale.css 的 --fs-p1/p2/p3）
+     * 刻意不由主題決定：這是使用者設定的全域字級縮放，非配色的一部分，
+     * 故三主題檔皆不定義它，只在此提供映射。 */
     --dsm-font-scale: var(--fs-p2, 1);
-    /* 品牌 */
-    --dsm-brand: #FE2F89;
-    --dsm-brand-soft: rgba(254, 47, 137, 0.15);   /* focus ring / 淡陰影（原 0.12/0.15/0.25 收斂）*/
-    --dsm-brand-strong: rgba(254, 47, 137, 0.3);  /* 強調陰影 / warning pulse（原 0.25/0.28/0.3/0.4 收斂）*/
-    /* 文字（light）*/
-    --dsm-text: #333333;
-    --dsm-text-secondary: #555555;
-    --dsm-text-muted: #999999;
-    /* 邊框（light）*/
-    --dsm-border-light: #dddddd;
-    --dsm-border-strong: #cccccc;
-    /* 表面（light）*/
-    --dsm-surface: #ffffff;
-    --dsm-surface-alt: #f6f6f6;
-    /* 元件背景（light）*/
-    --dsm-input-bg: #ffffff;
-    --dsm-btn-bg: #f7f7f7;
-    --dsm-btn-hover-bg: #fff7fb;
-    --dsm-code-bg: #fafafa;
-    /* 訊息區（品牌色系，light）*/
-    --dsm-message-bg: #fdf2f7;
-    --dsm-message-border: #f2c6da;
-    --dsm-message-text: #c2185b;
-    /* 狀態背景（light）*/
-    --dsm-error-bg: #fff5f5;
-    --dsm-warning-bg: #fff0f5;
-    --dsm-list-item-bg: #eeeeee;
-    /* 成功色（light）*/
-    --dsm-success-bg: #eefaf1;
-    --dsm-success-border: #cdeeda;
-    --dsm-success-text: #2e7d32;
-    --dsm-success-accent: #4CAF50;
-    /* disabled（決策 2026-08-30：補定義）*/
-    --dsm-disabled-bg: #f0f0f0;
-    --dsm-disabled-text: #aaaaaa;
-    --dsm-disabled-border: #e0e0e0;
-    /* 縮圖底板（2026-10-01：object-fit 改 contain 後，上下/左右留白會露出此底色） */
-    --dsm-thumb-bg: #eeeeee;
-    /* 類型入口卡片（2026-09-10 M1：類型鎖定入口）*/
-    --dsm-card-bg: #ffffff;
-    --dsm-card-border: #dddddd;
-    --dsm-card-hover-border: #FE2F89;
-    --dsm-dev-badge-bg: #fff0f5;
-    --dsm-dev-badge-text: #c2185b;
-    --dsm-type-badge-bg: #fdf2f7;
-}
-
-/* dark / high-contrast token 覆寫（Stage 5 切片 4）：值與既有 dark 區塊原值等值 */
-body.vscode-dark,
-body.vscode-high-contrast,
-body.cocoya-dark-mode,
-body.cocoya-dark-mode  {
-    --dsm-text: #e0e0e0;
-    --dsm-text-secondary: #aaaaaa;
-    --dsm-text-muted: #888888;
-    --dsm-border-light: #404040;
-    --dsm-border-strong: #555555;
-    --dsm-surface: #252526;
-    --dsm-surface-alt: #2d2d2d;
-    --dsm-input-bg: #1e1e1e;
-    --dsm-btn-bg: #3c3c3c;
-    --dsm-btn-hover-bg: #4a2a35;
-    --dsm-code-bg: #1e1e1e;
-    --dsm-message-bg: #3a2b32;
-    --dsm-message-border: #6b4455;
-    --dsm-message-text: #ff8fb3;
-    --dsm-error-bg: #3d1b1b;      /* 對應 .dataset-validation.error dark 原值 */
-    --dsm-warning-bg: #4a2333;    /* 對應 .dataset-name-warning dark 原值 */
-    --dsm-list-item-bg: #444444;  /* 對應 .dataset-annotation-item dark 原值 */
-    --dsm-success-bg: #26302a;    /* 對應 .dataset-export-progress dark 原值 */
-    --dsm-success-border: #3d5543;
-    --dsm-success-text: #8fd49a;
-    --dsm-success-accent: #4CAF50;
-    /* 類型入口卡片（2026-09-10 M1：類型鎖定入口）*/
-    --dsm-card-bg: #2d2d2d;
-    --dsm-card-border: #555555;
-    --dsm-card-hover-border: #FE2F89;
-    --dsm-dev-badge-bg: #4a2333;
-    --dsm-dev-badge-text: #ff8fb3;
-    --dsm-type-badge-bg: #3a2b32;
 }
 
 
