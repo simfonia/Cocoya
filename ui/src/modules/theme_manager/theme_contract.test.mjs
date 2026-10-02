@@ -143,3 +143,87 @@ test('msgColours 覆寫：dark 與 candy 必須宣告；light 沿用預設色（
         );
     }
 });
+
+/**
+ * 守門 6：`body.vscode-dark` / `body.vscode-high-contrast` 必須帶
+ *        `:not(.cocoya-light-mode)` 條件。
+ *
+ * ★ 這個 bug 的真實樣貌（2026-10-02 由使用者實測確認，程式碼推論預測正確）：
+ *   `body.vscode-dark` 是 **VS Code webview 注入**的 class，長駐且 Cocoya 管不了；
+ *   `body.cocoya-dark-mode` / `body.cocoya-light-mode` 由 theme_manager.js:173-174
+ *   toggle（兩者互斥）。兩套 class 並聯寫在同一批選擇器裡 →
+ *   「VS Code 深色 ＋ 使用者選淺色主題（candy／light）」時，
+ *   深色字面值會蓋掉淺色主題，導致外觀錯亂。
+ *
+ *   為何深色主題從未暴露此問題：VS Code 深色 ＋ Cocoya dark 時兩套都生效
+ *   且**都是深色**，結果正確 —— 衝突被掩蓋。bug 一直躲在看起來正常的組合裡。
+ *
+ * ★ 修法與理由：
+ *   在 vscode 選擇器上加 :not(.cocoya-light-mode)，語意是
+ *   「VS Code 是深色，且使用者沒有明確選淺色主題」。
+ *   不採「JS 移除 vscode class」，因為 theme_manager.js:141-142 的
+ *   _detectSystemDark() 正是讀這個 class 判定 auto 模式，移除會讓 auto 在 VSIX 失效；
+ *   也不碰 VS Code 注入的 class，避免影響 VS Code 自身對它的使用。
+ *
+ * 範圍刻意收斂：只檢查**真正的選擇器行**，跳過 CSS 註解。
+ *   判準不能只看「行首去空白是否 body.」—— 註解內文也可能以 body. 開頭
+ *   （例：本次修改後 style.css 的 FOUC Guard 說明文字裡就有
+ *   「body.vscode-dark 由 VS Code 注入且長駐…」這一行），
+ *   會被誤判成漏改（實測踩過：守門一開始就是紅的）。
+ *   故先剝除註解區塊，再逐行檢查。
+ */
+const uiRoot = path.join(here, '..', '..');
+const GUARD = ':not(.cocoya-light-mode)';
+
+/** 遞迴找出 ui/src 下所有 .css（排除 dist 與第三方 vendored） */
+function listCssFiles(dir) {
+    const out = [];
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        if (entry.name === 'dist' || entry.name === 'node_modules') continue;
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) out.push(...listCssFiles(full));
+        else if (entry.name.endsWith('.css')) out.push(full);
+    }
+    return out;
+}
+
+/**
+ * 找出所有「未加 :not(.cocoya-light-mode) 的 vscode 深色選擇器行」。
+ * 先把註解換成等長空白（保留換行以維持行號），再逐行比對。
+ */
+function findUnguardedVscodeSelectors(text) {
+    const stripped = text.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '));
+    const out = [];
+    stripped.split(/\r?\n/).forEach((line, i) => {
+        if (!/^\s*body\.vscode-(dark|high-contrast)/.test(line)) return;
+        if (!line.includes(GUARD)) out.push({ line: i + 1, text: line.trim() });
+    });
+    return out;
+}
+
+test('守門 6：vscode 深色選擇器必須帶 :not(.cocoya-light-mode)，否則淺色主題會被蓋掉', () => {
+    const files = listCssFiles(uiRoot);
+    assert.ok(files.length > 0, '應能找到 ui/src 下的 .css');
+
+    const offenders = [];
+    for (const file of files) {
+        const text = fs.readFileSync(file, 'utf8');
+        for (const o of findUnguardedVscodeSelectors(text)) {
+            offenders.push(`${path.relative(uiRoot, file)}:${o.line}  ${o.text}`);
+        }
+    }
+    assert.deepEqual(offenders, [],
+        '以下選擇器在「VS Code 深色 ＋ 使用者選淺色主題」時仍會生效，會蓋掉淺色主題外觀');
+});
+
+test('守門 6 自檢：拿掉 :not(.cocoya-light-mode) 後本守門必須報紅', () => {
+    // 真實回歸形狀：把某個選擇器的 :not(...) 拿掉 —— 就是本次修的那個 bug。
+    const target = fs.readFileSync(path.join(uiRoot, 'style.css'), 'utf8');
+    const broken = target.replace('body.vscode-dark:not(.cocoya-light-mode)', 'body.vscode-dark');
+    assert.notEqual(broken, target,
+        '自檢失效：模擬回歸的取代沒有生效（樣式表格式可能已變，請更新本自檢）');
+
+    assert.deepEqual(findUnguardedVscodeSelectors(target), []);
+    assert.ok(findUnguardedVscodeSelectors(broken).length > 0,
+        '守門必須能抓到未加 :not() 的 vscode 深色選擇器');
+});

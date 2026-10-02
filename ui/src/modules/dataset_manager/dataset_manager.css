@@ -16,6 +16,37 @@
  *
  *   已驗證：主題檔聯集 47 鍵 ⊇ 原本 CSS 兩區塊的全部鍵，唯一例外是
  *   --dsm-font-scale（下方保留）。
+ *
+ * ★ 2026-10-02（P1-3 續）：再收斂 dark 覆寫區塊中的「純冗餘」——
+ *   var(--x) 的實際值寫在 body 行內樣式（theme_manager.js:179），
+ *   主題切換時 light 與 dark 兩邊都會自動換值。故 dark 區塊把同一個 var
+ *   再寫一次，對任何主題的呈現都沒有影響 —— 已刪除 23 處（58 行）。
+ *
+ *   ★ 仍存在的硬編碼是**刻意保留**的（非冗餘，不可順手刪）：
+ *     · light 段 43 處 + dark 段 44 處字面值。
+ *     · ⚠ 別說成「任何主題都摸不到 87 個」：dark 段掛在 body.cocoya-dark-mode，
+ *       淺色主題（light／candy）不會命中 → 淺色主題受約束的只有 light 段 43 處；
+ *       87 僅適用於「深色主題」。candy 之所以看來正常，是那些淺色值疊淺色底不刺眼
+ *       （意外正確），仍走樣的例子：.dataset-primary-btn:hover = #e91e63（candy 應 #FFE3F0）。
+ *     · 經評估，C 類 token 化需新增 12~15 變數 × 3 主題 = 40+ 新值，
+ *       收益只有「真的要做第 4 個主題」才吃得到，故 2026-10-02 由使用者
+ *       決定暫不處理（詳見 log/todo.md 同日條目）。
+ *
+ *   ✅ 2026-10-02 已修（使用者實測確認 VSIX ＋ VS Code 深色 ＋ candy 確實錯亂）：
+ *     下列 dark 覆寫的選擇器群組原含 body.vscode-dark / body.vscode-high-contrast，
+ *     該 class 由 VS Code webview 注入、長駐且非 Cocoya 控制（theme_manager.js:173 只切換 cocoya-*）
+ *     → 淺色主題被深色字面值蓋掉。現已全部加上 :not(.cocoya-light-mode)，
+ *     語意為「VS Code 是深色，且使用者沒有明確選淺色主題」。
+ *     不採「JS 移除 vscode class」，因 theme_manager.js:141-142 的 _detectSystemDark()
+ *     讀的就是它，移除會讓 auto 模式在 VSIX 失效。
+ *     防復發：theme_contract.test.mjs「守門 6」會掃遍 ui/src 下所有 .css。
+ *     ⚠ 勿在本註解內寫出 glob（src 後接兩層斜線再接副檔名的那種）：
+ *     該 glob 裡的「星號＋斜線」兩字元序列會被 CSS 解析器當成註解結束符，
+ *     導致本註解提前中斷、後文被當選擇器解析（2026-10-02 曾因此產生語法錯誤，
+ *     VS Code 報「L44 必須是左大括號」）。CSS 與 JS 的註解同一個陷阱。
+ *
+ *   防復發：dataset_theme_contract.test.mjs 的「守門 5」會擋下
+ *   「dark 區塊重複宣告 light 已有 var」的情形（掃描型守門，已變異測試驗證）。
  */
 :root {
     /* 字級縮放（下游唯讀；上游 SSOT 為 ui/src/font_scale.css 的 --fs-p1/p2/p3）
@@ -169,8 +200,8 @@
     margin: 15px 0;
 }
 
-body.vscode-dark .dataset-panel-divider,
-body.vscode-high-contrast .dataset-panel-divider,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-panel-divider,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-panel-divider,
 body.cocoya-dark-mode .dataset-panel-divider,
 body.cocoya-dark-mode .dataset-panel-divider  {
     background: #444444;
@@ -189,16 +220,16 @@ body.cocoya-dark-mode .dataset-panel-divider  {
     box-shadow: 0 0 0 2px var(--dsm-brand-soft);
 }
 
-body.vscode-dark .dataset-source-panel input:focus,
-body.vscode-dark .dataset-source-panel select:focus,
-body.vscode-dark .dataset-source-panel textarea:focus,
-body.vscode-dark .dataset-column-row input:focus,
-body.vscode-dark .dataset-column-row select:focus,
-body.vscode-high-contrast .dataset-source-panel input:focus,
-body.vscode-high-contrast .dataset-source-panel select:focus,
-body.vscode-high-contrast .dataset-source-panel textarea:focus,
-body.vscode-high-contrast .dataset-column-row input:focus,
-body.vscode-high-contrast .dataset-column-row select:focus,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-source-panel input:focus,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-source-panel select:focus,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-source-panel textarea:focus,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-column-row input:focus,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-column-row select:focus,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-source-panel input:focus,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-source-panel select:focus,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-source-panel textarea:focus,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-column-row input:focus,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-column-row select:focus,
 body.cocoya-dark-mode .dataset-source-panel input:focus,
 body.cocoya-dark-mode .dataset-source-panel select:focus,
 body.cocoya-dark-mode .dataset-source-panel textarea:focus,
@@ -209,7 +240,6 @@ body.cocoya-dark-mode .dataset-source-panel select:focus,
 body.cocoya-dark-mode .dataset-source-panel textarea:focus,
 body.cocoya-dark-mode .dataset-column-row input:focus,
 body.cocoya-dark-mode .dataset-column-row select:focus  {
-    border-color: var(--dsm-brand);
     box-shadow: 0 0 0 2px var(--dsm-brand-strong);
 }
 
@@ -250,12 +280,11 @@ body.cocoya-dark-mode .dataset-column-row select:focus  {
     color: var(--dsm-brand);
 }
 
-body.vscode-dark .dataset-icon-btn:hover,
-body.vscode-high-contrast .dataset-icon-btn:hover,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-icon-btn:hover,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-icon-btn:hover,
 body.cocoya-dark-mode .dataset-icon-btn:hover,
 body.cocoya-dark-mode .dataset-icon-btn:hover  {
     background: #4a2a35;
-    color: var(--dsm-brand);
 }
 
 .dataset-small-btn,
@@ -277,16 +306,14 @@ body.cocoya-dark-mode .dataset-icon-btn:hover  {
     background: var(--dsm-btn-hover-bg);
 }
 
-body.vscode-dark .dataset-small-btn:hover,
-body.vscode-dark .dataset-secondary-btn:hover,
-body.vscode-high-contrast .dataset-small-btn:hover,
-body.vscode-high-contrast .dataset-secondary-btn:hover,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-small-btn:hover,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-secondary-btn:hover,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-small-btn:hover,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-secondary-btn:hover,
 body.cocoya-dark-mode .dataset-small-btn:hover,
 body.cocoya-dark-mode .dataset-secondary-btn:hover,
 body.cocoya-dark-mode .dataset-small-btn:hover,
 body.cocoya-dark-mode .dataset-secondary-btn:hover  {
-    border-color: var(--dsm-brand);
-    color: var(--dsm-brand);
     background: #4a2a35;
 }
 
@@ -316,8 +343,8 @@ body.cocoya-dark-mode .dataset-secondary-btn:hover  {
     color: #9b2222;
 }
 
-body.vscode-dark .dataset-validation.ok,
-body.vscode-high-contrast .dataset-validation.ok,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-validation.ok,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-validation.ok,
 body.cocoya-dark-mode .dataset-validation.ok,
 body.cocoya-dark-mode .dataset-validation.ok  {
     border-color: #388e3c;
@@ -325,12 +352,11 @@ body.cocoya-dark-mode .dataset-validation.ok  {
     color: #81c784;
 }
 
-body.vscode-dark .dataset-validation.error,
-body.vscode-high-contrast .dataset-validation.error,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-validation.error,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-validation.error,
 body.cocoya-dark-mode .dataset-validation.error,
 body.cocoya-dark-mode .dataset-validation.error  {
     border-color: #c62828;
-    background: var(--dsm-error-bg);
     color: #ef9a9a;
 }
 
@@ -340,8 +366,8 @@ body.cocoya-dark-mode .dataset-validation.error  {
  *      .ok / .error 原本就有暗色覆寫，唯獨 .warn 被漏掉。
  *      （注意：dark class 對齊只救「已存在」的規則，救不了「根本沒寫」的規則。）
  */
-body.vscode-dark .dataset-validation.warn,
-body.vscode-high-contrast .dataset-validation.warn,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-validation.warn,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-validation.warn,
 body.cocoya-dark-mode .dataset-validation.warn,
 body.cocoya-dark-mode .dataset-validation.warn  {
     border-color: #8a6d2f;
@@ -349,8 +375,8 @@ body.cocoya-dark-mode .dataset-validation.warn  {
     color: #e0c878;
 }
 
-body.vscode-dark .dataset-validation .dataset-warnings,
-body.vscode-high-contrast .dataset-validation .dataset-warnings,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-validation .dataset-warnings,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-validation .dataset-warnings,
 body.cocoya-dark-mode .dataset-validation .dataset-warnings,
 body.cocoya-dark-mode .dataset-validation .dataset-warnings  {
     color: #ffb74d;
@@ -397,43 +423,40 @@ body.cocoya-dark-mode .dataset-validation .dataset-warnings  {
     }
 }
 
-body.vscode-dark .dataset-manager-dialog,
-body.vscode-high-contrast .dataset-manager-dialog,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-manager-dialog,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-manager-dialog,
 body.cocoya-dark-mode .dataset-manager-dialog,
 body.cocoya-dark-mode .dataset-manager-dialog  {
-    background: var(--dsm-surface);
-    color: var(--dsm-text);
     border-color: var(--dsm-border-light);
 }
 
-body.vscode-dark .dataset-manager-header,
-body.vscode-dark .dataset-manager-footer,
-body.vscode-high-contrast .dataset-manager-header,
-body.vscode-high-contrast .dataset-manager-footer,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-manager-header,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-manager-footer,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-manager-header,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-manager-footer,
 body.cocoya-dark-mode .dataset-manager-header,
 body.cocoya-dark-mode .dataset-manager-footer,
 body.cocoya-dark-mode .dataset-manager-header,
 body.cocoya-dark-mode .dataset-manager-footer  {
-    background: var(--dsm-surface-alt);
     border-color: var(--dsm-border-light);
 }
 
-body.vscode-dark .dataset-panel,
-body.vscode-high-contrast .dataset-panel,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-panel,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-panel,
 body.cocoya-dark-mode .dataset-panel,
 body.cocoya-dark-mode .dataset-panel  {
     background: var(--dsm-surface-alt);
     border-color: var(--dsm-border-light);
 }
 
-body.vscode-dark .dataset-panel h3,
-body.vscode-dark .dataset-source-panel label span,
-body.vscode-dark .dataset-column-head,
-body.vscode-dark .dataset-manager-header span,
-body.vscode-high-contrast .dataset-panel h3,
-body.vscode-high-contrast .dataset-source-panel label span,
-body.vscode-high-contrast .dataset-column-head,
-body.vscode-high-contrast .dataset-manager-header span,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-panel h3,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-source-panel label span,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-column-head,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-manager-header span,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-panel h3,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-source-panel label span,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-column-head,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-manager-header span,
 body.cocoya-dark-mode .dataset-panel h3,
 body.cocoya-dark-mode .dataset-source-panel label span,
 body.cocoya-dark-mode .dataset-column-head,
@@ -445,16 +468,16 @@ body.cocoya-dark-mode .dataset-manager-header span  {
     color: var(--dsm-text-secondary);
 }
 
-body.vscode-dark .dataset-source-panel input,
-body.vscode-dark .dataset-source-panel select,
-body.vscode-dark .dataset-source-panel textarea,
-body.vscode-dark .dataset-column-row input,
-body.vscode-dark .dataset-column-row select,
-body.vscode-high-contrast .dataset-source-panel input,
-body.vscode-high-contrast .dataset-source-panel select,
-body.vscode-high-contrast .dataset-source-panel textarea,
-body.vscode-high-contrast .dataset-column-row input,
-body.vscode-high-contrast .dataset-column-row select,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-source-panel input,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-source-panel select,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-source-panel textarea,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-column-row input,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-column-row select,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-source-panel input,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-source-panel select,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-source-panel textarea,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-column-row input,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-column-row select,
 body.cocoya-dark-mode .dataset-source-panel input,
 body.cocoya-dark-mode .dataset-source-panel select,
 body.cocoya-dark-mode .dataset-source-panel textarea,
@@ -467,24 +490,22 @@ body.cocoya-dark-mode .dataset-column-row input,
 body.cocoya-dark-mode .dataset-column-row select  {
     background: #1e1e1e;
     border-color: var(--dsm-border-strong);
-    color: var(--dsm-text);
 }
 
-body.vscode-dark .dataset-small-btn,
-body.vscode-dark .dataset-secondary-btn,
-body.vscode-high-contrast .dataset-small-btn,
-body.vscode-high-contrast .dataset-secondary-btn,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-small-btn,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-secondary-btn,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-small-btn,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-secondary-btn,
 body.cocoya-dark-mode .dataset-small-btn,
 body.cocoya-dark-mode .dataset-secondary-btn,
 body.cocoya-dark-mode .dataset-small-btn,
 body.cocoya-dark-mode .dataset-secondary-btn  {
     background: #3c3c3c;
     border-color: var(--dsm-border-strong);
-    color: var(--dsm-text);
 }
 
-body.vscode-dark #dataset-json-preview,
-body.vscode-high-contrast #dataset-json-preview,
+body.vscode-dark:not(.cocoya-light-mode) #dataset-json-preview,
+body.vscode-high-contrast:not(.cocoya-light-mode) #dataset-json-preview,
 body.cocoya-dark-mode #dataset-json-preview,
 body.cocoya-dark-mode #dataset-json-preview  {
     background: #1e1e1e;
@@ -512,8 +533,8 @@ body.cocoya-dark-mode #dataset-json-preview  {
     position: relative;
 }
 
-body.vscode-dark .dataset-image-item,
-body.vscode-high-contrast .dataset-image-item,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-image-item,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-image-item,
 body.cocoya-dark-mode .dataset-image-item,
 body.cocoya-dark-mode .dataset-image-item  {
     background: #333333;
@@ -524,11 +545,10 @@ body.cocoya-dark-mode .dataset-image-item  {
     box-shadow: 0 4px 12px var(--dsm-brand-soft);
 }
 
-body.vscode-dark .dataset-image-item:hover,
-body.vscode-high-contrast .dataset-image-item:hover,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-image-item:hover,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-image-item:hover,
 body.cocoya-dark-mode .dataset-image-item:hover,
 body.cocoya-dark-mode .dataset-image-item:hover  {
-    border-color: var(--dsm-brand);
     box-shadow: 0 4px 12px var(--dsm-brand-strong);
 }
 
@@ -537,8 +557,8 @@ body.cocoya-dark-mode .dataset-image-item:hover  {
     border-color: #4CAF50;
 }
 
-body.vscode-dark .dataset-image-item.annotated,
-body.vscode-high-contrast .dataset-image-item.annotated,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-image-item.annotated,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-image-item.annotated,
 body.cocoya-dark-mode .dataset-image-item.annotated,
 body.cocoya-dark-mode .dataset-image-item.annotated  {
     border-color: #4CAF50;
@@ -560,8 +580,8 @@ body.cocoya-dark-mode .dataset-image-item.annotated  {
     z-index: 3;
 }
 
-body.vscode-dark .dataset-image-check,
-body.vscode-high-contrast .dataset-image-check,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-image-check,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-image-check,
 body.cocoya-dark-mode .dataset-image-check,
 body.cocoya-dark-mode .dataset-image-check  {
     background: rgba(0, 0, 0, 0.7);
@@ -577,8 +597,8 @@ body.cocoya-dark-mode .dataset-image-check  {
     font-weight: 500;
 }
 
-body.vscode-dark .dataset-autosave-indicator,
-body.vscode-high-contrast .dataset-autosave-indicator,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-autosave-indicator,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-autosave-indicator,
 body.cocoya-dark-mode .dataset-autosave-indicator,
 body.cocoya-dark-mode .dataset-autosave-indicator  {
     color: #6fdd8a;
@@ -625,23 +645,15 @@ body.cocoya-dark-mode .dataset-autosave-indicator  {
     color: var(--dsm-success-text);
 }
 
-body.vscode-dark .dataset-export-progress,
-body.vscode-high-contrast .dataset-export-progress,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-export-progress,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-export-progress,
 body.cocoya-dark-mode .dataset-export-progress,
 body.cocoya-dark-mode .dataset-export-progress  {
-    background: var(--dsm-success-bg);
     border-bottom-color: var(--dsm-success-border);
 }
 
-body.vscode-dark .dataset-export-progress-label,
-body.vscode-high-contrast .dataset-export-progress-label,
-body.cocoya-dark-mode .dataset-export-progress-label,
-body.cocoya-dark-mode .dataset-export-progress-label  {
-    color: var(--dsm-success-text);
-}
-
-body.vscode-dark .dataset-export-progress-bar,
-body.vscode-high-contrast .dataset-export-progress-bar,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-export-progress-bar,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-export-progress-bar,
 body.cocoya-dark-mode .dataset-export-progress-bar,
 body.cocoya-dark-mode .dataset-export-progress-bar  {
     background: #444444;
@@ -674,8 +686,8 @@ body.cocoya-dark-mode .dataset-export-progress-bar  {
     border-color: var(--dsm-message-border);
 }
 
-body.vscode-dark .dataset-manager-message.is-visible,
-body.vscode-high-contrast .dataset-manager-message.is-visible,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-manager-message.is-visible,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-manager-message.is-visible,
 body.cocoya-dark-mode .dataset-manager-message.is-visible,
 body.cocoya-dark-mode .dataset-manager-message.is-visible  {
     background: #3a2b32;
@@ -696,12 +708,11 @@ body.cocoya-dark-mode .dataset-manager-message.is-visible  {
     50% { box-shadow: 0 0 0 4px var(--dsm-brand-strong); }
 }
 
-body.vscode-dark .dataset-name-warning,
-body.vscode-high-contrast .dataset-name-warning,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-name-warning,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-name-warning,
 body.cocoya-dark-mode .dataset-name-warning,
 body.cocoya-dark-mode .dataset-name-warning  {
     border-color: #ff8fb3 !important;
-    background: var(--dsm-warning-bg) !important;
     box-shadow: 0 0 0 2px rgba(255, 143, 179, 0.35) !important;
 }
 
@@ -752,8 +763,8 @@ body.cocoya-dark-mode .dataset-name-warning  {
     flex: 0 0 auto;
 }
 
-body.vscode-dark .dataset-annotation-toolbar .dataset-annotation-export-status,
-body.vscode-high-contrast .dataset-annotation-toolbar .dataset-annotation-export-status,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-annotation-toolbar .dataset-annotation-export-status,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-annotation-toolbar .dataset-annotation-export-status,
 body.cocoya-dark-mode .dataset-annotation-toolbar .dataset-annotation-export-status,
 body.cocoya-dark-mode .dataset-annotation-toolbar .dataset-annotation-export-status  {
     color: #ff8fb3;
@@ -800,8 +811,8 @@ body.cocoya-dark-mode .dataset-annotation-toolbar .dataset-annotation-export-sta
     justify-content: center;
 }
 
-body.vscode-dark .dataset-image-thumb,
-body.vscode-high-contrast .dataset-image-thumb,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-image-thumb,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-image-thumb,
 body.cocoya-dark-mode .dataset-image-thumb,
 body.cocoya-dark-mode .dataset-image-thumb  {
     background: #444;
@@ -848,8 +859,8 @@ body.cocoya-dark-mode .dataset-image-thumb  {
     background: var(--dsm-surface-alt);
 }
 
-body.vscode-dark .dataset-label-row,
-body.vscode-high-contrast .dataset-label-row,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-label-row,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-label-row,
 body.cocoya-dark-mode .dataset-label-row,
 body.cocoya-dark-mode .dataset-label-row  {
     background: #333333;
@@ -862,8 +873,8 @@ body.cocoya-dark-mode .dataset-label-row  {
     border: 1px solid rgba(0,0,0,0.1);
 }
 
-body.vscode-dark .dataset-label-color,
-body.vscode-high-contrast .dataset-label-color,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-label-color,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-label-color,
 body.cocoya-dark-mode .dataset-label-color,
 body.cocoya-dark-mode .dataset-label-color  {
     border-color: rgba(255,255,255,0.2);
@@ -881,8 +892,8 @@ body.cocoya-dark-mode .dataset-label-color  {
     color: var(--dsm-text);
 }
 
-body.vscode-dark .dataset-label-summary,
-body.vscode-high-contrast .dataset-label-summary,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-label-summary,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-label-summary,
 body.cocoya-dark-mode .dataset-label-summary,
 body.cocoya-dark-mode .dataset-label-summary  {
     background: #333333;
@@ -899,13 +910,6 @@ body.cocoya-dark-mode .dataset-label-summary  {
     color: var(--dsm-text-muted);
     font-style: italic;
     font-size: calc(13px * var(--dsm-font-scale));
-}
-
-body.vscode-dark .dataset-empty-state,
-body.vscode-high-contrast .dataset-empty-state,
-body.cocoya-dark-mode .dataset-empty-state,
-body.cocoya-dark-mode .dataset-empty-state  {
-    color: var(--dsm-text-muted);
 }
 
 /* Annotation Mode */
@@ -934,8 +938,8 @@ body.cocoya-dark-mode .dataset-empty-state  {
     padding: 10px;
 }
 
-body.vscode-dark .dataset-annotation-sidebar,
-body.vscode-high-contrast .dataset-annotation-sidebar,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-annotation-sidebar,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-annotation-sidebar,
 body.cocoya-dark-mode .dataset-annotation-sidebar,
 body.cocoya-dark-mode .dataset-annotation-sidebar  {
     background: #333333;
@@ -953,13 +957,6 @@ body.cocoya-dark-mode .dataset-annotation-sidebar  {
     font-size: calc(11px * var(--dsm-font-scale));
 }
 
-body.vscode-dark .dataset-annotation-item,
-body.vscode-high-contrast .dataset-annotation-item,
-body.cocoya-dark-mode .dataset-annotation-item,
-body.cocoya-dark-mode .dataset-annotation-item  {
-    background: var(--dsm-list-item-bg);
-}
-
 .dataset-annotation-item button {
     background: none;
     border: none;
@@ -969,13 +966,6 @@ body.cocoya-dark-mode .dataset-annotation-item  {
 }
 
 .dataset-annotation-item button:hover {
-    color: var(--dsm-brand);
-}
-
-body.vscode-dark .dataset-annotation-item button:hover,
-body.vscode-high-contrast .dataset-annotation-item button:hover,
-body.cocoya-dark-mode .dataset-annotation-item button:hover,
-body.cocoya-dark-mode .dataset-annotation-item button:hover  {
     color: var(--dsm-brand);
 }
 
@@ -990,8 +980,8 @@ body.cocoya-dark-mode .dataset-annotation-item button:hover  {
     padding: 0 8px;
 }
 
-body.vscode-dark .dataset-label-head,
-body.vscode-high-contrast .dataset-label-head,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-label-head,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-label-head,
 body.cocoya-dark-mode .dataset-label-head,
 body.cocoya-dark-mode .dataset-label-head  {
     color: var(--dsm-text-secondary);
@@ -1049,15 +1039,15 @@ body.cocoya-dark-mode .dataset-label-head  {
     border: 1px solid var(--dsm-border-light);
     white-space: nowrap;
 }
-body.vscode-dark .dataset-preview-table th,
-body.vscode-high-contrast .dataset-preview-table th,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-preview-table th,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-preview-table th,
 body.cocoya-dark-mode .dataset-preview-table th,
 body.cocoya-dark-mode .dataset-preview-table th  {
     background: #333;
     border-color: var(--dsm-border-strong);
 }
-body.vscode-dark .dataset-preview-table td,
-body.vscode-high-contrast .dataset-preview-table td,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-preview-table td,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-preview-table td,
 body.cocoya-dark-mode .dataset-preview-table td,
 body.cocoya-dark-mode .dataset-preview-table td  {
     border-color: var(--dsm-border-strong);
@@ -1112,8 +1102,8 @@ body.cocoya-dark-mode .dataset-preview-table td  {
     border-radius: 6px;
 }
 
-body.vscode-dark .dataset-sampler-controls,
-body.vscode-high-contrast .dataset-sampler-controls,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-sampler-controls,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-sampler-controls,
 body.cocoya-dark-mode .dataset-sampler-controls,
 body.cocoya-dark-mode .dataset-sampler-controls  {
     background: #333;
@@ -1153,8 +1143,8 @@ body.cocoya-dark-mode .dataset-sampler-controls  {
     gap: 5px;
 }
 
-body.vscode-dark .dataset-sampler-settings,
-body.vscode-high-contrast .dataset-sampler-settings,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-sampler-settings,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-sampler-settings,
 body.cocoya-dark-mode .dataset-sampler-settings,
 body.cocoya-dark-mode .dataset-sampler-settings  {
     color: #999;
@@ -1186,8 +1176,8 @@ body.cocoya-dark-mode .dataset-sampler-settings  {
     border-top: 1px solid var(--dsm-border-light);
 }
 
-body.vscode-dark .dataset-sampler-controls,
-body.vscode-high-contrast .dataset-sampler-controls,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-sampler-controls,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-sampler-controls,
 body.cocoya-dark-mode .dataset-sampler-controls,
 body.cocoya-dark-mode .dataset-sampler-controls  {
     border-top-color: #444;
@@ -1231,8 +1221,8 @@ body.cocoya-dark-mode .dataset-sampler-controls  {
     background: var(--dsm-surface-alt);
 }
 
-body.vscode-dark #dataset-sampler-view,
-body.vscode-high-contrast #dataset-sampler-view,
+body.vscode-dark:not(.cocoya-light-mode) #dataset-sampler-view,
+body.vscode-high-contrast:not(.cocoya-light-mode) #dataset-sampler-view,
 body.cocoya-dark-mode #dataset-sampler-view,
 body.cocoya-dark-mode #dataset-sampler-view  {
     background: #2d2d2d;
@@ -1295,8 +1285,8 @@ body.cocoya-dark-mode #dataset-sampler-view  {
     background: var(--dsm-surface-alt);
 }
 
-body.vscode-dark .dataset-manager-body.dataset-annotation-mode .dataset-panel-title,
-body.vscode-high-contrast .dataset-manager-body.dataset-annotation-mode .dataset-panel-title,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-manager-body.dataset-annotation-mode .dataset-panel-title,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-manager-body.dataset-annotation-mode .dataset-panel-title,
 body.cocoya-dark-mode .dataset-manager-body.dataset-annotation-mode .dataset-panel-title,
 body.cocoya-dark-mode .dataset-manager-body.dataset-annotation-mode .dataset-panel-title  {
     border-bottom-color: var(--dsm-border-light);
@@ -1337,8 +1327,8 @@ body.cocoya-dark-mode .dataset-manager-body.dataset-annotation-mode .dataset-pan
     min-height: 0;
 }
 
-body.vscode-dark .dataset-annotation-thumbnails,
-body.vscode-high-contrast .dataset-annotation-thumbnails,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-annotation-thumbnails,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-annotation-thumbnails,
 body.cocoya-dark-mode .dataset-annotation-thumbnails,
 body.cocoya-dark-mode .dataset-annotation-thumbnails  {
     border-right-color: var(--dsm-border-light);
@@ -1385,8 +1375,8 @@ body.cocoya-dark-mode .dataset-annotation-thumbnails  {
 }
 
 /* 深色主題沿用 --dsm token（.dataset-image-delete-btn 既有規則已 token 化，僅補對比） */
-body.vscode-dark .dataset-annotation-thumb-item:hover .dataset-image-delete-btn,
-body.vscode-high-contrast .dataset-annotation-thumb-item:hover .dataset-image-delete-btn,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-annotation-thumb-item:hover .dataset-image-delete-btn,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-annotation-thumb-item:hover .dataset-image-delete-btn,
 body.cocoya-dark-mode .dataset-annotation-thumb-item:hover .dataset-image-delete-btn,
 body.cocoya-dark-mode .dataset-annotation-thumb-item:hover .dataset-image-delete-btn  {
     background: var(--dsm-danger, #F44336);
@@ -1416,8 +1406,8 @@ body.cocoya-dark-mode .dataset-annotation-thumb-item:hover .dataset-image-delete
     font-weight: bold;
 }
 
-body.vscode-dark .dataset-annotation-thumb-item.annotated::after,
-body.vscode-high-contrast .dataset-annotation-thumb-item.annotated::after,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-annotation-thumb-item.annotated::after,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-annotation-thumb-item.annotated::after,
 body.cocoya-dark-mode .dataset-annotation-thumb-item.annotated::after,
 body.cocoya-dark-mode .dataset-annotation-thumb-item.annotated::after  {
     background: rgba(0, 0, 0, 0.7);
@@ -1450,8 +1440,8 @@ body.cocoya-dark-mode .dataset-annotation-thumb-item.annotated::after  {
     word-break: break-all;
 }
 
-body.vscode-dark .dataset-annotation-info,
-body.vscode-high-contrast .dataset-annotation-info,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-annotation-info,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-annotation-info,
 body.cocoya-dark-mode .dataset-annotation-info,
 body.cocoya-dark-mode .dataset-annotation-info  {
     color: #a0a0a0;
@@ -1551,8 +1541,8 @@ body.cocoya-dark-mode .dataset-annotation-info  {
     font-size: calc(11px * var(--dsm-font-scale));
 }
 
-body.vscode-dark .dataset-annotation-toolbar,
-body.vscode-high-contrast .dataset-annotation-toolbar,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-annotation-toolbar,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-annotation-toolbar,
 body.cocoya-dark-mode .dataset-annotation-toolbar,
 body.cocoya-dark-mode .dataset-annotation-toolbar  {
     border-bottom-color: var(--dsm-border-light);
@@ -1567,13 +1557,6 @@ body.cocoya-dark-mode .dataset-annotation-toolbar  {
 .dataset-annotation-shortcuts-hint {
     color: var(--dsm-text-muted);
     font-size: calc(10px * var(--dsm-font-scale));
-}
-
-body.vscode-dark .dataset-annotation-shortcuts-hint,
-body.vscode-high-contrast .dataset-annotation-shortcuts-hint,
-body.cocoya-dark-mode .dataset-annotation-shortcuts-hint,
-body.cocoya-dark-mode .dataset-annotation-shortcuts-hint  {
-    color: var(--dsm-text-muted);
 }
 
 .dataset-annotation-image-container {
@@ -1610,8 +1593,8 @@ body.cocoya-dark-mode .dataset-annotation-shortcuts-hint  {
     gap: 12px;
 }
 
-body.vscode-dark .dataset-annotation-controls,
-body.vscode-high-contrast .dataset-annotation-controls,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-annotation-controls,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-annotation-controls,
 body.cocoya-dark-mode .dataset-annotation-controls,
 body.cocoya-dark-mode .dataset-annotation-controls  {
     border-left-color: var(--dsm-border-light);
@@ -1623,13 +1606,6 @@ body.cocoya-dark-mode .dataset-annotation-controls  {
     font-weight: bold;
     color: var(--dsm-text-secondary);
     margin-bottom: 6px;
-}
-
-body.vscode-dark .dataset-annotation-section-title,
-body.vscode-high-contrast .dataset-annotation-section-title,
-body.cocoya-dark-mode .dataset-annotation-section-title,
-body.cocoya-dark-mode .dataset-annotation-section-title  {
-    color: var(--dsm-text-secondary);
 }
 
 .dataset-annotation-class-row {
@@ -1650,13 +1626,11 @@ body.cocoya-dark-mode .dataset-annotation-section-title  {
     color: var(--dsm-text);
 }
 
-body.vscode-dark .dataset-annotation-class-select,
-body.vscode-high-contrast .dataset-annotation-class-select,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-annotation-class-select,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-annotation-class-select,
 body.cocoya-dark-mode .dataset-annotation-class-select,
 body.cocoya-dark-mode .dataset-annotation-class-select  {
-    background: var(--dsm-input-bg);
     border-color: var(--dsm-border-strong);
-    color: var(--dsm-text);
 }
 
 .dataset-annotation-list {
@@ -1670,8 +1644,8 @@ body.cocoya-dark-mode .dataset-annotation-class-select  {
     background: #e6f7ff;
 }
 
-body.vscode-dark .dataset-annotation-item.selected,
-body.vscode-high-contrast .dataset-annotation-item.selected,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-annotation-item.selected,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-annotation-item.selected,
 body.cocoya-dark-mode .dataset-annotation-item.selected,
 body.cocoya-dark-mode .dataset-annotation-item.selected  {
     background: #1a3a4a;
@@ -1695,13 +1669,12 @@ body.cocoya-dark-mode .dataset-annotation-item.selected  {
     white-space: nowrap;
 }
 
-body.vscode-dark .dataset-annotation-item .dataset-annotation-item-class,
-body.vscode-high-contrast .dataset-annotation-item .dataset-annotation-item-class,
+body.vscode-dark:not(.cocoya-light-mode) .dataset-annotation-item .dataset-annotation-item-class,
+body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-annotation-item .dataset-annotation-item-class,
 body.cocoya-dark-mode .dataset-annotation-item .dataset-annotation-item-class,
 body.cocoya-dark-mode .dataset-annotation-item .dataset-annotation-item-class  {
     background: #1e1e1e;
     border-color: var(--dsm-border-strong);
-    color: var(--dsm-text);
 }
 
 /* 響應式：小螢幕時縮小側欄 */

@@ -98,9 +98,9 @@ body {
 }
 
 /* 深色模式下的檔名標籤 */
-body.vscode-dark #file-breadcrumb,
+body.vscode-dark:not(.cocoya-light-mode) #file-breadcrumb,
 body.cocoya-dark-mode #file-breadcrumb,
-body.vscode-high-contrast #file-breadcrumb,
+body.vscode-high-contrast:not(.cocoya-light-mode) #file-breadcrumb,
 body.cocoya-dark-mode #file-breadcrumb {
     background-color: #333;
     border-color: #444;
@@ -108,16 +108,16 @@ body.cocoya-dark-mode #file-breadcrumb {
 }
 
 /* 深色模式 hover：專案名標籤與模式 label 統一粉色高亮 */
-body.vscode-dark #file-breadcrumb:has(#current-filename.has-path):hover,
+body.vscode-dark:not(.cocoya-light-mode) #file-breadcrumb:has(#current-filename.has-path):hover,
 body.cocoya-dark-mode #file-breadcrumb:has(#current-filename.has-path):hover,
-body.vscode-high-contrast #file-breadcrumb:has(#current-filename.has-path):hover,
+body.vscode-high-contrast:not(.cocoya-light-mode) #file-breadcrumb:has(#current-filename.has-path):hover,
 body.cocoya-dark-mode #file-breadcrumb:has(#current-filename.has-path):hover {
     background-color: #3a2b32;
     border-color: #FE2F89;
 }
-body.vscode-dark #current-filename.has-path:hover,
+body.vscode-dark:not(.cocoya-light-mode) #current-filename.has-path:hover,
 body.cocoya-dark-mode #current-filename.has-path:hover,
-body.vscode-high-contrast #current-filename.has-path:hover,
+body.vscode-high-contrast:not(.cocoya-light-mode) #current-filename.has-path:hover,
 body.cocoya-dark-mode #current-filename.has-path:hover {
     color: #FE2F89;
 }
@@ -131,9 +131,9 @@ body.cocoya-dark-mode #current-filename.has-path:hover {
     border-color: #FE2F89;
     color: #FE2F89;
 }
-body.vscode-dark .platform-badge.clickable:hover,
+body.vscode-dark:not(.cocoya-light-mode) .platform-badge.clickable:hover,
 body.cocoya-dark-mode .platform-badge.clickable:hover,
-body.vscode-high-contrast .platform-badge.clickable:hover,
+body.vscode-high-contrast:not(.cocoya-light-mode) .platform-badge.clickable:hover,
 body.cocoya-dark-mode .platform-badge.clickable:hover {
     background-color: #3a2b32;
     border-color: #FE2F89;
@@ -505,8 +505,8 @@ body.cocoya-dark-mode .dropdown-item:hover img {
 }
 
 body.cocoya-dark-mode #btn-serial-raw-dump .diagnostic-toggle,
-body.vscode-dark #btn-serial-raw-dump .diagnostic-toggle,
-body.vscode-high-contrast #btn-serial-raw-dump .diagnostic-toggle {
+body.vscode-dark:not(.cocoya-light-mode) #btn-serial-raw-dump .diagnostic-toggle,
+body.vscode-high-contrast:not(.cocoya-light-mode) #btn-serial-raw-dump .diagnostic-toggle {
     background: #5a5a62;
     border: 1px solid #888;
 }
@@ -795,21 +795,21 @@ body.resizing-panel {
 }
 
 /* 深色模式下的切換鈕與調整棒 */
-body.vscode-dark #code-toggle,
+body.vscode-dark:not(.cocoya-light-mode) #code-toggle,
 body.cocoya-dark-mode #code-toggle,
-body.vscode-high-contrast #code-toggle,
+body.vscode-high-contrast:not(.cocoya-light-mode) #code-toggle,
 body.cocoya-dark-mode #code-toggle,
-body.vscode-dark #terminal-toggle,
+body.vscode-dark:not(.cocoya-light-mode) #terminal-toggle,
 body.cocoya-dark-mode #terminal-toggle,
-body.vscode-high-contrast #terminal-toggle,
+body.vscode-high-contrast:not(.cocoya-light-mode) #terminal-toggle,
 body.cocoya-dark-mode #terminal-toggle {
     background-color: #2d2d2d;
     border-color: #404040;
 }
 
-body.vscode-dark #panel-resizer:hover,
+body.vscode-dark:not(.cocoya-light-mode) #panel-resizer:hover,
 body.cocoya-dark-mode #panel-resizer:hover,
-body.vscode-dark #panel-resizer.is-dragging,
+body.vscode-dark:not(.cocoya-light-mode) #panel-resizer.is-dragging,
 body.cocoya-dark-mode #panel-resizer.is-dragging {
     background-color: #FE2F89;
 }
@@ -1465,52 +1465,52 @@ body.cocoya-dark-mode #panel-resizer.is-dragging {
 
 /* === 深色主題變體 === */
 body.cocoya-dark-mode #diagnose-modal .modal-header,
-body.vscode-dark #diagnose-modal .modal-header,
-body.vscode-high-contrast #diagnose-modal .modal-header {
+body.vscode-dark:not(.cocoya-light-mode) #diagnose-modal .modal-header,
+body.vscode-high-contrast:not(.cocoya-light-mode) #diagnose-modal .modal-header {
     color: #FE2F89;
 }
 
 body.cocoya-dark-mode #python-path-bar,
-body.vscode-dark #python-path-bar,
-body.vscode-high-contrast #python-path-bar {
+body.vscode-dark:not(.cocoya-light-mode) #python-path-bar,
+body.vscode-high-contrast:not(.cocoya-light-mode) #python-path-bar {
     border-bottom-color: #444;
 }
 
 body.cocoya-dark-mode .diag-path-label,
-body.vscode-dark .diag-path-label {
+body.vscode-dark:not(.cocoya-light-mode) .diag-path-label {
     color: #aaa;
 }
 
 body.cocoya-dark-mode .diag-path-col code,
-body.vscode-dark .diag-path-col code {
+body.vscode-dark:not(.cocoya-light-mode) .diag-path-col code {
     color: #e0e0e0;
     background: #1e1e1e;
     border-color: #444;
 }
 
 body.cocoya-dark-mode .diag-warning,
-body.vscode-dark .diag-warning {
+body.vscode-dark:not(.cocoya-light-mode) .diag-warning {
     color: #f48771;
     background: #3a2020;
     border-color: #6b3030;
 }
 
 body.cocoya-dark-mode .diag-progress,
-body.vscode-dark .diag-progress {
+body.vscode-dark:not(.cocoya-light-mode) .diag-progress {
     color: #9ecbf5;
     background: #1c2b3a;
     border-color: #35506e;
 }
 
 body.cocoya-dark-mode .diag-progress.stalled,
-body.vscode-dark .diag-progress.stalled {
+body.vscode-dark:not(.cocoya-light-mode) .diag-progress.stalled {
     color: #ffb74d;
     background: #3a2c15;
     border-color: #6b5220;
 }
 
 body.cocoya-dark-mode .diag-loading-text,
-body.vscode-dark .diag-loading-text {
+body.vscode-dark:not(.cocoya-light-mode) .diag-loading-text {
     color: #aaa;
 }
 
@@ -1554,47 +1554,47 @@ body.vscode-dark .diag-loading-text {
 }
 
 /* 深色模式支援 */
-body.vscode-dark .quick-pick-item,
+body.vscode-dark:not(.cocoya-light-mode) .quick-pick-item,
 body.cocoya-dark-mode .quick-pick-item,
-body.vscode-high-contrast .quick-pick-item,
+body.vscode-high-contrast:not(.cocoya-light-mode) .quick-pick-item,
 body.cocoya-dark-mode .quick-pick-item {
     color: #cccccc;
     border-bottom-color: #333;
 }
 
-body.vscode-dark .quick-pick-item:hover,
+body.vscode-dark:not(.cocoya-light-mode) .quick-pick-item:hover,
 body.cocoya-dark-mode .quick-pick-item:hover,
-body.vscode-high-contrast .quick-pick-item:hover,
+body.vscode-high-contrast:not(.cocoya-light-mode) .quick-pick-item:hover,
 body.cocoya-dark-mode .quick-pick-item:hover {
     background-color: #3e3e3e;
     color: #FE2F89;
 }
 
-body.vscode-dark .modal-content,
+body.vscode-dark:not(.cocoya-light-mode) .modal-content,
 body.cocoya-dark-mode .modal-content,
-body.vscode-high-contrast .modal-content,
+body.vscode-high-contrast:not(.cocoya-light-mode) .modal-content,
 body.cocoya-dark-mode .modal-content {
     background-color: #2d2d2d;
     color: #e0e0e0;
 }
 
-body.vscode-dark .modal-header,
+body.vscode-dark:not(.cocoya-light-mode) .modal-header,
 body.cocoya-dark-mode .modal-header,
-body.vscode-high-contrast .modal-header,
+body.vscode-high-contrast:not(.cocoya-light-mode) .modal-header,
 body.cocoya-dark-mode .modal-header {
     border-bottom-color: #444 !important;
 }
 
-body.vscode-dark .modal-footer,
+body.vscode-dark:not(.cocoya-light-mode) .modal-footer,
 body.cocoya-dark-mode .modal-footer,
-body.vscode-high-contrast .modal-footer,
+body.vscode-high-contrast:not(.cocoya-light-mode) .modal-footer,
 body.cocoya-dark-mode .modal-footer {
     border-top-color: #444 !important;
 }
 
-body.vscode-dark .btn-close,
+body.vscode-dark:not(.cocoya-light-mode) .btn-close,
 body.cocoya-dark-mode .btn-close,
-body.vscode-high-contrast .btn-close,
+body.vscode-high-contrast:not(.cocoya-light-mode) .btn-close,
 body.cocoya-dark-mode .btn-close {
     background-color: #3c3c3c;
     border-color: #555;
@@ -1854,9 +1854,9 @@ input:checked + .slider:before {
 }
 
 /* 深色模式支援 */
-body.vscode-dark .cloud-ai-wrapper,
+body.vscode-dark:not(.cocoya-light-mode) .cloud-ai-wrapper,
 body.cocoya-dark-mode .cloud-ai-wrapper,
-body.vscode-high-contrast .cloud-ai-wrapper,
+body.vscode-high-contrast:not(.cocoya-light-mode) .cloud-ai-wrapper,
 body.cocoya-dark-mode .cloud-ai-wrapper {
     background: rgba(254, 47, 137, 0.1);
     border-color: rgba(254, 47, 137, 0.3);
@@ -1895,9 +1895,17 @@ body.cocoya-dark-mode .cloud-ai-wrapper {
 
 /* === 防閃白守衛（FOUC Guard）===
    主題 CSS 由 ThemeManager 於 JS 啟動時注入；此處僅保留最小關鍵表面，
-   讓 VS Code 原生深色 class 在 JS 執行前就有正確底色，其餘全由主題檔決定 */
-body.vscode-dark,
-body.vscode-high-contrast {
+   讓 VS Code 原生深色 class 在 JS 執行前就有正確底色，其餘全由主題檔決定
+
+   2026-10-02 加上 :not(.cocoya-light-mode)：
+     修 VSIX ＋ VS Code 深色 ＋ 選淺色主題（candy/light）時外觀錯亂。
+     body.vscode-dark 由 VS Code 注入且長駐，若無此條件會蓋掉淺色主題。
+     此處加條件**不影響防閃白目的**：FOUC 階段 JS 尚未執行，
+     body 上還沒有 cocoya-light-mode → :not() 成立，變數照常定義；
+     JS 執行後則由主題檔 cssVars 經 setProperty 寫入行內樣式接手
+     （行內樣式特異度高於本規則）。 */
+body.vscode-dark:not(.cocoya-light-mode),
+body.vscode-high-contrast:not(.cocoya-light-mode) {
     --bg-color: #1e1e1e;
     --toolbar-bg: #2d2d2d;
     --toolbar-border: #404040;
