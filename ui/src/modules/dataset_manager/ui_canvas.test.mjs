@@ -495,7 +495,8 @@ test('hover 標註：加粗但維持標籤色；selected 優先於 hover', () =>
     UICanvas.state.selectedAnnotationIndex = -1;
     UICanvas.state.hoveredAnnotationIndex = -1;
     UICanvas.render();
-    const normalW = seq[1].width;        // 一般狀態的內框寬    seq.length = 0;
+    const normalW = seq[1].width;        // 一般狀態的內框寬
+    seq.length = 0;
 
     // hover 第 1 框（貓）：應加粗，且**維持標籤色**（不變青色）
     UICanvas.state.hoveredAnnotationIndex = 0;
