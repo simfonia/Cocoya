@@ -29,6 +29,42 @@
                 'cursorColour': '#d0d0d0'
             }
         },
+        // ── P2-16（2026-10-01）：dark 主題的積木顏色覆寫 ──────────────
+        //
+        // 背景：原本只有 cocoya_candy 有 msgColours，light/dark 都沿用
+        // 根 zh-hant.js/en.js 的 COLOUR_* 預設色。那些預設色是為**淺底**
+        // 設計的，搬到深色底上會偏亮偏刺眼（使用者目視回報）。
+        //
+        // 初始生成方式（做法 1：保留預設色的色相與分類辨識度，只調整明度）：
+        //   以 OKLCH 感知空間換算，將全部 38 鍵收斂到 L≈0.66 的深底適配區間
+        //   （L>0.68 降亮、L<0.66 提亮），彩度 ×0.88，**色相完全不變**。
+        //
+        // ★ 後續由使用者目視再調（2026-10-01，同日）：
+        //   實機載入後仍有偏亮的分類，使用者手動再往下調暗 8 個鍵：
+        //     STRUCTURE #929292→#737373、CODING #929292→#454444、
+        //     AI_BASIC #ef6b31→#ce5c2b、AI_DRAW #a39e03→#8d8903、
+        //     AI_HAND #4eb313→#3d8b10、AI_FACE #34aa9b→#309f90、
+        //     AI_POSE #608afe→#415eb0、AI_INFERENCE #c564d7→#b65cc6。
+        //   **下方是目視調校後的最終值，不是公式輸出** —— 請勿用初始公式覆蓋。
+        //
+        // 註：若日後要改配色，請直接在下方調整並目視確認；
+        //     刻意不寫成「從預設色推導」的執行期邏輯 —— 主題檔必須是靜態資料，
+        //     執行期換算會讓主題切換多一層不確定性，且會蓋掉人工調校。
+        msgColours: {
+            'STRUCTURE': '#737373', 'LOGIC': '#a18cc8', 'LOOPS': '#69ab6a',
+            'MATH': '#828ec7', 'TEXT': '#7f9a85', 'TYPES': '#c08e36',
+            'VARIABLES': '#ca8181', 'FUNCTIONS': '#e5598b', 'IO': '#8095aa',
+            'TIME': '#6fa1a1', 'CODING': '#454444', 'AI': '#ef6b31',
+            'AI_BASIC': '#ce5c2b', 'AI_DRAW': '#8d8903', 'AI_HAND': '#3d8b10',
+            'AI_FACE': '#309f90', 'AI_POSE': '#415eb0', 'HARDWARE': '#8c89cf',
+            'MCU_CAMERA': '#e746b9', 'HUSKYLENS': '#699ab0', 'MCU_CAR': '#e5655e',
+            'MCU_CAR_MOTOR': '#e5655e', 'MCU_CAR_SERVO': '#ba73e9', 'MCU_CAR_MUSIC': '#d761aa',
+            'MCU_CAR_LED': '#8083f3', 'MCU_CAR_SENSOR': '#9f9f1b', 'MCU_CAR_BUTTON': '#4eaa47',
+            'SPIKE': '#cc862f', 'SPIKE_MOTOR': '#e5655e', 'SPIKE_MUSIC': '#d761aa',
+            'SPIKE_LED': '#8083f3', 'SPIKE_SENSOR': '#9f9f1b', 'SPIKE_SENSOR_COLOR': '#9f9f1b',
+            'SPIKE_SENSOR_DISTANCE': '#6499bd', 'SPIKE_SENSOR_FORCE': '#c97b61',
+            'SPIKE_SENSOR_IMU': '#d457cf', 'SPIKE_BUTTON': '#4eaa47', 'AI_INFERENCE': '#b65cc6'
+        },
         cssVars: {
             '--cocoya-overlay': '#1e1e1e',
             '--cocoya-surface': '#2d2d2d',

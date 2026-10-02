@@ -88,14 +88,58 @@ test('cssVars 鍵全部以 -- 開頭且不含空白（變數名契約）', () =>
     }
 });
 
-test('msgColours 為選配覆寫：cocoya_light／cocoya_dark 不宣告時不得報錯（設計事實）', () => {
-    // 依 AGENTS.md「新增積木模組檢查清單」第 2/3 點：
-    //   根 zh-hant.js／en.js 的 COLOUR_* 是預設色 SSOT；主題 msgColours 只是選配覆寫。
-    // 因此「某主題沒有 msgColours」是合法狀態（淺色主題預設 0 個、深色主題目前 0 個，
-    // 僅 candy 有覆寫）。P2-16 待決策項就是「dark 缺 msgColours 是否刻意」——
-    // 在使用者拍板前，這裡只鎖「不宣告時解析器必須回 null」，不強迫補齊。
-    assert.equal(msgColourKeys(themes.cocoya_light), null);
-    assert.equal(msgColourKeys(themes.cocoya_dark), null);
+test('msgColours 覆寫：dark 與 candy 必須宣告；light 沿用預設色（2026-10-01 P2-16 決策）', () => {
+    // ⚠️ 本測試在 2026-10-01 被**推翻重寫**，理由如下（AGENTS.md 要求記錄）：
+    //
+    // 原斷言是「light／dark 不宣告 msgColours 為合法」，那是 Batch 0 時我
+    // **替使用者做的判斷** —— 依 AGENTS.md「根 COLOUR_* 是預設色 SSOT、
+    // 主題 msgColours 只是選配覆寫」推論而得。但計畫 §12 原本把這列為
+    // 「待使用者決策事項」，我不應自行判定並寫成契約。
+    //
+    // 使用者目視後拍板：**深色底上預設色偏亮刺眼**（預設色為淺底設計），
+    // 決定選 B：dark 也要有專屬 msgColours。故推翻原判斷。
+    //
+    // ★ 教訓：把「待使用者決策」轉成技術契約，會讓選項在無人察覺下被鎖死。
+    //   遇到待決策項，應回報給使用者，不要自行寫成守門。
+
+    // dark 必須有覆寫（2026-10-01 新增，38 鍵）
+    const dark = msgColourKeys(themes.cocoya_dark);
+    assert.ok(Array.isArray(dark), 'cocoya_dark 必須宣告 msgColours（深色底需要專屬積木色）');
+    assert.ok(dark.length > 0, 'cocoya_dark 的 msgColours 不得為空');
+
+    // candy 維持既有覆寫
     const candy = msgColourKeys(themes.cocoya_candy);
     assert.ok(Array.isArray(candy) && candy.length > 0, 'cocoya_candy 應有 msgColours 覆寫');
+
+    // light 仍沿用預設色 —— 淺底本來就是預設色的設計環境
+    assert.equal(msgColourKeys(themes.cocoya_light), null,
+        'cocoya_light 不宣告 msgColours（淺底直接用預設色即可）');
+
+    // dark 與 candy 的覆寫不得出現「預設色清單以外」的鍵 —— 那通常是拼字錯誤，
+    // 會導致該分類永遠吃不到覆寫色（在深色底上又變回刺眼的淺色預設色）。
+    // 基準取自根 zh-hant.js 的 COLOUR_*（真正的預設色 SSOT）。
+    const src = fs.readFileSync(
+        path.join(here, '..', '..', 'zh-hant.js'), 'utf8');
+    const defaults = [...src.matchAll(/"(COLOUR_[A-Z0-9_]+)"\s*:/g)].map((m) => m[1]);
+    assert.ok(defaults.length > 0, '應能從根 zh-hant.js 讀到 COLOUR_* 預設色');
+
+    for (const name of ['cocoya_dark', 'cocoya_candy']) {
+        const keys = msgColourKeys(themes[name]);
+        if (!keys) continue;
+
+        // (a) 不得出現預設色清單以外的鍵 —— 通常是拼字錯誤
+        assert.deepEqual(
+            keys.filter((k) => !defaults.includes('COLOUR_' + k)), [],
+            `${name} 出現預設色清單沒有的 msgColours 鍵（拼字錯誤？）`
+        );
+
+        // (b) ★ 必須覆蓋每一個預設色鍵。
+        //     缺任何一個，該分類就會落回淺色預設色 —— 在深色底上又變成刺眼色，
+        //     正是 P2-16 要修的問題。少了 (b) 這條時，實測刪掉整個
+        //     SPIKE_MUSIC 覆寫，守門仍然全綠（假安全感）。
+        assert.deepEqual(
+            defaults.filter((d) => !keys.includes(d.replace('COLOUR_', ''))), [],
+            `${name} 缺少 msgColours 覆寫，該鍵會落回淺色預設色`
+        );
+    }
 });
