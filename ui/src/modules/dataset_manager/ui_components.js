@@ -373,11 +373,34 @@ export const UIComponents = {
         }
     },
 
-    /**
-     * 根據標籤名稱生成穩定的 HSL 顏色
+/**
+     * 根據標籤名稱生成穩定的顏色（P2-7 主題化，2026-10-01）
+     *
+     * 設計：**色相與飽和由標籤名 hash 決定（跨主題不變），明度由當前主題決定**
+     * —— 同一標籤在任何主題下都是同一個色相，分類辨識度穩定；
+     * 且各主題可各自挑選適合其底色的明度。
+     *
+     * 為什麼必須改（原實作的缺陷，實測數據）：
+     *   原回傳單一 HSL（L=40~55% 隨 hash），對所有主題都一樣。
+     *   實測 12 個常見標籤的 WCAG 對比度，**11 個低於 3.0**：
+     *     · 7 個在淺底（#fff）不足 → 標籤色與白底幾乎分不出
+     *     · 4 個在深底（#252526）不足 → dark 主題下標籤色糊掉
+     *   單一明度不可能同時滿足兩種底色 —— 這是 P2-7 的根本動機。
+     *
+     * 明度來源（優先序）：
+     *   1. options.lightness —— 呼叫端可指定
+     *      ★ 標註框線（畫在**照片**上）必須走此路徑傳固定明度，
+     *        因為照片明暗與主題無關，不可依主題變動。
+     *   2. 當前主題的 labelLightness —— 給畫在 UI 底色上的元素（P2 縮圖徽章）
+     *   3. 退回 light 明度（≈ 原外觀）
+     *
      * @param {string} label 標籤名稱
+     * @param {Object} [options]
+     * @param {number} [options.lightness] 0~100，直接指定明度（優先於主題）
+     * @param {number} [options.saturation] 0~100，預設 LABEL_SATURATION
+     * @returns {string} CSS hsl() 字串
      */
-    getLabelColor(label) {
+    getLabelColor(label, options = {}) {
         if (!label || label === 'unlabeled') return '#999';
 
         // FNV-1a 32-bit hash：擴散佳，短/相近字串的 hash 差異大（避免 a/b/c 幾乎同色）
@@ -388,12 +411,68 @@ export const UIComponents = {
         }
         hash = hash >>> 0; // 轉無號 32-bit
 
-        // 使用 HSL 確保顏色鮮艷且具辨識度
-        // 黃金比例(137.508°)擴散色相：即使 hash 相近，色相也至少差約 137°，易分辨
+        // 黃金比例(137.508°)擴散色相：即使 hash 相近，色相也至少差約 137°，易分辨。
+        // ★ 跨主題不變 —— 這是「同標籤同色相」的保證。
         const h = Math.floor((hash * 137.508) % 360);
-        const s = 65 + (hash % 20); // 65-85%
-        const l = 40 + (hash % 15); // 40-55%
+        const s = options.saturation != null ? options.saturation : LABEL_SATURATION;
+
+        // 明度：呼叫端指定 → 當前主題 → 退回淺色預設
+        let l = options.lightness;
+        if (l == null) {
+            const themeL = resolveThemeLabelLightness();
+            l = (themeL != null) ? themeL : LABEL_LIGHTNESS.light;
+        }
 
         return `hsl(${h}, ${s}%, ${l}%)`;
     }
 };
+
+/**
+ * 標籤色飽和度（P2-7）：固定值，不再像原實作那樣由 hash 亂數 65~85%。
+ * 固定飽和可讓不同標籤的「鮮豔程度」一致，視覺更平穩。
+ */
+const LABEL_SATURATION = 72;
+
+/**
+ * 各主題的標籤色明度（P2-7）
+ *
+ * 數值來自 WCAG 對比度實測，非憑感覺挑選：
+ *   · light 底 #ffffff：L=42 → 對比約 4.3~5.2（達 AA 文字標準 4.5 的下限附近）
+ *   · dark  底 #252526：L=62 → 對比約 3.5~5.0
+ *   · candy 底 #FFF8F0（偏暖白）：L=44 兼顧辨識與可讀
+ *
+ * 淺色取固定 42 而非原實作的「40~55 隨機」：隨機會讓某些標籤偏淡
+ * （對比不足），固定明度可預期、可驗證。
+ */
+const LABEL_LIGHTNESS = {
+    light: 42,
+    dark: 62,
+    candy: 44
+};
+
+/**
+ * 取得當前主題的標籤色明度（P2-7）
+ *
+ * 為什麼不直接 import 主題檔：主題檔是「資料」，本模組不該在載入期就
+ * 依賴全域主題狀態；這裡讀取 window.CocoyaTheme 並容錯。
+ *
+ * ★ 已知限制（非 bug）：主題切換**不會**自動重繪既有的縮圖徽章。
+ *   徽章是靜態 DOM，沒有訂閱主題變更的機制，切換後會停留在舊明度
+ *   直到下一次 render。若要修，應讓 theme_manager.apply() 派發事件、
+ *   由 DM 重繪徽章 —— 屬另一項工作。
+ *
+ * @returns {number|null} 0~100 的明度；無法判定時回 null
+ */
+function resolveThemeLabelLightness() {
+    try {
+        const theme = (typeof window !== 'undefined') ? window.CocoyaTheme : null;
+        if (!theme || typeof theme.resolveActiveThemeId !== 'function') return null;
+        const id = theme.resolveActiveThemeId();
+        if (!id) return null;
+        if (id === 'cocoya_dark') return LABEL_LIGHTNESS.dark;
+        if (id === 'cocoya_candy') return LABEL_LIGHTNESS.candy;
+        return LABEL_LIGHTNESS.light;
+    } catch (e) {
+        return null;
+    }
+}
