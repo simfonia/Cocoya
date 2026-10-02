@@ -217,30 +217,7 @@ body.cocoya-dark-mode .dataset-panel-divider  {
 .dataset-column-row input:focus,
 .dataset-column-row select:focus {
     border-color: var(--dsm-brand);
-    box-shadow: 0 0 0 2px var(--dsm-brand-soft);
-}
-
-body.vscode-dark:not(.cocoya-light-mode) .dataset-source-panel input:focus,
-body.vscode-dark:not(.cocoya-light-mode) .dataset-source-panel select:focus,
-body.vscode-dark:not(.cocoya-light-mode) .dataset-source-panel textarea:focus,
-body.vscode-dark:not(.cocoya-light-mode) .dataset-column-row input:focus,
-body.vscode-dark:not(.cocoya-light-mode) .dataset-column-row select:focus,
-body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-source-panel input:focus,
-body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-source-panel select:focus,
-body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-source-panel textarea:focus,
-body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-column-row input:focus,
-body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-column-row select:focus,
-body.cocoya-dark-mode .dataset-source-panel input:focus,
-body.cocoya-dark-mode .dataset-source-panel select:focus,
-body.cocoya-dark-mode .dataset-source-panel textarea:focus,
-body.cocoya-dark-mode .dataset-column-row input:focus,
-body.cocoya-dark-mode .dataset-column-row select:focus,
-body.cocoya-dark-mode .dataset-source-panel input:focus,
-body.cocoya-dark-mode .dataset-source-panel select:focus,
-body.cocoya-dark-mode .dataset-source-panel textarea:focus,
-body.cocoya-dark-mode .dataset-column-row input:focus,
-body.cocoya-dark-mode .dataset-column-row select:focus  {
-    box-shadow: 0 0 0 2px var(--dsm-brand-strong);
+    box-shadow: 0 0 0 2px var(--dsm-focus-ring);
 }
 
 .dataset-column-head,
@@ -284,7 +261,7 @@ body.vscode-dark:not(.cocoya-light-mode) .dataset-icon-btn:hover,
 body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-icon-btn:hover,
 body.cocoya-dark-mode .dataset-icon-btn:hover,
 body.cocoya-dark-mode .dataset-icon-btn:hover  {
-    background: #4a2a35;
+    background: var(--dsm-btn-hover-bg);
 }
 
 .dataset-small-btn,
@@ -306,17 +283,6 @@ body.cocoya-dark-mode .dataset-icon-btn:hover  {
     background: var(--dsm-btn-hover-bg);
 }
 
-body.vscode-dark:not(.cocoya-light-mode) .dataset-small-btn:hover,
-body.vscode-dark:not(.cocoya-light-mode) .dataset-secondary-btn:hover,
-body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-small-btn:hover,
-body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-secondary-btn:hover,
-body.cocoya-dark-mode .dataset-small-btn:hover,
-body.cocoya-dark-mode .dataset-secondary-btn:hover,
-body.cocoya-dark-mode .dataset-small-btn:hover,
-body.cocoya-dark-mode .dataset-secondary-btn:hover  {
-    background: #4a2a35;
-}
-
 .dataset-validation {
     border: 1px solid var(--dsm-border-light);
     border-radius: 6px;
@@ -333,14 +299,14 @@ body.cocoya-dark-mode .dataset-secondary-btn:hover  {
 }
 
 .dataset-validation.warn {
-    border-color: #e6c26a;
+    border-color: var(--dsm-warning-border);
     background: #fdf6e3;
 }
 
 .dataset-validation.error {
-    border-color: #efb7b7;
+    border-color: var(--dsm-error-border);
     background: var(--dsm-error-bg);
-    color: #9b2222;
+    color: var(--dsm-error-text);
 }
 
 body.vscode-dark:not(.cocoya-light-mode) .dataset-validation.ok,
@@ -350,14 +316,6 @@ body.cocoya-dark-mode .dataset-validation.ok  {
     border-color: #388e3c;
     background: #1b3d1b;
     color: #81c784;
-}
-
-body.vscode-dark:not(.cocoya-light-mode) .dataset-validation.error,
-body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-validation.error,
-body.cocoya-dark-mode .dataset-validation.error,
-body.cocoya-dark-mode .dataset-validation.error  {
-    border-color: #c62828;
-    color: #ef9a9a;
 }
 
 /* 2026-10-01：補上 .warn 的暗色覆寫。
@@ -370,9 +328,8 @@ body.vscode-dark:not(.cocoya-light-mode) .dataset-validation.warn,
 body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-validation.warn,
 body.cocoya-dark-mode .dataset-validation.warn,
 body.cocoya-dark-mode .dataset-validation.warn  {
-    border-color: #8a6d2f;
     background: #3a3320;
-    color: #e0c878;
+    color: var(--dsm-warning-text);
 }
 
 body.vscode-dark:not(.cocoya-light-mode) .dataset-validation .dataset-warnings,
@@ -388,7 +345,7 @@ body.cocoya-dark-mode .dataset-validation .dataset-warnings  {
 }
 
 .dataset-validation .dataset-warnings {
-    color: #8a6500;
+    color: var(--dsm-warning-text);
 }
 
 #dataset-json-preview {
@@ -488,7 +445,6 @@ body.cocoya-dark-mode .dataset-source-panel select,
 body.cocoya-dark-mode .dataset-source-panel textarea,
 body.cocoya-dark-mode .dataset-column-row input,
 body.cocoya-dark-mode .dataset-column-row select  {
-    background: #1e1e1e;
     border-color: var(--dsm-border-strong);
 }
 
@@ -500,7 +456,6 @@ body.cocoya-dark-mode .dataset-small-btn,
 body.cocoya-dark-mode .dataset-secondary-btn,
 body.cocoya-dark-mode .dataset-small-btn,
 body.cocoya-dark-mode .dataset-secondary-btn  {
-    background: #3c3c3c;
     border-color: var(--dsm-border-strong);
 }
 
@@ -508,7 +463,6 @@ body.vscode-dark:not(.cocoya-light-mode) #dataset-json-preview,
 body.vscode-high-contrast:not(.cocoya-light-mode) #dataset-json-preview,
 body.cocoya-dark-mode #dataset-json-preview,
 body.cocoya-dark-mode #dataset-json-preview  {
-    background: #1e1e1e;
     border-color: var(--dsm-border-light);
     color: #d4d4d4;
 }
@@ -537,19 +491,12 @@ body.vscode-dark:not(.cocoya-light-mode) .dataset-image-item,
 body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-image-item,
 body.cocoya-dark-mode .dataset-image-item,
 body.cocoya-dark-mode .dataset-image-item  {
-    background: #333333;
+    background: var(--dsm-surface-raised);
 }
 
 .dataset-image-item:hover {
     border-color: var(--dsm-brand);
-    box-shadow: 0 4px 12px var(--dsm-brand-soft);
-}
-
-body.vscode-dark:not(.cocoya-light-mode) .dataset-image-item:hover,
-body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-image-item:hover,
-body.cocoya-dark-mode .dataset-image-item:hover,
-body.cocoya-dark-mode .dataset-image-item:hover  {
-    box-shadow: 0 4px 12px var(--dsm-brand-strong);
+    box-shadow: 0 4px 12px var(--dsm-shadow-brand);
 }
 
 /* 列表縮圖牆的「已標註」綠勾（與標註縮圖欄一致；放左上角避免與右上刪除鈕重疊） */
@@ -561,7 +508,7 @@ body.vscode-dark:not(.cocoya-light-mode) .dataset-image-item.annotated,
 body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-image-item.annotated,
 body.cocoya-dark-mode .dataset-image-item.annotated,
 body.cocoya-dark-mode .dataset-image-item.annotated  {
-    border-color: #4CAF50;
+    border-color: var(--dsm-success-accent);
 }
 
 .dataset-image-check {
@@ -570,7 +517,7 @@ body.cocoya-dark-mode .dataset-image-item.annotated  {
     left: 2px;
     font-size: calc(11px * var(--dsm-font-scale));
     color: #4CAF50;
-    background: rgba(255, 255, 255, 0.85);
+    background: var(--dsm-scrim);
     border-radius: 50%;
     width: 16px;
     height: 16px;
@@ -580,28 +527,14 @@ body.cocoya-dark-mode .dataset-image-item.annotated  {
     z-index: 3;
 }
 
-body.vscode-dark:not(.cocoya-light-mode) .dataset-image-check,
-body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-image-check,
-body.cocoya-dark-mode .dataset-image-check,
-body.cocoya-dark-mode .dataset-image-check  {
-    background: rgba(0, 0, 0, 0.7);
-}
-
 /* 自動儲存已開啟指示（低噪音） */
 .dataset-autosave-indicator {
     font-size: calc(11px * var(--dsm-font-scale));
-    color: #4CAF50;
+    color: var(--dsm-autosave-indicator);
     margin-left: 8px;
     vertical-align: middle;
     opacity: 0.9;
     font-weight: 500;
-}
-
-body.vscode-dark:not(.cocoya-light-mode) .dataset-autosave-indicator,
-body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-autosave-indicator,
-body.cocoya-dark-mode .dataset-autosave-indicator,
-body.cocoya-dark-mode .dataset-autosave-indicator  {
-    color: #6fdd8a;
 }
 
 /* 匯出進行中的不確定進度條（modal 頂部，預覽/標註模式皆可見） */
@@ -619,7 +552,7 @@ body.cocoya-dark-mode .dataset-autosave-indicator  {
     flex: 0 0 140px;
     height: 6px;
     border-radius: 3px;
-    background: #e0e0e0;
+    background: var(--dsm-surface-sunken);
     overflow: hidden;
     position: relative;
 }
@@ -650,13 +583,6 @@ body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-export-progress,
 body.cocoya-dark-mode .dataset-export-progress,
 body.cocoya-dark-mode .dataset-export-progress  {
     border-bottom-color: var(--dsm-success-border);
-}
-
-body.vscode-dark:not(.cocoya-light-mode) .dataset-export-progress-bar,
-body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-export-progress-bar,
-body.cocoya-dark-mode .dataset-export-progress-bar,
-body.cocoya-dark-mode .dataset-export-progress-bar  {
-    background: #444444;
 }
 
 /* 集中式狀態訊息（modal 頂部常駐列，寬度同 modal 內容、文字靠左）。
@@ -690,8 +616,6 @@ body.vscode-dark:not(.cocoya-light-mode) .dataset-manager-message.is-visible,
 body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-manager-message.is-visible,
 body.cocoya-dark-mode .dataset-manager-message.is-visible,
 body.cocoya-dark-mode .dataset-manager-message.is-visible  {
-    background: #3a2b32;
-    border-color: #6b4455;
     color: #ff8fb3;
 }
 
@@ -863,21 +787,14 @@ body.vscode-dark:not(.cocoya-light-mode) .dataset-label-row,
 body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-label-row,
 body.cocoya-dark-mode .dataset-label-row,
 body.cocoya-dark-mode .dataset-label-row  {
-    background: #333333;
+    background: var(--dsm-surface-raised);
 }
 
 .dataset-label-color {
     width: 16px;
     height: 16px;
     border-radius: 50%;
-    border: 1px solid rgba(0,0,0,0.1);
-}
-
-body.vscode-dark:not(.cocoya-light-mode) .dataset-label-color,
-body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-label-color,
-body.cocoya-dark-mode .dataset-label-color,
-body.cocoya-dark-mode .dataset-label-color  {
-    border-color: rgba(255,255,255,0.2);
+    border: 1px solid var(--dsm-border-subtle);
 }
 
 /* 統計頂部摘要列（2026-09-22：影像張數／已標註張數，偵測採集未標註也可見張數） */
@@ -896,7 +813,7 @@ body.vscode-dark:not(.cocoya-light-mode) .dataset-label-summary,
 body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-label-summary,
 body.cocoya-dark-mode .dataset-label-summary,
 body.cocoya-dark-mode .dataset-label-summary  {
-    background: #333333;
+    background: var(--dsm-surface-raised);
 }
 
 .dataset-label-summary-item b {
@@ -942,7 +859,7 @@ body.vscode-dark:not(.cocoya-light-mode) .dataset-annotation-sidebar,
 body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-annotation-sidebar,
 body.cocoya-dark-mode .dataset-annotation-sidebar,
 body.cocoya-dark-mode .dataset-annotation-sidebar  {
-    background: #333333;
+    background: var(--dsm-surface-raised);
     border-color: #444;
 }
 
@@ -1028,7 +945,7 @@ body.cocoya-dark-mode .dataset-label-head  {
 .dataset-preview-table th {
     position: sticky;
     top: 0;
-    background: #f0f0f0;
+    background: var(--dsm-surface-raised);
     padding: 6px;
     border: 1px solid var(--dsm-border-light);
     text-align: left;
@@ -1043,7 +960,6 @@ body.vscode-dark:not(.cocoya-light-mode) .dataset-preview-table th,
 body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-preview-table th,
 body.cocoya-dark-mode .dataset-preview-table th,
 body.cocoya-dark-mode .dataset-preview-table th  {
-    background: #333;
     border-color: var(--dsm-border-strong);
 }
 body.vscode-dark:not(.cocoya-light-mode) .dataset-preview-table td,
@@ -1106,7 +1022,7 @@ body.vscode-dark:not(.cocoya-light-mode) .dataset-sampler-controls,
 body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-sampler-controls,
 body.cocoya-dark-mode .dataset-sampler-controls,
 body.cocoya-dark-mode .dataset-sampler-controls  {
-    background: #333;
+    background: var(--dsm-surface-raised);
 }
 
 .dataset-sampler-row {
@@ -1290,8 +1206,7 @@ body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-manager-body.dataset-
 body.cocoya-dark-mode .dataset-manager-body.dataset-annotation-mode .dataset-panel-title,
 body.cocoya-dark-mode .dataset-manager-body.dataset-annotation-mode .dataset-panel-title  {
     border-bottom-color: var(--dsm-border-light);
-    background: #2d2d2d;
-}
+    }
 
 .dataset-manager-body.dataset-annotation-mode #dataset-validation {
     display: none;
@@ -1332,8 +1247,7 @@ body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-annotation-thumbnails
 body.cocoya-dark-mode .dataset-annotation-thumbnails,
 body.cocoya-dark-mode .dataset-annotation-thumbnails  {
     border-right-color: var(--dsm-border-light);
-    background: #2d2d2d;
-}
+    }
 
 .dataset-annotation-thumb-list {
     display: flex;
@@ -1397,20 +1311,13 @@ body.cocoya-dark-mode .dataset-annotation-thumb-item:hover .dataset-image-delete
     right: 2px;
     font-size: calc(10px * var(--dsm-font-scale));
     color: #4CAF50;
-    background: rgba(255, 255, 255, 0.85);
+    background: var(--dsm-scrim);
     border-radius: 50%;
     width: 14px;
     height: 14px;
     line-height: 14px;
     text-align: center;
     font-weight: bold;
-}
-
-body.vscode-dark:not(.cocoya-light-mode) .dataset-annotation-thumb-item.annotated::after,
-body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-annotation-thumb-item.annotated::after,
-body.cocoya-dark-mode .dataset-annotation-thumb-item.annotated::after,
-body.cocoya-dark-mode .dataset-annotation-thumb-item.annotated::after  {
-    background: rgba(0, 0, 0, 0.7);
 }
 
 /* 分類標籤校正模式的縮圖標籤徽章 */
@@ -1546,8 +1453,7 @@ body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-annotation-toolbar,
 body.cocoya-dark-mode .dataset-annotation-toolbar,
 body.cocoya-dark-mode .dataset-annotation-toolbar  {
     border-bottom-color: var(--dsm-border-light);
-    background: #2d2d2d;
-}
+    }
 
 .dataset-annotation-progress {
     color: var(--dsm-brand);
@@ -1598,7 +1504,7 @@ body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-annotation-controls,
 body.cocoya-dark-mode .dataset-annotation-controls,
 body.cocoya-dark-mode .dataset-annotation-controls  {
     border-left-color: var(--dsm-border-light);
-    background: #333333;
+    background: var(--dsm-surface-raised);
 }
 
 .dataset-annotation-section-title {
@@ -1640,16 +1546,8 @@ body.cocoya-dark-mode .dataset-annotation-class-select  {
 }
 
 .dataset-annotation-item.selected {
-    border: 1px solid #00CCFF;
-    background: #e6f7ff;
-}
-
-body.vscode-dark:not(.cocoya-light-mode) .dataset-annotation-item.selected,
-body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-annotation-item.selected,
-body.cocoya-dark-mode .dataset-annotation-item.selected,
-body.cocoya-dark-mode .dataset-annotation-item.selected  {
-    background: #1a3a4a;
-    border-color: #00CCFF;
+    border: 1px solid var(--dsm-select-border);
+    background: var(--dsm-select-bg);
 }
 
 /* 標註列表中的類別下拉選單 */
@@ -1673,7 +1571,6 @@ body.vscode-dark:not(.cocoya-light-mode) .dataset-annotation-item .dataset-annot
 body.vscode-high-contrast:not(.cocoya-light-mode) .dataset-annotation-item .dataset-annotation-item-class,
 body.cocoya-dark-mode .dataset-annotation-item .dataset-annotation-item-class,
 body.cocoya-dark-mode .dataset-annotation-item .dataset-annotation-item-class  {
-    background: #1e1e1e;
     border-color: var(--dsm-border-strong);
 }
 

@@ -596,6 +596,11 @@ VS Code 報「L44 必須是 {」「L52 預期為 at-rule 或選取器」，整�
 結束符」判斷註解是否提前閉合 —— 合法樣式表在剝除註解後不可能再出現該序列。
 變異測試：於註解內注入 glob → 守門報紅 ✅
 
+📌 **位置更正（2026-10-02 下半場）**：守門 7 **已移交**至 `theme_contract.test.mjs`
+（全專案掃描版，3 例：註解提前閉合／大括號平衡／自檢）。原因：單檔版只掃
+`dataset_manager.css`，漏掉 `style.css` 等其他樣式表；`dataset_theme_contract.test.mjs`
+僅保留「大括號平衡」並在檔內留下移交理由與位置指針。
+
 順帶修掉一個**既存的測試缺陷**：「大括號平衡」原本**不排除註解**就計數，
 註解裡若出現大括號（例如引用編輯器錯誤訊息「必須是 {」）就會誤報。
 本次因此誤報 216 / 215，一度讓我懷疑整份樣式表壞掉 —— 實際去註解後是 215 / 215。
@@ -606,7 +611,27 @@ VS Code 報「L44 必須是 {」「L52 預期為 at-rule 或選取器」，整�
   ② auto ＋ VS Code 深色（`:not` 應成立、維持深色）③ Tauri ＋ candy（無 vscode class，應無變化）
   ④ VS Code 執行中切換色彩主題（`theme_manager.js:225` MutationObserver 會重跑 `apply()`）
 - B/C 類（light 段 43 + dark 段 44 處硬編碼）**下次處理**（使用者決定），屆時需先決定 candy 的新配色
+  → **2026-10-02 下半場已處理 dark 段**（B 5／C 12 保留未動），light 段 43 處仍待處理；
+  candy 新配色已代填三處（`--dsm-success-text`／focus-ring 強度／ok 邊框）待目視定案，見後段條目。
 - 可考慮比照 P1-3 的方法，盤點 `style.css` 其餘硬編碼（P1-4，242 hex）
+### [2026-10-02] #task[cocoya dark主題 token] P1-3 B/C 類 token 化 ＋ 守門升級（本次提交）
+
+> 接續上方同日 A 類收斂（`f63d5f0`）。詳細敘述與技術深挖見 `log/work/2026-10-02.md` §2.3～§5。
+
+- [x] **核心手法：把「dark 覆寫」換成「雙主題 token」**。實測發現 `--dsm-brand-soft`(0.15) 與 `--dsm-brand-strong`(0.3) 在三主題的值**完全相同** → 那 30 組 dark 覆寫從來不是「主題差異」，而是「深色底需要更明顯的 focus ring」。改為單一規則 ＋ 主題感知 token `--dsm-focus-ring`（light 0.15／dark 0.3／candy 0.3），dark 覆寫整組刪除。
+- [x] 新增 **13 個 token × 3 主題**（cssVars 47 → 60 鍵）：`--dsm-error-border/-text`、`--dsm-warning-border/-text`、`--dsm-surface-raised/-sunken`、`--dsm-scrim`、`--dsm-border-subtle`、`--dsm-focus-ring`、`--dsm-shadow-brand`、`--dsm-autosave-indicator`、`--dsm-select-border/-bg`。light／dark 兩欄值 = 原本各自實際生效的字面值（逐一比對，視覺等價）。
+- [x] 直接重用既有 token（不新增）：`#4a2a35` → `--dsm-btn-hover-bg`、`#4CAF50` → `--dsm-success-accent`／`--dsm-autosave-indicator`、`rgba(0,0,0,0.1)`/`rgba(255,255,255,0.2)` → `--dsm-border-subtle`。
+- [x] 量化：`dataset_manager.css` 1710 → **1607 行**（淨減 103）；刪 129 行（選擇器 60 ＝ `:not()` 30 ＋ `body.cocoya-dark-mode` 30；屬性 46；括號 23）、新增 26 行（23 筆 token 取代 ＋ 3 行結構）。
+- [x] **附帶清掉既存垃圾**：dark 覆寫群的 `body.cocoya-dark-mode …` 選擇器清單整組重複兩次。經 `git show 304d403` 比對確認**非 `f63d5f0` 造成**，是更早就有。
+- [x] 守門 4 **判準升級**（`dataset_theme_contract`）：由「有沒有 dark 覆寫」這個**代理指標**，改為「dark 主題的**有效值**不得沿用淺色值」（解析 `var()` → 讀主題 cssVars 真值 → 逐顏色屬性比對）。舊判準在 token 化後會兩個方向都錯：把「全走雙主題 token、不需覆寫」的正確寫法誤判缺失，又放行「有覆寫但覆寫成同值」。
+- [x] 守門 7 **由單檔移交全專案**（`theme_contract.test.mjs`，3 例：註解提前閉合／大括號平衡／自檢）；`dataset_theme_contract` 檔內留下移交理由與位置指針。
+- [x] 自檢寫法修正：守門 4 舊自檢**照抄偵測邏輯**＝只驗複製品（真函式壞掉仍全綠）；改為直接呼叫被測函式 `stateDarkOffenders`，並用「效果等價」的追加變異（不採刪除既有規則——選擇器跨多行＋CRLF 曾吃過刪不乾淨的虧）。
+- [x] 驗收：全專案 275 → **282** 綠（1.2s）、ESLint 0 error、vite build PASS、6 檔全 CRLF 無 BOM；變異測試（守門 4／5／6／7）皆確認會紅後還原。
+- [ ] ⚠ **candy 三處刻意視覺調整待目視定案**（本次唯一無法用「視覺等價」證明者）：`--dsm-success-text` `#8A4A6A`→`#2F6B3C`（舊值與 `--dsm-dev-badge-text` 相同，疑為複製殘留）；`--dsm-focus-ring`／`--dsm-shadow-brand` 實際生效 `0.15`→`0.3`；ok 邊框 `#4CAF50`→`#FE2F89`（品牌色）。
+- [ ] **dark 段剩餘 17 處**（B 類 5／C 類 12，原 B 17／C 31）：`.dataset-validation.ok` 深綠三件套、`.dataset-annotation-info` `#a0a0a0`、`.dataset-sampler-settings` `#999` 等，需再新增約 5~8 token。
+- [ ] **light 段 43 處**硬編碼未動（與 A/B/C 同一「新主題摸不到」問題）。
+- [ ] 📌 **位置更正**：上方同日條目寫「新增守門 7（`dataset_theme_contract.test.mjs`）」，**現已移交**至 `theme_contract.test.mjs`（全專案掃描版）；單檔版僅保留「大括號平衡」。
+
 
 ### [2026-10-01] #task[Batch 2 完成] P2-7 標籤色主題化 ＋ hover 高亮（使用者目視確認成功）
 - [x] P2-7 起點用數據論證：實測 12 個常見標籤的 WCAG 對比度，舊實作（單一 HSL L=40~55%）**11 個低於 3.0**（7 淺底不足、4 深底不足）。單一明度不可能同時滿足兩種底色。
@@ -632,6 +657,8 @@ VS Code 報「L44 必須是 {」「L52 預期為 at-rule 或選取器」，整�
   修法：164 個 vscode 選擇器加 `:not(.cocoya-light-mode)`（`style.css` 42 ＋ `dataset_manager.css` 122）；
   不採 JS 移除 class，因 `_detectSystemDark()` 依賴它判定 auto 模式。新增守門 6（全專案掃描型）。
 - [ ] **P1-3 B/C 類刻意不處理**（使用者決定）：light 段仍有 43 處、dark 段仍有 44 處硬編碼字面值。
+  → **2026-10-02 下半場已部分推翻**：dark 段收斂至 **B 5／C 12**（新增 13 個雙主題 token、CSS 淨減 103 行、dark 覆寫整組刪除 30 組），
+  見同日後段條目「P1-3 B/C 類 token 化 ＋ 守門升級」與 `log/work/2026-10-02.md` §2.3；**light 段 43 處仍未動**。
   ⚠ **勿用「87 個」概括**（2026-10-02 修正）：dark 段掛在 `body.cocoya-dark-mode`，淺色主題不命中，
   故**深色**主題受約束 43+44=87 處、**淺色**主題（light／candy）僅受約束 light 段 43 處。
   candy 看似正常是「淺色值疊淺色底不刺眼」的意外正確，仍走樣處如 `.dataset-primary-btn:hover` = `#e91e63`。

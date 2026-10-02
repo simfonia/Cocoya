@@ -227,3 +227,79 @@ test('守門 6 自檢：拿掉 :not(.cocoya-light-mode) 後本守門必須報紅
     assert.ok(findUnguardedVscodeSelectors(broken).length > 0,
         '守門必須能抓到未加 :not() 的 vscode 深色選擇器');
 });
+
+/**
+ * 守門 7：全專案 CSS 結構健全性（註解不得提前閉合 ＋ 大括號平衡）。
+ *
+ * ★ 為什麼需要這道（2026-10-02 實測，非憑感覺）：
+ *   CSS 語法錯誤**只有 vite build（lightningcss）會抓**，但
+ *     package.json 的 test = test:unit + test:ui，
+ *     而 test:unit = compile + lint + lint:ui，lint:ui 只掃 .js/.mjs（不含 .css）
+ *     → 只跑 npm test **完全抓不到 CSS 壞掉**。
+ *   JS 側則已被 eslint 完整覆蓋（實測：區塊註解提前閉合 → Parsing error），
+ *   故這道守門只針對 CSS，不重複造輪子。
+ *
+ * ★ 真實事故：我在 CSS 註解裡寫了 src 後接「兩層斜線再接副檔名」的 glob，
+ *   其中的「星號＋斜線」序列被解析器當成註解結束符 → 註解提前中斷 →
+ *   後文被當選擇器解析 → VS Code 報「L44 必須是左大括號」，
+ *   整份樣式表從該處起解析異常。而當時所有測試都是綠的。
+ *
+ * 判準：CSS 註解在第一個「星號＋斜線」序列就結束，因此**合法**樣式表在
+ *      「剝除所有註解後」不可能再出現該序列；只要還有，就是提前閉合。
+ *      大括號則必須在剝除註解後平衡（註解內的符號不影響 CSS 語法）。
+ */
+
+/** 依 CSS 語意配對註解，回傳真正的程式碼部分 */
+function stripCssComments(text) {
+    let rest = text, guard = 0;
+    for (;;) {
+        const open = rest.indexOf('/*');
+        if (open < 0) break;
+        const close = rest.indexOf('*/', open + 2);
+        if (close < 0) break;          // 未閉合的註解：後面全算程式碼，由下方殘留檢查抓
+        rest = rest.slice(0, open) + rest.slice(close + 2);
+        if (++guard > 10000) throw new Error('註解配對未收斂，解析邏輯有誤');
+    }
+    return rest;
+}
+
+test('守門 7：全專案 CSS 註解不得提前閉合', () => {
+    const offenders = [];
+    for (const file of listCssFiles(uiRoot)) {
+        const text = fs.readFileSync(file, 'utf8');
+        const rest = stripCssComments(text);
+        [...rest.matchAll(/\*\//g)].forEach((m) => {
+            const line = rest.slice(0, m.index).split(/\r?\n/).length;
+            const ctx = rest.slice(Math.max(0, m.index - 40), m.index + 2).replace(/\s+/g, ' ');
+            offenders.push(`${path.relative(uiRoot, file)}:${line}  …${ctx}`);
+        });
+    }
+    assert.deepEqual(offenders, [],
+        '剝除註解後仍殘留註解結束序列 → 某處註解被提前閉合（例如在註解內寫了含該序列的 glob），'
+        + '其後內容會被當成選擇器解析');
+});
+
+test('守門 7：全專案 CSS 大括號必須平衡（剝除註解後）', () => {
+    const offenders = [];
+    for (const file of listCssFiles(uiRoot)) {
+        const rest = stripCssComments(fs.readFileSync(file, 'utf8'));
+        const open = (rest.match(/\{/g) || []).length;
+        const close = (rest.match(/\}/g) || []).length;
+        if (open !== close) {
+            offenders.push(`${path.relative(uiRoot, file)}  { ${open} / } ${close}`);
+        }
+    }
+    assert.deepEqual(offenders, [],
+        '大括號不平衡（必須先剝除註解再計數 —— 註解內的符號不影響 CSS 語法）');
+});
+
+test('守門 7 自檢：注入提前閉合後，本守門必須報紅', () => {
+    // 真實回歸形狀：在註解裡寫 glob —— 就是 2026-10-02 造成語法錯誤的那個動作。
+    const sample = '/* glob src/' + '**' + '/*.css */\n.a { color: red; }\n';
+    assert.ok((stripCssComments(sample).match(/\*\//g) || []).length > 0,
+        '守門必須能抓到註解被提前閉合（剝除註解後仍殘留結束序列）的情形');
+
+    const clean = '/* 正常註解 */\n.a { color: red; }\n';
+    assert.equal((stripCssComments(clean).match(/\*\//g) || []).length, 0,
+        '正常註解不得被誤判為提前閉合');
+});

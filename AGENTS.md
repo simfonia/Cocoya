@@ -253,15 +253,15 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
 ### 注意
 - 主題切換採「存偏好 + reloadWebview」：VSIX 由 host 重建 HTML（cocoyaManager.ts reloadWebview case）、Tauri 為 location.reload()；新模組無需處理此機制
 
-### 測試執行分層守門 (Test Gating, 2026-09-30／2026-10-01 更新)
-本專案 Node 測試共 **38 檔 253 例**（Batch 0 +30；Batch 1 P1-1/P1-2 typePolicy 單一來源守門 5＋P2-6-b 跨橋 capabilities 對帳 3＋P2-6 ui_components 呈現路徑守門 5；使用者回報修正 ui_canvas 標註畫布 +13），全量約 **1.2 秒**。**不同階段只跑該跑的層級**，避免浪費時間與 AI 對話 token。
+### 測試執行分層守門 (Test Gating, 2026-09-30／2026-10-01／2026-10-02 更新)
+本專案 Node 測試共 **40 檔 282 例**（Batch 0 +30；Batch 1 P1-1/P1-2 typePolicy 單一來源守門 5＋P2-6-b 跨橋 capabilities 對帳 3＋P2-6 ui_components 呈現路徑守門 5；使用者回報修正 ui_canvas 標註畫布 +13；2026-10-02 P1-3 CSS token 化：`dataset_theme_contract` 守門 4 判準升級＋守門 5、`theme_contract` 守門 7 全專案化 +3），全量約 **1.0 秒**。**不同階段只跑該跑的層級**，避免浪費時間與 AI 對話 token。
 
 | 層級 | 指令 | 適用時機 | 內容 |
 |---|---|---|---|
 | **L0** | `npm run test:fast` | 每次改完碼 | 依 `git diff` 自動挑必要測試（同名 → 同目錄 → 模組 glob），只輸出摘要 |
 | **L0 指定** | `npm run test:fast -- <檔案…>` | 明確知道改到哪 | 手動指定變更檔 |
 | **L1** | `npm run test:dm` / `test:core` / `test:theme` | 一個功能切片完成 | 單一模組 |
-| **L2** | `npm run test:ui` | 階段／Batch 收尾、提交前 | 全量 253 例 |
+| **L2** | `npm run test:ui` | 階段／Batch 收尾、提交前 | 全量 282 例 |
 | **L1.5** | `npm run lint:ui` | 改了 `ui/src/**` 的 JS | ESLint（`ui/.eslintrc.json`） |
 | **L2 全閘** | `npm test` | 發布前 | compile + lint(ts) + lint:ui + 全量 |
 | **其他** | `npm run test:rust` / `cargo check` | Rust 異動 | 不併入 `npm test` |
@@ -293,6 +293,11 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
 - **既有檔案可能是空殼（2026-10-01）**：`ui_components.test.mjs` 檔案存在卻**無任何測試**，先前因「檔案存在」而誤以為已有覆蓋。新增守門前先確認測試檔真的非空。
 - **行為測試碰不到內部函式時會變成假安全感（2026-10-01 踩坑）**：`syncLabelMap()` 是 `ui_layout.js` 的**內部函式（非 export）**。我寫的「改名後顯示新名稱」測試只是**手動改 labelMap 再自己呼叫 render()** —— 等於把答案餵給自己。mutation（刪掉真正的 `UICanvas.render()`）後**全部測試仍全綠**。改用**掃描型守門**（讀原始碼斷言函式本體含 `render()`）後同一 mutation 立刻報紅。**判準只有一個：真實迴歸時會不會變紅 —— 靠 mutation 確認，不是靠綠燈。**
 - **改畫布狀態要注意 render 的既有 early-return（2026-10-01）**：`ui_canvas.js` 的 bbox 分支有 `if (!this.state.isDrawing) return;`。新增「游標位置」等狀態若沿用這個 early-return，會導致新功能**只在拉框時出現**（非拉框時不重繪）。
+- **CSS 註解內的「星號＋斜線」序列會提前閉合註解（2026-10-02 踩坑）**：`dataset_manager.css` 檔頭註解寫了 glob（`src` 後接星號＋斜線再接副檔名），其中的星號＋斜線被 CSS 解析器當成**註解結束符** → 註解提前中斷、後文被當選擇器解析（VS Code 報「必須是左大括號」）。**同一序列在 `.mjs` 的 JSDoc 裡會造成 JS 語法錯誤**（寫說明時最易再犯）→ 檔內舉例一律改用描述性文字，**不寫字面**。**為何全綠**：`npm test` 不含 `vite build`、也不掃 `.css`，CSS 語法壞掉只有 vite/lightningcss 抓得到 → 已補守門 7（掃 `ui/src/**/*.css`：註解提前閉合 ＋ 大括號平衡，先剝註解再計數）。**CSS 刪除範圍以「選擇器首行 ~ 收尾 `}`」為單位，改完必跑 `npx vite build`。**
+- **契約守門禁用「代理指標」（2026-10-02）**：判準必須落在真不變式（**有效值**）上。守門 4 原判「有沒有 dark 覆寫」，token 化後兩個方向都錯：把「全走雙主題 token、不需覆寫」的正確寫法誤判缺失（假紅），又放行「有覆寫但覆寫成同值」（假綠）。改為解析 `var()` → 讀主題 cssVars 真值 → 逐顏色屬性比對。
+- **選擇器跨多行時，刪除規則不可只從 `{` 行起算（2026-10-02）**：會留下裸選擇器行，而**裸選擇器行語法合法**（被下一條規則的選擇器接續）→ 語法層自檢（大括號平衡、行尾逗號）**全數抓不到**，只在該元素暗色下多吃一條規則（靜默視覺回歸）。判準只能落在語意上；自檢**不可照抄偵測邏輯**（只驗到複製品），須直接呼叫被測函式。
+- **「dark 覆寫」優先改寫為「雙主題 token」（2026-10-02 P1-3）**：若覆寫只是「深色底需要更明顯／更亮的值」（如 focus ring `0.15`→`0.3`），那它是**主題感知值**而非主題差異 → 收斂為單一 token（三主題各給值）並整組刪除 dark 覆寫。只有涉及**結構**（如 `:not(.cocoya-light-mode)` 的 VS Code 越權修正）才留在 CSS。SSOT 是 `theme_manager.js` 的 cssVars（寫在 body 行內樣式 → CSS 字面值無法被新主題覆蓋，此即 P1-3 的病根）。
+
 
 ### i18n 契約守門 (2026-09-30 T2)
 `ui/src/modules/core/core_contract.test.mjs` 已涵蓋 `core_manifest.json` **全部 22 模組**，並含 3 項 i18n 守門：

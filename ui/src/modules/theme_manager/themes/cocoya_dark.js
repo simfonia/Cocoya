@@ -114,7 +114,20 @@
             '--dsm-card-hover-border': '#FE2F89',
             '--dsm-dev-badge-bg': '#4a2333',
             '--dsm-dev-badge-text': '#ff8fb3',
-            '--dsm-type-badge-bg': '#3a2b32'
+            '--dsm-type-badge-bg': '#3a2b32',
+            '--dsm-error-border': '#c62828',
+            '--dsm-error-text': '#ef9a9a',
+            '--dsm-warning-border': '#8a6d2f',
+            '--dsm-warning-text': '#e0c878',
+            '--dsm-surface-raised': '#333333',
+            '--dsm-surface-sunken': '#444444',
+            '--dsm-scrim': 'rgba(0, 0, 0, 0.7)',
+            '--dsm-border-subtle': 'rgba(255, 255, 255, 0.2)',
+            '--dsm-focus-ring': 'rgba(254, 47, 137, 0.3)',
+            '--dsm-shadow-brand': 'rgba(254, 47, 137, 0.3)',
+            '--dsm-autosave-indicator': '#6fdd8a',
+            '--dsm-select-border': '#ff8fb3',
+            '--dsm-select-bg': '#3a2b32'
         },
         css: `
 /* --- VS Code / System Theme Integration --- */
