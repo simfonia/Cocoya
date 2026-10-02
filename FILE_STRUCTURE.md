@@ -360,6 +360,7 @@ C:\Workspace\cocoya\
 │   ├── dataset_io.py        # 資料集檔案存取與打包工具
 │   └── media_pipe_service.py # AI 特徵提取服務 (MediaPipe)；[M4] extract_landmarks(frame, use_z) Hand/Pose 關鍵點供 collectFeature
 ├── temp_scripts/          # 執行期間暫存目錄
+    │   └── t_scan.cjs         # [2026-10-01] T-scan：掃描測試檔的計時器洩漏／未清除 handle／無 await（40 檔靜態掃描；只報「線索」不報「錯誤」，判定須人工確認）
 ├── package.json           # 根目錄設定
 └── tsconfig.json          # TS 編譯設定
 └── ui/src/modules/theme_manager/themes/cocoya_dark.js # [REFACTORED] 完全自足深色主題：componentStyles+cssVars+css（主題專屬規則由 ThemeManager 注入 <style>，style.css 不再含任何深色規則）
