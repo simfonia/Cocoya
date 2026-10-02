@@ -23,6 +23,16 @@
 - **仍待使用者實機**（完整表見計畫 §15.3）：R9 雙平台＋三主題目視、table int8 量化本機驗證、
   line/feature 整鏈 GUI 實機、DM 第二輪 UI、M4b 存讀混合、Stage 6 Gate 簽核、Stage 7 總驗證。
 
+### [2026-10-02] DM P3 標註尺規 bug（已完成）
+- [x] **滑鼠不在影像上尺規仍顯示** ✅ 2026-10-02：真因是 `ui_canvas.js` 的 `mousemove` 掛在 `window`
+ （拉框拖出畫布仍要追蹤）＋ 座標被 `clamp` 釘在邊界 → `canvas.mouseleave` 清掉 pointer 後，
+ 下一次 window `mousemove` 又把尺規設回邊界值（等於永遠清不掉）。改以**未 clamp 的 raw 座標**判定
+ 在影像內與否，出界一律收 `null`；拉框預覽框仍用 clamp 座標（行為不變）。
+ 新增 2 回歸測試（`ui_canvas.test.mjs` 28 → 30，全量 284 綠），**變異測試確認會紅**。
+ 詳見 `log/work/2026-10-02.md` §6。
+- [x] 順帶修：`ui_canvas.test.mjs` 單行**孤 CR 行尾**（歷史遺留）→ 正規化 CRLF，
+ git `ls-files --eol` 由 `i/-text w/-text` 回歸 `i/lf w/crlf`（獨立 chore commit，避免稀釋 bug fix diff）。
+
 ### tauri-codegen 產生 typed invoke (待辦, 2026-08-19)
 - [ ] 評估 tauri-codegen / @tauri-apps/types：自動從 #[tauri::command] 簽名生成 TS invoke<cmd>(args)
 - [ ] 目標：command 參數缺漏在 tsc 編譯期發現（而非執行期 invalid args）

@@ -54,6 +54,11 @@ function setupCanvas(mode = 'bbox') {
     Object.assign(UICanvas.state, {
         ctx, canvas: ctx.canvas, mode, annotations: [], currentBbox: null,
         selectedAnnotationIndex: -1, labelMap: {}, pointerX: null, pointerY: null,
+        // ★ 拉框狀態也必須重置（2026-10-02）。沿用下方 hover 重置的同一個理由：
+        //   同檔測試共用 UICanvas.state，前一個測試若留下 isDrawing=true，
+        //   後一個測試的 mousemove 會憑空產生 currentBbox 預覽框，
+        //   而預覽框的虛線外框會呼叫 setLineDash → 讓「尺規是否繪製」的斷言誤判。
+        isDrawing: false, drawingState: 0, startX: 0, startY: 0,
         // ★ 必須完整重置 hover 相關狀態（2026-10-01）。
         //   node --test 會並發執行同一檔內的測試且共用 UICanvas.state，
         //   若此處不重置，上一個測試殘留的 hover 狀態會讓本測試的
@@ -151,6 +156,53 @@ test('十字尺規：游標離開畫布（null）時不繪製', () => {
     UICanvas.render();
     assert.equal(ctx.calls.filter((c) => c.name === 'setLineDash').length, 0,
         '無游標位置時不應呼叫 setLineDash');
+});
+
+// ---------------------------------------------------------------------------
+// 1b. 回歸鎖：游標不在「影像上」時尺規不得出現（2026-10-02 使用者回報）
+//     真因：mousemove 掛在 window（拉框拖出畫布仍要追蹤），游標到了影像之外照樣觸發；
+//     currX/currY 被 clamp 釘在邊界 → 尺規黏在影像邊緣不消失，且 canvas.mouseleave
+//     清掉 pointer 之後的下一次 window mousemove 又立刻設回去，等於永遠清不掉。
+// ---------------------------------------------------------------------------
+
+test('十字尺規：游標在影像外的 window mousemove 不得設定 pointer（尺規黏邊）', () => {
+    const ctx = setupCanvas('bbox');
+    const move = getMousemoveHandler(ctx);
+
+    // canvas 800×600、getBoundingClientRect 為 (0,0) → x=-40、y=700 皆在影像外。
+    // 舊實作會把座標 clamp 成 0／600（邊界值）→ 尺規仍畫在影像邊線上。
+    move({ clientX: -40, clientY: 300 });
+    assert.equal(UICanvas.state.pointerX, null, '左側出界時不得設定尺規座標');
+    assert.equal(UICanvas.state.pointerY, null, '左側出界時不得設定尺規座標');
+
+    move({ clientX: 400, clientY: 700 });
+    assert.equal(UICanvas.state.pointerX, null, '下方出界時不得設定尺規座標');
+    assert.equal(UICanvas.state.pointerY, null, '下方出界時不得設定尺規座標');
+});
+
+test('十字尺規：mouseleave 清除後，影像外的 window mousemove 不得把尺規設回來', () => {
+    const ctx = setupCanvas('bbox');
+    const move = getMousemoveHandler(ctx);
+
+    move({ clientX: 300, clientY: 200 });
+    assert.equal(UICanvas.state.pointerX, 300, '影像內仍正常追蹤');
+
+    UICanvas.state.handlers.mouseleave(); // canvas.mouseleave：離開畫布收起尺規
+    assert.equal(UICanvas.state.pointerX, null, 'mouseleave 應清除尺規');
+
+    // ★ 真實回歸形狀：游標已離開畫布，但 window 上的 mousemove 仍會觸發。
+    //   舊實作此處會把 pointer 設回邊界值 → 尺規復活（等於 mouseleave 白做）。
+    move({ clientX: -10, clientY: -10 });
+    assert.equal(UICanvas.state.pointerX, null, '影像外不得把尺規設回來（原 bug）');
+
+    ctx.calls.length = 0; // 清空紀錄，確認收起後重繪真的不再畫尺規
+    // 前置條件：本檔 setLineDash 有兩個來源（尺規、drawBox 的虛線外框），
+    // 此處必須確保標註框與預覽框皆為空，才能讓下面的 0 唯一指向「尺規沒畫」。
+    assert.equal(UICanvas.state.currentBbox, null, '前置條件：無預覽框');
+    assert.equal(UICanvas.state.annotations.length, 0, '前置條件：無標註');
+    UICanvas.render();
+    assert.equal(ctx.calls.filter((c) => c.name === 'setLineDash').length, 0,
+        '游標已離開影像，重繪不得再畫尺規');
 });
 
 test('十字尺規：line 模式不繪製（線段模式已有橡皮筋預覽）', () => {
