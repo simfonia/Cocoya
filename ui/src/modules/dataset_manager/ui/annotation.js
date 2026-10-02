@@ -191,9 +191,16 @@ export function createAnnotationController({
         UICanvas.init(container, img, image.annotations || [], {
             mode: mode,
             labelMap: labelMap,
-            // 2026-10-01：bbox 框線改依 P2 給各標籤的顏色上色，
+            // 2026-10-01（P2-7）：bbox 框線改依 P2 類別色上色，
             // 讓標註畫布與 P2 縮圖／統計的顏色一致（同一類別看起來就是同一個顏色）。
-            getLabelColor: (label) => UIComponents.getLabelColor(label),
+            // ★ 必須傳固定 lightness，不可依主題變動：
+            //   框線畫在「照片」上，而照片明暗與主題無關（白底商品照在 light/dark
+            //   主題下都是白底）。若跟著主題改明度，暗照片配 light 主題時
+            //   深色框線就看不見了。
+            //   （框線本身的暗照片可見性另由 drawBox 的白色外層描邊處理。）
+            getLabelColor: (label) => UIComponents.getLabelColor(label, {
+                lightness: UICanvas.BOX_LABEL_LIGHTNESS
+            }),
             onUpdate: (anns) => {
                 image.annotations = anns;
                 renderAnnotationListUI(anns);
@@ -403,6 +410,17 @@ export function createAnnotationController({
                 // 高亮列表項目
                 list.querySelectorAll('.dataset-annotation-item').forEach(el => el.classList.remove('selected'));
                 item.classList.add('selected');
+            };
+
+            // 2026-10-01（使用者需求）：hover 列表項目 → 畫面對應的框高亮。
+            // 多個框要刪除時，使用者需要知道畫面上是哪一個。
+            // mouseenter / mouseleave 用 delegation 綁在容器上較省，
+            // 但此處逐項綁定與既有的 onclick 風格一致、更好讀。
+            item.onmouseenter = () => {
+                UICanvas.setHoveredAnnotation(parseInt(item.dataset.index));
+            };
+            item.onmouseleave = () => {
+                UICanvas.setHoveredAnnotation(-1);
             };
         });
 

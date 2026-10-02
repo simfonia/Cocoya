@@ -18,15 +18,31 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 /** 記錄所有 2D 繪圖呼叫的假 ctx */
 function makeFakeCtx() {
     const calls = [];
+    const dashCalls = [];
+    let lineDash = [];
+    let lineDashOffset = 0;
     const rec = (name) => (...args) => { calls.push({ name, args }); };
     return {
         calls,
+        dashCalls,
         canvas: { width: 800, height: 600 },
         clearRect: rec('clearRect'), save: rec('save'), restore: rec('restore'),
         beginPath: rec('beginPath'), moveTo: rec('moveTo'), lineTo: rec('lineTo'),
         stroke: rec('stroke'), fill: rec('fill'), fillRect: rec('fillRect'),
         strokeRect: rec('strokeRect'), arc: rec('arc'), closePath: rec('closePath'),
-        fillText: rec('fillText'), setLineDash: rec('setLineDash'),
+        fillText: rec('fillText'),
+        // 記錄每次 setLineDash 的參數與當下的 lineDashOffset。
+        // `_dashTag` 由原始碼在呼叫前設定（見 ui_canvas.js 的 setDash 註解），
+        // 讓測試能區分「外框（虛線）」與「內框（實線）」——不依賴 stack 解析。
+        setLineDash(dash) {
+            lineDash = Array.isArray(dash) ? dash.slice() : [];
+            dashCalls.push({ dash: lineDash.slice(), tag: this._dashTag || '', offset: lineDashOffset });
+            calls.push({ name: 'setLineDash', args: [dash] });
+        },
+        _dashTag: '',
+        get lineDash() { return lineDash; },
+        get lineDashOffset() { return lineDashOffset; },
+        set lineDashOffset(v) { lineDashOffset = v; },
         measureText: (t) => ({ width: t.length * 8 }),
         // 可被測試觀察的可變狀態
         font: '', fillStyle: '', strokeStyle: '', lineWidth: 0, textBaseline: ''
@@ -37,7 +53,14 @@ function setupCanvas(mode = 'bbox') {
     const ctx = makeFakeCtx();
     Object.assign(UICanvas.state, {
         ctx, canvas: ctx.canvas, mode, annotations: [], currentBbox: null,
-        selectedAnnotationIndex: -1, labelMap: {}, pointerX: null, pointerY: null
+        selectedAnnotationIndex: -1, labelMap: {}, pointerX: null, pointerY: null,
+        // ★ 必須完整重置 hover 相關狀態（2026-10-01）。
+        //   node --test 會並發執行同一檔內的測試且共用 UICanvas.state，
+        //   若此處不重置，上一個測試殘留的 hover 狀態會讓本測試的
+        //   「phase=1」變成非 hover 狀態 → 光暈寬度差異，症狀極難追。
+        hoveredAnnotationIndex: -1,
+        hoverPhase: -1,
+        hoverRafId: -1
     });
     return ctx;
 }
@@ -306,23 +329,46 @@ test('resolveBoxColor：取色函式丟例外或回傳空值時不得炸掉畫�
     assert.equal(UICanvas.resolveBoxColor('貓', false), UICanvas.DEFAULT_BOX_COLOR);
 });
 
-test('render：兩個不同標籤的 bbox 必須畫成兩種顏色', () => {
+test('render：bbox 採雙層描邊（白色外框 ＋ 標籤色內框），且標籤色不同則內框色不同', () => {
+    // 2026-10-01：原測試只驗「兩個框顏色不同」，屬弱命題（僅呼叫
+    // resolveBoxColor 而非真正檢查畫布），且雙層描邊後 strokeRect 由 2 次
+    // 變 4 次而失敗。本次改為直接觀察 ctx 的可變狀態。
     const ctx = setupCanvas('bbox');
     UICanvas.state.getLabelColor = (label) => (label === '貓' ? 'hsl(10, 70%, 50%)' : 'hsl(20, 70%, 50%)');
-    UICanvas.state.labelMap = { 0: '貓', 1: '狗' };
+    UICanvas.state.labelMap = { '貓': 0, '狗': 1 };
     UICanvas.state.annotations = [
         { bbox: [0, 0, 0.2, 0.2], class_id: 0 },
         { bbox: [0.3, 0.3, 0.2, 0.2], class_id: 1 }
     ];
     UICanvas.state.selectedAnnotationIndex = -1;
+
+    // 在 strokeRect 當下記錄當下的 strokeStyle / lineWidth（真正的觀測）
+    const seq = [];
+    const origStrokeRect = ctx.strokeRect;
+    ctx.strokeRect = (...a) => {
+        seq.push({ color: ctx.strokeStyle, width: ctx.lineWidth });
+        origStrokeRect(...a);
+    };
+
     UICanvas.render();
 
-    // strokeRect 前的 strokeStyle 就是框線色；依繪製順序應為 貓色、狗色
-    const strokes = ctx.calls.filter(c => c.name === 'strokeRect');
-    assert.equal(strokes.length, 2, '應畫出兩個框');
-    // 走 drawBox：先設 strokeStyle 再 strokeRect，用 ctx 可變狀態不易攔截，
-    // 因此改驗證「兩個框的顏色確實不同」這項最終結果。
-    assert.notEqual(UICanvas.resolveBoxColor('貓', false), UICanvas.resolveBoxColor('狗', false));
+    // 每個框兩層 → 2 個框共 4 次 strokeRect
+    assert.equal(seq.length, 4, '兩個框各應有外層+內層共兩次 strokeRect');
+
+    // 第 1 個框：外白內貓色
+    assert.equal(seq[0].color, UICanvas.BOX_HALO_COLOR, '第 1 層應為白色外框');
+    assert.equal(seq[1].color, 'hsl(10, 70%, 50%)', '第 2 層應為「貓」的標籤色');
+    // 外層必須比內層粗，否則白邊會被完全覆蓋而失去作用
+    assert.ok(seq[0].width > seq[1].width,
+        `白色外框必須比標籤色內框粗（實得 ${seq[0].width} vs ${seq[1].width}）`);
+
+    // 第 2 個框：外白內狗色 → 驗證不同標籤的內框確實不同
+    assert.equal(seq[2].color, UICanvas.BOX_HALO_COLOR, '第 2 個框外層也應為白色');
+    assert.equal(seq[3].color, 'hsl(20, 70%, 50%)', '第 2 個框內層應為「狗」的標籤色');
+
+    // 外層兩框相同（都是白），內層兩框不同 → 這是雙色設計的關鍵性質
+    assert.equal(seq[0].color, seq[2].color, '外層統一白色');
+    assert.notEqual(seq[1].color, seq[3].color, '內層必須保留類別差異');
 });
 
 test('掃描守門：render() 不得再硬編碼 #FE2F89 / #00CCFF 作為框色', () => {
@@ -367,3 +413,174 @@ test('掃描守門：P3 標註工具列不得再有匯出按鈕（匯出僅存�
             `${f} 仍有 #annotation-export-btn，會讓 P3 出現第二顆匯出鈕`);
     }
 });
+// ---------------------------------------------------------------------------
+// 6. hover 預覽標註（2026-10-01 使用者需求）
+//    標註列表有多個框時，使用者從列表刪除時需要知道畫面上是哪一個。
+// ---------------------------------------------------------------------------
+
+/** 依繪製順序記錄每次 strokeRect 當下的顏色與線寬 */
+function captureStrokes(ctx) {
+    const seq = [];
+    const orig = ctx.strokeRect;
+    ctx.strokeRect = (...a) => {
+        seq.push({ color: ctx.strokeStyle, width: ctx.lineWidth });
+        orig(...a);
+    };
+    return seq;
+}
+
+test('hover 標註：加粗但維持標籤色；selected 優先於 hover', () => {
+    const ctx = setupCanvas('bbox');
+    UICanvas.state.getLabelColor = (label) => (label === '貓' ? 'hsl(10, 70%, 50%)' : 'hsl(20, 70%, 50%)');
+    UICanvas.state.labelMap = { '貓': 0, '狗': 1 };
+    UICanvas.state.annotations = [
+        { bbox: [0, 0, 0.2, 0.2], class_id: 0 },
+        { bbox: [0.3, 0.3, 0.2, 0.2], class_id: 1 }
+    ];
+    const seq = captureStrokes(ctx);
+
+    // 一般狀態：兩框同粗
+    UICanvas.state.selectedAnnotationIndex = -1;
+    UICanvas.state.hoveredAnnotationIndex = -1;
+    UICanvas.render();
+    const normalW = seq[1].width;        // 一般狀態的內框寬    seq.length = 0;
+
+    // hover 第 1 框（貓）：應加粗，且**維持標籤色**（不變青色）
+    UICanvas.state.hoveredAnnotationIndex = 0;
+    UICanvas.render();
+    assert.equal(seq.length, 4, 'hover 不得改變框數量');
+    assert.equal(seq[1].color, 'hsl(10, 70%, 50%)',
+        'hover 的框必須維持自己的標籤色（不可變成 selected 的青色）');
+    assert.ok(seq[1].width > normalW,
+        `hover 應加粗（一般 ${normalW} → hover ${seq[1].width}）`);
+
+    // ★ 2026-10-01 使用者回報「加粗不明顯」→ 再回報改用閃爍虛線。
+    //   hover 框的光暈（白色外框）必須是**虛線**且寬度**隨相位呼吸**。
+    //   動態提示不依賴顏色對比，比靜態加粗更可靠。
+    const minExpected = 3 + UICanvas.HOVER_HALO_MIN_EXTRA;
+    const maxExpected = 3 + UICanvas.HOVER_HALO_MAX_EXTRA;
+
+    // phase = 0 → 最窄；phase = 1 → 最寬
+    // ★ 斷言「所有 strokeRect 中的最大值」而非 seq[0]：
+    //   node --test 會並發執行同一檔內的測試且共用 UICanvas.state，
+    //   依賴固定索引（seq[0]）易因狀態殘留而 flaky。
+    //   「hover 框是最寬的」這個性質本身就是正確且穩定的不變式。
+    UICanvas.state.hoveredAnnotationIndex = 0;
+    UICanvas.state.selectedAnnotationIndex = -1;
+    ctx.dashCalls.length = 0;
+    UICanvas.state.hoverPhase = 0;
+    UICanvas.render();
+    const narrowHalo = Math.max(...seq.map((s) => s.width));
+    // 從 dashCalls 讀「outer 那次」呼叫時的 offset —— 不可讀 ctx.lineDashOffset，
+    // 因為 drawBox 結束時會把 lineDashOffset 歸零（避免影響後續繪製）。
+    const dashAt0 = (ctx.dashCalls.find((c) => c.tag === 'outer') || {}).offset;
+
+    ctx.dashCalls.length = 0;
+    UICanvas.state.hoverPhase = 1;
+    UICanvas.render();
+    const wideHalo = Math.max(...seq.map((s) => s.width));
+    const dashAt1 = (ctx.dashCalls.find((c) => c.tag === 'outer') || {}).offset;
+
+    assert.equal(narrowHalo, minExpected,
+        `phase=0 時光暈應為最小值 ${minExpected}px，實得 ${narrowHalo}`);
+    assert.equal(wideHalo, maxExpected,
+        `phase=1 時光暈應為最大值 ${maxExpected}px，實得 ${wideHalo}`);
+    assert.ok(wideHalo > narrowHalo,
+        `光暈必須隨相位變寬（${narrowHalo} → ${wideHalo}），否則沒有呼吸效果`);
+
+    // 虛線：外框用虛線、內框用實線（tag === 'outer'/'inner'）
+    assert.ok(ctx.dashCalls.length > 0, 'hover 必須呼叫 setLineDash（虛線效果）');
+    assert.ok(ctx.dashCalls.some((c) => c.tag === 'outer' && c.dash.length > 0),
+        'hover 的白色外框必須為虛線');
+    assert.ok(ctx.dashCalls.some((c) => c.tag === 'inner' && c.dash.length === 0),
+        'hover 的標籤色內框必須是實線（虛線會讓類別色難辨）');
+    assert.notEqual(dashAt0, dashAt1, 'lineDashOffset 應隨相位變化（流動感）');
+    seq.length = 0;
+
+    // ★ 關鍵：已選取的框即使被 hover，也不應被「洗掉」選取外觀
+    UICanvas.state.selectedAnnotationIndex = 1;   // 選中「狗」
+    UICanvas.state.hoveredAnnotationIndex = 1;    // 同時 hover 同一個
+    UICanvas.render();
+    assert.equal(seq[3].color, UICanvas.SELECTED_COLOR,
+        'selected 優先於 hover：選取中的框維持選取色');
+    seq.length = 0;
+
+    // 選中第 1 框（貓）、hover 第 2 框（狗）：兩者外觀必須不同
+    UICanvas.state.selectedAnnotationIndex = 0;
+    UICanvas.state.hoveredAnnotationIndex = 1;
+    UICanvas.render();
+    assert.equal(seq[1].color, UICanvas.SELECTED_COLOR, '選取中的框為選取色');
+    assert.equal(seq[3].color, 'hsl(20, 70%, 50%)', 'hover 中的框維持其標籤色');
+    assert.notEqual(seq[1].width, seq[3].width,
+        'selected 與 hover 的線寬應有差異（否則看不出選中與 hover 的分別）');
+});
+
+test('hover 時標註晶片底板必須變亮（使用者回報「不明顯」的第二道處理）', () => {
+    // 框線光暈加寬後，使用者仍覺不明顯 → 再疊加「晶片底板變亮」。
+    // 這裡驗證 fillStyle（底板色）的 alpha 確實提高，且文字仍是白色。
+    const ctx = setupCanvas('bbox');
+    UICanvas.state.getLabelColor = () => 'hsl(10, 70%, 50%)';
+    UICanvas.state.labelMap = { '貓': 0 };
+
+    const fills = [];
+    const origFillRect = ctx.fillRect;
+    ctx.fillRect = (...a) => { fills.push(ctx.fillStyle); origFillRect(...a); };
+    const texts = [];
+    const origFillText = ctx.fillText;
+    ctx.fillText = (...a) => { texts.push(ctx.fillStyle); origFillText(...a); };
+
+    UICanvas.state.annotations = [{ bbox: [0.1, 0.1, 0.2, 0.2], class_id: 0 }];
+    UICanvas.state.selectedAnnotationIndex = -1;
+    UICanvas.state.hoveredAnnotationIndex = -1;
+    UICanvas.render();
+    const normalBg = fills[0];
+    const normalTextColor = texts[0];
+    fills.length = 0; texts.length = 0;
+
+    UICanvas.state.hoveredAnnotationIndex = 0;
+    UICanvas.render();
+    const hoverBg = fills[0];
+    const hoverTextColor = texts[0];
+
+    const alphaOf = (s) => {
+        const m = /rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/.exec(String(s));
+        return m ? parseFloat(m[1]) : null;
+    };
+    const nA = alphaOf(normalBg), hA = alphaOf(hoverBg);
+    assert.ok(nA !== null && hA !== null, `底板應為 rgba()，實得 ${normalBg} / ${hoverBg}`);
+    assert.ok(hA > nA,
+        `hover 底板必須更不透明（一般 ${nA} → hover ${hA}）`);
+    assert.equal(hA, UICanvas.CHIP_HOVER_BG_ALPHA,
+        'hover 底板不透明度應等於 CHIP_HOVER_BG_ALPHA');
+    assert.equal(hoverTextColor, normalTextColor,
+        'hover 只加亮底板、不換文字色（白底白字不可讀）');
+});
+
+test('setHoveredAnnotation：索引未變時不重繪（避免 hover 反覆觸發重繪）', () => {
+    setupCanvas('bbox');
+    let renders = 0;
+    const orig = UICanvas.render;
+    UICanvas.render = function () { renders += 1; return orig.call(this); };
+    try {
+        UICanvas.state.hoveredAnnotationIndex = -1;
+        UICanvas.setHoveredAnnotation(2);
+        assert.equal(renders, 1, '首次設定應重繪');
+        UICanvas.setHoveredAnnotation(2);
+        assert.equal(renders, 1, '同一索引重複設定不應重繪');
+        UICanvas.setHoveredAnnotation(-1);
+        assert.equal(renders, 2, '清除應重繪');
+    } finally {
+        UICanvas.render = orig;
+    }
+});
+
+test('掃描守門：列表必須綁 mouseenter/mouseleave（否則 hover 高亮無來源）', () => {
+    const src = fs.readFileSync(path.join(here, 'ui', 'annotation.js'), 'utf8');
+    const start = src.indexOf('function renderAnnotationListUI');
+    assert.ok(start > 0, '找不到 renderAnnotationListUI');
+    const body = src.slice(start, src.indexOf('\n    }', start));
+    assert.ok(/onmouseenter\s*=/.test(body), '標註列表未綁 mouseenter → hover 高亮無來源');
+    assert.ok(/onmouseleave\s*=/.test(body), '標註列表未綁 mouseleave → 滑開後高亮不會消失');
+    assert.ok(/setHoveredAnnotation\s*\(/.test(body), 'hover 事件未呼叫 setHoveredAnnotation');
+});
+

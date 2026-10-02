@@ -18,6 +18,15 @@ export const UICanvas = {
         mode: 'bbox', // 'bbox' 或 'line'
         currentClassId: 0, // 目前選擇的類別 ID（由外部 UI 設定）
         selectedAnnotationIndex: -1, // -1 = 無選中
+        // 2026-10-01：滑鼠 hover 的標註索引（從標註列表觸發）。
+        // 與 selectedAnnotationIndex 刻意分開 —— hover 暫時、選取持續（見 setHoveredAnnotation）。
+        hoveredAnnotationIndex: -1,
+        // 2026-10-01：hover 閃爍動畫的時鐘（0~1，用於虛線相位）。
+        // 由 _hoverTick() 以 requestAnimationFrame 持續推進；
+        // 無 hover 時為 -1（代表「不跑動畫」）。
+        hoverPhase: -1,
+        // requestAnimationFrame 的 handle；-1 = 未啟動。用於確保不重複啟動動畫迴圈。
+        hoverRafId: -1,
         labelMap: {}, // class_id → 類別名稱對照表
         // 2026-10-01：由呼叫端注入的標籤取色函式（來自 P2 的 UIComponents.getLabelColor），
         // 讓 bbox 框線與 P2 縮圖／統計同色。未注入時退回舊的單色。
@@ -44,6 +53,54 @@ export const UICanvas = {
     SELECTED_COLOR: '#00CCFF',
     // 未注入 P2 標籤取色時的退 fallback 色（維持舊的單色行為）。
     DEFAULT_BOX_COLOR: '#FE2F89',
+
+    // ── 框線雙色描邊（2026-10-01）───────────────────────────────────
+    // 為什麼要雙層：框線畫在「照片」上，不是畫在 UI 底色上。
+    //   照片的明暗與主題無關 —— 白色背景的商品照在 light/dark 主題下
+    //   都是白底；夜景照則相反。單一顏色必然有一半情況看不見。
+    //
+    // 解法（兩層互補）：
+    //   外層 BOX_HALO_COLOR（白、粗）→ 在暗照片上提供邊界
+    //   內層 標籤色（細）            → 保留類別辨識；且在亮照片上反而清楚
+    // 因此白+標籤色這組搭配可涵蓋絕大多數照片，不需判斷照片明暗
+    // （判斷的話得每張取樣，且漸層照片會誤判，成本高）。
+    BOX_HALO_COLOR: '#FFFFFF',
+
+    // ── hover 閃爍虛線（2026-10-01，使用者回報「加粗不明顯」後改用）────
+    // 為什麼改用閃爍而不只是加粗：
+    //   靜態的加粗/加寬在高解析照片上仍可能被背景吞沒；
+    //   「動態」是不依賴顏色對比的訊號，人眼對運動的敏感度遠高於對粗細。
+    //   （業界工具如 CVAT / LabelImg 的 hover 提示也常以動態強調。）
+    //
+    // 頻率 2Hz（使用者指定「慢速呼吸，柔和不惱人」）：
+    //   每秒 2 次往返。快於此會讓人眼花、易疲勞。
+    HOVER_BLINK_HZ: 2,
+    // 虛線樣式 [實線段, 空白段]（畫布像素）。
+    HOVER_DASH: [7, 5],
+    // 呼吸的振幅：光暈寬度在此範圍內起伏。設 0 即為固定寬度（無呼吸）。
+    HOVER_HALO_MIN_EXTRA: 2,
+    HOVER_HALO_MAX_EXTRA: 8,
+    // 外層比內層粗這麼多 px，確保白邊不會被內層完全覆蓋。
+    BOX_HALO_EXTRA_PX: 2,
+
+    // hover 時光暈額外加寬的 px（2026-10-01 使用者回報「高亮不明顯」）。
+    // 只加寬光暈、不加寬內框 —— 內框變粗會讓標籤色的可辨識性下降，
+    // 而使用者要的是「知道是哪個框」，不是「框更粗」。
+    BOX_HOVER_HALO_EXTRA_PX: 5,
+
+    // hover 時晶片底板的不透明度（比一般狀態更亮更實）。
+    // 一般為 0.72（半透明黑）；hover 提到 0.92，讓文字與色條更突出。
+    CHIP_HOVER_BG_ALPHA: 1,
+
+    // 框線（內層標籤色）的固定明度，**不依主題變動**。
+    // 取 52 的理由：介於深底可見（需 ≥55 較佳）與亮照片可辨（需 ≤60）
+    // 之間的中值；且因外層有白色描邊兜底，暗照片上的可見性不依賴這個值。
+    BOX_LABEL_LIGHTNESS: 52,
+
+    // 標註晶片色條用的「亮化」幅度（%）。
+    // 晶片底板是 rgba(0,0,0,0.72) 深色，若直接用標籤原色，
+    // 偏暗的標籤色（light 主題 L≈42）在深底上幾乎看不見色條。
+    CHIP_BAR_LIGHTEN_PCT: 22,
 
     /**
      * 設定十字尺規顏色並立即重繪。
@@ -84,6 +141,11 @@ export const UICanvas = {
         this.state.drawingState = 0; // 重置點擊兩點狀態機
         this.state.isDrawing = false;
         this.state.selectedAnnotationIndex = -1; // 重置選中狀態
+        // 2026-10-01：也要重置 hover —— 否則切圖後舊索引會指向新圖的框，
+        // 畫面會莫名高亮一個不相關的框。
+        this.state.hoveredAnnotationIndex = -1;
+        // 停止閃爍動畫 —— 否則 rAF 會持續對舊畫布重繪（洩漏 + 浪費 CPU）。
+        this._stopHoverAnimation();
         this.state.pointerX = null; // 重置十字尺規
         this.state.pointerY = null;
         this.loadCrosshairColor(); // 還原使用者上次選的尺規顏色（2026-10-01 可調色）
@@ -276,6 +338,10 @@ export const UICanvas = {
         if (h.mouseup) window.removeEventListener('mouseup', h.mouseup);
         if (h.keydown && canvas) canvas.removeEventListener('keydown', h.keydown);
         
+        // 2026-10-01：離開標註模式時必須停止 hover 閃爍動畫，
+        // 否則 rAF 會一直跑下去（洩漏 + 對已卸載的畫布重繪）。
+        this._stopHoverAnimation();
+
         this.state.handlers = {};
     },
 
@@ -302,8 +368,21 @@ export const UICanvas = {
             annotations.forEach((ann, idx) => {
                 if (ann.bbox) {
                     const isSelected = (idx === this.state.selectedAnnotationIndex);
+                    // 2026-10-01：hover 預覽（滑鼠停在標註列表項目上）。
+                    // 優先級 selected > hovered：已選取的框即使被 hover 也不改變，
+                    // 否則 hover 會「洗掉」選取狀態的視覺回饋。
+                    const isHovered = (idx === this.state.hoveredAnnotationIndex);
                     const label = this.getAnnotationLabel(ann.class_id, idx);
-                    this.drawBox(ann.bbox, this.resolveBoxColor(label, isSelected), label, isSelected);
+                    // ★ 只有 selected 才換成青色；hover 只加粗、維持標籤色
+                    //   （先前誤傳 isSelected || isHovered，會讓 hover 也變青色，
+                    //    與「hover 用加粗而非換色區隔」的設計相矛盾）。
+                    this.drawBox(
+                        ann.bbox,
+                        this.resolveBoxColor(label, isSelected),
+                        label,
+                        isSelected,
+                        isHovered && !isSelected
+                    );
                 }
             });
 
@@ -342,20 +421,90 @@ export const UICanvas = {
         ctx.restore();
     },
 
-    drawBox(bbox, color, label, isSelected = false) {
+    /**
+     * 繪製標註框（雙色描邊，2026-10-01）
+     *
+     * 兩層各司其職：
+     *   1. 外層白色粗線 → 在**暗照片**上提供邊界（照片明暗與主題無關，
+     *      單色框必然有一半情況看不見）
+     *   2. 內層標籤色細線 → 保留**類別辨識度**，且在亮照片上反而清楚
+     *
+     * 兩層互補，故不需判斷照片明暗（判斷需每張取樣，漸層照片會誤判）。
+     *
+     * @param {number[]} bbox [x, y, w, h] 皆為 0~1 的相對座標
+     * @param {string} color 標籤色（內層用）
+     * @param {string} label 標籤文字
+     * @param {boolean} [isSelected=false] 是否選取中（青色，最粗）
+     * @param {boolean} [isHovered=false] 是否 hover 中（加粗但維持標籤色）。
+     *   與 isSelected 的差別：hover 只加粗、不換色，且優先級較低
+     *   （已選取的框被 hover 時不會改變外觀）。
+     */
+    drawBox(bbox, color, label, isSelected = false, isHovered = false) {
         const { ctx, canvas } = this.state;
         const [x, y, w, h] = bbox;
-        
+
         const px = x * canvas.width;
         const py = y * canvas.height;
         const pw = w * canvas.width;
         const ph = h * canvas.height;
 
-        ctx.strokeStyle = color;
-        ctx.lineWidth = isSelected ? 4 : 2;
+        // 線寬：selected(4) > hovered(3) > 一般(2)
+        const baseWidth = isSelected ? 4 : (isHovered ? 3 : 2);
+        // ── hover：閃爍虛線 + 呼吸光暈（2026-10-01）────────────────────
+        // 靜態加粗被使用者回報「不明顯」，故改用動態提示：
+        //   · 光暈寬度依 hoverPhase 在 [MIN, MAX] 之間往返（呼吸）
+        //   · 虛線的 lineDashOffset 隨相位前移 → 看起來在流動
+        // 人眼對運動的敏感度遠高於對粗細，故此法在複雜背景上更可靠。
+        const blinking = isHovered && !isSelected;
+        let haloWidth = baseWidth + UICanvas.BOX_HALO_EXTRA_PX;
+        if (blinking) {
+            const phase = (this.state.hoverPhase >= 0) ? this.state.hoverPhase : 0;
+            const extra = UICanvas.HOVER_HALO_MIN_EXTRA
+                + phase * (UICanvas.HOVER_HALO_MAX_EXTRA - UICanvas.HOVER_HALO_MIN_EXTRA);
+            haloWidth = baseWidth + extra;
+
+            // 處線相位：隨呼吸相位前移，形成流動感（與呼吸同頼）
+            ctx._dashTag = 'outer'; // 測試用：標記本次 setLineDash 的來源
+            // ★ 先設 lineDashOffset 再設 lineDash —— setLineDash 會重置 offset，
+            //   順序額倒會讓「流動」效果完全看不到（畫面變成靜止處線）。
+            ctx.lineDashOffset = -phase * 12;
+            ctx.setLineDash(UICanvas.HOVER_DASH);
+        }
+
+        // 第 1 層：白色外框（粗）—— 暗照片上的可見性來源；hover 時呼吸且為虛線
+        ctx.strokeStyle = UICanvas.BOX_HALO_COLOR;
+        ctx.lineWidth = haloWidth;
         ctx.strokeRect(px, py, pw, ph);
 
-        this.drawLabelChip(label, px, py > 22 ? py - 6 : py + 18, color, isSelected);
+        // 第 2 層：標籤色內框（細）—— 類別辨識；亮照片上靠這層看清
+        // hover 時不畫虛線（虛線套在內框會讓標籤色難以辨識）
+        if (blinking) { ctx._dashTag = 'inner'; ctx.setLineDash([]); }
+        ctx.strokeStyle = color;
+        ctx.lineWidth = baseWidth;
+        ctx.strokeRect(px, py, pw, ph);
+
+        // 還原 lineDash，避免影響後續繪製（尺規等）
+        ctx.setLineDash([]);
+        ctx.lineDashOffset = 0;
+
+        this.drawLabelChip(label, px, py > 22 ? py - 6 : py + 18, color, isSelected, blinking);
+    },
+
+    /**
+     * 將 hsl() 色字串的明度提高指定百分比（用於深底板上的色條）。
+     *
+     * 為什麼需要：標註晶片的底板是 rgba(0,0,0,0.72) 深色，
+     * 直接畫偏暗的標籤色（light 主題 L≈42）在上面幾乎看不見。
+     *
+     * @param {string} color CSS 色字串，目前僅支援 hsl(h, s%, l%) 格式
+     * @param {number} pct 要增加的明度百分比
+     * @returns {string} 亮化後的色字串；格式不符時原樣回傳
+     */
+    lightenHsl(color, pct) {
+        const m = /^hsl\(\s*(-?[\d.]+)\s*,\s*([\d.]+)%\s*,\s*([\d.]+)%\s*\)$/.exec(String(color).trim());
+        if (!m) return color;
+        const l = Math.min(100, parseFloat(m[3]) + pct);
+        return `hsl(${m[1]}, ${m[2]}%, ${l}%)`;
     },
 
     /**
@@ -366,8 +515,12 @@ export const UICanvas = {
      * @param {number} y 文字基準 y
      * @param {string} color 原標註色（用於底板左側色條）
      * @param {boolean} isSelected 是否為選中狀態（字體略大）
+     * @param {boolean} [isHovered=false] 是否為 hover 預覽（2026-10-01）。
+     *   hover 時底板更亮更實（alpha 0.72 → 0.92），讓文字與色條在
+     *   雜亂照片上更突出 —— 使用者回報框線高亮「不明顯」，光暈加寬仍不足，
+     *   故疊加底板變亮。文字維持白色（白底白字不可讀，故只加亮底板不換字色）。
      */
-    drawLabelChip(text, x, y, color, isSelected = false) {
+    drawLabelChip(text, x, y, color, isSelected = false, isHovered = false) {
         const { ctx } = this.state;
         const fontSize = isSelected ? this.LABEL_FONT_SIZE_SELECTED : this.LABEL_FONT_SIZE;
         ctx.save();
@@ -380,12 +533,16 @@ export const UICanvas = {
         const w = metrics.width + padX * 2;
         const h = fontSize + padY * 2;
 
-        // 深色底板（半透明黑），疊在任何背景上都可讀
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
+        // 深色底板（半透明黑），疊在任何背景上都可讀。
+        // hover 時提高不透明度 → 底板更實、文字更突出。
+        const bgAlpha = (isHovered && !isSelected) ? UICanvas.CHIP_HOVER_BG_ALPHA : 0.72;
+        ctx.fillStyle = `rgba(0, 0, 0, ${bgAlpha})`;
         ctx.fillRect(x - padX, y - fontSize - padY, w, h);
 
-        // 左側色條標示類別色
-        ctx.fillStyle = color;
+        // 左側色條標示類別色。
+        // 2026-10-01：改用「亮化版」—— 底板是 rgba(0,0,0,0.72) 深色，
+        // 偏暗的標籤色（light 主題 L≈42）直接畫上去幾乎看不見色條。
+        ctx.fillStyle = this.lightenHsl(color, UICanvas.CHIP_BAR_LIGHTEN_PCT);
         ctx.fillRect(x - padX, y - fontSize - padY, 3, h);
 
         ctx.fillStyle = '#FFFFFF';
@@ -400,6 +557,95 @@ export const UICanvas = {
     setSelectedAnnotation(index) {
         this.state.selectedAnnotationIndex = index;
         this.render();
+    },
+
+    /**
+     * 設定「滑鼠停留」的標註索引（hover 預覽）並重新繪製。
+     *
+     * 為什麼需要（2026-10-01 使用者需求）：標註列表有多個框時，
+     * 從列表刪除框時無法對應畫面上是哪一個。使用者 hover 列表項目時，
+     * 畫面對應的框要高亮，才能知道要刪哪一個。
+     *
+     * ★ 與 selectedAnnotationIndex **刻意分開**：
+     *   hover 是暫時的（滑開就消失），選取是持續的（點一下就固定）。
+     *   若共用同一狀態，滑鼠滑過列表會把選取狀態洗掉，
+     *   使用者點了「選取框」再滑鼠碰到列表就失效了。
+     *
+     * @param {number} index 標註索引，-1 表示清除 hover
+     */
+    setHoveredAnnotation(index) {
+        if (this.state.hoveredAnnotationIndex === index) return; // 避免重複重繪
+        this.state.hoveredAnnotationIndex = index;
+        this._syncHoverAnimation();
+        this.render();
+    },
+
+    /**
+     * 依 hover 狀態啟動／停止閃爍動畫（2026-10-01）。
+     *
+     * 為什麼需要這個方法：若只靠 setHoveredAnnotation 呼叫 render()，
+     * 虛線相位不會前進，畫面就是「靜態虛線」而非閃爍。
+     * 而若無腦常駐 rAF，則在沒有 hover 時白白重繪、浪費 CPU。
+     * 故此處明確管理「何時跑動畫」，並在 hover 結束時把相位歸零。
+     *
+     * @private
+     */
+    _syncHoverAnimation() {
+        const needsAnim = this.state.hoveredAnnotationIndex >= 0;
+        if (!needsAnim) {
+            this._stopHoverAnimation();
+            return;
+        }
+        if (this.state.hoverRafId === -1) {
+            this._startHoverAnimation();
+        }
+    },
+
+    /**
+     * 啟動閃爍動畫迴圈（@private）
+     * 以 requestAnimationFrame 推進 hoverPhase 並重繪。
+     */
+    _startHoverAnimation() {
+        const step = () => {
+            // 無 hover → 停止迴圈（避免空轉）
+            if (this.state.hoveredAnnotationIndex < 0) {
+                this.state.hoverRafId = -1;
+                return;
+            }
+            // 以時間而非影格數推進，確保不同螢幕更新率下閃爍速度一致
+            const now = (typeof performance !== 'undefined' && performance.now)
+                ? performance.now() : Date.now();
+            if (this._hoverClockStart == null) this._hoverClockStart = now;
+            const elapsed = (now - this._hoverClockStart) / 1000; // 秒
+            // 三角波：0→1→0，來回呼吸
+            const cycles = elapsed * UICanvas.HOVER_BLINK_HZ;
+            const tri = Math.abs((cycles % 2) - 1); // 0..1..0
+            this.state.hoverPhase = tri;
+
+            this.render();
+
+            const raf = (typeof requestAnimationFrame !== 'undefined')
+                ? requestAnimationFrame : (cb) => setTimeout(() => cb(Date.now()), 16);
+            this.state.hoverRafId = raf(step);
+        };
+        this._hoverClockStart = null;
+        const raf = (typeof requestAnimationFrame !== 'undefined')
+            ? requestAnimationFrame : (cb) => setTimeout(() => cb(Date.now()), 16);
+        this.state.hoverRafId = raf(step);
+    },
+
+    /**
+     * 停止閃爍動畫並歸零相位（@private）
+     */
+    _stopHoverAnimation() {
+        if (this.state.hoverRafId !== -1) {
+            const cancel = (typeof cancelAnimationFrame !== 'undefined')
+                ? cancelAnimationFrame : clearTimeout;
+            try { cancel(this.state.hoverRafId); } catch (e) { /* 忽略 */ }
+            this.state.hoverRafId = -1;
+        }
+        this._hoverClockStart = null;
+        this.state.hoverPhase = -1;
     },
 
     /**
