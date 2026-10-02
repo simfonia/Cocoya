@@ -26,6 +26,11 @@
                 'cursorColour':              '#FE2F89'
             }
         },
+        // 2026-10-01（P2-16）：補上 SPIKE_SENSOR（無後綴）。
+//   這是 theme_contract 新增「msgColours 必須覆蓋全部預設色鍵」守門時抓到的
+//   既存缺口 —— candy 一直只有 SPIKE_SENSOR_COLOR，漏了無後綴的 SPIKE_SENSOR，
+//   導致 spike_blocks.js 的 SPIKE 主積木在 candy 主題下吃不到覆寫色。
+//   值與 SPIKE_SENSOR_COLOR 相同（兩者本來就是同一類感測器）。
         msgColours: {
             'STRUCTURE': '#8A7F70', 'LOGIC': '#8E7CF8', 'LOOPS': '#4ECDC4',
             'MATH': '#FFB347', 'TEXT': '#7ED957', 'TYPES': '#FFD166',
@@ -38,7 +43,7 @@
             'MCU_CAR_MUSIC': '#F49AC2', 'MCU_CAR_LED': '#89CFF0', 'MCU_CAR_SENSOR': '#B5E48C',
             'MCU_CAR_BUTTON': '#76C893',
             'SPIKE': '#D28303', 'SPIKE_MOTOR': '#FFB26B', 'SPIKE_MUSIC': '#F49AC2',
-            'SPIKE_LED': '#89CFF0', 'SPIKE_SENSOR_COLOR': '#B5E48C',
+            'SPIKE_LED': '#89CFF0', 'SPIKE_SENSOR': '#B5E48C', 'SPIKE_SENSOR_COLOR': '#B5E48C',
             'SPIKE_SENSOR_DISTANCE': '#5BC8AF', 'SPIKE_SENSOR_FORCE': '#A86A4A',
             'SPIKE_SENSOR_IMU': '#C77DFF', 'SPIKE_BUTTON': '#76C893'
         },

@@ -421,3 +421,13 @@
 - [x] 驗收：272/272 綠（3 次取樣 1435/1080/1134ms）、eslint 0 error。
 - [x] 使用者拍板 Batch 2 範圍：P1-3 CSS token 化、P2-7 標籤色主題化、P2-16 dark 補 msgColours。
 - [ ] **Batch 2 執行**（待指示）：P1-3 + P2-7 + P2-16。P2-16 配色採「做法 1：沿用預設色相與飽和、僅降亮度」，並須推翻 `theme_contract.test.mjs` 第 4 測（該測試是 Batch 0 我替使用者判定「刻意」所寫，此次經使用者明確推翻）。candy 配色為淺底設計，不可直接沿用深底。
+### [2026-10-01] #task[Batch 2 / P2-16] dark 主題補 msgColours（使用者已目視確認）
+- [x] **推翻** Batch 0 由我代判的 `theme_contract.test.mjs` 第 4 測（原寫「light/dark 不宣告 msgColours 為合法」），改為「dark 與 candy 必須宣告、light 沿用預設色」。使用者目視回報深色刺眼 → 選 B。
+- [x] `cocoya_dark.js` 新增 `msgColours` 38 鍵：OKLCH 換算，色相不變、彩度 ×0.88、亮度收斂到深底適配區間（>0.68 降、<0.66 提）。
+- [x] 使用者目視後手動再調暗 8 鍵（STRUCTURE/CODING/AI_BASIC/AI_DRAW/AI_HAND/AI_FACE/AI_POSE/AI_INFERENCE），已更新主題檔註解記錄，標明「勿用初始公式覆蓋」。
+- [x] 補 `cocoya_candy.js` 的 `SPIKE_SENSOR`（新守門抓出的既存缺口：candy 只有 SPIKE_SENSOR_COLOR，導致 SPIKE 主積木吃不到覆寫色）。
+- [x] 守門兩次假綠：① 只驗「不得多出預設色外的鍵」→ 刪掉整個 SPIKE_MUSIC 覆寫仍全綠；② 補上「必須覆蓋全部預設色鍵」後才抓到（並連帶抓出 candy 缺口）。
+- [x] 變異測試皆報紅：拼字錯誤（AI_INFERANCE）、缺整個覆寫（SPIKE_MUSIC）。
+- [x] 驗收：theme_contract 4/4、全專案 272/272、ESLint 0 error、使用者目視 OK。
+- [ ] **P1-3 暫緩**：稽核報告「144 個 hex」含 token 定義值，實際待處理 87 處（dark 區塊 44）。關鍵發現：`--dsm-*` 有**三套並存**來源（CSS :root ＋ CSS body.cocoya-dark-mode 區塊 ＋ 三主題檔 cssVars，各 34~35 鍵）。在確定收斂方向前做替換只是把混亂換位置。待主題系統重構方向確定後再處理。
+- [ ] 主題系統重構（待決策）：三套並存問題如何收斂？建議先產出「只讀盤點報告」（誰是實際生效的那份、哪些衝突、可行的收斂方向），再動手。
