@@ -18,6 +18,8 @@ ui/dist/
 src-tauri/target/
 src-tauri/bin/
 src-tauri/gen/
+# 覆蓋率報告（T5：基準數據屬暫態產物，committed baseline 僅供本地趨勢對照）
+coverage/
 
 # Cocoya Runtime / Temp
 temp/

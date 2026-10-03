@@ -316,13 +316,72 @@
 - [ ] T4 前置盤點：8 支 e2e 腳本的相依套件（numpy／tensorflow／PIL）與執行時間，評估轉 pytest 順序
 
 #### Batch 6（清理／收尾）
-- [ ] P2-9 repo 殘留：3 個 `cocoya-*.vsix`、`nul`、`DATASET_MANAGER_PLAN.md`（**需使用者確認**才刪／移）；`.gitignore` 涵蓋 `*.vsix` 與 `nul`；確認 `test/project2~6.xml` 是否仍被 `temp_scripts/e2e_*` 引用
-- [ ] P3-4 `FILE_STRUCTURE.md` 已有行號錯位（L18-19 處脫離樹狀縮排）→ 分段重排並去除行號；`log/COCOYA_STATE.md` §6 技術債合併指向本計畫
-- [ ] P3-3 死碼掃描：`index.js` 匯出的 `removeAnnotation`／`refreshDynamicPanels`／`refreshPreview` 等是否仍被 `window.CocoyaDataset` 外部呼叫；`sampler.js`／`ui_canvas.js` 與新 `ui/samplerPanel.js`／`ui/annotation.js` 是否職能重疊
-- [ ] **T5** 覆蓋率基準：加 c8，先只產報告不設門檻 → 連續兩週後依實際值收緊
+- [x] P2-9 repo 殘留 ✅ 2026-10-03（使用者授權全刪）
+  **實查結論**（計畫原文的假設需修正）：`.gitignore` **早已涵蓋** `*.vsix`／`nul`／`test/`（含 `!ui/test/` 例外），
+  故「補 .gitignore」無須動作。已刪：`cocoya-0.7.0/0.7.7/0.8.0.vsix`（193MB，**皆未進版控**）、
+  `nul`（0 bytes）、`DATASET_MANAGER_PLAN.md`（**已進版控**，檔頭自標 SUPERSEDED；
+  刪前備份 `backup/DATASET_MANAGER_PLAN_20261003_164350.md`，並 `git rm`）。
+  `test/project*.xml`（`test/` 整個目錄已被 gitignore）經跨端檢索 `temp_scripts`／`scripts`／`src`／
+  `src-tauri`／`ui/src` **零引用** → 保留不動（已被 gitignore 排除，無需搬移）。
+- [x] P3-4 `FILE_STRUCTURE.md` 重排 + `log/COCOYA_STATE.md` §6 合併 ✅ 2026-10-03
+  **計畫描述與實況有落差**：計畫寫「已有**行號**錯位（L18-19 處脫離樹狀縮排）」，
+  實查檔內**根本沒有行號**（該檔從未引入行號制），真正的問題是**樹狀縮排錯位 8 處**。
+  已修（`temp_scripts/fs_check.cjs` 為本次寫的一次性掃描器，gitignored）：
+  ① `py_ai_pose_calc_angle_*` 兩行脫離 `docs/help/` 子樹；② `openTrainingReport.md` 重複列出兩次；
+  ③ `log/mappings/` 下連續 5 個 `└──`（應只有最後一個）；④ **最嚴重**：`firmware/`、`deploy/`、
+  `deploy_mcu.py`、`extension_icon.png`、sidecar 四檔被寫在 **`src-tauri/` 底下**（實查 `Test-Path`
+  確認全在 `resources/`，且 `resources/` 段另有記載 → 重複矛盾，已移回並補 `src-tauri/` 實際
+  缺少的 `permissions/`、`build.rs`、`resources/`）；⑤ 檔尾 `└── ui/src/.../cocoya_dark.js`
+  以完整路徑行脫離樹狀（與 `themes/` 段重複，已刪）；⑥ `temp_scripts/` 子項縮排殘留。
+  另補 `log/mappings/` 三個漏登項、`temp_scripts/` 摘要化。
+  **新守門** `ui/src/modules/core/file_structure_contract.test.mjs`（5 測，掃描型）。
+  變異測試 3 種皆報紅：① 把 `docs/help/` 最後一行改 `└──`（還原原始 bug 形狀）；
+  ② 檔尾加 `└── ui/src/modules/core/core.js`；③ 註解塞入「見 L18-19」。還原後 5/5 綠。
+- [x] P3-3 死碼掃描 ✅ 2026-10-03（**結論：3 個待查匯出中 2 個為死碼，1 個是活的**）
+  **跨端檢索**（`ui/src`＋`ui/index.html`＋`docs`＋`examples`＋`resources`＋VSIX `src`）後：
+  - `removeAnnotation`：**活的** —— `ui/annotation.js:381/397` 產生 inline
+    `onclick="window.CocoyaDataset.removeAnnotation(${i})"`，**經字串內嵌呼叫**，一般檢索抓不到。
+    → 保留（AGENTS.md 跨端檢索鐵則的實例：只看 `ui/src` 的直接呼叫會誤判）。
+  - `refreshDynamicPanels` / `refreshPreview`：**死的** —— window 命名空間上零消費者；
+    內部呼叫一律走 `ui_layout.js` 模組層級。已從 `index.js` 的 `Object.assign` 移除，
+    並連帶把 `ui_layout.js` 的兩處 `export` 降為內部 `function`（該檔唯一外部消費者就是 `index.js`）。
+  - 職能重疊比對：`sampler.js`（Bridge/相機狀態機）vs `ui/samplerPanel.js`（DOM 面板編排）
+    **不重疊**；`ui_canvas.js`（canvas 繪製與滑鼠事件）vs `ui/annotation.js`（標註模式編排）
+    **不重疊**。與 Batch 0 對 `ui_components.js` 的結論一致 —— **記錄「查無重疊」並留下證據，
+    比硬湊一個刪除動作更有價值**（AGENTS.md 明載）。
+  - 驗收：322/322 綠（`node --check` 兩檔 + 全量）。
+- [x] Stage 0 殘項 T3（共用測試夾具）✅ 2026-10-03
+  首輪（2026-09-30）只收了 5 檔的 fake DOM。殘留盤點後再收 5 檔：
+  `statusMessage`／`panels`（自帶 fake element）、`featurePanel`／`labelManager`／`exportUseCases`
+  （自造假 `t`/`escapeHtml`）、`modal`（自帶 `optionList`＋帶標記的 `t`）。
+  新增 `ui/test/depsStubs.js`（fallbackT／taggedT／rawEscapeHtml／angleEscapeHtml／
+  optionListModal／optionListPanels）；`fakeDom.js` 補 `classList.toggle`（statusMessage.js
+  會呼叫，缺了直接 TypeError）與 `_appended` 累積（panels 斷言讀此欄位）。
+  **刻意不統一改用真實 `t()`／`escapeHtml()`**：真 `t()` 會查 `Blockly.Msg`，若某測試載入 Blockly
+  全域（`core_contract.test.mjs` 就會）會讓斷言依賴全域載入順序 —— 正是 T3 要消除的隱性相依。
+  故定位為「消除重複的**定義**、保留每檔的**選擇**」。
+  **踩坑**：兩種 `optionList` 輸出格式其實**不同**（modal 版有 `value="X"`、panels 版沒有），
+  先合併成一個函式才發現斷言不過 → 拆回兩個具名函式，差異變得明確可查。
+  驗收：**斷言零修改**，327/327 綠（322 + 新增 5）。
+- [x] **T5** 覆蓋率基準 ✅ 2026-10-03（**只產報告，未設門檻，符合 T5 階段一設計**）
+  新增 `scripts/coverage.cjs` ＋ `npm run coverage` / `coverage:check`；devDep `c8@^12`。
+  **量測範圍刻意保守**（SSOT 寫在檔內 SCOPE）：只量 `ui/src/{modules,app,bridge,utils}/**/*.js`，
+  排除測試檔與 vendored `src/blockly/**`。
+  理由：`ui/src` 混有三種性質不同的檔案（可測純邏輯／只在瀏覽器跑的膠水／第三方 vendored），
+  全量統計會被 vendored 與膠水稀釋到毫無行動价值。**這不是全專案覆蓋率。**
+  **基準值**：行 **55.66%**（4052/7279）、分支 78.95%、函式 59.8%。
+  **最需補測**：`bridge/tauri.js` **8.0%**（1864 行，最大缺口）『 `importUseCases.js` 16.4%
+  ＞ `sampler.js` 33.4% ＞ `ui_components.js` 39.7% ＞ `bridge/base.js` 54.3%。
+  → **T7 的「tauri.js 子模組補測試」與這份清單完全對得上**（tauri.js 是唯一 <20% 的超大檔）。
+  `baseline.json` 內 `enforce: false` ＋ `coverage/` 已 gitignore → 目前不擺任何流程。
+  **踩坑**：`npm install --save-dev c8` 會重排 `package.json` 三行既存縬排
+  （`pristine:examples`／`vscode:prepublish`／`test:theme` 原本就是 4 空格、與鄰行 8 空格不一致）。
+  已還原為原樣，diff 只留 c8 一行。**教論：npm 會順手格式化整檔，diff 出現無關行時要逐一還原。**
+  **階段二**：連續兩週後依實際值把 `enforce` 改 true 並填 `minLines`。
 - [ ] **T6** CI 與 pre-commit：GitHub Actions workflow（`node --test`／`tsc --noEmit`／`lint`／`cargo check`／`cargo test`／`py_compile`）＋ husky pre-commit 跑快速子集（**待決策**：CI 平台是否採 GitHub Actions）
 - [ ] **T7** 高風險檔補契約測試（拆檔後）：`bridge/tauri.js` 拆檔後各子模組、sidecar 訊息協定（stdout 單一 JSON）。**Batch 0 已補前段**（anchor ＋ capabilities ＋ 快照／備份），拆檔後仍需逐子模組補
 - [ ] **T8** 測試分類標註：區分**契約測試**（守設計：manifest／i18n／色碼／主題 token）與**行為測試**（守重構：controller／use-case），禁止只有後者
+  （**本批已補兩個契約測試**：`file_structure_contract`（文件契約）與既有 `sidecar_module_split`）
 
 #### 待決策（2026-10-01 Batch 0 浮現；詳見計畫 §14.5）
 - [ ] **P2-16 `cocoya_dark` 缺 `msgColours` 是刻意或疏漏**：Batch 0 已依 AGENTS.md「新增積木模組檢查清單」第 2/3 點判定為**符合設計**（根 `zh-hant.js`/`en.js` 的 `COLOUR_*` 才是預設色 SSOT，主題 `msgColours` 為選配覆寫），並把此判斷**釘進 `theme_contract.test.mjs` 第 4 測**。⚠️ 若使用者認為應是疏漏，需推翻該測試改為要求 dark 有覆寫

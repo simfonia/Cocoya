@@ -41,10 +41,17 @@
 | 08-24~09-01 | Dataset Manager 三層重構 Stage 0-6（含手動測試 backlog 與 Gate 簽核遺留） |
 
 ## 6. 尚未解決／待決策（重要技術債，勿踩舊坑）
+> **本節只列「程式行為面的技術債」。** 檔案結構、文件一致性等非行為面的整理工作
+> 統一由 `FILE_STRUCTURE.md` 檔頭的維護鐵律與其守門
+> （`ui/src/modules/core/file_structure_contract.test.mjs`）管理，
+> 進度見 `log/todo.md`「ComprehensiveAudit_2026-09-27」Batch 6，不在此重複記載。
+
 - **Tauri dev sidecar 路徑債**：`get_sidecar_dir` 以 Resource 目錄（`target\debug\resources`）優先於專案根原始檔 → **改 sidecar 後須手動同步 dev 副本＋重啟 app**（違反「dev 優先原始檔」規範，建議優先序對調或 build 自動同步）。
 - **vidPid 表三處手動同步債**：`board_defs.js`（前端）／`mcu.rs detect_board_id`／`serialOps.ts boardIdMap`；未來改執行期讀取或 codegen。
 - **Python deploy 端對齊債**：`resources/deploy/base.py` 尚以自家 vidPid 偵測（與前端兩套 drift），未統一讀 board_defs。
 - **`--dsm-*` dark/token 非單一事實來源債**：`vscode-dark` CSS 覆寫與 `cocoya_dark` 主題 cssVars 各持一份 deep 值。
+  （部分已於 2026-10-01~02 P1-3 收斂：刪除 `dataset_manager.css` 中 `:root` 與 `body.cocoya-dark-mode` 兩處死碼 token 定義；
+  **未涵蓋** 268 個 dark 規則塊中的 88 處硬編碼 hex，詳見 `log/todo.md` P1-3 未涵蓋範圍。）
 - **`spec.js` 直用 `t()` transitional 債**：core 層文案耦合 i18n（AGENTS.md 明令不得新增同類耦合）。
 - **待產品決策**：捨棄「仍錨定」行為是否「捨棄並回首頁/清錨定」；`--dsm` dark 收斂範圍；腳位 tag 過濾清單範圍。
 
