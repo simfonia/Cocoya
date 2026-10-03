@@ -182,7 +182,7 @@ sftp.stat(abs_path)  # 正常運作
 |-------------|---------|-------------|
 | `image` | `{ label: "rock" }` | `ai_inference/classifier/` |
 | `object_detection` | `{ bbox: [x,y,w,h] 正規化 0~1 }` | `ai_inference/detector/` |
-| `line_following` | `{ line: [x1,y1,x2,y2] 正規化 0~1 }` | `ai_inference/line_follower/` |
+| `line_following` | `{ line: [x1,y1,x2,y2] 正規化 0~1 }` | `ai_inference/line_following/` |
 | `feature`/`table` | CSV 欄位 | `ai_inference/table/` |
 
 ---
@@ -203,7 +203,7 @@ sftp.stat(abs_path)  # 正常運作
 指令: downloadModel
 參數: {
   projectName,
-  taskType: "classifier",
+  taskType: "image_classifier",
   sshConfig,
   remoteModelDir,
   localOutputDir

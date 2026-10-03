@@ -55,9 +55,9 @@ function dropdownTaskTypes() {
 // ② 從 train_model 分派段取出 task_type（限 script_name 那段 if/elif）
 // 抓取範圍：從 classifier 分派到「不支援的任務類型」這個 else 為止，
 // 不可用「第一個 script_name」當終點——那會在 classifier 就停住，
-// 抓不到後面的 detector/line_follower/table/feature 分派（曾因此漏判）。
+// 抓不到後面的 detector/line_following/table/feature 分派（曾因此漏判）。
 function trainDispatchTaskTypes() {
-  const start = genSrc.indexOf('if task_type == "classifier":');
+  const start = genSrc.indexOf('if task_type == "image_classifier":');
   assert.ok(start !== -1, '找不到 train_model 的 task_type 分派段');
   const end = genSrc.indexOf('不支援的任務類型', start);
   assert.ok(end !== -1, '找不到 train_model 分派段的 else 終點');
@@ -93,7 +93,7 @@ test('① SSOT 下拉清單含 feature，且無重複', () => {
   assert.ok(types.includes('feature'), '下拉清單應含 feature（缺＝G1 未修）');
   assert.deepEqual([...new Set(types)], types, '下拉清單不得有重複 task type');
   // 四個既有類型不得被回歸移除
-  for (const t of ['classifier', 'detector', 'line_follower', 'table']) {
+  for (const t of ['image_classifier', 'object_detection', 'line_following', 'table']) {
     assert.ok(types.includes(t), `下拉清單應保留既有類型 ${t}`);
   }
 });
@@ -171,4 +171,59 @@ test('⑥ i18n 雙語系皆有 AI_TASK_FEATURE（parity）', () => {
   globalThis.Blockly.Msg = saved;
   assert.ok(typeof en.AI_TASK_FEATURE === 'string' && en.AI_TASK_FEATURE.length > 0,
     'en 缺 AI_TASK_FEATURE');
+});
+// === 命名統一守門（2026-10-03）=== 
+// 命名統一（classifier→image_classifier、detector→object_detection、line_follower→line_following）
+// 是一次跨 20+ 檔的破壞性改名。事後驗證：任一處漏改都會在執行期才爆，
+// 故以下兩測把「改名後的一致性」變成可持續生效的守門。
+
+test('⑦ 訓練對話框（dialogs.js）的 task type 不得含已淘汰的舊名', () => {
+  // 病根：ui/src/ui/dialogs.js 的 showTrainingDialog 是**第四處**獨立的
+  // task type 定義，與 TASK_TYPE_OPTIONS 無關 → 改名時極易漏改。
+  // 它原本就只有 3 項（classifier/detector/line_follower），不含 table/feature。
+  const dialogPath = path.join(here, '..', '..', 'ui', 'dialogs.js');
+  const src = fs.readFileSync(dialogPath, 'utf8');
+  // 只掃該對話框的 option value（避免誤傷其他文字）
+  const seg = src.slice(src.indexOf('training-task-type'),
+                        src.indexOf('training-task-type') + 2000);
+  for (const old of ['"classifier"', '"detector"', '"line_follower"']) {
+    assert.ok(!seg.includes(old),
+      `dialogs.js 訓練對話框仍含舊 task type ${old}（改名遺漏）`);
+  }
+  for (const t of ['"image_classifier"', '"object_detection"', '"line_following"']) {
+    assert.ok(seg.includes(t), `dialogs.js 訓練對話框應含新 task type ${t}`);
+  }
+});
+
+test('⑧ 訓練模板目錄與 sidecar 兩處映射一致（改名後的核心不變式）', () => {
+  // 訓練模板目錄名 == task type 名（image_classifier/、object_detection/、line_following/）
+  // 且 sidecar 的 task_scripts 與 script_rel 兩處映射都指向存在的檔。
+  const repo = path.join(here, '..', '..', '..', '..');
+  const tmplRoot = path.join(repo, 'resources', 'train_templates');
+
+  for (const t of dropdownTaskTypes()) {
+    if (t === 'serial') continue; // G2：預留未實作
+    assert.ok(fs.existsSync(path.join(tmplRoot, t)),
+      `train_templates/${t}/ 目錄不存在（task type 與模板目錄名不一致）`);
+    assert.ok(fs.existsSync(path.join(tmplRoot, t, `${t}_train.py`)),
+      `train_templates/${t}/${t}_train.py 不存在`);
+  }
+  // 舊目錄不得殘留
+  for (const old of ['classifier', 'detector', 'line_follower']) {
+    assert.ok(!fs.existsSync(path.join(tmplRoot, old)),
+      `舊模板目錄 train_templates/${old}/ 仍存在（改名遺漏）`);
+  }
+
+  const sidecar = fs.readFileSync(
+    path.join(repo, 'resources', 'dataset_manager', 'dataset_sidecar.py'), 'utf8');
+  for (const t of dropdownTaskTypes()) {
+    if (t === 'serial') continue;
+    assert.ok(sidecar.includes(`"${t}": "${t}_train.py"`),
+      `sidecar task_scripts 缺 ${t} 映射`);
+    assert.ok(sidecar.includes(`"${t}/${t}_train.py"`),
+      `sidecar script_rel 缺 ${t} 映射（遠端訓練會找不到模板）`);
+  }
+  // Docker 映像名刻意不參與改名（改了遠端已建映像會失效）
+  assert.ok(sidecar.includes('"cocoya-train-classifier"'),
+    'Docker 映像名 cocoya-train-classifier 應保留（刻意不改名）');
 });

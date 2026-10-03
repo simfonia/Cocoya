@@ -9,7 +9,7 @@
         <field name="VALIDATION_SPLIT">0.2</field>
         <field name="DROPOUT">0.2</field>
         <field name="AUGMENTATION">TRUE</field>
-        <field name="TASK_TYPE">detector</field>
+        <field name="TASK_TYPE">object_detection</field>
         <field name="BACKEND">auto</field>
         <field name="BACKBONE">mobilenetv2</field>
         <field name="OPTIMIZER">adam</field>

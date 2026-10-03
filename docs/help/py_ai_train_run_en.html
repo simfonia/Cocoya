@@ -29,7 +29,7 @@
     <h2>Basic settings</h2>
     <table class="param-table">
       <tr><th>Field</th><th>Description</th><th>Default</th></tr>
-      <tr><td>Type</td><td>Task type: classifier / detector / line_follower / table. Determines the training template and inference engine; must match the "init model" block type.</td><td>classifier</td></tr>
+      <tr><td>Type</td><td>Task type: classifier / detector / line_following / table. Determines the training template and inference engine; must match the "init model" block type.</td><td>classifier</td></tr>
       <tr><td>Training host</td><td>Where training runs: <strong>local</strong> (this computer) or <strong>remote</strong> (sent over SSH to a remote host). First remote run shows an SSH setup dialog.</td><td>local</td></tr>
       <tr><td>Dataset</td><td>Path to the training dataset folder. Each subfolder is one class. Use forward slashes on Windows.</td><td>dataset/classifier_dataset</td></tr>
       <tr><td>Data Sync</td><td><strong>Only when Training host = remote</strong>: smart (upload if changed) / always (full upload) / skip (use existing remote dataset).</td><td>smart</td></tr>

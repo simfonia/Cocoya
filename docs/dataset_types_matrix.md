@@ -6,31 +6,47 @@
 > - 產出日期：2026-10-02。所有內容均為**實查原始碼**所得，非記憶推論；每列均附事實來源。
 > - 維護規則：類型能力變動時**先改本文件**，再改程式碼；本文件過時視為契約破口。
 
-## 0. 命名對照（最易踩坑處）
+## 0. 命名對照（SSOT — 2026-10-03 已統一）
 
-DM 介面層的「專案類型」與訓練端的「任務類型」**命名不一致**，跨層查證時務必注意：
+> ✅ **2026-10-03 決策：命名已全面統一**。本節由「不一致對照表」改為「統一後的命名規範」。
 
-| 面向 | 命名 | 定義處 |
-| :--- | :--- | :--- |
-| DM 專案類型（UI 顯示） | `image` / `object_detection` / `line_following` / `table` / `feature` / `serial` | `ui/src/modules/dataset_manager/core/typePolicy.js::ALL_TYPES` |
-| 訓練任務類型（積木下拉） | `classifier` / `detector` / `line_follower` / `table` | `ai_inference_blocks.js` L16-21（`TASK_TYPE` 下拉） |
-| 訓練模板目錄 | `classifier` / `detector` / `line_follower` / `table` / `feature` | `resources/train_templates/` |
+| 面向 | 命名 |
+| :--- | :--- |
+| DM 專案類型（`typePolicy.ALL_TYPES`） | `image` / `object_detection` / `line_following` / `table` / `feature` / `serial` |
+| 訓練任務類型（`TASK_TYPE` 下拉） | **`image_classifier`** / `object_detection` / `line_following` / `table` / `feature` |
+| 訓練模板目錄（`resources/train_templates/`） | `image_classifier` / `object_detection` / `line_following` / `table` / `feature` |
 
-- **`line_following`（DM）→ `line_follower`（訓練）**：名稱不同但語意同一件事，映射存在於
-  sidecar `dataset_sidecar.py` L1066-1072（`task_scripts`）與 L798-809（`script_rel`）。
-- **`image`（DM）→ `classifier`（訓練）**：DM 端叫「影像分類」，訓練端叫 `classifier`。
-- ⚠️ **DM 端的 `serial` 在訓練積木下拉中沒有對應選項**（見 §3 G2，預留未實作）。
+### 0.1 命名對照規則（改動時必讀）
 
-> **決策（2026-10-03）：刻意不重命名，改為「顯式化」**
->
-> 上述命名不一致**不打算修正**。理由：名稱已貫穿 DM 的 `project.type`、使用者既有 `.xml`
-> 專案檔、`dataset.json`、Python 訓練模板目錄與匯出 ZIP 佈局。重命名＝資料遷移＋相容層，
-> 風險遠大於收益。
->
-> 正確做法是讓「不一致」變成**有文件、有單一來源**而非靠記憶：
-> ① 本節為命名對照的 SSOT；② 積木側的 task type 清單收斂為單一常數
-> `TASK_TYPE_OPTIONS`（`ai_inference_blocks.js`），並在該處註解對照；
-> ③ sidecar 兩處映射各自獨立，改動必須同步（見 §4 警示）。
+| DM 專案類型 | 訓練 task type | 模板目錄 / 腳本 | 說明 |
+| :--- | :--- | :--- | :--- |
+| `image` | **`image_classifier`** | `image_classifier/image_classifier_train.py` | 影像分類。**唯一仍不同的對**：DM 側叫 `image`，訓練側叫 `image_classifier` 以明示「分類器」、與 table 分類任務區別 |
+| `object_detection` | `object_detection` | `object_detection/object_detection_train.py` | 完全一致（原 `detector` 已統一） |
+| `line_following` | `line_following` | `line_following/line_following_train.py` | 完全一致（原 `line_follower` 已統一） |
+| `table` | `table` | `table/table_train.py` | 完全一致 |
+| `feature` | `feature` | `feature/feature_train.py` | 完全一致 |
+| `serial` | **無** | **無**（預留未實作，見 §3 G2） | — |
+
+### 0.2 刻意保持不變的名稱（非 task type）
+
+「classifier」一詞在別處仍存在，**這些不是 task type，不應跟著改**：
+
+| 名稱 | 為何不改 |
+| :--- | :--- |
+| Docker 映像 `cocoya-train-classifier` | 遠端主機已建好的映像會失效，需重新 build |
+| 範例資料夾 `AI_01_classifier` | 使用者教學路徑，改動會使既有教學連結失效 |
+| Python 模組 `common/classifier_dataset.py`、`common/classifier_model.py` | 模組內部實作名稱，與 task type 無關 |
+| 使用者自訂 `DATASET_DIR`（如 `dataset/classifier_dataset`） | 使用者自行命名的資料夾 |
+
+### 0.3 維護鐵律與相容性聲明
+
+新增 task type 必須同時滿足三處（漏任一處即半殘，見 §4）：
+① `ai_inference_blocks.js` 的 `TASK_TYPE_OPTIONS`　② `train_model` 分派　③ `predict` 分派；
+若需 sidecar 訓練，還要同步 `dataset_sidecar.py` 的**兩處**映射（`task_scripts` / `script_rel`）。
+
+> ⚠️ **不做相容層**：2026-10-03 使用者決策（Cocoya 尚未公開使用），既有 `.xml` /
+> `dataset.json` 中的舊 task type 值會失效並回退預設值。
+> **新增 task type 時不可假設舊資料相容。**
 
 ## 1. 總覽矩陣
 
@@ -42,7 +58,7 @@ DM 介面層的「專案類型」與訓練端的「任務類型」**命名不一
 | **標註單位** | 每圖 1 類別 | 每圖 N 框（可分類別） | **每圖 1 條線** | 每列 1 筆樣本 |
 | **落盤佈局** | `<label>/*.jpg` + `dataset.json` | 同左 | 同左 | `dataset.json`（samples） |
 | **匯出 ZIP 內容** | `<label>/*.jpg`（原樣） | `images/` + `labels/` + `labels.txt` + `export_manifest.json` + `dataset.json` | `images/` + `lines/` + `dataset.json` | `data.csv` + `dataset.json` |
-| **訓練模板** | `classifier/classifier_train.py` | `detector/detector_train.py` | `line_follower/line_follower_train.py` | `table/table_train.py` |
+| **訓練模板** | `image_classifier/image_classifier_train.py` | `object_detection/object_detection_train.py` | `line_following/line_following_train.py` | `table/table_train.py` |
 | **loader** | `common/classifier_dataset.py` | `common/detector_dataset.py` | `common/line_dataset.py` | `common/table_dataset.py` |
 | **切分策略** | **分層**（依資料夾類別） | **分層**（依 YOLO `class_id`） | **隨機**（回歸型，見下方註） | 分層／隨機（依 label 為類別或連續值） |
 | **訓練報告指標** | Accuracy / Loss | Loss / **IoU** / MAE | Loss / **MAE** | Loss / **MAE** |
@@ -80,7 +96,7 @@ DM 介面層的「專案類型」與訓練端的「任務類型」**命名不一
 
 ### 2.3 `line_following`（循線）
 - **標註**：拉一條線段存為 `annotations = [{ class_id: 0, line: [x1,y1,x2,y2] }]`，**每圖僅一條**。
-- **語意**：輸出是**線段兩端點**，非 bbox（`line_follower_train.py` 用 `Dense(4, sigmoid)` 回歸）。
+- **語意**：輸出是**線段兩端點**，非 bbox（`line_following_train.py` 用 `Dense(4, sigmoid)` 回歸）。
   故不適用 IoU；報告採 Loss + MAE。
 - **匯出**：L340-384 建 `images/` 與 `lines/*.txt`（一行 `x1 y1 x2 y2` 歸一化比例）。
   未標註線段者跳過，逾半數未標註時 stderr 警告。
@@ -102,7 +118,7 @@ DM 介面層的「專案類型」與訓練端的「任務類型」**命名不一
 | :--- | :--- | :--- | :--- |
 | G1 | **✅ 已修（階段 1，2026-10-03）**　**階段 2 待做** | **已修**：`py_ai_train_run` 與 `py_ai_model_init` 的 `TASK_TYPE` 下拉已含 `feature`（經 SSOT 常數 `TASK_TYPE_OPTIONS`），`train_model` 分派已加 `feature → feature_train.py`；後端訓練鏈路經 e2e 實測可跑（1 epoch 產出 curve/history/report）。<br>**仍待（階段 2）**：表格型（table/feature）推論為空殼，推論會回報明確 `error: not implemented yet`（原回傳假值 `prediction 0.0`，已修正）；`feature` 推論另需「從相機擷取 landmark」的積木 | `ai_inference_blocks.js` `TASK_TYPE_OPTIONS`；`ai_inference_generators.js` train/predict 分派；證據 `temp_scripts/e2e_g1_feature_train_check.py`；守門 `task_type_contract.test.mjs` |
 | G2 | **`serial` 訓練模板不存在**（預留死碼，**刻意保留**） | sidecar `script_rel` 有 `serial → serial/serial_train.py` 映射，但 `train_templates/serial/` 目錄不存在。因 `isDevType('serial') === true` 且 `exportUseCases` 會擋下 dev 類型匯出，**該分支目前不可達**，不會在正常使用中炸。<br>**決策（2026-10-03）：保留預留位**（先留接口的合理設計），僅在此處明確標註，避免日後誤判為已實作 | `dataset_sidecar.py` L798-809；`resources/train_templates/` 無 `serial`（`Test-Path` 實查）；`typePolicy.js` `DEV_TYPES=['serial']` |
-| G3 | **`table` 無推論解析積木** | 表格模型可訓練可部署，但無積木可解析結果 | `toolbox.xml` 解析類積木僅覆蓋 classifier/detector/line_follower |
+| G3 | **`table` 無推論解析積木** | 表格模型可訓練可部署，但無積木可解析結果 | `toolbox.xml` 解析類積木僅覆蓋 classifier/detector/line_following |
 | G4 | **`feature` 卡片標為 dev 但 typePolicy 為 stable** | 入口卡片顯示「開發中」徽章，匯出/訓練仍可繼續（刻意：實測問題多，先標回開發中） | `entryCards.js` L14 vs `typePolicy.js::STABLE_TYPES` |
 | G5 | **`table` 不支援 live 採集** | 需先決定是否新增（決策項，見稽核計畫 P2-12） | `typePolicy.js::TYPE_TO_MODES_MAP` |
 | G6 | **`docs/help/` 缺英文版** | 18 個 help 頁中僅 3 個有 `_en.html`；`py_ai_get_*` 推論積木全無英文說明 | `docs/help/` 實際檔案清單 |
@@ -125,7 +141,7 @@ DM 介面層的「專案類型」與訓練端的「任務類型」**命名不一
 
 | 位置 | 用途 | 對應 |
 | :--- | :--- | :--- |
-| L1066-1072 `task_scripts` | `trainLocal`（本機訓練） | classifier / detector / line_follower / table / feature |
+| L1066-1072 `task_scripts` | `trainLocal`（本機訓練） | classifier / detector / line_following / table / feature |
 | L798-809 `script_rel` | `trainRemote`（遠端 Docker 訓練） | 上述 5 項 ＋ serial（**映射存在但模板檔不存在**，見 G2） |
 
 ## 5. 資料集雙佈局（所有影像系共用）
@@ -156,7 +172,7 @@ loader 分派順序：`images/` 存在 → 匯出佈局；否則 → 落盤佈�
 - **推論**：**無專屬解析積木**（見 §3）。
 
 | **匯出 ZIP 內容** | `<label>/*.jpg`（原樣） | `images/` + `labels/` + `labels.txt` + `export_manifest.json` + `dataset.json` | `images/` + `lines/` + `dataset.json` | `data.csv` + `dataset.json` |
-| **訓練模板** | `classifier/classifier_train.py` | `detector/detector_train.py` | `line_follower/line_follower_train.py` | `table/table_train.py` |
+| **訓練模板** | `image_classifier/image_classifier_train.py` | `object_detection/object_detection_train.py` | `line_following/line_following_train.py` | `table/table_train.py` |
 | **loader** | `common/classifier_dataset.py` | `common/detector_dataset.py` | `common/line_dataset.py` | `common/table_dataset.py` |
 | **切分策略** | **分層**（依資料夾類別） | **分層**（依 YOLO `class_id`） | **隨機**（回歸型，見下方註） | 分層／隨機（依 label 為類別或連續值） |
 | **訓練報告指標** | Accuracy / Loss | Loss / **IoU** / MAE | Loss / **MAE** | Loss / **MAE** |

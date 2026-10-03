@@ -98,7 +98,7 @@ C:\Workspace\cocoya\
 │       └── Renderer_API.html        # UI Renderer API (syncSelection, findLocatableBlock)
 │       └── ThemeManager.html        # [NEW] 主題管理模組對照表（API/主題定義格式/reloadWebview 鏈/新增主題 SOP）
 │       └── HuskyLens.html           # [NEW 2026-09-19] mcu_huskylens 模組對照表（V1/V2 協定/幀格式/CMD 碼/欄位偏移/座標系/循線向量語意與 V2 中位三解法/15 積木生成碼契約/πCar 循線範例/限制）
-│       └── AI_Inference.html        # [NEW 2026-09-19] py_ai_* 模組對照表（推論結果契約 classifier/detector/line_follower、循線 line/offset/angle 語意、int8 還原鐵律、兩個循線世界、P+D 控制實務）
+│       └── AI_Inference.html        # [NEW 2026-09-19] py_ai_* 模組對照表（推論結果契約 classifier/detector/line_following、循線 line/offset/angle 語意、int8 還原鐵律、兩個循線世界、P+D 控制實務）
 │       └── AppPlatformRestore.html  # [NEW 2026-09-22] App 層工作區還原契約（三條 XML→工作區路徑的平台切換順序、ensurePlatformForXml 鐵律、空積木症狀對照、currentPlatform 來源/origin 隔離、_describeCodegenError）
 
 
@@ -339,22 +339,18 @@ C:\Workspace\cocoya\
 │   │   │   ├── training_loop.py       # 訓練迴圈、class weight、優化器選擇（共用）
 │   │   │   ├── model_export.py        # TFLite 轉換、模型儲存（共用）
 │   │   │   └── training_report.py     # 訓練曲線繪製、HTML 報告產生（共用）
-│   │   ├── classifier/
-│   │   │   └── classifier_train.py    # 分類訓練腳本（使用 common 模組）
-│   │   └── detector/
-│   │       └── detector_train.py      # 物件偵測訓練腳本（單一目標，MSE loss＋MAE＋bbox IoU 指標；曲線三面板 Loss/MAE/IoU，報告對齊分類 Loss+Accuracy 版面）
+│   │   ├── image_classifier/                    # [2026-10-03 改名] 原 classifier/
+│   │   │   └── image_classifier_train.py       # 影像分類訓練腳本（task type: image_classifier；使用 common 模組）
+│   │   └── object_detection/
+│   │       └── object_detection_train.py      # [2026-10-03 改名] 原 detector/；物件偵測訓練（單一目標，MSE loss＋MAE＋bbox IoU 指標；曲線三面板 Loss/MAE/IoU，報告對齊分類 Loss+Accuracy 版面）
 │   │   ├── table/
 │   │   │   └── table_train.py         # [M3] 表格訓練（MLP；分類 softmax／回歸 linear＋報告）
 │   │   ├── feature/
 │   │   │   └── feature_train.py       # [M4] 特徵訓練（table 影分身；動態 num_features 依 use_z 108/162 維）
-│   │   └── line_follower/
-│   │       └── line_follower_train.py # [M3] 循線訓練（線段端點回歸，重用 detector 回歸頭＋報告）
+│   │   └── line_following/
+│   │       └── line_following_train.py # [M3] 循線訓練（線段端點回歸，重用 detector 回歸頭＋報告）
 │   ├── dataset_manager/   # Dataset Manager 模組
-│   │   └── train_templates/ # 訓練容器模板
-│   │       └── classifier/  # 手勢分類訓練模板
-│   │           ├── Dockerfile.train # Docker 映像定義
-│   │           ├── train_classifier.py # 訓練腳本
-│   │           └── requirements.txt # Python 套件需求
+│   │   └── (訓練容器模板位於 resources/dataset_manager/train_templates/，2026-10-03 實查該目錄不存在，本條目已移除)
 │   ├── dataset_sidecar.py   # Sidecar 主進程與指令解析（含遠端訓練 docker_cmd、keras_cache 權重快取掛載；[M3] exportDataset table/line 分流＋trainLocal 任務映射）
 │   ├── _local_convert_tflite.py # 遠端 keras 本地轉 TFLite（_sanitize_keras_config 剝除跨版本 Keras 3 不相容層參數）
 │   ├── camera_service.py    # OpenCV 攝影機預覽與擷取服務

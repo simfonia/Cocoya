@@ -375,17 +375,17 @@ syncSelection: function(blockId) {
         <p>訓練邏輯完全外部化到 <code>resources/train_templates/</code> 目錄，每個任務類型獨立維護：</p>
         <div class="file-tree">
             resources/train_templates/<br>
-            ├── classifier/<br>
-            │   └── classifier_train.py<br>
-            ├── detector/<br>
-            │   └── detector_train.py<br>
-            └── line_follower/<br>
-                └── line_follower_train.py<br>
+            ├── image_classifier/<br>
+            │   └── image_classifier_train.py<br>
+            ├── object_detection/<br>
+            │   └── object_detection_train.py<br>
+            └── line_following/<br>
+                └── line_following_train.py<br>
         </div>
 
         <h3>B. 統一介面規範 (Unified Interface)</h3>
         <p>所有訓練模板必須遵循統一的命令列介面：</p>
-        <pre><code class="language-bash">python classifier_train.py \
+        <pre><code class="language-bash">python image_classifier_train.py \
     --dataset_dir <path> \
     --output_dir <path> \
     --epochs <number> \
@@ -396,10 +396,10 @@ syncSelection: function(blockId) {
         <h3>C. 產生器路由邏輯 (Generator Routing)</h3>
         <p>JavaScript 產生器僅負責參數驗證與模板呼叫：</p>
         <pre><code class="language-javascript">// 根據任務類型選擇模板
-if (task_type == "classifier") {
-    script_name = "classifier_train.py";
-} else if (task_type == "detector") {
-    script_name = "detector_train.py";
+if (task_type == "image_classifier") {
+    script_name = "image_classifier_train.py";
+} else if (task_type == "object_detection") {
+    script_name = "object_detection_train.py";
 }
 
 // 呼叫 subprocess 執行
@@ -441,9 +441,9 @@ result = subprocess.run(cmd, capture_output=True, text=True, shell=True)</code><
         <h3>G. 版本控制與相容性 (Versioning)</h3>
         <p>模板版本號記錄在 <code>resources/train_templates/version.json</code>：</p>
         <pre><code class="language-json">{
-    "classifier": "1.0.0",
-    "detector": "0.1.0",
-    "line_follower": "0.0.1"
+    "image_classifier": "1.0.0",
+    "object_detection": "0.1.0",
+    "line_following": "0.0.1"
 }</code></pre>
     </section>
 
