@@ -46,31 +46,55 @@ Cocoya 是一個針對 Python AI 視覺的教學工具。它透過 Blockly 產�
 - **備份宣示權**：處理未命名備份時，必須遵循「偵測後立即重新命名為 `.recovering`」的宣示模式，確保同一個備份檔不會被多個視窗同時抓取。
 - **強制鎖定**：後端 `save_file` 指令必須檢查路徑擁有者。若非目前視窗鎖定的路徑，必須回傳錯誤並由前端 Alert 提示使用者「另存新檔」。
 ### 行尾規範（LF/CRLF）三層防護（2026-10-03 根治）
-**為何需要**：`.gitattributes` 的 `* text=auto eol=crlf` 只在「經過 git 的路徑」生效
+
+> ### ⚠️ 先釐清：對「程式執行」幾乎沒有影響
+>
+> **實測（2026-10-03）**：Python/JS/Rust 的解析器會自動正規化行尾。
+> 同一段程式碼存成 LF 或 CRLF，**執行結果一模一樣**，連多行字串常量裡都不會有 `\r`：
+> ```
+> CRLF 檔執行 -> ('42', 0)     LF 檔執行 -> ('42', 0)
+> CRLF 多行字串 -> 'line1\nline2'    LF 多行字串 -> 'line1\nline2'
+> ```
+>
+> **真正必須的是「全專案一致」，不是「一定要 CRLF」。**
+> CRLF 只是本專案（Windows 專案：VSIX + Tauri）選定的一致性基準。
+>
+> **真正的危害在「用工具改檔」，不在「執行程式」** —— 逐行處理的批次腳本會壞：
+> ```
+> naive split(b'\n') 讀 CRLF 檔 -> [b'x\r', b'y\r', b'z\r', b'']   # 每行尾巴殘留 \r
+> naive split(b'\n') 讀 LF   檔 -> [b'x',   b'y',   b'z',   b'']
+> git：內容一字未改、只換行尾 -> status 仍顯示 'M a.txt'（假變更，污染 diff）
+> ```
+> 這些 `\r` 會導致：① 寫回時產生**混合行尾**（同一檔案 CRLF/LF 並存，最危險）
+> ② 正則/內容比對失配 ③ 統計 off-by-one、hash 不符。
+>
+> **危害排序：混合行尾 > 純 LF 或純 CRLF 不一致 > 統一使用哪一種。**
+> 混合行尾會讓同一檔案內不同行的行為不一致，才是我們要優先杜絕的。
+
+**為何需要三層**：`.gitattributes` 的 `* text=auto eol=crlf` 只在「經過 git 的路徑」生效
 （checkout / add / diff）。編輯器、Python 腳本、PowerShell **直接寫檔不經過 git**，
 工作區就會變成 LF；而 git 把「工作區 LF + 轉換後 LF」視為無差異 →
 **問題不會自己浮現，會靜態累積**（實測 2026-10-03：646 檔中 126 檔工作區是 LF，
-含 `tauri.js`、`dataset_sidecar.py`、`package.json`）。危害：以「逐行」為單位的工具失效
-（如 `/^\s*(\*|\/\/).*$/` 註解略過正則因 `\r` 而失配，導致測試誤報紅燈）。
-
-**三層防護**（各層互補，不可只靠一層）：
+其中 25 檔是混合行尾）。
 
 | 層 | 機制 | 作用 |
 | :--- | :--- | :--- |
 | 1 預防 | `.editorconfig`（`end_of_line = crlf`） | 編輯器存檔當下就寫對，不需經過 git |
 | 2 保險 | `.gitattributes`（`eol=crlf`） | git 取出時轉換 |
-| 3 驗證 | `npm run eol:check`（`scripts/eol.cjs`） | CI／手動驗證；`npm run eol:fix` 修復 |
+| 3 驗證 | `npm run eol:check`（`scripts/eol.cjs`） | 驗證；`npm run eol:fix` 修復 |
 
 - **已接入 `npm run test:unit`**（末段），故 `npm test` 會擋。
+- `scripts/eol.cjs` 的 `--list` 會把「混合行尾」與「純 LF」**分開列出**——
+  前者危害大得多，應優先處理。
 - `scripts/eol.cjs` 有**自我驗證機制**（`verifyAgainstGit`）：以 `git ls-files --eol`
   交叉比對，抓出「git 認定是 LF 但本工具沒掃到」的檔案 —— 沒有這道就會自以為全綠。
   實作當天即靠它抓出漏網的 `ui/.eslintrc.json`、`src-tauri/Cargo.toml`、
   `esp32s3_flash`（無副檔名的 shell 腳本）。
 - **刻意排除**：`highlight.min.js` / `python.min.js`（vendored，`.gitattributes` 已標 `-text`）、
   `target/` / `out/` / `dist/` / `src-tauri/gen/`（產物）、`backup/`（歷史備份不得改寫）。
-- **AI／腳本寫檔鐵律**：改檔案一律用 `node scripts/eol.cjs --fix` 收尾，或自行確保 CRLF。
-  Python 請用 `io.open(p,'wb').write(data.replace(b'\r\n',b'\n').replace(b'\n',b'\r\n'))`
-  或直接呼叫 `npm run eol:fix`；**不要用** `write_text()`（會轉 LF 造成全檔 diff）。
+- **AI／腳本寫檔鐵律**：改檔案後一律 `npm run eol:fix` 收尾。
+  Python 用 `io.open(p,'wb').write(data.replace(b'\r\n',b'\n').replace(b'\n',b'\r\n'))`，
+  **不要用 `write_text()`**（預設寫 `\n`，會造成全檔 diff）。
 
 ### Task Type 命名統一鐵律（2026-10-03）
 DM 專案類型（`typePolicy.ALL_TYPES`）、訓練任務類型（`TASK_TYPE` 下拉）、訓練模板目錄
