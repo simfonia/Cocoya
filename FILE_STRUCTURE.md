@@ -356,11 +356,16 @@ C:\Workspace\cocoya\
 │   │       └── line_following_train.py # [M3] 循線訓練（線段端點回歸，重用 detector 回歸頭＋報告）
 │   ├── dataset_manager/   # Dataset Manager 模組
 │   │   └── (訓練容器模板位於 resources/dataset_manager/train_templates/，2026-10-03 實查該目錄不存在，本條目已移除)
-│   ├── dataset_sidecar.py   # Sidecar 主進程與指令解析（含遠端訓練 docker_cmd、keras_cache 權重快取掛載；[M3] exportDataset table/line 分流＋trainLocal 任務映射）
+│   ├── dataset_sidecar.py   # [P2-3 2026-10-03 拆分後 1206→499 行] Sidecar 主進程：stdin JSON 指令解析與分派、stdout 單一 JSON 回應契約（send_response/send_event/send_error）、exportDataset 與相機指令分派、遠端訓練狀態存取（_get/_set_remote_state）；遠端訓練與本地訓練已抽出至下列模組
 │   ├── _local_convert_tflite.py # 遠端 keras 本地轉 TFLite（_sanitize_keras_config 剝除跨版本 Keras 3 不相容層參數）
 │   ├── camera_service.py    # OpenCV 攝影機預覽與擷取服務
 │   ├── dataset_io.py        # 資料集檔案存取與打包工具
-│   └── media_pipe_service.py # AI 特徵提取服務 (MediaPipe)；[M4] extract_landmarks(frame, use_z) Hand/Pose 關鍵點供 collectFeature
+│   ├── media_pipe_service.py # AI 特徵提取服務 (MediaPipe)；[M4] extract_landmarks(frame, use_z) Hand/Pose 關鍵點供 collectFeature
+│   ├── local_training.py    # [P2-3] trainLocal 指令：子進程執行 train_templates/<task_type>/<script>.py；TASK_SCRIPTS 為 task→腳本映射 SSOT（須與 ai_inference_generators.js 的 train_model 分派一致）
+│   ├── remote_ssh.py        # [P2-3] 遠端 SSH 指令（checkRemoteEnvironment／uploadDataset／trainRemote／stopTraining）＋ REMOTE_SCRIPTS 映射 SSOT、_require_paramiko（P1-5 不自動 pip 安裝）
+│   ├── remote_sync.py       # [P2-3] 遠端 smart 同步（sync_dataset：smart/always/skip；sync_templates：模板增量同步，本地模板掃不到即報錯）
+│   ├── remote_docker.py     # [P2-3] 遠端 Docker 訓練執行：映像別名補齊、`docker run --gpus all` 串流解析（剝 ANSI／\r 切行）、SFTP 下載產物
+│   └── remote_tflite.py     # [P2-3] 本地 Keras→TFLite 轉換（乾淨環境子進程＋60s 無輸出 watchdog 傾印環境變數）
 ├── temp_scripts/          # 執行期間暫存目錄
     │   └── t_scan.cjs         # [2026-10-01] T-scan：掃描測試檔的計時器洩漏／未清除 handle／無 await（40 檔靜態掃描；只報「線索」不報「錯誤」，判定須人工確認）
 ├── package.json           # 根目錄設定

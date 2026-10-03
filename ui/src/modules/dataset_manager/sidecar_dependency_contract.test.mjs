@@ -14,6 +14,14 @@ const repoRoot = path.join(here, '..', '..', '..', '..');
 const read = (...p) => fs.readFileSync(path.join(repoRoot, ...p), 'utf8');
 
 const sidecar = read('resources', 'dataset_manager', 'dataset_sidecar.py');
+// P2-3（2026-10-03）：paramiko 使用點、task 映射、遠端同步與 Docker 段已抽出為獨立模組
+const remoteSsh = read('resources', 'dataset_manager', 'remote_ssh.py');
+// 掃描範圍涵蓋全部 sidecar 模組（P2-3 拆分後，新增檔案自動納入）
+const scanAll = sidecar + '\n' + remoteSsh + '\n'
+    + read('resources', 'dataset_manager', 'local_training.py') + '\n'
+    + read('resources', 'dataset_manager', 'remote_tflite.py') + '\n'
+    + read('resources', 'dataset_manager', 'remote_sync.py') + '\n'
+    + read('resources', 'dataset_manager', 'remote_docker.py');
 const tauriJs = read('ui', 'src', 'bridge', 'tauri.js');
 const baseJs = read('ui', 'src', 'ui', 'base.js');
 const trainingOps = read('src', 'handlers', 'trainingOps.ts');
@@ -25,33 +33,30 @@ const pythonModules = JSON.parse(read('config', 'python_modules.json'));
 const ERROR_CODE = 'SSH_PARAMIKO_MISSING';
 
 test('P1-5 守門 1：sidecar 全檔不得自動 pip install 任何套件', () => {
-    const offenders = [...sidecar.matchAll(/["']install["']\s*,\s*["'][A-Za-z0-9_.\-=]+["']/g)]
+    const offenders = [...scanAll.matchAll(/["']install["']\s*,\s*["'][A-Za-z0-9_.\-=]+["']/g)]
         .map((m) => m[0]);
     assert.deepEqual(offenders, [], 'sidecar 出現 pip install 自動安裝：' + offenders.join(', '));
     // 連 subprocess pip 呼叫整體都不該存在（本專案安裝一律走 UI 明確按鈕）
-    assert.ok(!/["']-m["']\s*,\s*["']pip["']/.test(sidecar),
+    assert.ok(!/["']-m["']\s*,\s*["']pip["']/.test(scanAll),
         'sidecar 仍以 python -m pip 呼叫安裝；安裝必須由使用者於 UI 明確觸發');
 });
 
 test('P1-5 守門 2：四個 SSH 使用點一律走 _require_paramiko() 並回報錯誤碼', () => {
-    const calls = [...sidecar.matchAll(/_require_paramiko\(\)/g)].length;
-    // 1 次定義 + 4 次呼叫（checkRemoteEnvironment / uploadDataset / trainRemote / stopTraining）
-    assert.equal(calls, 5, `_require_paramiko() 出現 ${calls} 次，應為 1 次定義 + 4 次呼叫`);
-
-    // 每個使用點都必須在同一區塊內帶 errorCode，否則前端無從翻譯
-    const uses = [...sidecar.matchAll(/paramiko, _pk_err = _require_paramiko\(\)\s*\n\s*if _pk_err:[\s\S]{0,400}?"errorCode": _pk_err/g)];
+    // P2-3（2026-10-03）：四個使用點已抽出至 remote_ssh.py，主檔僅保留常數
+    const uses = [...remoteSsh.matchAll(/paramiko, _pk_err = _require_paramiko\(\)\s*\n\s*if _pk_err:[\s\S]{0,400}?"errorCode": _pk_err/g)];
     assert.equal(uses.length, 4, `僅 ${uses.length}/4 個使用點在缺裝分支回報 errorCode`);
+    assert.ok(/def _require_paramiko\(\)/.test(remoteSsh), 'remote_ssh 缺 _require_paramiko 定義');
 
-    // 不得再有裸 import paramiko（模組層 try/except 自動安裝的遺留）
-    const bareImports = [...sidecar.matchAll(/^\s*import paramiko\s*$/gm)].map((m) => m[0]);
-    assert.deepEqual(bareImports, [], '仍有裸 import paramiko：' + bareImports.join(' | '));
+    // 兩檔皆不得有裸 import paramiko（模組層 try/except 自動安裝的遺留）
+    const bare = [...(sidecar + '\n' + remoteSsh).matchAll(/^\s*import paramiko\s*$/gm)].map((m) => m[0]);
+    assert.deepEqual(bare, [], '仍有裸 import paramiko：' + bare.join(' | '));
 });
 
 test('P1-5 守門 3：sidecar 不得輸出 paramiko 缺失的展示用文案（文案由前端 i18n 負責）', () => {
     // 判準落在真正送給前端的欄位值（"error": "..."），而非任意中文字串。
     // 曾一度掃全文命中 _require_paramiko 的 docstring（註解本就可以中文）→ 假紅，已收斂。
-    const errorValues = [...sidecar.matchAll(/"error":\s*"([^"]*)"/g)].map((m) => m[1]);
-    const offenders = [...new Set(errorValues.filter((v) => /paramiko/i.test(v) && /[一-鿿]/.test(v)))];
+    const errorValues = [...scanAll.matchAll(/"error":\s*"([^"]*)"/g)].map((m) => m[1]);
+    const offenders = [...new Set(errorValues.filter((v) => /paramiko/i.test(v) && /[\u4e00-\u9fff]/.test(v)))];
     assert.deepEqual(offenders, [], 'sidecar 仍回傳中文展示文案：' + offenders.join(' | '));
 });
 
