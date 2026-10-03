@@ -263,6 +263,9 @@
     "MSG_TRAINING_COMPLETE_LOCAL": "--- 本地訓練完成: %1 ---",
     "MSG_TRAINING_COMPLETE_REMOTE": "--- 遠端訓練完成: %1 ---",
 
+    // 遠端訓練缺 paramiko（P1-5：sidecar 不再自動 pip install，改回錯誤碼 + 前端指引）
+    "MSG_PARAMIKO_MISSING": "❌ 遠端訓練需要 paramiko（SSH 連線庫），但目前的 Python 環境未安裝。請開啟【Python 環境設定】安裝 paramiko 後再試，或於終端機執行 pip install paramiko。本程式不會自動替您安裝套件。",
+
     // Python 核心關鍵字
     "PY_DEF": "def",
     "PY_RETURN": "return",

@@ -4,6 +4,22 @@ import * as fs from 'fs';
 import { execSync } from 'child_process';
 
 /**
+ * PowerShell 單引號字串跳脫（P1-6 F2）。
+ *
+ * 本 Handler 以 `terminal.sendText()` 將指令送進**互動式 PowerShell**（不是 argv 陣列），
+ * 因此所有插入值都必須自行跳脫，否則：
+ *   - 檔名含 `"` → 指令提前截斷，後半段被當成獨立命令（功能破壞）
+ *   - 檔名含 `$(...)` / 反引號 → **被 PowerShell 展開並執行**（注入）
+ * 自訂韌體的檔名來自 `showOpenDialog`（使用者選的檔），內建韌體的 addr 來自
+ * `project_config.json` —— 皆非本檔案可直接信任的常數。
+ *
+ * PowerShell 單引號內不做變數展開，唯一要跳脫的是單引號本身（連續兩個）。
+ */
+function psQuote(value: string): string {
+    return `'${String(value).replace(/'/g, "''")}'`;
+}
+
+/**
  * 韌體操作 Handler（燒錄、抹除、穩定模式設定等）
  */
 export class FirmwareOpsHandler {
@@ -59,9 +75,15 @@ export class FirmwareOpsHandler {
                     const files = config[projectKey];
                     if (files) {
                         for (const [addr, name] of Object.entries(files)) {
+                            // P1-6 F2：addr 來自外部 project_config.json，未驗證即拼進 shell 字串。
+                            // 只接受 esptool 合法位址（0x 開頭十六進位）或 UF2 關鍵字，其餘跳過。
+                            if (!/^(0[xX][0-9a-fA-F]+|UF2)$/.test(String(addr).trim())) {
+                                console.warn(`[FirmwareBurn] 忽略不合法燒錄位址: ${addr}`);
+                                continue;
+                            }
                             const fPath = path.join(firmwareDir, name as string);
                             if (fs.existsSync(fPath)) {
-                                flashSegments.push({ addr, path: fPath });
+                                flashSegments.push({ addr: String(addr).trim(), path: fPath });
                             }
                         }
                     }
@@ -100,9 +122,11 @@ export class FirmwareOpsHandler {
             const terminal = vscode.window.createTerminal('Cocoya Firmware Burn');
             terminal.show();
 
-            let cmd = `& "${pythonPath}" -m esptool --chip ${chip} --port ${serialPort} --baud 921600 --before default-reset --after hard-reset write-flash -z --flash-mode dio --flash-freq 80m --flash-size 8MB`;
+            // P1-6 F2：所有插入值以 PowerShell 單引號跳脫（原為雙引號包裹 → 可被注入）
+            // seg.addr 已於讀取 project_config.json 時驗證為 0x 十六進位或 UF2，仍跳脫作縱深防禦
+            let cmd = `& ${psQuote(pythonPath)} -m esptool --chip ${chip} --port ${psQuote(serialPort)} --baud 921600 --before default-reset --after hard-reset write-flash -z --flash-mode dio --flash-freq 80m --flash-size 8MB`;
             for (const seg of flashSegments) {
-                cmd += ` ${seg.addr} "${seg.path}"`;
+                cmd += ` ${psQuote(seg.addr)} ${psQuote(seg.path)}`;
             }
 
             terminal.sendText(cmd);
@@ -180,7 +204,7 @@ export class FirmwareOpsHandler {
         const eScript = vscode.Uri.joinPath(this.manager.context.extensionUri, 'resources', 'deploy_mcu.py').fsPath;
         const eTerminal = vscode.window.createTerminal('Cocoya Deep Repair');
         eTerminal.show();
-        eTerminal.sendText(`& "${ePython}" -u "${eScript}" "${ePort}" --erase-filesystem --lang "${eLang}" --tauri`);
+        eTerminal.sendText(`& ${psQuote(ePython)} -u ${psQuote(eScript)} ${psQuote(ePort)} --erase-filesystem --lang ${psQuote(eLang)} --tauri`);
 
         const infoMsg = this.manager.localeMessages['MSG_ERASE_START_REFLASH'] ||
             (eLang === 'zh-hant' ? '正在重建 MCU 檔案系統。完成後請重新上傳您的程式碼。' : 'Rebuilding filesystem on MCU. Re-upload your code after it completes!');

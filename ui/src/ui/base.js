@@ -774,7 +774,11 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                     // D4 遠端訓練失敗（含 SSH 認證失敗）：必須顯示於終端機，避免看似卡住
                     if (self._remoteConnTimer) { clearInterval(self._remoteConnTimer); self._remoteConnTimer = null; }
                     if (window.CocoyaUI?.appendTerminal) {
-                        window.CocoyaUI.appendTerminal('[Remote] 錯誤: ' + (msg.error || '未知錯誤'), 'err');
+                        // P1-5：後端錯誤碼在此轉為 i18n 文案（後端不輸出展示用文案）
+                        const errText = (msg.errorCode === 'SSH_PARAMIKO_MISSING')
+                            ? ((Blockly.Msg && Blockly.Msg['MSG_PARAMIKO_MISSING']) || 'paramiko not installed')
+                            : (msg.error || '未知錯誤');
+                        window.CocoyaUI.appendTerminal('[Remote] 錯誤: ' + errText, 'err');
                     }
                     // 連線失敗時清除 session SSH 設定，下次執行重新跳出精靈讓使用者修正
                     if (window.CocoyaUI && /SSH|連線失敗|timed out|Authentication|auth/i.test(msg.error || '')) {

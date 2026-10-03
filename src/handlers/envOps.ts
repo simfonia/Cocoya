@@ -235,6 +235,7 @@ print(json.dumps({
                 this.manager.panel.webview.postMessage({
                     command: 'checkRemoteEnvironmentResult',
                     success: false,
+                    errorCode: resp.errorCode,   // P1-5：paramiko 缺裝錯誤碼透傳，前端轉 i18n
                     error: resp.error || 'SSH 診斷失敗'
                 });
             }

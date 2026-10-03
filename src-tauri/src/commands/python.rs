@@ -225,6 +225,13 @@ pub async fn start_training(
     task_type: String,
     backend: String,
     ssh_config: Option<serde_json::Value>,
+// P1-6 F1/F3：原硬編碼 Command::new("python")，會忽略使用者於硬體頁設定的 Python 路徑
+    // （venv/conda/pyenv 環境下 sidecar 會因缺 opencv 而啟動失敗）。
+    // 改為接收 python_path，空值才回退 "python"（維持舊行為）。
+    // 註：本 command 目前未註冊於 lib.rs invoke_handler（F3，Tauri 無法呼叫；
+    //     訓練實際走 py_ai_train_run → run_python / trainRemote）。仍修正以免日後
+    //     重新註冊時帶著同一缺陷回來。
+    python_path: Option<String>,
 ) -> Result<(), String> {
     use std::io::Write;
     
@@ -233,8 +240,9 @@ pub async fn start_training(
         .join("resources")
         .join("dataset_manager")
         .join("dataset_sidecar.py");
-    
-    let mut cmd = Command::new("python");
+
+    let py = python_path.unwrap_or_else(|| "python".to_string());
+    let mut cmd = Command::new(&py);
     // 編碼修復：同 run_python，強制 UTF-8 IO，避免 cp950 亂碼
     cmd.env("PYTHONIOENCODING", "utf-8")
        .env("PYTHONUTF8", "1")

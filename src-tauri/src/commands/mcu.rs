@@ -781,6 +781,17 @@ pub async fn erase_filesystem(
     Ok(())
 }
 
+/// P1-6 F1：燒錄韌體時的 Python 直譯器選擇。
+/// 使用者可在硬體頁設定自訂 Python 路徑（venv、conda、pyenv…）；esptool 必須安裝在
+/// **同一個**直譯器環境才能 `python -m esptool` 運作，硬編碼 "python" 會讓燒錄失敗。
+/// 空值或全空白時回退 "python"（交由 PATH 解析，維持舊行為）。
+fn reset_firmware_python(python_path: &Option<String>) -> &str {
+    match python_path {
+        Some(p) if !p.trim().is_empty() => p.trim(),
+        _ => "python",
+    }
+}
+
 #[tauri::command]
 pub async fn reset_firmware(
     window: Window,
@@ -789,6 +800,10 @@ pub async fn reset_firmware(
     model: String, 
     should_clear: bool,
     serial_port: Option<String>,
+    // P1-6 F1：原硬編碼 Command::new("python")，會忽略使用者於硬體頁設定的 Python 路徑
+    // → 若使用者指向 venv/自訂安裝，esptool 會因裝在該環境而燒錄失敗（且 PATH 上的
+    // python 可能根本不存在或版本不符）。改為接收 python_path，缺空值才回退 "python"。
+    python_path: Option<String>,
 ) -> Result<(), String> {
     let firmware_dir = if model == "custom" {
         None
@@ -878,7 +893,7 @@ pub async fn reset_firmware(
         // 偵測是否為 ESP32-S3 (根據目錄名或型號)
         let chip = if model.contains("ESP32_S3") { "esp32s3" } else { "auto" };
 
-        let mut cmd = Command::new("python");
+        let mut cmd = Command::new(reset_firmware_python(&python_path));
         // 編碼修復（對齊 PC run_python）：esptool 輸出經 Rust from_utf8_lossy 解讀，強制 UTF-8 避免 cp950 亂碼
         cmd.env("PYTHONIOENCODING", "utf-8")
             .env("PYTHONUTF8", "1");

@@ -243,6 +243,7 @@ export class TrainingOpsHandler {
                 this.manager.panel.webview.postMessage({
                     command: 'trainingError',
                     success: false,
+                    errorCode: resp.errorCode,   // P1-5：paramiko 缺裝錯誤碼透傳，前端轉 i18n
                     error: resp.error || '遠端訓練失敗'
                 });
             }

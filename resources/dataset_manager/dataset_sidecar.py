@@ -30,17 +30,23 @@ else:
     _HIDE = 0
     _POPEN = dict()
 
-# 嘗試自動安裝 paramiko 連線庫，確保開箱即用
-try:
-    import paramiko
-except ImportError:
-    import subprocess
-    print("[Sidecar Log] paramiko not found, attempting to install via pip...", file=sys.stderr)
+# paramiko 缺裝錯誤碼（P1-5，2026-10-03）
+# 舊實作在此處未經使用者同意直接 `pip install paramiko`，會在未告知的情況下
+# 修改全域 Python 環境（離線必失敗、可能觸及權限提升）。現改為純降級：
+# 需要 paramiko 的指令（checkRemoteEnvironment / uploadDataset / trainRemote /
+# stopTraining）一律回報本碼，由前端 i18n 顯示安裝指引。
+# 安裝途徑：Python 環境設定面板（config/python_modules.json 已含 paramiko 條目）。
+PARAMIKO_MISSING = "SSH_PARAMIKO_MISSING"
+
+
+def _require_paramiko():
+    """匯入 paramiko；缺裝時回傳 (None, errorCode)。不再自動 pip 安裝（P1-5）。"""
     try:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "paramiko"], **_POPEN)
-        print("[Sidecar Log] paramiko successfully installed!", file=sys.stderr)
-    except Exception as inst_err:
-        print(f"[Sidecar Log] Failed to auto-install paramiko: {str(inst_err)}", file=sys.stderr)
+        import paramiko as _paramiko
+        return _paramiko, None
+    except ImportError:
+        return None, PARAMIKO_MISSING
+
 
 class DatasetSidecar:
     def __init__(self):
@@ -411,13 +417,13 @@ class DatasetSidecar:
                     username = msg.get("username")
                     password = msg.get("password")
                     
-                    try:
-                        import paramiko
-                    except ImportError:
+                    paramiko, _pk_err = _require_paramiko()
+                    if _pk_err:
                         self.send_response(request_id, {
                             "command": "checkRemoteEnvironmentResult",
                             "success": False,
-                            "error": "本地電腦缺少 paramiko 庫，請在本地終端機執行 'pip install paramiko'。"
+                            "errorCode": _pk_err,
+                            "error": "paramiko not installed"
                         })
                         continue
 
@@ -486,13 +492,13 @@ class DatasetSidecar:
                     project_name = msg.get("projectName", "dataset")
                     local_zip_path = msg.get("localZipPath")
 
-                    try:
-                        import paramiko
-                    except ImportError:
+                    paramiko, _pk_err = _require_paramiko()
+                    if _pk_err:
                         self.send_response(request_id, {
                             "command": "datasetUploadResult",
                             "success": False,
-                            "error": "本地電腦缺少 paramiko 庫，請在本地終端機執行 'pip install paramiko'。"
+                            "errorCode": _pk_err,
+                            "error": "paramiko not installed"
                         })
                         continue
 
@@ -602,10 +608,9 @@ class DatasetSidecar:
 
                     def do_remote_train():
                         ssh = None
-                        try:
-                            import paramiko
-                        except ImportError:
-                            self.send_response(request_id, {"success": False, "error": "本地電腦缺少 paramiko 庫，請在本地終端機執行 'pip install paramiko'。"})
+                        paramiko, _pk_err = _require_paramiko()
+                        if _pk_err:
+                            self.send_response(request_id, {"success": False, "errorCode": _pk_err, "error": "paramiko not installed"})
                             return
                         # 先連 SSH 再驗本地資料集（錯誤診斷順序：連線問題優先呈現）
                         try:
@@ -1030,8 +1035,12 @@ class DatasetSidecar:
                         self.send_response(request_id, {"success": False, "error": "目前沒有進行中的遠端訓練"})
                     else:
                         def do_stop():
+                            paramiko, _pk_err = _require_paramiko()
+                            if _pk_err:
+                                self.send_response(request_id, {"success": False, "errorCode": _pk_err, "error": "paramiko not installed"})
+                                self._remote_train = None
+                                return
                             try:
-                                import paramiko
                                 ssh2 = paramiko.SSHClient()
                                 ssh2.set_missing_host_key_policy(paramiko.AutoAddPolicy())
                                 ssh2.connect(hostname=info["host"], port=info["port"], username=info["username"], password=info["password"], timeout=10)
