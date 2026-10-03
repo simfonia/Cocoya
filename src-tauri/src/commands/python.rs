@@ -220,7 +220,7 @@ pub async fn stop_python(window: Window, state: State<'_, AppState>) -> Result<(
 pub async fn start_training(
     window: Window,
     handle: tauri::AppHandle,
-    state: State<'_, AppState>,
+    _state: State<'_, AppState>,
     project_name: String,
     task_type: String,
     backend: String,
@@ -265,7 +265,7 @@ pub async fn start_training(
     let stderr = child.stderr.take().ok_or("Failed to open stderr")?;
     
     // 構建指令
-    let mut command_msg = serde_json::json!({
+    let command_msg = serde_json::json!({
         "command": "trainLocal",
         "requestId": "train_".to_string() + &uuid::Uuid::new_v4().to_string(),
         "projectName": project_name,
