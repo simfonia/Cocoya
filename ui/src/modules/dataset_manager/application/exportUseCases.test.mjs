@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createExportUseCases } from './exportUseCases.js';
 
-function makeUC({ type = 'image' } = {}) {
+function makeUC({ type = 'image_classification' } = {}) {
     const calls = { status: [], progress: [], sync: 0, confirm: 0, request: 0 };
     const state = {
         images: [{ path: 'a.jpg', annotations: [{ class_id: 0 }] }],

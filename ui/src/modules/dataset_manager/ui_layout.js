@@ -676,7 +676,7 @@ function loadClassificationImage(index) {
 
 function enterAnnotationMode(image, index) {
     // 分流：image（影像分類）類型進入「分類標籤校正」模式，而非 bbox 拉框標註
-    if (getFormValue('projectType') === 'image') {
+    if (getFormValue('projectType') === 'image_classification') {
         return enterClassificationReviewMode(image, index);
     }
     // P3：隱藏 header 的清除資料／重新選擇類型（X 改為返回資料集管理）

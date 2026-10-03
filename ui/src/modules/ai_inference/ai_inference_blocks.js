@@ -14,7 +14,7 @@
 // 名稱對照（DM 專案類型 vs 訓練任務類型）：
 //   image(DM) → classifier ｜ line_following(DM) → line_following ｜ object_detection(DM) → detector
 const TASK_TYPE_OPTIONS = [
-  [Blockly.Msg["AI_TASK_IMAGE_CLASSIFIER"], "image_classifier"],
+  [Blockly.Msg["AI_TASK_IMAGE_CLASSIFICATION"], "image_classification"],
   [Blockly.Msg["AI_TASK_OBJECT_DETECTION"], "object_detection"],
   [Blockly.Msg["AI_TASK_LINE_FOLLOWING"], "line_following"],
   [Blockly.Msg["AI_TASK_TABLE"], "table"],

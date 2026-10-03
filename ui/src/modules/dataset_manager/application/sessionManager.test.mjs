@@ -8,8 +8,8 @@ import { createSessionManager } from './sessionManager.js';
 test('openSession 鎖定類型並進入 workspace；backToEntry 解鎖回入口', () => {
     const sm = createSessionManager();
     assert.deepEqual(sm.snapshot(), { lockedType: null, phase: 'entry' });
-    sm.openSession('image');
-    assert.deepEqual(sm.snapshot(), { lockedType: 'image', phase: 'workspace' });
+    sm.openSession('image_classification');
+    assert.deepEqual(sm.snapshot(), { lockedType: 'image_classification', phase: 'workspace' });
     sm.backToEntry();
     assert.deepEqual(sm.snapshot(), { lockedType: null, phase: 'entry' });
 });

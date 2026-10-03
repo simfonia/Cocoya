@@ -238,7 +238,7 @@ export class DatasetSpec {
         //   schema.label 欄位不適用，不再發出誤導性的「尚未指定 Label 欄位」；
         //   改為真實反應樣本標籤覆蓋率（stats.label_counts['unlabeled']）。
         if (isImageType) {
-            if (spec.project.type === 'image' && sampleCount > 0) {
+            if (spec.project.type === 'image_classification' && sampleCount > 0) {
                 const labelCounts = isPlainObject(spec.stats.label_counts) ? spec.stats.label_counts : {};
                 const unlabeled = Number(labelCounts['unlabeled']) || 0;
                 if (unlabeled > 0) {

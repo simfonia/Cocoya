@@ -57,7 +57,7 @@ function dropdownTaskTypes() {
 // 不可用「第一個 script_name」當終點——那會在 classifier 就停住，
 // 抓不到後面的 detector/line_following/table/feature 分派（曾因此漏判）。
 function trainDispatchTaskTypes() {
-  const start = genSrc.indexOf('if task_type == "image_classifier":');
+  const start = genSrc.indexOf('if task_type == "image_classification":');
   assert.ok(start !== -1, '找不到 train_model 的 task_type 分派段');
   const end = genSrc.indexOf('不支援的任務類型', start);
   assert.ok(end !== -1, '找不到 train_model 分派段的 else 終點');
@@ -93,7 +93,7 @@ test('① SSOT 下拉清單含 feature，且無重複', () => {
   assert.ok(types.includes('feature'), '下拉清單應含 feature（缺＝G1 未修）');
   assert.deepEqual([...new Set(types)], types, '下拉清單不得有重複 task type');
   // 四個既有類型不得被回歸移除
-  for (const t of ['image_classifier', 'object_detection', 'line_following', 'table']) {
+  for (const t of ['image_classification', 'object_detection', 'line_following', 'table']) {
     assert.ok(types.includes(t), `下拉清單應保留既有類型 ${t}`);
   }
 });
@@ -190,13 +190,13 @@ test('⑦ 訓練對話框（dialogs.js）的 task type 不得含已淘汰的舊�
     assert.ok(!seg.includes(old),
       `dialogs.js 訓練對話框仍含舊 task type ${old}（改名遺漏）`);
   }
-  for (const t of ['"image_classifier"', '"object_detection"', '"line_following"']) {
+  for (const t of ['"image_classification"', '"object_detection"', '"line_following"']) {
     assert.ok(seg.includes(t), `dialogs.js 訓練對話框應含新 task type ${t}`);
   }
 });
 
 test('⑧ 訓練模板目錄與 sidecar 兩處映射一致（改名後的核心不變式）', () => {
-  // 訓練模板目錄名 == task type 名（image_classifier/、object_detection/、line_following/）
+  // 訓練模板目錄名 == task type 名（image_classification/、object_detection/、line_following/）
   // 且 sidecar 的 task_scripts 與 script_rel 兩處映射都指向存在的檔。
   const repo = path.join(here, '..', '..', '..', '..');
   const tmplRoot = path.join(repo, 'resources', 'train_templates');

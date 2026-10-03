@@ -11,7 +11,7 @@ test('目錄含 6 類型；feature/serial 標 dev 徽章（M4 實測除錯中，
     assert.equal(TYPE_CATALOG.length, 6);
     assert.equal(isDevEntry('feature'), true);
     assert.equal(isDevEntry('serial'), true);
-    assert.equal(isDevEntry('image'), false);
+    assert.equal(isDevEntry('image_classification'), false);
     assert.equal(isDevEntry('table'), false);
     assert.ok(getTypeEntry('object_detection'));
     assert.equal(getTypeEntry('unknown'), null);

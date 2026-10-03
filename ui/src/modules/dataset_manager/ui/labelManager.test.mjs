@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createLabelManager } from './labelManager.js';
 
-function makeHarness({ type = 'image', labelMap = {}, images = [] } = {}) {
+function makeHarness({ type = 'image_classification', labelMap = {}, images = [] } = {}) {
     const specData = {
         project: { type },
         schema: { label_map: { ...labelMap } }
@@ -51,7 +51,7 @@ test('空容器早退', () => {
 });
 
 test('新增類別寫入 label_map', async () => {
-    const h = makeHarness({ type: 'image' });
+    const h = makeHarness({ type: 'image_classification' });
     // 以最小 fake DOM 驗證新增流程的 spec 寫入
     const box = {
         id: '', innerHTML: '', _handlers: {},

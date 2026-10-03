@@ -46,8 +46,8 @@ Blockly.Python.forBlock['py_ai_train_run'] = function(block, generator) {
       '    os.makedirs(model_dir, exist_ok=True)\n' +
       '    \n' +
       '    # 根據任務類型選擇訓練腳本\n' +
-      '    if task_type == "image_classifier":\n' +
-      '        script_name = "image_classifier_train.py"\n' +
+      '    if task_type == "image_classification":\n' +
+      '        script_name = "image_classification_train.py"\n' +
       '    elif task_type == "object_detection":\n' +
       '        script_name = "object_detection_train.py"\n' +
       '    elif task_type == "line_following":\n' +
@@ -219,13 +219,13 @@ Blockly.Python.forBlock['py_ai_model_init'] = function(block, generator) {
       '        import numpy as np\n' +
       '        d2 = self._preprocess(frame)\n' +
       '        if d2 is None:\n' +
-      '            return {"type": "image_classifier", "label": "none", "confidence": 0.0}\n' +
+      '            return {"type": "image_classification", "label": "none", "confidence": 0.0}\n' +
       '        self.it.set_tensor(self.i[0]["index"], d2); self.it.invoke()\n' +
       '        out = self.it.get_tensor(self.o[0]["index"])[0]\n' +
       '        out = out.astype(np.float32)/255.0 if not self.isf else out\n' +
       '        cid = int(np.argmax(out)); conf = float(out[cid])\n' +
       '        lb = self.ls[cid] if cid < len(self.ls) else "class_" + str(cid)\n' +
-      '        return {"type": "image_classifier", "label": lb, "confidence": conf}\n' +
+      '        return {"type": "image_classification", "label": lb, "confidence": conf}\n' +
       '    \n' +
       '    def _detect(self, frame):\n' +
       '        # 物件偵測推論（單一目標回歸）\n' +
@@ -285,7 +285,7 @@ Blockly.Python.forBlock['py_ai_model_init'] = function(block, generator) {
       '        return {"type": "table", "error": "table/feature inference not implemented yet"}\n' +
       '    \n' +
       '    def predict(self, frame):\n' +
-      '        if self.task_type == "image_classifier":\n' +
+      '        if self.task_type == "image_classification":\n' +
       '            return self._classify(frame)\n' +
       '        elif self.task_type == "object_detection":\n' +
       '            return self._detect(frame)\n' +

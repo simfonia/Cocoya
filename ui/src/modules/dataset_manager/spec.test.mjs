@@ -88,21 +88,21 @@ test('feature file 模式無欄位：維持 COLUMN_REQUIRED error（匯出必要
 // 不再發出「尚未指定 Label 欄位」誤導訊息；改為真實反映未標籤樣本數
 function makeImageSpec(sampleCount, labelCounts = {}) {
     return new DatasetSpec({
-        project: { name: 'img', type: 'image' },
+        project: { name: 'img', type: 'image_classification' },
         data_source: { mode: 'live', files: [], samples: [], base_dir: 'dataset/img/' },
         schema: { columns: [], features: [], label: '', label_map: {} },
         stats: { sample_count: sampleCount, label_counts: labelCounts, samples_truncated: false }
     });
 }
 
-test('image live 已拍樣本：不發 NO_LABEL；有未標籤照片時真實警告', () => {
+test('image_classification live 已拍樣本：不發 NO_LABEL；有未標籤照片時真實警告', () => {
     const v = makeImageSpec(3, { unlabeled: 2, cat: 1 }).validate();
     assert.equal(v.ok, true);
     assert.ok(!v.warnings.some((w) => w.includes('Label 欄位')), '不應出現 NO_LABEL 誤導訊息');
     assert.ok(v.warnings.some((w) => w.includes('3') && w.includes('2')), '應回報未標籤照片數');
 });
 
-test('image live 全部照片已標籤：乾淨無警告', () => {
+test('image_classification live 全部照片已標籤：乾淨無警告', () => {
     const v = makeImageSpec(3, { cat: 2, dog: 1 }).validate();
     assert.equal(v.ok, true);
     assert.equal(v.warnings.length, 0);

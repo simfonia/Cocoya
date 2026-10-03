@@ -102,12 +102,14 @@ DM 專案類型（`typePolicy.ALL_TYPES`）、訓練任務類型（`TASK_TYPE` �
 
 | DM 專案類型 | 訓練 task type | 模板目錄 / 腳本 |
 | :--- | :--- | :--- |
-| `image` | **`image_classifier`** | `image_classifier/image_classifier_train.py` |
+| `image_classification` | `image_classification` | `image_classification/image_classification_train.py` |
 | `object_detection` | `object_detection` | `object_detection/object_detection_train.py` |
 | `line_following` | `line_following` | `line_following/line_following_train.py` |
-| `table` / `feature` / `serial` | 同名 | 同名（`serial` 預留未實作） |
+| `table` / `feature` | 同名 | 同名 |
 
-- **唯一仍不同的對**：`image`（DM）→ `image_classifier`（訓練），因訓練端需明示「分類器」以與 table 分類任務區別。
+- ✅ **三層名稱完全統一**（2026-10-03）。歷史名稱對照（改動時可能查到舊資料）：
+  `image`（DM 舊）→ `image_classifier`（訓練舊）→ **`image_classification`**（現行）；
+  `detector`（訓練舊）→ `object_detection`；`line_follower`（訓練舊）→ `line_following`。
 - **新增 task type 必須同時滿足三處**：① `ai_inference_blocks.js` 的 `TASK_TYPE_OPTIONS`
   ② `ai_inference_generators.js` 的 `train_model` 分派 ③ `predict` 分派；
   若需 sidecar 訓練，還要同步 `dataset_sidecar.py` 的**兩處**映射（`task_scripts` L1066 / `script_rel` L798）。

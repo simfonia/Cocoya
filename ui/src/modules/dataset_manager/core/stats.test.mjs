@@ -6,8 +6,8 @@ import assert from 'node:assert/strict';
 import { calculateStats, countAnnotatedImages } from './stats.js';
 
 test('countAnnotatedImages：image 類型全部視為已標註', () => {
-    assert.equal(countAnnotatedImages('image', [{}, { annotations: [] }]), 2);
-    assert.equal(countAnnotatedImages('image', []), 0);
+    assert.equal(countAnnotatedImages('image_classification', [{}, { annotations: [] }]), 2);
+    assert.equal(countAnnotatedImages('image_classification', []), 0);
 });
 
 test('countAnnotatedImages：object_detection 只算有框的圖', () => {

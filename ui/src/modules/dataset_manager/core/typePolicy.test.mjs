@@ -15,8 +15,8 @@ import {
 const here = path.dirname(fileURLToPath(import.meta.url));
 const dmRoot = path.join(here, '..');
 
-test('影像系判定：image/object_detection/line_following', () => {
-    assert.equal(isImageType('image'), true);
+test('影像系判定：image_classification/object_detection/line_following', () => {
+    assert.equal(isImageType('image_classification'), true);
     assert.equal(isImageType('object_detection'), true);
     assert.equal(isImageType('line_following'), true);
     assert.equal(isImageType('table'), false);
@@ -27,13 +27,13 @@ test('影像系判定：image/object_detection/line_following', () => {
 test('標註檢查：僅 object_detection/line_following；未分類僅 object_detection', () => {
     assert.equal(needsAnnotationCheck('object_detection'), true);
     assert.equal(needsAnnotationCheck('line_following'), true);
-    assert.equal(needsAnnotationCheck('image'), false);
+    assert.equal(needsAnnotationCheck('image_classification'), false);
     assert.equal(needsUnclassifiedCheck('object_detection'), true);
     assert.equal(needsUnclassifiedCheck('line_following'), false);
 });
 
-test('分類校正：僅 image；開發中：serial（feature 已轉正式）', () => {
-    assert.equal(isClassificationType('image'), true);
+test('分類校正：僅 image_classification；開發中：serial（feature 已轉正式）', () => {
+    assert.equal(isClassificationType('image_classification'), true);
     assert.equal(isClassificationType('object_detection'), false);
     assert.equal(isDevType('feature'), false);
     assert.equal(isDevType('serial'), true);
@@ -41,7 +41,7 @@ test('分類校正：僅 image；開發中：serial（feature 已轉正式）', 
 });
 
 test('allowedModes：影像系 live+file，feature live+file，表格系 file；未知 fallback file', () => {
-    assert.deepEqual(allowedModes('image'), ['live', 'file']);
+    assert.deepEqual(allowedModes('image_classification'), ['live', 'file']);
     assert.deepEqual(allowedModes('table'), ['file']);
     assert.deepEqual(allowedModes('feature'), ['live', 'file']);
     assert.deepEqual(allowedModes('serial'), ['file']);
@@ -54,7 +54,7 @@ test('allowedModes：影像系 live+file，feature live+file，表格系 file；
 
 test('projectTypes：為全部合法類型，且與 imageTypes ∪ devTypes ∪ {table} 吻合', () => {
     assert.deepEqual(projectTypes(),
-        ['image', 'object_detection', 'feature', 'serial', 'table', 'line_following']);
+        ['image_classification', 'object_detection', 'feature', 'serial', 'table', 'line_following']);
     assert.deepEqual(projectTypes().sort(),
         [...new Set([...imageTypes(), ...devTypes(), ...stableTypes(), 'table', 'serial'])].sort());
     for (const type of projectTypes()) assert.equal(isKnownType(type), true, `${type} 應為合法類型`);
@@ -65,7 +65,7 @@ test('projectTypes：為全部合法類型，且與 imageTypes ∪ devTypes ∪ 
 
 test('isFeatureType：僅 feature（P1-1 新增，供 spec.js feature live 豁免與 ui_layout 分流）', () => {
     assert.equal(isFeatureType('feature'), true);
-    for (const other of ['image', 'object_detection', 'line_following', 'table', 'serial', undefined]) {
+    for (const other of ['image_classification', 'object_detection', 'line_following', 'table', 'serial', undefined]) {
         assert.equal(isFeatureType(other), false, `${other} 不應被視為 feature`);
     }
 });
@@ -74,9 +74,9 @@ test('回傳的陣列一律是複本（呼叫端改動不得污染 SSOT）', () 
     const a = projectTypes();
     a.push('injected');
     assert.equal(isKnownType('injected'), false, 'projectTypes() 必須回傳複本');
-    const b = allowedModes('image');
+    const b = allowedModes('image_classification');
     b.push('injected');
-    assert.deepEqual(allowedModes('image'), ['live', 'file'], 'allowedModes() 必須回傳複本');
+    assert.deepEqual(allowedModes('image_classification'), ['live', 'file'], 'allowedModes() 必須回傳複本');
 });
 
 test('單一來源不變式：object_detection 字面量只允許出現在 typePolicy.js', () => {
@@ -95,7 +95,7 @@ test('單一來源不變式：object_detection 字面量只允許出現在 typeP
                 // 導致純註解行沒被略過，誤報硬編碼。
                 const code = line.replace(/\r$/, '').replace(/^\s*(\*|\/\/).*$/, '');
                 if (/projectType\s*[!=]==?\s*'object_detection'/.test(code)
-                    || /projectType\s*[!=]==?\s*'image'/.test(code)
+                    || /projectType\s*[!=]==?\s*'image_classification'/.test(code)
                     || /projectType\s*[!=]==?\s*'feature'/.test(code)) {
                     offenders.push(`${path.relative(dmRoot, full)}:${i + 1}`);
                 }

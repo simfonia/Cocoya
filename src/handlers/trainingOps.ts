@@ -166,7 +166,7 @@ export class TrainingOpsHandler {
             const m = (code || '').match(re);
             return m ? m[1] : dflt;
         };
-        const taskType = pick(/task_type='([^']+)'/, 'image_classifier');
+        const taskType = pick(/task_type='([^']+)'/, 'image_classification');
         const projectName = path.basename(datasetDir || '') || pick(/--project_name/, 'training_project');
         const epochs = parseInt(pick(/epochs=(\d+)/, '30'), 10) || 30;
         const batchSize = parseInt(pick(/batch_size=(\d+)/, '32'), 10) || 32;
@@ -217,7 +217,7 @@ export class TrainingOpsHandler {
                     modelOutput, taskType
                 },
             outputDir,
-            dockerImage: 'cocoya-train-' + (taskType === 'object_detection' ? 'object_detection' : 'image_classifier')
+            dockerImage: 'cocoya-train-' + (taskType === 'object_detection' ? 'object_detection' : 'image_classification')
         }, (resp: any) => {
             if (resp.success) {
                 vscode.window.showInformationMessage(hostMsg('remoteComplete', resp.modelDir));

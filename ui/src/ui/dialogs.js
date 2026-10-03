@@ -332,7 +332,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
 
     showTrainingDialog: function(options) {
         const projectName = options.projectName || '手勢分類_' + new Date().toISOString().slice(0, 10).replace(/-/g, '');
-        const taskType = options.taskType || 'image_classifier';
+        const taskType = options.taskType || 'image_classification';
         
         // 從 localStorage 讀取上次選擇的後端
         const savedBackend = localStorage.getItem('cocoya_training_backend') || 'local';
@@ -369,7 +369,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                     <label style="display: flex; flex-direction: column; gap: 6px; font-size: 13px;">
                         <span style="font-weight: bold; color: #333;">任務類型</span>
                         <select id="training-task-type" style="padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px;">
-                            <option value="image_classifier" ${taskType === 'image_classifier' ? 'selected' : ''}>圖像分類 (Image Classifier)</option>
+                            <option value="image_classification" ${taskType === 'image_classification' ? 'selected' : ''}>圖像分類 (Image Classifier)</option>
                             <option value="object_detection" ${taskType === 'object_detection' ? 'selected' : ''}>物件偵測 (Object Detection)</option>
                             <option value="line_following" ${taskType === 'line_following' ? 'selected' : ''}>循線偵測 (Line Following)</option>
                         </select>
