@@ -40,7 +40,7 @@ Blockly.Msg["AI_INFERENCE_TYPE_INT8"] = "量化 (int8)";
 Blockly.Msg["AI_INFERENCE_TYPE_F32"] = "Float32";
 
 // Task Types
-Blockly.Msg["AI_TASK_IMAGE_CLASSIFIER"] = "分類器";
+Blockly.Msg["AI_TASK_IMAGE_CLASSIFICATION"] = "分類器";
 Blockly.Msg["AI_TASK_OBJECT_DETECTION"] = "偵測器";
 Blockly.Msg["AI_TASK_LINE_FOLLOWING"] = "循線";
 Blockly.Msg["AI_TASK_TABLE"] = "表格";

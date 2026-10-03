@@ -40,7 +40,7 @@ Blockly.Msg["AI_INFERENCE_TYPE_INT8"] = "Quantized (int8)";
 Blockly.Msg["AI_INFERENCE_TYPE_F32"] = "Float32";
 
 // Task Types
-Blockly.Msg["AI_TASK_IMAGE_CLASSIFIER"] = "image_classifier";
+Blockly.Msg["AI_TASK_IMAGE_CLASSIFICATION"] = "image_classification";
 Blockly.Msg["AI_TASK_OBJECT_DETECTION"] = "object_detection";
 Blockly.Msg["AI_TASK_LINE_FOLLOWING"] = "line_following";
 Blockly.Msg["AI_TASK_TABLE"] = "table";

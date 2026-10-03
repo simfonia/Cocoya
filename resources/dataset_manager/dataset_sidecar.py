@@ -794,7 +794,7 @@ class DatasetSidecar:
                                 rt_log("[Remote] 模板已是最新，無需上傳")
 
                             # --- 遠端 Docker 訓練 (cocoya classifier_train.py v2) ---
-                            task_type = str(hyperparams.get("taskType", "image_classifier")).lower()
+                            task_type = str(hyperparams.get("taskType", "image_classification")).lower()
                             if task_type == "object_detection":
                                 script_rel = "object_detection/object_detection_train.py"
                             elif task_type == "line_following":
@@ -806,7 +806,7 @@ class DatasetSidecar:
                             elif task_type == "serial":
                                 script_rel = "serial/serial_train.py"
                             else:
-                                script_rel = "image_classifier/image_classifier_train.py"
+                                script_rel = "image_classification/image_classification_train.py"
                             # --- 映像存在性檢查（2026-09-23）---
                             # 各任務映像只是「相同 TF 執行環境」的別名（腳本走 bind mount /workspace）；
                             # 遠端通常只建過 cocoya-train-classifier → 缺映像時自動 tag 補齊，
@@ -1048,7 +1048,7 @@ class DatasetSidecar:
 
                 elif command == "trainLocal":
                     project_name = msg.get("projectName", "training_project")
-                    task_type = msg.get("taskType", "image_classifier")
+                    task_type = msg.get("taskType", "image_classification")
                     dataset_dir = msg.get("datasetDir", "")
                     output_dir = msg.get("outputDir", "")
                     hyperparams = msg.get("hyperparams", {})
@@ -1064,13 +1064,13 @@ class DatasetSidecar:
                             # 修正（M3/T-4）：舊版硬編碼 classifier_train.py 且誤傳 --model_type
                             # （三腳本 argparse 皆為 --backbone，舊參數會 unrecognized 直接失敗）
                             task_scripts = {
-                                "image_classifier": "image_classifier_train.py",
+                                "image_classification": "image_classification_train.py",
                                 "object_detection": "object_detection_train.py",
                                 "line_following": "line_following_train.py",
                                 "table": "table_train.py",
                                 "feature": "feature_train.py"
                             }
-                            script_name = task_scripts.get(str(task_type).lower(), "image_classifier_train.py")
+                            script_name = task_scripts.get(str(task_type).lower(), "image_classification_train.py")
                             script_path = os.path.join(os.path.dirname(__file__), "..", "..", "train_templates", task_type, script_name)
                             
                             if not os.path.exists(script_path):

@@ -489,7 +489,7 @@ export class BridgeTauri extends BaseBridge {
                         dsDir = projectRoot.replace(/[\\/]+$/, '') + '/' + dsDir;
                     }
                     const projName = (dsDir || '').replace(/[\\/]+$/, '').split(/[\\/]/).pop() || 'training_project';
-                    const taskRt = pickRt(/task_type='([^']+)'/, 'image_classifier');
+                    const taskRt = pickRt(/task_type='([^']+)'/, 'image_classification');
                     const remotePayload = {
                         host: data.sshConfig?.host,
                         port: data.sshConfig?.port || 22,
@@ -513,7 +513,7 @@ export class BridgeTauri extends BaseBridge {
                             taskType: taskRt
                         },
                         outputDir: (projectRoot ? projectRoot.replace(/[\\/]+$/, '') + '/model/' + projName : 'model/' + projName),
-                        dockerImage: 'cocoya-train-' + (taskRt === 'object_detection' ? 'object_detection' : 'image_classifier')
+                        dockerImage: 'cocoya-train-' + (taskRt === 'object_detection' ? 'object_detection' : 'image_classification')
                     };
                     await this._handleDatasetCommand('trainRemote', remotePayload, (response) => {
                         this._dispatchToFrontend({

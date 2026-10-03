@@ -7,7 +7,7 @@
 import { escapeHtml as esc } from '../core/html.js';
 
 export const TYPE_CATALOG = [
-    { id: 'image', status: 'stable', modes: ['live', 'file'] },
+    { id: 'image_classification', status: 'stable', modes: ['live', 'file'] },
     { id: 'object_detection', status: 'stable', modes: ['live', 'file'] },
     { id: 'line_following', status: 'stable', modes: ['live', 'file'] },
     { id: 'table', status: 'stable', modes: ['file'] },

@@ -203,7 +203,7 @@ sftp.stat(abs_path)  # 正常運作
 指令: downloadModel
 參數: {
   projectName,
-  taskType: "image_classifier",
+  taskType: "image_classification",
   sshConfig,
   remoteModelDir,
   localOutputDir

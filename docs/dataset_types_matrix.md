@@ -12,20 +12,27 @@
 
 | 面向 | 命名 |
 | :--- | :--- |
-| DM 專案類型（`typePolicy.ALL_TYPES`） | `image` / `object_detection` / `line_following` / `table` / `feature` / `serial` |
-| 訓練任務類型（`TASK_TYPE` 下拉） | **`image_classifier`** / `object_detection` / `line_following` / `table` / `feature` |
-| 訓練模板目錄（`resources/train_templates/`） | `image_classifier` / `object_detection` / `line_following` / `table` / `feature` |
+| DM 專案類型（`typePolicy.ALL_TYPES`） | `image_classification` / `object_detection` / `line_following` / `table` / `feature` / `serial` |
+| 訓練任務類型（`TASK_TYPE` 下拉） | `image_classification` / `object_detection` / `line_following` / `table` / `feature` |
+| 訓練模板目錄（`resources/train_templates/`） | `image_classification` / `object_detection` / `line_following` / `table` / `feature` |
 
 ### 0.1 命名對照規則（改動時必讀）
 
 | DM 專案類型 | 訓練 task type | 模板目錄 / 腳本 | 說明 |
 | :--- | :--- | :--- | :--- |
-| `image` | **`image_classifier`** | `image_classifier/image_classifier_train.py` | 影像分類。**唯一仍不同的對**：DM 側叫 `image`，訓練側叫 `image_classifier` 以明示「分類器」、與 table 分類任務區別 |
-| `object_detection` | `object_detection` | `object_detection/object_detection_train.py` | 完全一致（原 `detector` 已統一） |
-| `line_following` | `line_following` | `line_following/line_following_train.py` | 完全一致（原 `line_follower` 已統一） |
+| `image_classification` | `image_classification` | `image_classification/image_classification_train.py` | 完全一致。影像分類（舊名：DM 側 `image`、訓練側 `image_classifier`） |
+| `object_detection` | `object_detection` | `object_detection/object_detection_train.py` | 完全一致（舊名 `detector`） |
+| `line_following` | `line_following` | `line_following/line_following_train.py` | 完全一致（舊名 `line_follower`） |
 | `table` | `table` | `table/table_train.py` | 完全一致 |
 | `feature` | `feature` | `feature/feature_train.py` | 完全一致 |
 | `serial` | **無** | **無**（預留未實作，見 §3 G2） | — |
+
+> **歷史名稱對照**（日後查到舊資料時的參考）：
+> `image`（DM 舊）→ `image_classifier`（訓練舊）→ **`image_classification`**（現行）；
+> `detector`（訓練舊）→ `object_detection`；`line_follower`（訓練舊）→ `line_following`。
+
+> ⚠️ **`image` 在程式碼裡也是變數名**（`enterAnnotationMode(image, index)`、`state.images`）。
+> 批次改名時**只能改「字串常量」不可改變數名**，否則會造成毀損（2026-10-03 實作踩坑）。
 
 ### 0.2 刻意保持不變的名稱（非 task type）
 
@@ -58,7 +65,7 @@
 | **標註單位** | 每圖 1 類別 | 每圖 N 框（可分類別） | **每圖 1 條線** | 每列 1 筆樣本 |
 | **落盤佈局** | `<label>/*.jpg` + `dataset.json` | 同左 | 同左 | `dataset.json`（samples） |
 | **匯出 ZIP 內容** | `<label>/*.jpg`（原樣） | `images/` + `labels/` + `labels.txt` + `export_manifest.json` + `dataset.json` | `images/` + `lines/` + `dataset.json` | `data.csv` + `dataset.json` |
-| **訓練模板** | `image_classifier/image_classifier_train.py` | `object_detection/object_detection_train.py` | `line_following/line_following_train.py` | `table/table_train.py` |
+| **訓練模板** | `image_classification/image_classification_train.py` | `object_detection/object_detection_train.py` | `line_following/line_following_train.py` | `table/table_train.py` |
 | **loader** | `common/classifier_dataset.py` | `common/detector_dataset.py` | `common/line_dataset.py` | `common/table_dataset.py` |
 | **切分策略** | **分層**（依資料夾類別） | **分層**（依 YOLO `class_id`） | **隨機**（回歸型，見下方註） | 分層／隨機（依 label 為類別或連續值） |
 | **訓練報告指標** | Accuracy / Loss | Loss / **IoU** / MAE | Loss / **MAE** | Loss / **MAE** |
@@ -172,7 +179,7 @@ loader 分派順序：`images/` 存在 → 匯出佈局；否則 → 落盤佈�
 - **推論**：**無專屬解析積木**（見 §3）。
 
 | **匯出 ZIP 內容** | `<label>/*.jpg`（原樣） | `images/` + `labels/` + `labels.txt` + `export_manifest.json` + `dataset.json` | `images/` + `lines/` + `dataset.json` | `data.csv` + `dataset.json` |
-| **訓練模板** | `image_classifier/image_classifier_train.py` | `object_detection/object_detection_train.py` | `line_following/line_following_train.py` | `table/table_train.py` |
+| **訓練模板** | `image_classification/image_classification_train.py` | `object_detection/object_detection_train.py` | `line_following/line_following_train.py` | `table/table_train.py` |
 | **loader** | `common/classifier_dataset.py` | `common/detector_dataset.py` | `common/line_dataset.py` | `common/table_dataset.py` |
 | **切分策略** | **分層**（依資料夾類別） | **分層**（依 YOLO `class_id`） | **隨機**（回歸型，見下方註） | 分層／隨機（依 label 為類別或連續值） |
 | **訓練報告指標** | Accuracy / Loss | Loss / **IoU** / MAE | Loss / **MAE** | Loss / **MAE** |

@@ -5,7 +5,7 @@
  *   標註列表 UI（renderListUI，含 class 更正下拉）、進度更新（updateProgress）、
  *   畫布鍵盤事件（bindCanvasKeyboardEvents：↑/↓ 切換、Delete 刪除、Esc 退出）、
  *   刪除高亮標註（deleteSelectedAnnotation）、畫布標註寫回（saveCurrentAnnotations）
- * - 分流職責（projectType === 'image' → 分類校正模式）留在 ui_layout 協調層
+ * - 分流職責（projectType === 'image_classification' → 分類校正模式）留在 ui_layout 協調層
  * - 畫布生命週期：UICanvas 為共享 singleton，init 由本 controller 呼叫；
  *   unbindEvents / 面板清理仍由 ui_layout 的 exitAnnotationMode 統一處理
  * - 依賴全注入；annotation mutation 純函式直接 import application/annotationMutations.js

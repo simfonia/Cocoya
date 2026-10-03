@@ -18,7 +18,7 @@ const t = (key, fallback) => `[${key}:${fallback}]`;
 const deps = {
     t,
     optionList,
-    projectTypes: ['table', 'image', 'object_detection', 'feature', 'serial', 'line_following'],
+    projectTypes: ['table', 'image_classification', 'object_detection', 'feature', 'serial', 'line_following'],
     sourceModes: ['file']
 };
 

@@ -344,8 +344,8 @@ C:\Workspace\cocoya\
 │   │   │   ├── training_loop.py       # 訓練迴圈、class weight、優化器選擇（共用）
 │   │   │   ├── model_export.py        # TFLite 轉換、模型儲存（共用）
 │   │   │   └── training_report.py     # 訓練曲線繪製、HTML 報告產生（共用）
-│   │   ├── image_classifier/                    # [2026-10-03 改名] 原 classifier/
-│   │   │   └── image_classifier_train.py       # 影像分類訓練腳本（task type: image_classifier；使用 common 模組）
+│   │   ├── image_classification/                    # [2026-10-03 改名] 原 classifier/
+│   │   │   └── image_classification_train.py       # 影像分類訓練腳本（task type: image_classifier；使用 common 模組）
 │   │   └── object_detection/
 │   │       └── object_detection_train.py      # [2026-10-03 改名] 原 detector/；物件偵測訓練（單一目標，MSE loss＋MAE＋bbox IoU 指標；曲線三面板 Loss/MAE/IoU，報告對齊分類 Loss+Accuracy 版面）
 │   │   ├── table/

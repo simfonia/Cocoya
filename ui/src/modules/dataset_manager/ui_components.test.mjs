@@ -24,7 +24,7 @@ function headerFor(projectType) {
 test('計數欄表頭：object_detection=標註框數／line_following=標註線段／其餘=樣本數', () => {
     assert.equal(headerFor('object_detection'), '標註框數');
     assert.equal(headerFor('line_following'), '標註線段');
-    assert.equal(headerFor('image'), '樣本數');
+    assert.equal(headerFor('image_classification'), '樣本數');
     // 表格系若誤用 needsUnclassifiedCheck 的反面分支，會顯示「標註框數」——回歸鎖
     assert.equal(headerFor('table'), '樣本數');
     assert.equal(headerFor('feature'), '樣本數');
