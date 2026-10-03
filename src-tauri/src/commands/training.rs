@@ -5,7 +5,11 @@ use tauri::{State, Window};
 use crate::state::AppState;
 
 /// 訓練報告資訊（回傳給前端）
+// P2-5 修：原缺 #[serde(rename_all = "camelCase")]，序列化後欄位為 project_name /
+//   mtime_millis，而 ui/src/bridge/tauri.js 讀的是 r.projectName（QuickPick 標籤）→ 恆為 undefined，
+//   使用者在報告選擇清單看到的是空白標籤。AGENTS.md「Rust 序列化命名規範」明載此坑。
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ReportInfo {
     pub path: String,
     pub project_name: String,

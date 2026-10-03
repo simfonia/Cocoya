@@ -283,8 +283,9 @@ C:\Workspace\cocoya\
 │       └── commands/      # [NEW] 分類指令處理器
 │           ├── mod.rs       # 指令集匯出
 │           ├── python.rs    # Python 執行與環境診斷（注入 UTF-8 編碼與 COCOYA_TRAIN_TEMPLATES 環境變數）；install_python_module/abort_install_module 為套件安裝專用命令（獨立進程 + install-module-* 事件 + kill_tree）
-│           ├── file.rs      # 檔案讀寫、備份與鎖定 (+ dataset_save_progress/dataset_load_progress 進度存讀 [NEW] + 內建範例唯讀保護：Release 開啟時確認後複製範例專案到 桌面\Cocoya\Projects；2026-09-16 由文件改為桌面)
-│           ├── mcu.rs       # 硬體通訊、韌體與序列埠（ProjectRoot/raw_dump.log 注入、輸出背壓與聚焦重取）
+│           ├── file/            # [P2-5 2026-10-03 拆分：原 file.rs 925 行 → 7 檔] 檔案讀寫、備份與鎖定。子模組：manifest（core_manifest.json/toolbox 讀取）、anchor（ProjectAnchor＋release_session）、examples（範例路徑守衛、複製開啟、seed 還原）、openfile（open_file/open_examples/restore_examples）、savefile（save_file＋examples 唯讀保護＋跨視窗檔案鎖）、backup（auto_backup/check_startup_backup/clear_backup/reject_recovery/delete_file）、dataset（DM 支援：標籤改名、匯入掃描、標註進度存讀、選檔）
+│           ├── mcu/            # [P2-5 2026-10-03 拆分：原 mcu.rs 1018 行 → 7 檔] 硬體通訊、韌體與序列埠。子模組：board（序列埠列舉＋VID/PID 板辨識）、deploy（deploy_mcu 韌體上傳）、monitor（序列埠監看＋視窗焦點交接 set_window_focus）、firmware（erase_filesystem＋esptool/UF2 燒錄）、raw_dump（ProjectRoot/raw_dump.log 路徑解析與環境注入）、stream（輸出背壓與時間窗聚合）
+│           │   └── ⚠ Tauri 邊界：`#[tauri::command]` 產生的 `__cmd__<fn>` 巨集無法經 pub use 跨模組轉出，故 lib.rs 的 generate_handler! 必用完整子模組路徑（如 commands::mcu::board::get_serial_ports）
 │           ├── app.rs       # 視窗控制與系統資訊
 │           ├── dataset.rs   # [NEW] Sidecar 通訊 (start/send/stop)
 │           └── training.rs  # [NEW] 訓練報告開啟 (open_report, find_latest_training_report)

@@ -156,3 +156,123 @@ test('P2-3 守門 8：paramiko 缺裝錯誤碼在主檔與抽出模組間一致'
     assert.ok(/def _require_paramiko\(\)/.test(ssh), 'remote_ssh 缺自帶的 _require_paramiko');
     assert.ok(!/from dataset_sidecar import/.test(ssh), 'remote_ssh 不得 import 主檔');
 });
+
+// ---------------------------------------------------------------------------
+// P2-5：Rust commands 拆分成子模組後的結構契約
+// ---------------------------------------------------------------------------
+
+const tauriSrc = path.join(repoRoot, 'src-tauri', 'src');
+
+function readRs(rel) {
+    return fs.readFileSync(path.join(tauriSrc, ...rel.split('/')), 'utf8');
+}
+
+function rsFiles() {
+    const out = [];
+    const walk = (d, prefix) => {
+        for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+            const full = path.join(d, e.name);
+            if (e.isDirectory()) walk(full, prefix + e.name + '/');
+            else if (e.name.endsWith('.rs')) out.push({ mod: prefix + e.name.replace(/\.rs$/, ''), src: fs.readFileSync(full, 'utf8') });
+        }
+    };
+    walk(path.join(tauriSrc, 'commands'), '');
+    return out;
+}
+
+test('P2-5 守門 1：mcu / file 巨型檔已拆分為目錄模組，且無同名舊檔', () => {
+    for (const name of ['mcu', 'file']) {
+        const dir = path.join(tauriSrc, 'commands', name);
+        assert.ok(fs.existsSync(dir) && fs.statSync(dir).isDirectory(), `commands/${name}/ 目錄不存在`);
+        assert.ok(!fs.existsSync(path.join(tauriSrc, 'commands', name + '.rs')),
+            `commands/${name}.rs 舊檔仍存在（會與 ${name}/ 目錄同名衝突）`);
+        const sub = fs.readdirSync(dir).filter((f) => f.endsWith('.rs'));
+        assert.ok(sub.includes('mod.rs'), `commands/${name}/mod.rs 缺失`);
+        assert.ok(sub.length >= 5, `commands/${name}/ 僅 ${sub.length} 檔，拆分未生效`);
+        // 單檔不得再長回 500 行以上
+        for (const f of sub) {
+            const n = fs.readFileSync(path.join(dir, f), 'utf8').split('\n').length;
+            assert.ok(n < 500, `commands/${name}/${f} 有 ${n} 行（拆分目標每檔 < 500）`);
+        }
+    }
+});
+
+test('P2-5 守門 2：lib.rs 的 command 註冊必用完整子模組路徑（Tauri __cmd__ 巨集限制）', () => {
+    // 本次踩到的真實坑：`#[tauri::command]` 產生的 `__cmd__<fn>` 巨集**無法經 pub use 跨模組轉出**，
+    // 寫 `commands::get_serial_ports` 會得到 E0433 failed to resolve。
+    // 故凡屬於 mcu/ 或 file/ 子模組的 command，必須寫 `commands::mcu::board::get_serial_ports` 形式。
+    const lib = readRs('lib.rs');
+    const handler = lib.slice(lib.indexOf('generate_handler!['));
+    const entries = [...handler.matchAll(/commands::([\w:]+),/g)].map((m) => m[1]);
+    assert.ok(entries.length >= 40, `command 註冊數 ${entries.length}，預期 >= 40`);
+
+    const mcuFns = ['get_serial_ports', 'deploy_mcu', 'open_serial_monitor', 'toggle_serial_monitor',
+        'erase_filesystem', 'reset_firmware', 'set_window_focus'];
+    const fileFns = ['get_manifest', 'get_module_toolbox', 'open_file', 'open_examples',
+        'restore_examples', 'save_file', 'auto_backup', 'clear_backup', 'reject_recovery',
+        'check_startup_backup', 'delete_file', 'dataset_rename_label', 'pick_folder',
+        'pick_data_file', 'get_project_anchor', 'release_session', 'dataset_save_progress',
+        'dataset_load_progress', 'dataset_import_from_folder'];
+    for (const fn of [...mcuFns, ...fileFns]) {
+        const re = new RegExp('commands::(mcu|file)::\\w+::' + fn + ',');
+        assert.ok(re.test(handler),
+            `lib.rs 的 ${fn} 未使用完整子模組路徑（__cmd__ 巨集無法經 pub use 轉出）`);
+    }
+});
+
+test('P2-5 守門 3：每個 #[tauri::command] 都有同名 pub use 或完整路徑註冊（完整性）', () => {
+    // 本次搬移的真實教訓：切割邊界把 `#[tauri::command]` / `#[derive(serde::Serialize)]`
+    // 留在前一段尾端，清潔時一併刪掉 —— 編譯仍可能通過（少個屬性）但 command 未註冊、
+    // 型別未序列化。使用者按鈕會靜默無反應。
+    const lib = readRs('lib.rs');
+    const handler = lib.slice(lib.indexOf('generate_handler!['));
+    for (const { mod, src } of rsFiles()) {
+        const cmds = [...src.matchAll(/#\[tauri::command\]\s*(?:#\[[^\]]*\]\s*)*pub (?:async )?fn (\w+)/g)]
+            .map((m) => m[1]);
+        for (const fn of cmds) {
+            // start_training：P1-6 F3 已確認未註冊於 invoke_handler（Tauri 無法呼叫；訓練實際走
+            //   py_ai_train_run → run_python / trainRemote）。待 P3-3 刪除整段死碼。
+            if (fn === 'start_training') continue;
+            const registered = new RegExp('commands::[\\w:]*' + fn + '\\s*[,)]').test(handler);
+            assert.ok(registered, `commands/${mod} 的 command ${fn} 未在 lib.rs generate_handler 註冊`);
+        }
+    }
+});
+
+test('P2-5 守門 4：跨邊界回傳型別必須有 #[derive(serde::Serialize)]（AGENTS.md Rust 序列化鐵律）', () => {
+    // 本次搬移曾把 RenamedPath 的 derive 屬性丟失 → E0599 blocking_kind 編譯失敗；
+    // 但若型別本來就沒 derive，編譯會過而執行期序列化才炸，故在此顯式守門。
+    for (const { mod, src } of rsFiles()) {
+        // 直接以「pub struct 開頭位置」向前看 200 字元的屬性區塊。
+        // （先前以 m.index 反推 start 造成偏移 → 假紅，已改為直接匹配行首。）
+        for (const m of src.matchAll(/^pub struct (\w+)/gm)) {
+            const name = m[1];
+            const before = src.slice(Math.max(0, m.index - 200), m.index);
+            const usedInCmd = new RegExp('Result<[^>]*' + name).test(src)
+                || new RegExp('->\\s*' + name).test(src);
+            if (!usedInCmd) continue;
+            // 允許 serde::Serialize 或已 use 後的短名 Serialize（training.rs 用後者）
+            const hasDerive = /#\[derive\((?:serde::)?Serialize[^\]]*\)\]/.test(before);
+            assert.ok(hasDerive,
+                `commands/${mod} 的 ${name} 用於 command 回傳值卻缺 #[derive(Serialize)]`);
+            // AGENTS.md：Rust → JS 必須 camelCase
+            assert.ok(/#\[serde\(rename_all\s*=\s*"camelCase"\)\]/.test(before),
+                `commands/${mod} 的 ${name} 缺 #[serde(rename_all = "camelCase")]（前端會讀到 snake_case 欄位）`);
+        }
+    }
+});
+
+test('P2-5 守門 5：子模組不得反向引用同級子模組的非 pub(crate) 私有項', () => {
+    // 編譯器擋得住，但錯誤訊息在跨檔時不易讀；此守門讓意圖顯式化：
+    // 若某函式需跨子模組使用，必須在定義處標 pub(crate) 並在 mod.rs 註明用途。
+    for (const name of ['mcu', 'file']) {
+        const modRs = fs.readFileSync(path.join(tauriSrc, 'commands', name, 'mod.rs'), 'utf8');
+        for (const m of modRs.matchAll(/^pub(?:\(crate\))? use [\w:]*::\{?([\w, ]+)\}?;/gm)) {
+            const names = m[1].split(',').map((s) => s.trim()).filter(Boolean);
+            for (const fn of names) {
+                assert.ok(/^pub\(crate\) use/.test(m[0]) || /^pub use/.test(m[0]),
+                    `commands/${name}/mod.rs 的 ${fn} 導出方式異常`);
+            }
+        }
+    }
+});

@@ -290,7 +290,28 @@
   驗收：309 → **317/317 綠**、端到端煙霧測試（stdout 全為合法 JSON，契約未破）、5 種匯入順序皆 exit 0、
   tsc/lint/py_compile/eol 全通過。備份 `backup/dataset_sidecar_pre_p23_20261003_141427.py`。
   **待實機**：遠端訓練全鏈（資料 sync→模板 sync→Docker→下載→本地 TFLite）＋ 中斷訓練 ＋ 匯出回歸。
-- [ ] P2-5 Rust 拆檔（**先不動**，待 tauri-codegen 議題合併處理）：`mcu.rs`→`mcu/{serial,board,monitor}.rs`；`file.rs`→`file/{ops,anchor}.rs`
+- [x] P2-5 Rust 拆檔 ✅ 2026-10-03（原標註「先不動，待 tauri-codegen 合併」；使用者指示執行後完成）
+  **計畫描述與實況有落差**：實際切分依程式結構而非原列的 3 檔。`mcu.rs`(1018) → `mcu/{board,deploy,monitor,firmware,raw_dump,stream}.rs`；
+  `file.rs`(925) → `file/{manifest,anchor,examples,openfile,savefile,backup,dataset}.rs`（file.rs 實際含大量 DM 邏輯，非原列的 ops/anchor 兩檔）。
+  **Tauri 邊界真陷阱**：`#[tauri::command]` 產生的 `__cmd__<fn>` 巨集**無法經 pub use 跨模組轉出**
+  （Rust 巨集與 pub use 語義衝突 → E0433）。故 lib.rs 的 `generate_handler!` 必須改寫**完整子模組路徑**
+  （如 `commands::mcu::board::get_serial_ports`）—— 這是拆分後唯一必要的 lib.rs 改動，已寫入 mod.rs 註解與 FILE_STRUCTURE。
+  **搬移陷阱（皆實測，非推測）**：
+  ① 段落邊界會把 `#[tauri::command]` / `#[derive(serde::Serialize)]` 留在前一段尾端，清潔時一併刪掉
+  —— **編譯仍可能通過但 command 未註冊**（`save_file`/`auto_backup` 即如此，靠逐字元比對才發現）；
+  ② 函式內的局部 `use tauri_plugin_dialog::DialogExt;` 被我提升到檔頭再移除 → `pick_folder`/`pick_data_file` 編譯失敗。
+  **完整性驗證（非僅靠編譯）**：寫比對腳本以 git HEAD 為基準，確認 **28 個 pub fn 函式體逐字元完全相同**、
+  **26 個 #[tauri::command] 零遺失零新增**、pub struct 10 個全數保留。
+  **順帶修掉一個真實 bug**：`training.rs::ReportInfo` 缺 `#[serde(rename_all = "camelCase")]` →
+  序列化為 `project_name`，而 `tauri.js` 讀 `r.projectName`（報告 QuickPick 標籤）→ 恆為 undefined，
+  使用者看到空白標籤。**正是 AGENTS.md「Rust 序列化命名規範」記載的坑**（2026-07-29 ScanedImage.blob_url 同型）。
+  **新守門** `sidecar_module_split.test.mjs` 增 5 項 P2-5 守門（拆分結構、lib.rs 完整路徑、command 註冊完整性、
+  回傳型別 camelCase、子模組導出）；變異測試 2 種皆紅（還原短路徑、拿掉 camelCase）。
+  **連帶修 3 個既有守門**（路徑隨拆分改變）：`process_spawn_contract` 守門 4/5 改讀 `mcu/firmware.rs`、
+  守門 8 的註冊比對改取路徑末段。
+  驗收：317 → **322/322 綠**、cargo check 僅剩 2 個拆分前既有 warning、cargo test 3/3、tsc/lint/eol 全通過。
+  備份 `backup/{mcu,file}_pre_p25_20261003_144839.rs`。**待實機**：序列埠列舉/監看、韌體上傳與燒錄、
+  開檔存檔（含另存新檔與範例唯讀保護）、DM 標籤改名與進度存讀。
 - [ ] **T4** Python／Rust 測試納入：`temp_scripts/e2e_*.py` 轉 pytest（移除硬編碼路徑 `BALL = r'C:/Users/simfonia/Desktop/cocoya/dataset/ball'`，改 `tmp_path`／env）＋補 `sys.exit(1)`；Rust 補 `file.rs`／`python.rs` 測試（現全專案僅 3 個 `#[test]`）；`cargo test` 與 `pytest` 接入 `npm test`
 - [ ] T4 前置盤點：8 支 e2e 腳本的相依套件（numpy／tensorflow／PIL）與執行時間，評估轉 pytest 順序
 

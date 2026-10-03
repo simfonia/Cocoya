@@ -115,7 +115,7 @@ function rustSignature(src, fnName) {
 }
 
 test('P1-6 守門 4：reset_firmware 簽名含 python_path 且燒錄使用它（F1）', () => {
-    const mcu = read('src-tauri', 'src', 'commands', 'mcu.rs');
+    const mcu = read('src-tauri', 'src', 'commands', 'mcu', 'firmware.rs');
     const params = rustSignature(mcu, 'reset_firmware');
     assert.ok(params, 'reset_firmware 簽名未找到');
     assert.ok(/python_path:\s*Option<String>/.test(params),
@@ -130,7 +130,7 @@ test('P1-6 守門 4：reset_firmware 簽名含 python_path 且燒錄使用它（
 test('P1-6 守門 5：前端 reset_firmware invoke 必須帶 pythonPath（跨語言簽名同步鐵律）', () => {
     const tauriJs = read('ui', 'src', 'bridge', 'tauri.js');
     // 以 Rust 簽名反推前端必須送齊的參數，避免在本檔寫死字串比對
-    const mcu = read('src-tauri', 'src', 'commands', 'mcu.rs');
+    const mcu = read('src-tauri', 'src', 'commands', 'mcu', 'firmware.rs');
     const params = rustSignature(mcu, 'reset_firmware');
     const rustParams = [...params.matchAll(/(\w+):\s*(Option<String>|String|bool)/g)]
         .map((m) => ({ name: m[1], type: m[2] }));
@@ -194,7 +194,10 @@ test('P1-6 守門 7：psQuote 實作正確（以函式行為驗證，不只驗�
 test('P1-6 守門 8：#[tauri::command] 未註冊於 invoke_handler 者須列入白名單且真實存在（F3）', () => {
     const libRs = read('src-tauri', 'src', 'lib.rs');
     const handler = libRs.slice(libRs.indexOf('generate_handler!['));
-    const registered = new Set([...handler.matchAll(/commands::(\w+)/g)].map((m) => m[1]));
+    // P2-5 後 command 註冊改用完整子模組路徑（commands::mcu::board::get_serial_ports），
+    // 故比對時取路徑最後一段為函式名。
+    const registered = new Set([...handler.matchAll(/commands::([\w:]+)/g)]
+        .map((m) => m[1].split('::').pop()));
     // 白名單：每項必須附原因，且真的存在（避免過期白名單默默放寬守門）
     const UNREGISTERED_OK = [
         { name: 'start_training', reason: 'P1-6 F3：已停用（Tauri 訓練走 py_ai_train_run → run_python / trainRemote），待 P3-3 刪除' },
