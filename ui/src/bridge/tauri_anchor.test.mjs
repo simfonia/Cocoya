@@ -163,6 +163,8 @@ test('capabilities：_anchor 更新後即時反映（isAnchored / projectRoot �
 test('capabilities：isAnchored=true 但 projectRoot 缺失時不得洩漏 undefined（回 null）', () => {
     const bridge = makeBridge();
     bridge._anchor = { isAnchored: true, projectRoot: undefined };
+    assert.equal(bridge.capabilities.projectRoot, null, 'projectRoot 為 undefined 時不得洩漏 undefined，必須收斂為 null');
+});
 
 // ---------------------------------------------------------------------------
 // _refreshAnchor：成功刷新／後端失敗時降級為未錨定（不可殘留過期快照）
@@ -218,9 +220,6 @@ test('_refreshAnchor：回傳 null（後端未錨定而非拋錯）也收斂為�
         console.log = originalLog;
     }
     assert.deepEqual(bridge._anchor, { isAnchored: false, projectRoot: null });
-    assert.equal(bridge.capabilities.projectRoot, null);
-});
-
     assert.equal(bridge.capabilities.projectRoot, null);
 });
 
