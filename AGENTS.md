@@ -356,6 +356,13 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
     - `no-regex-spaces` — `  # ID:`（2 空格）與 `/^(    )+/`（4 空格）是 ID 注入與 Python 基準縮排的**契約本身**，6 處刻意使用。
     - `no-empty` — 27 處刻意 no-op 區塊（no-op 監聽、預設回呼），與根 `.eslintrc.json` 決策一致。
   - `no-unused-vars` 用 `argsIgnorePattern: "^_"`：**對外 API 簽名不得刪參數**（如 `window.open(url, _name, _specs)` 必須維持瀏覽器 API 契約），此類加底線而非移除。
+  - **`scripts/` 的 lint 覆蓋（2026-10-03 補）**：`lint:ui` 只掃 `ui/src ui/test`、`lint` 只掃 `src`（TS），
+    **`scripts/` 原本不在任何閘門範圍內** → 該目錄的錯誤只會在 VS Code 編輯器（ESLint 擴充套件）
+    顯示，`npm test` 全綠也攔不到。已新增 `lint:scripts` 並接入 `test:unit`。
+    該 override 另關閉 `no-irregular-whitespace`：**U+3000（全形空格）在中文指令稿中是刻意的欄位對齊手段**
+    （如 `拆分前 case：X　switch 殘留：Y`），不是排版錯誤。
+    ⚠️ ESLint 實測：該規則會對**模板字串與註解**觸發，只略過一般字串（`skipStrings`）。
+    關閉範圍僅限 `scripts/**`，`ui/` 與 `src/` 仍維持預設嚴格。
 - **Blockly generator 簽名慣例**：statement 型由 `statementToCode` 以 `generator(block)` 呼叫、value 型由 `valueToCode` 以 `(block, name, order)` 呼叫。**不引用 `generator` 的函式不宣告該參數**（專案已有 `function(block)` 先例）；此處不受 `argsIgnorePattern` 保護，寫 `(block, generator)` 卻不用會被 lint 擋下。
 
 - **測試 SSOT 執行方式**：`ui/` 目錄下 `node --test "src/**/*.test.mjs"`（**勿用目錄模式**，會誤把 `index.js` 當入口，見上文 DM 測試段落）。

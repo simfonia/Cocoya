@@ -33,6 +33,18 @@
   },
   "overrides": [
     {
+      "files": ["scripts/**/*.cjs", "scripts/**/*.js"],
+      "parserOptions": {
+        "sourceType": "script"
+      },
+      "env": {
+        "node": true
+      },
+      "rules": {
+        "no-irregular-whitespace": "off"
+      }
+    },
+    {
       "files": ["ui/**/*.js"],
       "env": {
         "browser": true
