@@ -1,4 +1,7 @@
 import { BaseBridge } from './base.js';
+// [P2-1 2026-10-03] send() 的 command → 函式對照表（command 集合的 SSOT）。
+// 已遷移的 command 在此攔截，未遷移的仍走下方 switch（漸進式遷移，見 send() 註解）。
+import { getSendHandler } from './tauri/sendHandlers.js';
 
 /**
  * Tauri 桌面應用專屬橋接實作
@@ -76,181 +79,32 @@ export class BridgeTauri extends BaseBridge {
     /**
      * 處理 Tauri 指令分發
      */
+    /**
+     * 處理 Tauri 指令分發
+     *
+     * [P2-1 2026-10-03] 採**漸進式遷移**：已搬至子模組的 command 走 handler 對照表，
+     * 未搬的仍留在下方 switch。每完成一組遷移就從 switch 移除對應 case，
+     * 全部搬完時整個 switch 與 `result` 變數一併刪除。
+     * 分派機制刻意與原 switch **逐項等價**：
+     *   - 未命中的 command 落入 switch，行為完全不變
+     *   - 例外 → 同一則 console.error ＋ resetFirmware 的 alert（兩者皆原樣保留）
+     *   - **不回傳** handler 結果：原 `let result` 從未 `return`（實測 0 處 `return result`），
+     *     `base.js` 呼叫端也只 await promise 等副作用完成。故本方法 resolve 值恆為 undefined。
+     */
     async send(command, data = {}) {
         await this.ready;
         if (!this.tauriInvoke) return;
 
         try {
-            let result;
+            // ── 已遷移至 tauri/*.js 的 command ──
+            const handler = getSendHandler(command);
+            if (handler) {
+                await handler.call(this, command, data);
+                return;
+            }
+
+            // ── 尚未遷移的 command（下方 switch）──
             switch (command) {
-                case 'getManifest':
-                    result = await this.tauriInvoke('get_manifest'); 
-                    this._dispatchToFrontend({ command: 'manifestData', data: result, mediaUri: 'src', lang: 'zh-hant' });
-                    break;
-
-                case 'reloadWebview':
-                    // 主題/語系切換：Tauri 無 host HTML 管理，直接重載頁面
-                    location.reload();
-                    result = true;
-                    break;
-
-                case 'getModuleToolbox':
-                    {
-                        // 單獨包成 block：switch 內宣告 const/let 必須有區塊作用域，
-                        // 否則與其他 case 的同名變數共用同一個 switch 作用域。
-                        const toolboxPath = `${data.moduleId}/toolbox.xml`;
-                        result = await this.tauriInvoke('get_module_toolbox', { path: toolboxPath });
-                        if (data.requestId) {
-                            this._dispatchToFrontend({ command: 'toolboxData', data: result, requestId: data.requestId });
-                        }
-                    }
-                    break;
-
-                case 'setPythonPath':
-                    try {
-                        const newPath = await this.tauriInvoke('pick_python_path');
-                        if (newPath) {
-                            localStorage.setItem('pythonPath', newPath);
-                            const msg = (window.Blockly?.Msg['MSG_PYTHON_UPDATED'] || 'Python path updated to: %1').replace('%1', newPath);
-                            this.alert(msg);
-                            // 回報新路徑給環境設定視窗並自動重新檢查套件
-                            this._dispatchToFrontend({ command: 'pythonPathData', pythonPath: newPath });
-                            const checkData = await this.tauriInvoke('check_environment', { pythonPath: newPath });
-                            this._dispatchToFrontend({ command: 'environmentStatus', ...checkData });
-                        }
-                    } catch (e) {
-                        if (e !== 'Canceled') console.error('[Bridge] Failed to pick python path:', e);
-                    }
-                    break;
-
-                case 'getPythonPath':
-                    // 環境設定視窗路徑列：回報目前 pythonPath（Tauri 權威來源 = localStorage）
-                    this._dispatchToFrontend({
-                        command: 'pythonPathData',
-                        pythonPath: localStorage.getItem('pythonPath') || 'python'
-                    });
-                    break;
-
-                case 'runCode':
-                    try {
-                        const pythonPath = localStorage.getItem('pythonPath') || 'python';
-                        const lang = (window.Blockly && Blockly.Msg['BKY_LANG']) || 'zh-hant';
-                        
-                        if (data.platform === 'MicroPython') {
-                            if (!data.serialPort) {
-                                this.alert(window.Blockly?.Msg['MSG_SELECT_PORT'] || 'Please select a serial port first!');
-                                return;
-                            }
-                            window.CocoyaUI.showLoadingModal(window.Blockly?.Msg['MSG_UPLOADING'] || 'Uploading code to MCU...');
-                            
-                            await this.tauriInvoke('deploy_mcu', {
-                                pythonPath: pythonPath,
-                                port: data.serialPort,
-                                code: data.code,
-                                serialUploadOnly: data.serialUploadOnly || false,
-                                rawDumpEnabled: data.rawDumpEnabled === undefined
-                                    ? localStorage.getItem('cocoya_serial_raw_dump_enabled') === 'true'
-                                    : !!data.rawDumpEnabled,
-                                lang: lang
-                            });
-                            
-                            window.CocoyaUI.hideLoadingModal();
-                            window.CocoyaUI.flashButton('btn-run', '#75FB4C');
-                        } else {
-                            await this.tauriInvoke('run_python', { 
-                                code: data.code, 
-                                pythonPath: pythonPath 
-                            });
-                            window.CocoyaUI.flashButton('btn-run', '#75FB4C');
-                        }
-                    } catch (e) {
-                        window.CocoyaUI.hideLoadingModal();
-                        this.alert('Run failed: ' + e);
-                    }
-                    break;
-
-                case 'stopCode':
-                    // 順帶中斷遠端訓練（若無進行中訓練，sidecar 回「目前沒有」僅靜默）
-                    this._handleDatasetCommand('stopTraining', {}, null).catch(() => {
-                        // 停止遠端訓練失敗不影響本機停止（sidecar 可能已結束），靜默忽略。
-                    });
-                    await this.tauriInvoke('stop_python');
-                    break;
-
-                case 'openSerialMonitor':
-                    try {
-                        if (!data.serialPort) return;
-                        const pythonPath = localStorage.getItem('pythonPath') || 'python';
-                        const lang = (window.Blockly && Blockly.Msg['BKY_LANG']) || 'zh-hant';
-                        if (window.CocoyaUI) {
-                            window.CocoyaUI.toggleTerminal(true);
-                            window.CocoyaUI.appendTerminal(`--- Opening Monitor: ${data.serialPort} ---`, 'info');
-                        }
-                        await this.tauriInvoke('open_serial_monitor', { 
-                            port: data.serialPort,
-                            pythonPath: pythonPath,
-                            rawDumpEnabled: data.rawDumpEnabled === undefined
-                                ? localStorage.getItem('cocoya_serial_raw_dump_enabled') === 'true'
-                                : !!data.rawDumpEnabled,
-                            lang: lang
-                        });
-                    } catch (e) {
-                        console.error('[Bridge] Failed to open monitor:', e);
-                        const errLabel = window.Blockly?.Msg['MSG_MONITOR_FAILED'] || 'Failed to open monitor: ';
-                        this.alert(errLabel + e);
-                    }
-                    break;
-
-                case 'toggleSerialMonitor': {
-                    // 序列監看鈕 toggle：後端已啟用中 → 停止；否則對指定埠啟動
-                    try {
-                        if (!data.serialPort) break;
-                        const monPython = localStorage.getItem('pythonPath') || 'python';
-                        const monLang = (window.Blockly && Blockly.Msg['BKY_LANG']) || 'zh-hant';
-                        const res = await this.tauriInvoke('toggle_serial_monitor', {
-                            port: data.serialPort,
-                            pythonPath: monPython,
-                            rawDumpEnabled: data.rawDumpEnabled === undefined
-                                ? localStorage.getItem('cocoya_serial_raw_dump_enabled') === 'true'
-                                : !!data.rawDumpEnabled,
-                            lang: monLang
-                        });
-                        const opened = res === 'opened';
-                        if (window.CocoyaUI) {
-                            window.CocoyaUI.setSerialMonitorActive(opened);
-                            window.CocoyaUI.appendTerminal(
-                                opened ? `--- Opening Monitor: ${data.serialPort} ---` : '--- Monitor Stopped ---',
-                                'info'
-                            );
-                            if (opened) window.CocoyaUI.toggleTerminal(true);
-                        }
-                    } catch (e) {
-                        console.error('[Bridge] Failed to toggle monitor:', e);
-                        this.alert('Failed to toggle monitor: ' + e);
-                    }
-                    break;
-                }
-
-                case 'refreshSerialPorts':
-                case 'getSerialPorts':
-                    result = await this.tauriInvoke('get_serial_ports');
-                    this._dispatchToFrontend({ command: 'serialPortsData', ports: result });
-                    break;
-
-                case 'deployMcu':
-                    await this.tauriInvoke('deploy_mcu', {
-                        pythonPath: localStorage.getItem('pythonPath') || 'python',
-                        port: data.port,
-                        code: data.code,
-                        serialUploadOnly: false,
-                        rawDumpEnabled: data.rawDumpEnabled === undefined
-                            ? localStorage.getItem('cocoya_serial_raw_dump_enabled') === 'true'
-                            : !!data.rawDumpEnabled,
-                        lang: (window.Blockly && Blockly.Msg['BKY_LANG']) || 'zh-hant'
-                    });
-                    this._dispatchToFrontend({ command: 'deployCompleted' });
-                    break;
-
                 case 'saveFile':
                 case 'saveFileAs':
                     {
@@ -327,127 +181,11 @@ export class BridgeTauri extends BaseBridge {
                     }
                     break;
 
-                case 'checkStartupBackup':
-                    result = await this.tauriInvoke('check_startup_backup');
-                    if (result) {
-                        this._dispatchToFrontend({ command: 'recoveryData', xml: result });
-                    }
-                    break;
-
-                case 'autoBackup':
-                    await this.tauriInvoke('auto_backup', { xml: data.xml });
-                    break;
-
-                case 'clearBackup':
-                    await this.tauriInvoke('clear_backup');
-                    break;
-
-                case 'rejectRecovery':
-                    await this.tauriInvoke('reject_recovery');
-                    break;
+                // [P2-1] checkStartupBackup / autoBackup / clearBackup / rejectRecovery
+                // 已遷移至 tauri/backup.js，見 sendHandlers.js
 
                 case 'checkUpdate':
                     await this._handleCheckUpdate();
-                    break;
-
-                case 'openHelp':
-                    try {
-                        await this.tauriInvoke('open_help', { helpId: data.helpId });
-                    } catch (e) {
-                        console.error('[Bridge] Failed to open help:', e);
-                    }
-                    break;
-
-                case 'openExternal':
-                    try {
-                        const { open } = await import('@tauri-apps/plugin-shell');
-                        await open(data.url);
-                    } catch (e) {
-                        console.error('[Bridge] Failed to open external URL:', e);
-                        window.open(data.url, '_blank');
-                    }
-                    break;
-
-                case 'eraseFilesystem':
-                    try {
-                        this._firstLogReceived = true;
-                        window.CocoyaUI.toggleTerminal(true);
-                        const loadingMsg = window.Blockly?.Msg['MSG_ERASING_FS'] || 'Rebuilding filesystem... Please wait about 15 seconds.';
-                        window.CocoyaUI.showLoadingModal(loadingMsg);
-                        const pythonPath = localStorage.getItem('pythonPath') || 'python';
-                        const lang = (window.Blockly && Blockly.Msg['BKY_LANG']) || 'zh-hant';
-                        await this.tauriInvoke('erase_filesystem', { 
-                            port: data.serialPort,
-                            pythonPath: pythonPath,
-                            lang: lang
-                        });
-                        window.CocoyaUI.hideLoadingModal();
-                        this.alert(window.Blockly?.Msg['MSG_ERASE_FS_SUCCESS'] || 'Filesystem rebuilt successfully!');
-                    } catch (e) {
-                        this._firstLogReceived = true;
-                        window.CocoyaUI.hideLoadingModal();
-                        this.alert('Erase failed: ' + e);
-                    }
-                    break;
-
-                case 'setWindowTitle':
-                    try {
-                        const fullTitle = `Cocoya - ${data.title}`;
-                        document.title = fullTitle;
-                        await this.tauriInvoke('set_window_title', { title: fullTitle });
-                    } catch (e) { console.warn('[Bridge] Failed to set window title via Rust:', e); }
-                    break;
-
-                case 'setDirty':
-                    await this.tauriInvoke('set_dirty', { isDirty: data.isDirty });
-                    break;
-
-                case 'closeWindow':
-                    await this.tauriInvoke('close_window');
-                    break;
-
-                case 'closeEditor':
-                    // toolbar 的「關閉編輯器」：與右上角 X 走相同 dirty 檢查與存檔確認流程
-                    if (this._appWindow) await this._handleCloseDialog();
-                    break;
-
-                case 'backToHome':
-                    // 回首頁（模式 label 點擊 / Ctrl+R 攔截共用）：釋放本視窗 session
-                    // （current_paths 錨定 / file_locks / dirty_states）並同步 _anchor 快照
-                    try {
-                        await this.tauriInvoke('release_session');
-                    } catch (e) {
-                        console.error('[Bridge] release_session failed:', e);
-                    }
-                    await this._refreshAnchor();
-                    break;
-
-                // 2026-09-30 移除 'setupStableMode' 事件處理。
-                // 原因：CircuitPython 遺留功能，後端 setup_stable_mode 三個實作皆為 no-op。
-
-                case 'resetFirmware':
-                    try {
-                        const loadingMsg = window.Blockly?.Msg['MSG_BURNING_FIRMWARE'] || 'Burning firmware... Please do not close the window.';
-                        window.CocoyaUI.showLoadingModal(loadingMsg);
-                        await this.tauriInvoke('reset_firmware', {
-                            model: data.model,
-                            shouldClear: data.shouldClear,
-                            serialPort: data.serialPort || '',
-                            // P1-6 F1：esptool 必須用與使用者設定一致的 Python（venv/conda 環境）
-                            pythonPath: localStorage.getItem('pythonPath') || ''
-                        });
-                        window.CocoyaUI.hideLoadingModal();
-                        this.alert(window.Blockly?.Msg['MSG_FIRMWARE_BURN_SUCCESS'] || 'Burn success!');
-                    } catch (e) {
-                        window.CocoyaUI.hideLoadingModal();
-                        throw e;
-                    }
-                    break;
-
-                case 'alert':
-                case 'confirm':
-                case 'prompt':
-                    await this._handleNativeDialogs(command, data);
                     break;
 
                 case 'openExamples':
@@ -543,14 +281,6 @@ export class BridgeTauri extends BaseBridge {
                             window.CocoyaUI.appendTerminal('[Remote] ' + (response.error || '中斷失敗'), 'err');
                         }
                     });
-                    break;
-
-                case 'openFolder':
-                    try {
-                        await this.tauriInvoke('open_folder', { path: data.path || data.folderPath || '' });
-                    } catch (e) {
-                        console.error('[Bridge] openFolder failed:', e);
-                    }
                     break;
 
                 case 'datasetListCameras':
@@ -1020,72 +750,6 @@ export class BridgeTauri extends BaseBridge {
                 case 'newFile':
                 case 'createWindow':
                     await this.tauriInvoke('create_window');
-                    break;
-
-                case 'setLocale':
-                    console.log('[Bridge] Locale sync ignored in Tauri mode');
-                    break;
-
-                case 'checkEnvironment':
-                    try {
-                        const pythonPath = localStorage.getItem('pythonPath') || 'python';
-                        const data = await this.tauriInvoke('check_environment', { pythonPath: pythonPath });
-                        console.log('[Bridge] check_environment returned:', data);
-                        this._dispatchToFrontend({ command: 'environmentStatus', ...data });
-                    } catch (e) {
-                        console.error('[Bridge] Check environment failed:', e);
-                        // 明確回報「無效」而非靜默：否則 modal 會永遠停在「正在偵測…」
-                        this._dispatchToFrontend({
-                            command: 'environmentStatus',
-                            results: {}, modules: [],
-                            pythonValid: false, pythonResolvedPath: '', pythonVersion: '',
-                            pythonError: String(e)
-                        });
-                    }
-                    break;
-
-                case 'installModule':
-                    // 走專用 command，而非 run_python。理由：
-                    // 1. run_python 開頭會 stop_python → 會殺掉使用者正在執行的程式，
-                    //    並釋放該視窗的串列埠監看（在專案中裝套件時會誤殺）。
-                    // 2. run_python 不回報 exit code → 前端無法得知安裝完成/失敗。
-                    // 輸出改由 install-module-log / install-module-done 事件回報，
-                    // 直接顯示在環境設定視窗內（不再送往底部終端機，避免被 modal 遮住）。
-                    try {
-                        const pythonPath = localStorage.getItem('pythonPath') || 'python';
-                        await this.tauriInvoke('install_python_module', {
-                            pythonPath: pythonPath,
-                            moduleId: data.module,
-                            pipPackage: data.pipPackage || data.module
-                        });
-                    } catch (e) {
-                        console.error('[Bridge] Failed to start installation:', e);
-                        // 讓前端狀態機收斂（否則列會永遠停在「安裝中…」）
-                        this._dispatchToFrontend({
-                            command: 'installModuleDone',
-                            moduleId: data.module,
-                            success: false,
-                            exitCode: null,
-                            aborted: false,
-                            errorCode: (e === 'INSTALL_ALREADY_RUNNING') ? 'INSTALL_ALREADY_RUNNING' : 'SPAWN_FAILED'
-                        });
-                    }
-                    break;
-
-                case 'abortInstall':
-                    try {
-                        await this.tauriInvoke('abort_install_module');
-                    } catch (e) {
-                        console.error('[Bridge] Failed to abort installation:', e);
-                        // 後端未能中止時仍讓前端收斂，避免 modal 卡在鎖定狀態無法關閉
-                        this._dispatchToFrontend({
-                            command: 'installModuleDone',
-                            moduleId: null,
-                            success: false,
-                            exitCode: null,
-                            aborted: true
-                        });
-                    }
                     break;
 
                 default:
