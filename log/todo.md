@@ -267,7 +267,29 @@
 - [x] P1-7 核對 sidecar 3 處 Popen 的 `encoding/errors` ✅ 2026-10-03 **實查後已全部符合，隨 P1-5 一併結案**
   （L967 TFLite 轉換、L1099 trainLocal 皆已有 `encoding="utf-8", errors="replace"`；
   唯一缺 encoding 的是 P1-5 刪除的 pip `check_call`，本無文字輸出需求）。AGENTS.md 四件套鐵律在 sidecar 端已滿足。
-- [ ] P2-3 `dataset_sidecar.py`（1138 行／19 def）拆分：內嵌 Python 字串腳本抽 `resources/dataset_manager/scripts/*.py`；`CameraService`／遠端訓練／TFLite 轉換各自成模組；維持 stdout 單一 JSON 回應契約
+- [x] P2-3 `dataset_sidecar.py` 拆分 ✅ 2026-10-03（**1206 行 → 主檔 499 行**，拆出 5 個模組）
+  **計畫前提修正**：原文要求抽「內嵌 Python 字串腳本」，但 `_local_convert_tflite.py`（2026-09-04）
+  與 `dataset_io.py` 早已是獨立檔、全文無三引號腳本 → 真正待解的是 `run()` 的 **1050 行 if/elif 指令鏈**。
+  拆出：`local_training.py`(135，trainLocal＋TASK_SCRIPTS SSOT)／`remote_ssh.py`(754，四遠端指令＋
+  REMOTE_SCRIPTS SSOT＋_require_paramiko)／`remote_sync.py`(141，smart sync)／`remote_docker.py`(357，
+  Docker 訓練＋產物下載)／`remote_tflite.py`(108，本地 Keras→TFLite)。搬 1085 行。
+  **搬移方式**：Python 腳本**機械式抽取**（逐行切割＋取代 `self.send_*`/`self._remote_train` → 注入參數），
+  非人工重打，降低 600 行搬移的轉錄風險。
+  **兩個語意陷阱**（皆實測證實非推測）：① `continue` 失去宿主迴圈 —— paramiko 缺裝分支函式化後
+  等價於 `return`（逐處確認僅 2 處）；② **循環 import** —— 頂層雙向 import 只在特定順序下僥倖可用，
+  單獨 `import remote_sync` 立刻拋 partially initialized module → 改函式內延遲 import ＋ 註解原因。
+  連帶修掉：`remote_docker` 內聯 24 行 `script_rel` 鏈 → 改用 `resolve_remote_script`（SSOT 單一）。
+  **新守門** `ui/src/modules/dataset_manager/sidecar_module_split.test.mjs`（8 測）；守門 1 初版 18 秒
+  → 改單一子行程批次（import 前清 `sys.modules` 殘留模擬乾淨載入）→ 5.5 秒。
+  **變異測試揪出守門 3 是假綠**：原只驗「分派數 ≥14」，把 `stopTraining` 改名後總數不變 → 全綠；
+  改 handler 名同樣漏。已改為**與預期集合完全一致** ＋ **分派呼叫的 handler 必須真的存在於某模組**。
+  教訓：「數量下限」守門在重構中必然失效，只能靠集合對帳。
+  **連帶修兩個被拆分打破的既有守門**（證明其先前有效）：`task_type_contract.test.mjs` ⑧
+  改讀 `local_training.TASK_SCRIPTS`／`remote_ssh.REMOTE_SCRIPTS`；`sidecar_dependency_contract`
+  ①②③ 掃描範圍擴為全部 6 個 sidecar 模組。
+  驗收：309 → **317/317 綠**、端到端煙霧測試（stdout 全為合法 JSON，契約未破）、5 種匯入順序皆 exit 0、
+  tsc/lint/py_compile/eol 全通過。備份 `backup/dataset_sidecar_pre_p23_20261003_141427.py`。
+  **待實機**：遠端訓練全鏈（資料 sync→模板 sync→Docker→下載→本地 TFLite）＋ 中斷訓練 ＋ 匯出回歸。
 - [ ] P2-5 Rust 拆檔（**先不動**，待 tauri-codegen 議題合併處理）：`mcu.rs`→`mcu/{serial,board,monitor}.rs`；`file.rs`→`file/{ops,anchor}.rs`
 - [ ] **T4** Python／Rust 測試納入：`temp_scripts/e2e_*.py` 轉 pytest（移除硬編碼路徑 `BALL = r'C:/Users/simfonia/Desktop/cocoya/dataset/ball'`，改 `tmp_path`／env）＋補 `sys.exit(1)`；Rust 補 `file.rs`／`python.rs` 測試（現全專案僅 3 個 `#[test]`）；`cargo test` 與 `pytest` 接入 `npm test`
 - [ ] T4 前置盤點：8 支 e2e 腳本的相依套件（numpy／tensorflow／PIL）與執行時間，評估轉 pytest 順序

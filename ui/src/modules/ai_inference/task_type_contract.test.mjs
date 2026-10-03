@@ -214,16 +214,26 @@ test('⑧ 訓練模板目錄與 sidecar 兩處映射一致（改名後的核心�
       `舊模板目錄 train_templates/${old}/ 仍存在（改名遺漏）`);
   }
 
+  // P2-3（2026-10-03）：task_scripts 已抽出至 local_training.py（TASK_SCRIPTS），
+  // script_rel 抽出至 remote_ssh.py（REMOTE_SCRIPTS）。守門須跟著搬移，否則整條改名不變式失效。
   const sidecar = fs.readFileSync(
     path.join(repo, 'resources', 'dataset_manager', 'dataset_sidecar.py'), 'utf8');
+  const localTraining = fs.readFileSync(
+    path.join(repo, 'resources', 'dataset_manager', 'local_training.py'), 'utf8');
+  const remoteSsh = fs.readFileSync(
+    path.join(repo, 'resources', 'dataset_manager', 'remote_ssh.py'), 'utf8');
   for (const t of dropdownTaskTypes()) {
     if (t === 'serial') continue;
-    assert.ok(sidecar.includes(`"${t}": "${t}_train.py"`),
-      `sidecar task_scripts 缺 ${t} 映射`);
-    assert.ok(sidecar.includes(`"${t}/${t}_train.py"`),
-      `sidecar script_rel 缺 ${t} 映射（遠端訓練會找不到模板）`);
+    assert.ok(localTraining.includes(`"${t}": "${t}_train.py"`),
+      `local_training.TASK_SCRIPTS 缺 ${t} 映射`);
+    assert.ok(remoteSsh.includes(`"${t}/${t}_train.py"`),
+      `remote_ssh.REMOTE_SCRIPTS 缺 ${t} 映射（遠端訓練會找不到模板）`);
   }
+  // 主檔不得再持有一份映射（SSOT 單一）
+  assert.ok(!/task_scripts\s*=\s*\{/.test(sidecar),
+    'dataset_sidecar.py 仍自持 task_scripts 映射（應以 local_training.TASK_SCRIPTS 為單一來源）');
   // Docker 映像名刻意不參與改名（改了遠端已建映像會失效）
-  assert.ok(sidecar.includes('"cocoya-train-classifier"'),
+  const allSidecar = [sidecar, localTraining, remoteSsh].join('\n');
+  assert.ok(allSidecar.includes('"cocoya-train-classifier"'),
     'Docker 映像名 cocoya-train-classifier 應保留（刻意不改名）');
 });
