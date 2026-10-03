@@ -4,6 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createLabelManager } from './labelManager.js';
+import { fallbackT, rawEscapeHtml } from '../../../../test/depsStubs.js';
 
 function makeHarness({ type = 'image_classification', labelMap = {}, images = [] } = {}) {
     const specData = {
@@ -27,9 +28,8 @@ function makeHarness({ type = 'image_classification', labelMap = {}, images = []
     };
     const UICanvas = { state: {}, render: () => { calls.rendered++; } };
     const UIComponents = { renderLabelStats: () => {} };
-    const t = (key, fallback) => fallback || key;
     const mgr = createLabelManager({
-        state, t, escapeHtml: (v) => String(v ?? ''),
+        state, t: fallbackT, escapeHtml: rawEscapeHtml,
         UIComponents, UICanvas,
         getFormValue: () => type,
         syncLabelMap: () => { calls.synced++; },

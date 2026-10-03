@@ -399,7 +399,9 @@ function renderValidation(result) {
 }
 
 let refreshTimeout = null;
-export function refreshPreview() {
+// [P3-3 2026-10-03] 不再 export：本檔唯一外部消費者 index.js 已於本批移除
+// window.CocoyaDataset.refreshPreview 掛載（零消費者）；內部呼叫不受影響。
+function refreshPreview() {
     const modal = getModal();
     if (!modal) return;
 
@@ -867,7 +869,8 @@ async function exitAnnotationMode(skipUnannotatedCheck = false) {
     refreshDynamicPanels();
 }
 
-export function refreshDynamicPanels() {
+// [P3-3 2026-10-03] 同 refreshPreview：不再 export（ui_layout.js 全檔僅 index.js 匯入）。
+function refreshDynamicPanels() {
     const modal = getModal();
     if (!modal) return;
 

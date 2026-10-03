@@ -1,14 +1,14 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { createPanelsPresenter } from './panels.js';
+import { makeEl } from '../../../../test/fakeDom.js';
+import { fallbackT, angleEscapeHtml, optionListPanels } from '../../../../test/depsStubs.js';
 
-/* 極簡 fake element */
+/* [T3 殘項 2026-10-03] 極簡 fake element 改用共用 makeEl。
+   本檔斷言讀 `c._appended`（insertAdjacentHTML 累積），已由 fakeDom 的
+   insertAdjacentHTML 同步累積提供，故此處不需再覆寫 —— 斷言逐字未動。 */
 function el(id) {
-    const e = {
-        id, innerHTML: '', _appended: '', style: {},
-        insertAdjacentHTML(_pos, html) { e._appended += html; }
-    };
-    return e;
+    return makeEl(id);
 }
 
 function makeDeps(modalOverrides = {}) {
@@ -26,9 +26,9 @@ function makeDeps(modalOverrides = {}) {
                     ] } })
                 }
             },
-            t: (key, fallback) => fallback || key,
-            escapeHtml: (v) => String(v).replace(/</g, '&lt;'),
-            optionList: (values, selected) => values.map(v => `<option ${v === selected ? 'selected' : ''}>${v}</option>`).join(''),
+            t: fallbackT,
+            escapeHtml: angleEscapeHtml,
+            optionList: optionListPanels,
             getModal: () => modal,
             refreshPreview: () => events.push('refresh'),
             DatasetSpec: { normalizeColumn: (c) => ({ name: c.name || '', type: c.type || 'text', role: c.role || 'feature' }) },

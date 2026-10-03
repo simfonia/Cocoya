@@ -6,13 +6,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createStatusMessageUI } from './statusMessage.js';
+import { makeEl } from '../../../../test/fakeDom.js';
 
+// [T3 殘項 2026-10-03] 原本自帶的 makeFakeDocument 已改用共用的 makeEl。
+// 差異只有初始 classList/style 與元素 id，以 overrides 表達；
+// 斷言（textContent / style.visibility / classList）逐字未動。
 function makeFakeDocument() {
-    const el = {
-        textContent: '',
-        style: { display: 'none' },
-        classList: { _set: new Set(), toggle(cls, on) { on ? this._set.add(cls) : this._set.delete(cls); }, contains(cls) { return this._set.has(cls); } }
-    };
+    const el = makeEl('dataset-manager-message', { style: { display: 'none' } });
     const documentRef = {
         getElementById(id) {
             return id === 'dataset-manager-message' ? el : null;

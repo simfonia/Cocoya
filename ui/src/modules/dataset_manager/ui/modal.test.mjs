@@ -5,15 +5,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildModalTemplate } from './modal.js';
-
-// 簡單 optionList 實作（與 ui_layout 行為等價）：`<option value="X" selected?...>X</option>`
-function optionList(values, selected) {
-    return values
-        .map((value) => `<option value="${value}" ${value === selected ? 'selected' : ''}>${value}</option>`)
-        .join('');
-}
-
-const t = (key, fallback) => `[${key}:${fallback}]`;
+import * as depsStubs from '../../../../test/depsStubs.js';
+// [T3 殘項 2026-10-03] 原本自帶的 optionList / t 已收攏至 ui/test/depsStubs.js。
+// taggedT 的輸出格式（[KEY:fallback]）為本檔斷言所需，刻意不與 fallbackT 合併。
+const { taggedT: t, optionListModal: optionList } = depsStubs;
 
 const deps = {
     t,

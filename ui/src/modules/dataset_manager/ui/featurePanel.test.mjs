@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import { createFeaturePanel } from './featurePanel.js';
 import { buildFeatureSchema, landmarksToRow, FEATURE_MEDIAPIPE_MISSING } from '../core/featureSchema.js';
 import { makeSpecStub } from '../../../../test/fixtures.js';
+import { fallbackT, rawEscapeHtml } from '../../../../test/depsStubs.js';
 
 function makeElement(id, overrides = {}) {
     const el = {
@@ -68,9 +69,9 @@ function makeHarness({ labelMap = {} } = {}) {
             },
             prompt: async () => 'newlabel'
         },
-        t: (k, f) => f || k,
+        t: fallbackT,
         Sampler, UIComponents: { renderLabelStats: () => {} },
-        escapeHtml: (v) => String(v),
+        escapeHtml: rawEscapeHtml,
         FEATURE_MEDIAPIPE_MISSING,
         buildFeatureSchema, landmarksToRow,
         nextLabelId: (map) => Object.keys(map).length,
@@ -137,9 +138,9 @@ test('缺 MediaPipe：回傳 errorCode 顯示降級訊息，不累計樣本', as
                 success: false, errorCode: FEATURE_MEDIAPIPE_MISSING, error: 'x' }) }),
             prompt: async () => 'x'
         },
-        t: (k, f) => f || k,
+        t: fallbackT,
         Sampler, UIComponents: { renderLabelStats: () => {} },
-        escapeHtml: (v) => String(v),
+        escapeHtml: rawEscapeHtml,
         FEATURE_MEDIAPIPE_MISSING,
         buildFeatureSchema, landmarksToRow,
         nextLabelId: () => 0,
