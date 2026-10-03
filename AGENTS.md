@@ -45,6 +45,31 @@ Cocoya 是一個針對 Python AI 視覺的教學工具。它透過 Blockly 產�
 - **原子化狀態同步**：前端在執行「儲存並關閉」流程時，必須 `await window.CocoyaBridge.send('setDirty', { isDirty: false })` 確保後端狀態更新後，才呼叫 `close_window`。
 - **備份宣示權**：處理未命名備份時，必須遵循「偵測後立即重新命名為 `.recovering`」的宣示模式，確保同一個備份檔不會被多個視窗同時抓取。
 - **強制鎖定**：後端 `save_file` 指令必須檢查路徑擁有者。若非目前視窗鎖定的路徑，必須回傳錯誤並由前端 Alert 提示使用者「另存新檔」。
+### Task Type 命名統一鐵律（2026-10-03）
+DM 專案類型（`typePolicy.ALL_TYPES`）、訓練任務類型（`TASK_TYPE` 下拉）、訓練模板目錄
+**三者使用同一組名稱**：
+
+| DM 專案類型 | 訓練 task type | 模板目錄 / 腳本 |
+| :--- | :--- | :--- |
+| `image` | **`image_classifier`** | `image_classifier/image_classifier_train.py` |
+| `object_detection` | `object_detection` | `object_detection/object_detection_train.py` |
+| `line_following` | `line_following` | `line_following/line_following_train.py` |
+| `table` / `feature` / `serial` | 同名 | 同名（`serial` 預留未實作） |
+
+- **唯一仍不同的對**：`image`（DM）→ `image_classifier`（訓練），因訓練端需明示「分類器」以與 table 分類任務區別。
+- **新增 task type 必須同時滿足三處**：① `ai_inference_blocks.js` 的 `TASK_TYPE_OPTIONS`
+  ② `ai_inference_generators.js` 的 `train_model` 分派 ③ `predict` 分派；
+  若需 sidecar 訓練，還要同步 `dataset_sidecar.py` 的**兩處**映射（`task_scripts` L1066 / `script_rel` L798）。
+  ⚠️ 另注意 **`ui/src/ui/dialogs.js` 的訓練對話框是第四處獨立定義**（與 `TASK_TYPE_OPTIONS` 無關），
+  改 task type 時極易漏改——守門 `task_type_contract.test.mjs` ⑦⑧ 已涵蓋。
+- **守門**：`ui/src/modules/ai_inference/task_type_contract.test.mjs`（8 測，掃描型，驗三處一致＋模板目錄存在＋sidecar 兩處映射＋舊目錄不得殘留）。
+- **不做相容層**（2026-10-03 決策，Cocoya 尚未公開使用）：既有 `.xml`／`dataset.json` 中的舊 task type
+  值會失效並回退預設值。**新增 task type 時不可假設舊資料相容。**
+- **刻意不參與改名**（非 task type，改了會造成實際損害）：Docker 映像 `cocoya-train-classifier`
+  （遠端已建映像失效）、範例資料夾 `AI_01_classifier`（教學路徑）、
+  Python 模組 `common/classifier_dataset.py`／`classifier_model.py`、使用者自訂 `DATASET_DIR`。
+- SSOT：`docs/dataset_types_matrix.md` §0（含命名對照規則與維護鐵律）。
+
 ### 訓練集切分鐵律：分層抽樣 (Stratified Split)
 所有**帶類別標籤**的訓練模板，切分訓練/驗證集時**必須使用分層抽樣**（各類別依 `validation_split` 比例各自切分），**禁止**全域隨機切分（`shuffle + take` 或 `image_dataset_from_directory(validation_split=...)` 這類不分類別的切法）。
 

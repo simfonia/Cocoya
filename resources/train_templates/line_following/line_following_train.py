@@ -136,7 +136,7 @@ def save_line_history(history, output_path, project_name, epochs, batch_size,
     """儲存訓練歷史 JSON。"""
     history_data = {
         'projectName': project_name,
-        'taskType': 'line_follower',
+        'taskType': 'line_following',
         'epochs': epochs,
         'batchSize': batch_size,
         'learningRate': learning_rate,
@@ -400,7 +400,7 @@ def main():
     result = {
         'success': True,
         'projectName': args.project_name,
-        'taskType': 'line_follower',
+        'taskType': 'line_following',
         'modelDir': args.output_dir,
         'epochs': args.epochs,
         'batchSize': args.batch_size,

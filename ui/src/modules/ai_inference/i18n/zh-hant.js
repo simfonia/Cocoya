@@ -40,9 +40,9 @@ Blockly.Msg["AI_INFERENCE_TYPE_INT8"] = "量化 (int8)";
 Blockly.Msg["AI_INFERENCE_TYPE_F32"] = "Float32";
 
 // Task Types
-Blockly.Msg["AI_TASK_CLASSIFIER"] = "分類器";
-Blockly.Msg["AI_TASK_DETECTOR"] = "偵測器";
-Blockly.Msg["AI_TASK_LINE_FOLLOWER"] = "循線";
+Blockly.Msg["AI_TASK_IMAGE_CLASSIFIER"] = "分類器";
+Blockly.Msg["AI_TASK_OBJECT_DETECTION"] = "偵測器";
+Blockly.Msg["AI_TASK_LINE_FOLLOWING"] = "循線";
 Blockly.Msg["AI_TASK_TABLE"] = "表格";
 // [G1 2026-10-03] feature（特徵）：訓練可跑；推論待階段 2（表格型推論尚未實作）
 Blockly.Msg["AI_TASK_FEATURE"] = "特徵";
@@ -76,7 +76,7 @@ Blockly.Msg["AI_GET_DIRECTION_TOOLTIP"] = "從循線結果中提取方向\n\n輸
 Blockly.Msg["AI_GET_BBOX_CENTER"] = "取得邊界框中心點 %1";
 Blockly.Msg["AI_GET_BBOX_CENTER_TOOLTIP"] = "從偵測結果中計算邊界框的中心點座標\n\n輸入：\n• RESULT：推論結果字典（偵測器類型）\n\n輸出：\n• Tuple (cx, cy)：中心點座標（0~1 比例）\n  若無法取得則回傳 (0, 0)\n\n用途：\n• 雲台追蹤：計算目標中心與畫面中心的偏移量\n• 控制伺服馬達轉向目標";
 
-// 循線（line_follower）解析積木（2026-09-19）
+// 循線（line_following）解析積木（2026-09-19）
 Blockly.Msg["AI_GET_LINE"] = "取得循線線段 %1";
 Blockly.Msg["AI_GET_LINE_TOOLTIP"] = "從循線推論結果中提取線段端點\n\n輸入：\n• RESULT：推論結果字典（循線類型）\n\n輸出：\n• Tuple (x1, y1, x2, y2)：線段兩端點（0~1 比例座標，與資料集標註同一座標系）\n  若無法取得則回傳 (0, 0, 0, 0)\n\n注意：\n• 端點順序＝標註時的點擊順序；模型採「線段端點回歸」（兩點），\n  因此同時擁有「起點（近端）」與「終點（遠端）」資訊";
 Blockly.Msg["AI_GET_LINE_END"] = "取得循線線段 %1 的 %2";

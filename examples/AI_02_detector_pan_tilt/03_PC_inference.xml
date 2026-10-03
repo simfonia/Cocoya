@@ -11,7 +11,7 @@
         <next>
           <block type="py_ai_model_init" id="det_init">
             <field name="MODEL_PATH">model/detector_dataset</field>
-            <field name="TASK_TYPE">detector</field>
+            <field name="TASK_TYPE">object_detection</field>
             <field name="MODEL_TYPE">int8</field>
             <next>
               <block type="py_io_serial_init" id="det_ser_init">

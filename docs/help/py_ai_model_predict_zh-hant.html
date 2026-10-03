@@ -37,9 +37,9 @@
     <h2>輸出格式（依任務類型）</h2>
     <table class="param-table">
       <tr><th>任務類型</th><th>回傳格式</th></tr>
-      <tr><td>分類器</td><td><code>{"type": "classifier", "label": "cat", "confidence": 0.95}</code></td></tr>
-      <tr><td>偵測器</td><td><code>{"type": "detector", "objects": [{"label": "cat", "confidence": 0.9, "bbox": [10,20,100,200]}]}</code></td></tr>
-      <tr><td>循線</td><td><code>{"type": "line_follower", "direction": "left", "confidence": 0.8}</code></td></tr>
+      <tr><td>分類器</td><td><code>{"type": "image_classifier", "label": "cat", "confidence": 0.95}</code></td></tr>
+      <tr><td>偵測器</td><td><code>{"type": "object_detection", "objects": [{"label": "cat", "confidence": 0.9, "bbox": [10,20,100,200]}]}</code></td></tr>
+      <tr><td>循線</td><td><code>{"type": "line_following", "direction": "left", "confidence": 0.8}</code></td></tr>
       <tr><td>表格</td><td><code>{"type": "table", "prediction": 0.85, "confidence": 0.9}</code></td></tr>
     </table>
   </div>

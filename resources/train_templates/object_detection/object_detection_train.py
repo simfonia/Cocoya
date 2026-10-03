@@ -252,7 +252,7 @@ def save_detector_history(history, output_path, project_name, epochs,
     """
     history_data = {
         'projectName': project_name,
-        'taskType': 'detector',
+        'taskType': 'object_detection',
         'epochs': epochs,
         'batchSize': batch_size,
         'learningRate': learning_rate,
@@ -571,7 +571,7 @@ def main():
     result = {
         'success': True,
         'projectName': args.project_name,
-        'taskType': 'detector',
+        'taskType': 'object_detection',
         'modelDir': args.output_dir,
         'epochs': args.epochs,
         'batchSize': args.batch_size,

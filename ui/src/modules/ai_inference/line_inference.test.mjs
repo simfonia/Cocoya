@@ -116,7 +116,7 @@ def mk(out, isf=True):
     obj.o = [{"index": 0}]
     obj.isf = isf
     obj.ls = ["line"]
-    obj.task_type = "line_follower"
+    obj.task_type = "line_following"
     return obj
 
 frame = np.zeros((480, 640, 3), dtype=np.uint8)
@@ -153,7 +153,7 @@ r["u_offset"] = res["offset"]; r["u_dir"] = res["direction"]
 
 # 7) _detect：同一 /255 還原路徑（原缺漏）
 det = mk([128, 128, 64, 64], isf=False)
-det.task_type = "detector"
+det.task_type = "object_detection"
 r["det_bbox_q"] = list(det._detect(frame)["objects"][0]["bbox"])
 det2 = mk([0.5, 0.5, 0.2, 0.2], isf=True)
 r["det_bbox_f"] = list(det2._detect(frame)["objects"][0]["bbox"])
@@ -167,7 +167,7 @@ test('推論行為：_follow_line 端點/橫向偏移/角度/方向（含 int8 �
 
   const gen = { valueToCode: () => 'frame', definitions_: {} };
   Py['py_ai_model_init']({
-    getFieldValue: (n) => ({ MODEL_PATH: 'm.tflite', TASK_TYPE: 'line_follower', MODEL_TYPE: 'int8' }[n])
+    getFieldValue: (n) => ({ MODEL_PATH: 'm.tflite', TASK_TYPE: 'line_following', MODEL_TYPE: 'int8' }[n])
   }, gen);
   const cls = gen.definitions_['module_ai_inference'];
   assert.ok(cls && cls.includes('class _ModelInference'), 'py_ai_model_init 未注入 _ModelInference 類');
@@ -190,7 +190,7 @@ test('推論行為：_follow_line 端點/橫向偏移/角度/方向（含 int8 �
   assert.ok(near(r.f_angle, 15.95, 0.1), 'angle 應約 15.9 度，實際 ' + r.f_angle);
   assert.equal(r.f_dir, 'left');
   assert.equal(r.f_conf, 1.0);
-  assert.equal(r.f_type, 'line_follower');
+  assert.equal(r.f_type, 'line_following');
   // 2) 置中
   assert.ok(near(r.c_offset, 0.0) && near(r.c_angle, 0.0), '置中線應 offset/angle = 0');
   assert.equal(r.c_dir, 'forward');

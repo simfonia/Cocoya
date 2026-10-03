@@ -12,11 +12,11 @@
 // 守門測試 task_type_contract.test.mjs 會驗證①②③一致。
 //
 // 名稱對照（DM 專案類型 vs 訓練任務類型）：
-//   image(DM) → classifier ｜ line_following(DM) → line_follower ｜ object_detection(DM) → detector
+//   image(DM) → classifier ｜ line_following(DM) → line_following ｜ object_detection(DM) → detector
 const TASK_TYPE_OPTIONS = [
-  [Blockly.Msg["AI_TASK_CLASSIFIER"], "classifier"],
-  [Blockly.Msg["AI_TASK_DETECTOR"], "detector"],
-  [Blockly.Msg["AI_TASK_LINE_FOLLOWER"], "line_follower"],
+  [Blockly.Msg["AI_TASK_IMAGE_CLASSIFIER"], "image_classifier"],
+  [Blockly.Msg["AI_TASK_OBJECT_DETECTION"], "object_detection"],
+  [Blockly.Msg["AI_TASK_LINE_FOLLOWING"], "line_following"],
   [Blockly.Msg["AI_TASK_TABLE"], "table"],
   // G1：feature 訓練鏈路已實測可跑（temp_scripts/e2e_g1_feature_train_check.py）。
   // 推論仍為階段 2（表格型推論需 _table_predict 真實實作＋解析積木，見
@@ -271,7 +271,7 @@ Blockly.Blocks["py_ai_get_bbox_center"] = {
   }
 };
 
-// === 循線（line_follower）解析積木（2026-09-19 H5）===
+// === 循線（line_following）解析積木（2026-09-19 H5）===
 
 Blockly.Blocks["py_ai_get_line"] = {
   init: function() {

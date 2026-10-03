@@ -46,12 +46,12 @@ Blockly.Python.forBlock['py_ai_train_run'] = function(block, generator) {
       '    os.makedirs(model_dir, exist_ok=True)\n' +
       '    \n' +
       '    # 根據任務類型選擇訓練腳本\n' +
-      '    if task_type == "classifier":\n' +
-      '        script_name = "classifier_train.py"\n' +
-      '    elif task_type == "detector":\n' +
-      '        script_name = "detector_train.py"\n' +
-      '    elif task_type == "line_follower":\n' +
-      '        script_name = "line_follower_train.py"\n' +
+      '    if task_type == "image_classifier":\n' +
+      '        script_name = "image_classifier_train.py"\n' +
+      '    elif task_type == "object_detection":\n' +
+      '        script_name = "object_detection_train.py"\n' +
+      '    elif task_type == "line_following":\n' +
+      '        script_name = "line_following_train.py"\n' +
       '    elif task_type == "table":\n' +
       '        script_name = "table_train.py"\n' +
       // G1（2026-10-03）：feature 訓練鏈路實測可跑（temp_scripts/e2e_g1_feature_train_check.py
@@ -219,20 +219,20 @@ Blockly.Python.forBlock['py_ai_model_init'] = function(block, generator) {
       '        import numpy as np\n' +
       '        d2 = self._preprocess(frame)\n' +
       '        if d2 is None:\n' +
-      '            return {"type": "classifier", "label": "none", "confidence": 0.0}\n' +
+      '            return {"type": "image_classifier", "label": "none", "confidence": 0.0}\n' +
       '        self.it.set_tensor(self.i[0]["index"], d2); self.it.invoke()\n' +
       '        out = self.it.get_tensor(self.o[0]["index"])[0]\n' +
       '        out = out.astype(np.float32)/255.0 if not self.isf else out\n' +
       '        cid = int(np.argmax(out)); conf = float(out[cid])\n' +
       '        lb = self.ls[cid] if cid < len(self.ls) else "class_" + str(cid)\n' +
-      '        return {"type": "classifier", "label": lb, "confidence": conf}\n' +
+      '        return {"type": "image_classifier", "label": lb, "confidence": conf}\n' +
       '    \n' +
       '    def _detect(self, frame):\n' +
       '        # 物件偵測推論（單一目標回歸）\n' +
       '        import numpy as np\n' +
       '        d2 = self._preprocess(frame)\n' +
       '        if d2 is None:\n' +
-      '            return {"type": "detector", "objects": []}\n' +
+      '            return {"type": "object_detection", "objects": []}\n' +
       '        self.it.set_tensor(self.i[0]["index"], d2); self.it.invoke()\n' +
       '        out = self.it.get_tensor(self.o[0]["index"])[0]\n' +
       '        out = out.astype(np.float32)/255.0 if not self.isf else out\n' +
@@ -242,14 +242,14 @@ Blockly.Python.forBlock['py_ai_model_init'] = function(block, generator) {
       '        x1, y1 = cx - w/2, cy - h/2\n' +
       '        x2, y2 = cx + w/2, cy + h/2\n' +
       '        label = self.ls[0] if self.ls else "object"\n' +
-      '        return {"type": "detector", "objects": [{"label": label, "confidence": 1.0, "bbox": (x1, y1, x2, y2)}]}\n' +
+      '        return {"type": "object_detection", "objects": [{"label": label, "confidence": 1.0, "bbox": (x1, y1, x2, y2)}]}\n' +
       '    \n' +
       '    def _follow_line(self, frame):\n' +
       '        # 循線偵測推論（線段端點回歸）\n' +
       '        import math, numpy as np\n' +
       '        d2 = self._preprocess(frame)\n' +
       '        if d2 is None:\n' +
-      '            return {"type": "line_follower", "line": (0.0, 0.0, 0.0, 0.0), "offset": 0.0, "angle": 0.0, "direction": "none", "confidence": 0.0}\n' +
+      '            return {"type": "line_following", "line": (0.0, 0.0, 0.0, 0.0), "offset": 0.0, "angle": 0.0, "direction": "none", "confidence": 0.0}\n' +
       '        self.it.set_tensor(self.i[0]["index"], d2); self.it.invoke()\n' +
       '        out = self.it.get_tensor(self.o[0]["index"])[0]\n' +
       '        out = out.astype(np.float32)/255.0 if not self.isf else out\n' +
@@ -276,7 +276,7 @@ Blockly.Python.forBlock['py_ai_model_init'] = function(block, generator) {
       '        else:\n' +
       '            direction = "forward"\n' +
       '        # 回歸模型無校正後信心值 → 固定 1.0（與 detector 一致）\n' +
-      '        return {"type": "line_follower", "line": (x1, y1, x2, y2), "offset": offset, "angle": angle, "direction": direction, "confidence": 1.0}\n' +
+      '        return {"type": "line_following", "line": (x1, y1, x2, y2), "offset": offset, "angle": angle, "direction": direction, "confidence": 1.0}\n' +
       '    \n' +
       '    def _table_predict(self, data):\n' +
       '        # G1 階段 2 待實作：表格型推論需要「特徵向量」輸入，與影像幀不同源。\n' +
@@ -285,11 +285,11 @@ Blockly.Python.forBlock['py_ai_model_init'] = function(block, generator) {
       '        return {"type": "table", "error": "table/feature inference not implemented yet"}\n' +
       '    \n' +
       '    def predict(self, frame):\n' +
-      '        if self.task_type == "classifier":\n' +
+      '        if self.task_type == "image_classifier":\n' +
       '            return self._classify(frame)\n' +
-      '        elif self.task_type == "detector":\n' +
+      '        elif self.task_type == "object_detection":\n' +
       '            return self._detect(frame)\n' +
-      '        elif self.task_type == "line_follower":\n' +
+      '        elif self.task_type == "line_following":\n' +
       '            return self._follow_line(frame)\n' +
       '        elif self.task_type in ("table", "feature"):\n' +
       '            # 表格型（table / feature）共用預留接口：訓練可跑、推論待階段 2。\n' +
@@ -359,7 +359,7 @@ Blockly.Python.forBlock['py_ai_get_bbox_center'] = function(block) {
   return [code, Blockly.Python.ORDER_FUNCTION_CALL];
 };
 
-// === 循線（line_follower）解析積木（2026-09-19 H5）===
+// === 循線（line_following）解析積木（2026-09-19 H5）===
 
 Blockly.Python.forBlock['py_ai_get_line'] = function(block) {
   var resultCode = Blockly.Python.valueToCode(block, 'RESULT', Blockly.Python.ORDER_ATOMIC) || '{}';
