@@ -44,6 +44,8 @@ Blockly.Msg["AI_TASK_CLASSIFIER"] = "classifier";
 Blockly.Msg["AI_TASK_DETECTOR"] = "detector";
 Blockly.Msg["AI_TASK_LINE_FOLLOWER"] = "line_follower";
 Blockly.Msg["AI_TASK_TABLE"] = "table";
+// [G1 2026-10-03] feature: training supported; inference pending stage 2 (table-type inference not implemented)
+Blockly.Msg["AI_TASK_FEATURE"] = "feature";
 
 // Backend Options
 Blockly.Msg["AI_BACKEND_LOCAL"] = "local";

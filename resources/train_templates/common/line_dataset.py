@@ -166,7 +166,7 @@ def load_line_dataset(dataset_dir, img_size=224, batch_size=32, validation_split
             print("錯誤: 切分後訓練集或驗證集為空，請增加樣本數或降低 validation_split")
             sys.exit(1)
 
-        print("隨機切分 (random split，無類別欄位（回歸），隨機切分):")
+        print("隨機切分 (random split，線段回歸任務無類別欄位):")
         print(f"  train {len(train_idx)} / val {len(val_idx)}")
 
         rng.shuffle(train_idx)

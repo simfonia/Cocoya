@@ -35,6 +35,7 @@ C:\Workspace\cocoya\
 │   │       └── lib/reveal/  # [NEW] 離線 Reveal.js 資源 (reveal.css/js + beige 主題)
 │   ├── api_manifest.md    # 前端 API SSOT (Source of Truth)
 │   ├── backend_api_manifest.md # [NEW] 後端 Rust API SSOT
+│   ├── dataset_types_matrix.md # [2026-10-02][P2-10] Dataset Manager 四類型能力矩陣 SSOT（命名對照/總覽矩陣/逐類型細節/已知殘餘 G1~G6/sidecar 雙處映射/雙佈局；改類型能力先改本檔）
 │   ├── mvp_development_guide.md # AI 模組開發規範與踩坑記錄
 │   ├── docker_training_deployment_guide.html # DGX Docker 訓練容器建置指南
 ├── examples/              # 範例檔 (.xml)

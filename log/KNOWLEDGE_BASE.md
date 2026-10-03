@@ -22,6 +22,7 @@
 | `resources/dataset_manager/` | Python sidecar（dataset_sidecar.py / camera_service.py / dataset_io.py） |
 | `resources/train_templates/` | AI 訓練腳本（common 共同模組 + classifier/detector 任務腳本） |
 | `docs/backend_api_manifest.md` | Tauri command 簽名 SSOT（含 Parameters 表） |
+| `docs/dataset_types_matrix.md` | DM 四類型能力 SSOT（模式/標註/匯出/訓練/推論/已知殘餘；2026-10-02 產出，Batch 4 P2-10） |
 | `docs/system_spec.html` | 系統規格書（ID 注入、轉義、AI 座標規範）——開發積木前必讀 |
 
 ### 1.3 專案根錨定 SSOT（2026-08 起）

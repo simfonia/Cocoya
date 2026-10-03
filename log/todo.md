@@ -180,8 +180,48 @@
 - [ ] P2-2 `ui_layout.js`（80.5KB）階段一刪除約 20 個純委派薄包裝（`enterClassificationReviewMode` L668 等，呼叫端直接取 controller）；階段二協調邏輯搬 `ui/orchestrator/*`；**不得破壞** `#dataset-structure-content` 嚴禁覆寫 innerHTML 契約，`renderStructurePanel()`／`renderStatsPanels()`／`refreshThumbnailBadges()` 介面不變
 
 #### Batch 4（DM 四類型深化）
-- [ ] P2-10 產出 `docs/dataset_types_matrix.md` 為四類型能力 SSOT（模式/標註/匯出/訓練/推論/已知殘餘）
-- [ ] P2-11 **line_following 切分策略**：檢查 `line/*.txt`／`dataset.json` 是否有可作類別的欄位；有→依該欄位分層（重用 detector 分層函式）；無→維持隨機切但報告註明「回歸型」並回寫本條結論
+- [x] **G1 feature 積木入口 — 階段 1 完成** ✅ 2026-10-03（使用者決策：分兩階段）：
+  **階段 1（本次，已完成）**：
+  ① 先實測後端（`temp_scripts/e2e_g1_feature_train_check.py`：1 epoch PASS，產出 curve/history/report）
+     → 確認 G1 **純為 UI 入口缺口**，非模板缺口（`feature_train.py` CLI 與其他模板 14 參數完全一致）。
+  ② `ai_inference_blocks.js` 抽出 **SSOT 常數 `TASK_TYPE_OPTIONS`**，`py_ai_train_run` 與 `py_ai_model_init`
+     **原本各自維護一份重複的下拉**（易只改一處）→ 兩處改為引用同一常數，並加 feature。
+  ③ `ai_inference_generators.js` `train_model` 加 `feature → feature_train.py` 分派。
+  ④ **修掉假回傳**：`_table_predict` 原本回傳硬編碼 `{"prediction": 0.0}`（使用者會誤以為模型壞掉）
+     → 改為明確 `{"error": "table/feature inference not implemented yet"}`；`predict` 分派改為 `in ("table","feature")`。
+  ⑤ i18n `AI_TASK_FEATURE`（zh-hant「特徵」／en「feature」，parity 守門通過）。
+  ⑥ **新守門** `ui/src/modules/ai_inference/task_type_contract.test.mjs`（6 測，掃描型）：
+     驗證 task type 在「UI 下拉／train 分派／predict 分派」**三處一致**＋不得內聯下拉＋不得假回傳 0.0＋i18n parity。
+     **變異測試 3 種皆報紅**：①刪 feature 訓練分派 ②還原假回傳 0.0 ③下拉改回硬編碼。
+  **階段 2（未做，待立計畫）**：實作真實 `_table_predict`／`_feature_predict`、新增表格型解析積木（G3）、
+  新增 feature 的「從相機擷取 landmark」積木（現有 12 個 `py_ai_*` 無此能力）。
+  驗收：全專案 284 → **290/290 綠**；lint:ui 0 error；vite build PASS；
+  產生之 `_ModelInference` 類與 `train_model` 函式 `py_compile` 皆 exit 0。
+
+- [x] **G2 serial 映射 — 決策保留預留位** ✅ 2026-10-03（使用者決策 B）：
+  查證：`isDevType('serial') === true`（`typePolicy.js` `DEV_TYPES=['serial']`）且 `exportUseCases` L36 會擋下
+  dev 類型匯出 → **該分支目前不可達，是死碼不會炸**。使用者選擇保留（先留接口的合理設計），
+  僅於 `docs/dataset_types_matrix.md` §3 G2 明確標註「預留、模板未實作」，避免日後誤判為已完成。
+
+- [x] **task type 下拉重複合併＋命名不一致顯式化** ✅ 2026-10-03：
+  ① 下拉兩份重複 → 合併為 `TASK_TYPE_OPTIONS` 單一 SSOT（見上）。
+  ② **命名不一致（`line_following`→`line_follower`、`image`→`classifier`）刻意不重命名**：
+  名稱已貫穿 DM `project.type`／使用者既有 `.xml`／`dataset.json`／Python 模板目錄／匯出 ZIP 佈局，
+  重命名＝資料遷移＋相容層，風險遠大於收益。改為「顯式化」——於 `docs/dataset_types_matrix.md` §0
+  記錄對照與不重命名理由、`TASK_TYPE_OPTIONS` 處加註解、sidecar 兩處映射加同步警示。
+
+- [x] P2-10 產出 `docs/dataset_types_matrix.md` 為四類型能力 SSOT ✅ 2026-10-02（模式/標註/匯出/訓練/推論/已知殘餘）：
+  六節結構（命名對照／總覽矩陣／逐類型細節／已知殘餘／sidecar 雙處映射／雙佈局／對應紀錄），全部內容實查原始碼並附行號來源。
+  **附帶盤出 6 項真實落差（G1~G6）**，其中兩項為本次新發現：
+  ① **G1 `feature` 有訓練模板但無積木入口**——`py_ai_train_run` 的 `TASK_TYPE` 下拉僅 4 項（classifier/detector/line_follower/table），
+  不含 feature，故 DM 能建 feature 專案卻無法從積木訓練（`feature_train.py` 存在且 py_compile 通過 → 是 UI 入口缺口，非模板缺口）。
+  ② **G2 `serial` 訓練模板目錄不存在**（`Test-Path` 實查 False），sidecar `script_rel` 卻有 serial 映射 → 走到該路徑必報「訓練模板不存在」。
+  另 G6：`docs/help/` 18 頁僅 3 頁有英文版，`py_ai_get_*` 推論積木全無英文說明。
+  另釐清最易踩坑的**命名不一致**：`line_following`（DM）→ `line_follower`（訓練）、`image`（DM）→ `classifier`（訓練），映射在 sidecar 兩處（L1066 `task_scripts` / L798 `script_rel`），改動須同步。
+- [x] P2-11 **line_following 切分策略** ✅ 2026-10-02（查證結案，**結論：無類別欄位 → 回歸型，維持隨機切「符合鐵律」，無需改分層**）：
+  證據鏈三層實查：① UI 層 `typePolicy.needsUnclassifiedCheck()` 僅對 object_detection 為真 → line 無類別選擇器；② 資料層 e2e 實測 `class_id` 集合 = `{0}`、annotation 欄位僅 `['class_id','line']`（無線型/方向/單雙線欄位）；③ 訓練層隨機切（seed 可再現）＋報告註明回歸型 → 滿足鐵律後半段。
+  查證過程**修掉一個真實缺陷**：切分報告標題行贅字與括號不閉合（「隨機切分…隨機切分)」）→ 改為 `隨機切分 (random split，線段回歸任務無類別欄位):`（備份 `backup/line_dataset_pre_p211_20261003_000101.py`）。
+  證據工具 `temp_scripts/e2e_p211_line_split_check.py`（自足 tmpfile 夾具、11 斷言 ALL PASS、**變異測試確認會紅**：改成分層抽樣 → 5 項報紅）。AGENTS.md 鐵律條文與稽核計畫 §6 P2-11 均已回寫結論。
 - [ ] P2-12 **table 是否新增 live 採集**（決策項）：A 維持 file-only／B 新增（可重用 `ui/featurePanel.js` 相機骨架）
 - [ ] P2-13 `spec.js` 直用 `t()` 42 處：`validate()` 先改回傳 `{code, params}`，文案上移 ui/application；分兩批
 - [ ] P2-17 盤點 `docs/help/` 中英文 help 缺漏（多數僅 `zh-hant`）
@@ -275,7 +315,10 @@
 - [ ] [2026-09-17] DM ui_layout.js 精簡切片（S1~S5，**暫緩施工 PAUSED**）：使用者拍板先不動，待下方「M4-FEATURE 除錯任務」線索 ①~⑥ 收斂後啟動。切片順序／預估減行（1823 → S1~S4 約 1330 → 含 S5 約 1150）與動工前置 SSOT 見 `log/plan/DatasetManagerTypeLockedWorkflow.md` §11。S1 `application/specSync.js`（syncSpecFromUI）／S2 `application/progressApply.js`（applyLoadedProgress）／S3 `ui/navigation.js`（P1/P2/P3 導航）／S4 `ui/modalEvents.js`（bindModalEvents）／S5 `application/imageSamples.js`（handleDeleteImage→addSampleFromSampler）；明確不做：硬拆 refreshDynamicPanels、刪仍被呼叫的 wrapper。
 - [x] [2026-09-17] DM 資料集名稱漂移政策「方案 A」：`core/projectNaming.js` 新增 `detectDatasetNameDrift`／`datasetNameFromImagePath`／`datasetNameFromFolderPath`（無 IO，證據＝`img.diskPath` 尾段反推＋`sourceFolderPath` canonical 段，取不到一律視為無漂移）＋`ui_layout.js` `applyDatasetNameDriftHint`（標紅＋`NAME_DRIFT_TIP`，同組漂移只提示一次）＋i18n `DSM_NAME_DRIFT_TIP`（parity 172/172）＋`core/projectNaming.test.mjs` 12 測。node --check×2＋DM 141/141＋vite build PASS；零後端改動。政策「未落盤可自由改名（不建立空目錄）／已落盤不搬移但要提示」已寫入 AGENTS.md 與計畫 §12；待雙平台實機
 - [ ] [2026-09-17] DM 資料集目錄改名「方案 B」（backlog，未實作）：新增 `dataset_rename_dataset_dir`——舊目錄不存在→no-op（**不建立**）／存在且目標不存在→整目錄搬家＋回傳 renames 對帳 `img.diskPath` 前綴與 `spec.data_source.base_dir`＋`refreshThumbnailBadges()`／目標已存在→`DATASET_DIR_CONFLICT`（禁覆蓋）。需雙平台（Rust `file.rs`＋VSIX `datasetOps.ts`）＋`permissions/commands.toml`＋`docs/backend_api_manifest.md`＋測試＋實機；動工前須定「同名另存／合併」語意。詳見 `log/plan/DatasetManagerTypeLockedWorkflow.md` §12.4
-- [ ] [2026-09-17] 匯出 staging 路徑驗證（backlog，既有風險、與改名無關）：①Tauri `export_dataset`（`src-tauri/src/commands/dataset.rs` L264-268）只複製 `sourceFolderPath`，live 模式該值為 null（僅 file 匯入會設）→ **live 匯出 ZIP 疑似只有 dataset.json、沒有照片**②VSIX `handleDatasetExport`（`datasetOps.ts` L241-245）用 `workspaceFolders[0]` 而非專案根組 `dataset/<名稱>`，xml 在子資料夾時可能取錯目錄。需雙平台實機驗證 ZIP 內容（images/labels/labels.txt）
+- [x] [2026-09-17 → 2026-10-02 查證結案] 匯出 staging 路徑驗證（原 backlog：**查無此 bug，兩項疑點皆已於 2026-09-22 修正**）：
+  ① 「live 匯出 ZIP 只有 dataset.json、沒有照片」**不成立**。Tauri `export_dataset`（`dataset.rs` L269-282）已改為「canonical 優先＋source 合併」：先由 `current_paths[label].parent()/dataset/<名>` 全量 copy（canonical ＝ live 落盤真相），`sourceFolderPath` 僅在 canonical 之外再 merge。live 模式 `sourceFolderPath` 為空**不再導致影像遺失**。
+  ② 「VSIX 用 `workspaceFolders[0]` 取錯目錄」**不成立**。`datasetOps.ts` L243-248 已改為專案根 SSOT（`currentFilePath` 的 dirname 優先，僅在未開檔時才 fallback `workspaceFolders[0]`）；且匯出不再直接對真實 `datasetDir` 打包，先複製到 `os.tmpdir()/cocoya_export/<名>_<ts>` staging 再交 sidecar，完成/取消/失敗皆清理（避免 sidecar 於 staging 內建 `images/labels/` 污染 DM 日常目錄）。
+  **證據**：新增自足 e2e `temp_scripts/e2e_export_live_layout_check.py`（走真實 sidecar `exportDataset`，不依賴本機遺留路徑；原 `e2e_export_check.py` 已因依賴 `Desktop\cocoya\zip\` 而失效），以「live 落盤真相」佈局 `<label>/*.jpg + dataset.json` 驗三型別：`image` 4 張／`object_detection` 4 張＋images/labels.txt/export_manifest.json／`line_following` 2 張 → **ALL PASS**。
 - [x] [2026-09-17] #task[AI訓練積木教學簡報字體修改]：第 13 頁 SVG 雙圖（⛰️ 學習率）以使用者手調「第1~3步=12」為最小值等比放大（k=12/9.5：9.5→12、10→12.5、11→14、13→16.5、圖例▼12→15；白框加寬加高＋viewBox 372→380 防溢出）；備份 backup/py_ai_train_run_index_20260917_103614.html；日誌 log/work/2026-09-17.md；待使用者瀏覽器實機確認
 
 - [x] [2026-09-17] #task[Logic模組載入失敗]：Logic toolbox.xml 帶 UTF-8 BOM → DOMParser 報 'Unexpected characters outside the root element: ï»¿' → filterToolboxXML 跳過整模組。修：core/logic/toolbox.xml 與 ai_inference/toolbox.xml（同樣帶 BOM）去除 BOM＋filterToolboxXML 開頭剝除 uFEFF 防護。node --check＋vite build PASS；待實機確認 Logic 分類恢復
