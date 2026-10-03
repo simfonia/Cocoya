@@ -7,8 +7,6 @@ import {
     openDatasetManager,
     toggleDatasetManager,
     removeAnnotation,
-    refreshDynamicPanels,
-    refreshPreview,
     refreshI18n
 } from './ui_layout.js';
 
@@ -140,9 +138,11 @@ window.CocoyaDataset = Object.assign(namespace, {
     close: closeDatasetManager,
     toggle: toggleDatasetManager,
     getCurrentSpec: getCurrentDatasetSpec,
-    removeAnnotation: removeAnnotation,
-    refreshDynamicPanels: refreshDynamicPanels,
-    refreshPreview: refreshPreview
+    removeAnnotation: removeAnnotation
+    // [P3-3 2026-10-03] 原另掛 refreshDynamicPanels / refreshPreview 於 window，
+    // 經跨端檢索（ui/src、ui/index.html、docs、examples、resources、VSIX src）
+    // 確認兩者零外部消費者 —— 內部呼叫一律走 ui_layout.js 的模組層級函式。
+    // 若日後真的需要對外（例如除錯主控台），在此掛回即可。
 });
 
 init();

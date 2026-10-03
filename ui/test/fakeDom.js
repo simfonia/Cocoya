@@ -45,13 +45,27 @@ export function makeEl(id = '', overrides = {}) {
         src: '',
         onclick: null,
         onchange: null,
-        // classList 兩種存取風格並存：elements 與 _set 各指向同一個 Set
+        // classList 四種存取風格並存：elements 與 _set 各指向同一個 Set
+        // toggle 為 [P3 T3 殘項 2026-10-03] 補入 —— statusMessage.js 的
+        // setVisible() 會呼叫 el.classList.toggle('is-visible', visible)，
+        // 缺少會直接 TypeError。toggle 有明確第二參數，故以該參數為準；
+        // 未給第二參數時（DOM 原生語意）走「有則刪、無則加」。
         classes,
         classList: {
             _set: classes,
             add: (...c) => c.forEach(x => classes.add(x)),
             remove: (...c) => c.forEach(x => classes.delete(x)),
-            contains: (c) => classes.has(c)
+            contains: (c) => classes.has(c),
+            toggle: (c, force) => {
+                if (force === undefined) {
+                    if (classes.has(c)) classes.delete(c); else classes.add(c);
+                } else if (force) {
+                    classes.add(c);
+                } else {
+                    classes.delete(c);
+                }
+                return classes.has(c);
+            }
         },
         listeners,
         handlers,
@@ -67,6 +81,10 @@ export function makeEl(id = '', overrides = {}) {
         },
         insertAdjacentHTML(pos, html) {
             el._insertedHTML = (el._insertedHTML || '') + html;
+            // [T3 殘項 2026-10-03] `_appended` 為 panels.test.mjs 舊 fake 的欄位名，
+            // 該檔斷言讀 `list._appended.includes(...)`。依「多寫一份、不刪既有」原則
+            // 與 `_insertedHTML` 同步累積，讓兩種斷言風格共用同一個 factory。
+            el._appended = (el._appended || '') + html;
             el.insertAdjacentHTMLCalls.push({ pos, html });
         },
         focus() { el._focused = true; el.focused = true; },

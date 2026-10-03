@@ -4,6 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createExportUseCases } from './exportUseCases.js';
+import { fallbackT } from '../../../../test/depsStubs.js';
 
 function makeUC({ type = 'image_classification' } = {}) {
     const calls = { status: [], progress: [], sync: 0, confirm: 0, request: 0 };
@@ -18,7 +19,7 @@ function makeUC({ type = 'image_classification' } = {}) {
         syncSpecFromUI: () => { calls.sync++; },
         showStatusMessage: (m) => { calls.status.push(m); },
         showExportProgress: (a) => { calls.progress.push(a); },
-        t: (key, fallback) => fallback || key
+        t: fallbackT
     });
     return { uc, calls };
 }
