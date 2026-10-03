@@ -128,7 +128,6 @@ test('P1-6 守門 4：reset_firmware 簽名含 python_path 且燒錄使用它（
 });
 
 test('P1-6 守門 5：前端 reset_firmware invoke 必須帶 pythonPath（跨語言簽名同步鐵律）', () => {
-    const tauriJs = read('ui', 'src', 'bridge', 'tauri.js');
     // 以 Rust 簽名反推前端必須送齊的參數，避免在本檔寫死字串比對
     const mcu = read('src-tauri', 'src', 'commands', 'mcu', 'firmware.rs');
     const params = rustSignature(mcu, 'reset_firmware');
@@ -136,15 +135,48 @@ test('P1-6 守門 5：前端 reset_firmware invoke 必須帶 pythonPath（跨語
         .map((m) => ({ name: m[1], type: m[2] }));
     assert.ok(rustParams.length >= 4, '解析 Rust 參數失敗');
 
-    // 以 case 分隔取得真正的 reset_firmware 區段（lastIndexOf 會取到檔尾的無關 case）
-    const caseIdx = tauriJs.indexOf("case 'resetFirmware'");
-    const nextIdx = tauriJs.indexOf("\n                case '", caseIdx + 10);
-    const invokeBlock = tauriJs.slice(caseIdx, nextIdx < 0 ? caseIdx + 900 : nextIdx);
-    assert.ok(invokeBlock.includes("'reset_firmware'"), 'tauri.js 找不到 reset_firmware 呼叫端');
+    // [P2-1 2026-10-03] 原先硬寫 `tauri.js` + `case 'resetFirmware'`，
+    // 拆檔後該 case 已遷移至 tauri/firmware.js 的 `resetFirmware` handler，
+    // 硬寫路徑會讓守門誤報「找不到呼叫端」（P2-5 拆 Rust 時同型問題）。
+    // 改為**遞迴**搜尋整個 bridge 目錄：先定位含 'reset_firmware' 的檔案，再取其所在區段。
+    // ⚠️ 必須遞迴 —— 第一版只用 readdirSync(bridgeDir) 列直接檔案，
+    //    漏掉 tauri/ 子目錄 → 命中 0 處 → 守門誤報。
+    const bridgeDir = path.join(repoRoot, 'ui', 'src', 'bridge');
+    const jsFiles = [];
+    (function walk(dir) {
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+            const full = path.join(dir, entry.name);
+            if (entry.isDirectory()) walk(full);
+            else if (entry.name.endsWith('.js')) jsFiles.push(full);
+        }
+    })(bridgeDir);
+    const hits = jsFiles.filter((f) => fs.readFileSync(f, 'utf8').includes("'reset_firmware'"));
+    assert.equal(hits.length, 1, `reset_firmware 呼叫端應恰有一處，實得 ${hits.length}：${hits.join(', ')}`);
+    const hostFile = hits[0];
+    const src = fs.readFileSync(hostFile, 'utf8');
+    const at = src.indexOf("'reset_firmware'");
+
+    // 取該 invoke 所在的函式區段：以 export function 為左界、下一个 export/} 為右界。
+    // 舊碼是 switch case，故同時保留 case 邊界作為右界候選。
+    const leftBound = Math.max(
+        src.lastIndexOf('export async function', at),
+        src.lastIndexOf('export function', at),
+        src.lastIndexOf("case 'resetFirmware'", at)
+    );
+    const rightCands = [
+        src.indexOf('export async function', at),
+        src.indexOf('export function', at),
+        src.indexOf("\n                case '", at),
+        src.indexOf('\n}\n', at)
+    ].filter((i) => i > at);
+    const rightBound = rightCands.length ? Math.min(...rightCands) : src.length;
+    const invokeBlock = src.slice(leftBound < 0 ? 0 : leftBound, rightBound);
+
+    assert.ok(invokeBlock.includes("'reset_firmware'"), `${hostFile} 找不到 reset_firmware 呼叫端`);
     for (const p of rustParams) {
         const camel = p.name.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
         assert.ok(new RegExp('\\b' + camel + ':').test(invokeBlock),
-            `tauri.js reset_firmware 未送 ${camel}（Rust 參數 ${p.name}: ${p.type}）`);
+            `reset_firmware 未送 ${camel}（Rust 參數 ${p.name}: ${p.type}）`);
     }
     assert.ok(/pythonPath: localStorage\.getItem\('pythonPath'\)/.test(invokeBlock),
         'pythonPath 應取自 localStorage 權威來源（非不存在的欄位）');
