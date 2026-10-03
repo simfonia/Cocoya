@@ -432,7 +432,9 @@ export class BridgeTauri extends BaseBridge {
                         await this.tauriInvoke('reset_firmware', {
                             model: data.model,
                             shouldClear: data.shouldClear,
-                            serialPort: data.serialPort || ''
+                            serialPort: data.serialPort || '',
+                            // P1-6 F1：esptool 必須用與使用者設定一致的 Python（venv/conda 環境）
+                            pythonPath: localStorage.getItem('pythonPath') || ''
                         });
                         window.CocoyaUI.hideLoadingModal();
                         this.alert(window.Blockly?.Msg['MSG_FIRMWARE_BURN_SUCCESS'] || 'Burn success!');
@@ -520,6 +522,7 @@ export class BridgeTauri extends BaseBridge {
                             command: response.success ? 'trainingComplete' : 'trainingError',
                             success: !!response.success,
                             remote: true,
+                            errorCode: response.errorCode,
                             modelDir: response.modelDir,
                             projectName: response.projectName,
                             modelOutput: response.modelOutput,
@@ -830,6 +833,7 @@ export class BridgeTauri extends BaseBridge {
                                     this._dispatchToFrontend({
                                         command: 'datasetUploadResult',
                                         success: !!response.success,
+                                        errorCode: response.errorCode,
                                         error: response.error
                                     });
                                 });

@@ -259,6 +259,9 @@
     "MSG_TRAINING_RESULT_CLOSE": "Close",
     "MSG_TRAINING_COMPLETE_LOCAL": "--- Training complete: %1 ---",
     "MSG_TRAINING_COMPLETE_REMOTE": "--- Remote training complete: %1 ---",
+
+    // Remote training missing paramiko (P1-5: sidecar no longer auto-installs; error code + UI guidance instead)
+    "MSG_PARAMIKO_MISSING": "❌ Remote training requires paramiko (the SSH library), but it is not installed in the current Python environment. Open [Python Environment Setup] to install paramiko and try again, or run pip install paramiko in a terminal. Cocoya will not install packages on your behalf.",
     
     // Syntax (Basic)
     "PY_DEF": "def",

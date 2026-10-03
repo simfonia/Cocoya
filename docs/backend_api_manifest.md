@@ -89,7 +89,7 @@ Notation: `key?` = Optional. **Rule: changing a Rust signature -> immediately up
 | mcu | open_serial_monitor | port: String, python_path, lang, raw_dump_enabled: Option<bool> | {port, pythonPath, lang, rawDumpEnabled?} | Result<(), String> |
 | mcu | toggle_serial_monitor | port: Option<String>, python_path, lang: Option<String>, raw_dump_enabled: Option<bool> | {port?, pythonPath?, lang?, rawDumpEnabled?} | Result<String, String>（回 "opened"/"stopped"；設定保存於 serial_wants，聚焦重取沿用） |
 | mcu | erase_filesystem    | port: String, python_path, lang | {port, pythonPath, lang} | Result<(), String> |
-| mcu | reset_firmware      | model: String, should_clear: bool, serial_port: Option<String> | {model, shouldClear, serialPort?} | Result<(), String> |
+| mcu | reset_firmware      | model: String, should_clear: bool, serial_port: Option<String>, python_path: Option<String> | {model, shouldClear, serialPort?, pythonPath?} | Result<(), String>（`pythonPath` 為 P1-6 F1 新增：esptool 燒錄須用使用者設定的 Python，空白則回退 `python`） |
 | mcu | set_window_focus    | focused: bool, raw_dump_enabled: Option<bool> | {focused, rawDumpEnabled?} | Result<(), String>（focus 時同步既有 serial_wants 的 Raw Dump 設定後重取） |
 | file | get_manifest       | -- | {} | Result<serde_json::Value, String> |
 | file | get_module_toolbox  | path: String | {path} | Result<String, String> |

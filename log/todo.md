@@ -227,9 +227,46 @@
 - [ ] P2-17 盤點 `docs/help/` 中英文 help 缺漏（多數僅 `zh-hant`）
 
 #### Batch 5（後端／資源）
-- [ ] P1-5 **安全**：`dataset_sidecar.py:37-40` 匯入時自動 `pip install paramiko` → 改為缺套件回報明確錯誤碼（比照 `FEATURE_MEDIAPIPE_MISSING`），前端 i18n 顯示指引；或加使用者同意開關＋指向 venv
-- [ ] P1-6 逐條人工複核 Rust 15 處 `Command::new`（app 3／dataset 2／mcu 5／python 5）：確認無 shell 拼接、使用者輸入皆以 argv 陣列傳入，產出審查表
-- [ ] P1-7 核對 `dataset_sidecar.py` 3 處 Popen（L40／L967／L1099）的 `encoding/errors`，補齊 AGENTS.md 四件套鐵律
+- [x] P1-5 **安全**：`dataset_sidecar.py` 匯入時自動 `pip install paramiko` ✅ 2026-10-03
+  （採計畫首選「純降級回報錯誤碼」，未做使用者同意開關）：刪 module level `import paramiko` + `pip install`；
+  新增 `PARAMIKO_MISSING="SSH_PARAMIKO_MISSING"` 與 `_require_paramiko()`；4 個使用點
+  （checkRemoteEnvironment／uploadDataset／trainRemote／stopTraining）統一回 errorCode；
+  i18n `MSG_PARAMIKO_MISSING`（zh/en）；Tauri `tauri.js` 兩處 dispatch ＋ VSIX `trainingOps/envOps` 透傳 errorCode；
+  `ui/base.js` trainingError 依碼轉 i18n。
+  **附帶修**：`stopTraining` 原 paramiko 匯入在 try 內且無 except ImportError（缺裝會被吞成
+  `name 'paramiko' is not defined`），且早退不清 `_remote_train` 導致狀態卡住 → 兩者一併修正。
+  舊碼其實**已有降級分支但不可達**（module level 先 pip 過），與 G2 serial 同類病根。
+  **新守門** `ui/src/modules/dataset_manager/sidecar_dependency_contract.test.mjs`（7 測，掃描型）；
+  守門 3 初版掃全文中文誤命中 docstring → 收斂為只掃 `"error":` 欄位值（判準落有效值而非代理指標）。
+  **變異測試 4 種皆紅**：還原 pip install／移除 errorCode／移除橋接透傳／還原前端顯示 raw error。
+  驗收：292 → **299/299 綠**、lint 0 error、py_compile/tsc/vite build 全 PASS、615 檔 CRLF。
+  備份 `backup/*_pre_p15_20261003_124632.*`。**待實機**：兩平台各做一次缺 paramiko 的遠端訓練，
+  確認終端機顯示安裝指引（詳見 `log/work/2026-10-03.md` §1）。
+- [x] P1-6 逐條人工複核 Rust 15 處 `Command::new`（app 3／dataset 2／mcu 5／python 5）✅ 2026-10-03
+  **Rust 端全數 argv 陣列、無 shell 拼接，計畫初步判定成立**；但挖出 3 個真實缺陷：
+  - **F1** `mcu.rs` esptool 燒錄硬編碼 `Command::new("python")` → 使用者於硬體頁指向 venv/conda 時
+    燒錄必失敗且錯誤訊息無法診斷。修：簽名加 `python_path: Option<String>` ＋ `reset_firmware_python()`
+    （空白回退 `python`）；同步 `tauri.js` invoke 與 `docs/backend_api_manifest.md` SSOT。
+  - **F2（最嚴重，且不在 Rust）** `src/handlers/firmwareOps.ts` 以 `terminal.sendText` 送進**互動式
+    PowerShell**，5 個插入值全未跳脫（`--port ${serialPort}` 連引號都沒有；檔名含 `"`/`$(...)`
+    → 指令截斷與**真注入**）；`seg.addr` 來自 `project_config.json` 完全未驗證。
+    修：`psQuote()`（PowerShell 單引號跳脫）＋ 讀 config 時驗證 addr 格式（0x 十六進位或 UF2）。
+  - **F3** `python.rs::start_training` **未註冊於 `invoke_handler![]`** → Tauri 無法呼叫（死碼，
+    訓練實際走 `py_ai_train_run` → `run_python`／`trainRemote`）。刪除屬 P3-3 範疇**本次不動**，
+    但仍修其 `Command::new("python")`，免得日後重新註冊帶著同一缺陷回來。
+  **審查表（15 處逐條判定）見 `log/work/2026-10-03.md` §2.2**。
+  **新守門** `ui/src/modules/dataset_manager/process_spawn_contract.test.mjs`（10 測，掃描型，
+  遞迴整個 `src-tauri/src/**`）；守門 5 **由 Rust 簽名反推前端必須送齊的參數**而非寫死比對。
+  過程中修掉守門自身兩個缺陷：**守門 6 初版假綠**（只掃 `sendText(\`...\`)` 直接呼叫，漏了
+  `cmd += ...` 累積後再 `sendText(cmd)` 的間接組法 —— 變異測試發現）→ 改為同時掃字串組裝點；
+  **守門 3 假紅**（命中自己註解裡舉例的字串）→ 先剝行註解再掃。另立**守門 3b**
+  （簽名收 `python_path` 者函式體必須實際引用），因變異測試顯示守門 3 抓不到 `let py = "python"` 型迴歸。
+  驗收：299 → **309/309 綠**、cargo check PASS、tsc/lint/build 全 PASS、618 檔 CRLF。
+  **待實機**：VSIX Serial 燒錄一次（psQuote 改寫整個指令字串，須確認 esptool 仍正確解析
+  含空格的 Program Files 路徑）＋ 檔名含空格的 .bin ＋ venv 情境。
+- [x] P1-7 核對 sidecar 3 處 Popen 的 `encoding/errors` ✅ 2026-10-03 **實查後已全部符合，隨 P1-5 一併結案**
+  （L967 TFLite 轉換、L1099 trainLocal 皆已有 `encoding="utf-8", errors="replace"`；
+  唯一缺 encoding 的是 P1-5 刪除的 pip `check_call`，本無文字輸出需求）。AGENTS.md 四件套鐵律在 sidecar 端已滿足。
 - [ ] P2-3 `dataset_sidecar.py`（1138 行／19 def）拆分：內嵌 Python 字串腳本抽 `resources/dataset_manager/scripts/*.py`；`CameraService`／遠端訓練／TFLite 轉換各自成模組；維持 stdout 單一 JSON 回應契約
 - [ ] P2-5 Rust 拆檔（**先不動**，待 tauri-codegen 議題合併處理）：`mcu.rs`→`mcu/{serial,board,monitor}.rs`；`file.rs`→`file/{ops,anchor}.rs`
 - [ ] **T4** Python／Rust 測試納入：`temp_scripts/e2e_*.py` 轉 pytest（移除硬編碼路徑 `BALL = r'C:/Users/simfonia/Desktop/cocoya/dataset/ball'`，改 `tmp_path`／env）＋補 `sys.exit(1)`；Rust 補 `file.rs`／`python.rs` 測試（現全專案僅 3 個 `#[test]`）；`cargo test` 與 `pytest` 接入 `npm test`
