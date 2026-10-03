@@ -183,10 +183,15 @@ function main() {
 
   if (doList) {
     console.log(`掃描 ${files.length} 個文字檔`);
-    console.log(`  LF（需正規化為 CRLF）：${problems.length}`);
-    problems.forEach((p) => console.log(`    ${p.rel}  (${p.loneLf} 行)`));
-    console.log(`  混合行尾（同一檔案內 CRLF/LF 並存）：${mixed.length}`);
-    mixed.forEach((p) => console.log(`    ${p.rel}  (CRLF ${p.crlf} / LF ${p.loneLf})`));
+    // 依危害分級輸出：混合行尾 > 純 LF 不一致
+    // （見 AGENTS.md「行尾規範」：危害排序為 混合行尾 > 不一致 > 選哪一種；
+    //   純 LF 檔對「程式執行」無影響，但混合行尾會讓同檔內各行行為不一致）
+    if (mixed.length) {
+      console.log(`  ⚠ 混合行尾（同一檔案內 CRLF/LF 並存，危害最大）：${mixed.length}`);
+      mixed.forEach((p) => console.log(`      ${p.rel}  (CRLF ${p.crlf} / LF ${p.loneLf})`));
+    }
+    console.log(`  LF（與 CRLF 不一致；對程式執行無影響，屬一致性偏好）：${problems.length}`);
+    problems.forEach((p) => console.log(`      ${p.rel}  (${p.loneLf} 行)`));
     return 0;
   }
 
@@ -206,13 +211,16 @@ function main() {
   }
 
   console.error(`✗ 行尾檢查失敗：${files.length} 個文字檔中有 ${totalBad} 個不符規範。`);
-  console.error('');
-  console.error('  [需正規化為 CRLF]');
-  problems.forEach((p) => console.error(`    ${p.rel}  (${p.loneLf} 行)`));
+  console.error("");
+  // 依危害分級輸出（與 --list 模式一致）
   if (mixed.length) {
-    console.error('');
-    console.error('  [混合行尾：同一檔案內 CRLF/LF 並存，危害最大]');
+    console.error("  [混合行尾：同一檔案內 CRLF/LF 並存 —— 危害最大，各行行為不一致]");
     mixed.forEach((p) => console.error(`    ${p.rel}  (CRLF ${p.crlf} / LF ${p.loneLf})`));
+  }
+  if (problems.length) {
+    console.error("");
+    console.error("  [純 LF：對程式執行無影響（解析器會正規化），屬一致性問題]");
+    problems.forEach((p) => console.error(`    ${p.rel}  (${p.loneLf} 行)`));
   }
   console.error('');
   console.error('  修復方式：node scripts/eol.cjs --fix');
