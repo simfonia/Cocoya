@@ -2,6 +2,11 @@ C:\Workspace\cocoya\
 ├── .vscodeignore          # VSIX 打包過濾清單
 ├── .eslintrc.json         # ESLint 8 + TypeScript 規則設定（npm run lint）
 ├── .gitattributes         # [2026-10-01] 行尾規範：* text=auto eol=crlf ＋二進位/vendored/產物例外（根治 LF/CRLF 混雜）
+├── .editorconfig          # [2026-10-03] 行尾與編碼的「編輯器層」權威：end_of_line=crlf（預防層，不需經過 git）
+├── scripts/               # 建置與檢查腳本
+│   ├── eol.cjs            # [2026-10-03] 行尾（CRLF/LF）檢查與修復工具；含與 `git ls-files --eol` 的自我交叉驗證；npm run eol:check/fix/list
+│   ├── test-related.cjs   # [2026-09-30] 依 git diff 自動挑選相關測試（npm run test:fast）
+│   └── run-integration.cjs # 整合測試（npm run test:integration）
 ├── docs/                  # 專案文檔
 │   ├── help/              # 積木說明文件與腳位圖（右鍵 Help 統一位置）
 │   │   ├── hardware_pins_en.html        # 硬體腳位說明（英文）

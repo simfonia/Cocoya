@@ -1,0 +1,92 @@
+# ============================================================
+# EditorConfig：行尾與編碼的單一權威（2026-10-03 新增）
+# ============================================================
+# 為什麼需要這份檔案（.gitattributes 不足之處）：
+#   .gitattributes 只在「經過 git 的路徑」（checkout / add / diff）生效。
+#   但編輯器、Python 腳本、PowerShell 直接寫檔時**不經過 git**，
+#   工作區就會變成 LF —— 而 git 會把「工作區 LF + 轉換後 LF」視為無差異，
+#   **問題不會自己浮現**，會靜態累積。
+#   （實測 2026-10-03：646 個文字檔中有 126 個工作區是 LF，含 tauri.js、
+#     dataset_sidecar.py、package.json 等核心檔案。）
+#
+#   EditorConfig 則由編輯器在「存檔當下」強制，不需經過 git。
+#
+# 與 .gitattributes 的分工：
+#   .editorconfig → 編輯器存檔時就寫對（預防）
+#   .gitattributes → git 取出時轉換（保險）
+#   scripts/eol.cjs → CI / 手動檢查與修復（驗證）
+# ============================================================
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = crlf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# ---------------------------------------------------------
+# Markdown：不做行尾以外的格式強制
+# （Markdown 慣用 trailing two-space 換行，trim 會破壞排版）
+# ---------------------------------------------------------
+[*.md]
+trim_trailing_whitespace = false
+
+# ---------------------------------------------------------
+# JSON / YAML：2 空格縮排（常見慣例），且 JSON 不容許 trailing whitespace 差異
+# ---------------------------------------------------------
+[*.{json,yml,yaml}]
+indent_size = 2
+
+# ---------------------------------------------------------
+# 次要檔案類型
+# ---------------------------------------------------------
+[*.{js,mjs,ts,cjs,mjs}]
+indent_size = 2
+
+[*.py]
+indent_size = 4
+
+# ---------------------------------------------------------
+# 例外：自動產物與 vendored 第三方資產
+# 這些檔案不由本專案維護，強制行尾只會製造無意義 diff
+# ---------------------------------------------------------
+
+# Tauri 自動產生的 schema（已 gitignore）
+[src-tauri/gen/**]
+end_of_line = unset
+
+# 第三方壓縮資產（與 .gitattributes 的 -text 對應）
+[ui/src/highlight.min.js]
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+
+[ui/src/python.min.js]
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+
+# 建置產物
+[out/**]
+end_of_line = unset
+
+[target/**]
+end_of_line = unset
+
+[ui/dist/**]
+end_of_line = unset
+
+[backup/**]
+end_of_line = unset
+
+[temp/**]
+end_of_line = unset
+
+[temp_scripts/**]
+end_of_line = unset
+
+[log/**]
+trim_trailing_whitespace = false
