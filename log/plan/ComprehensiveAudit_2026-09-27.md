@@ -196,25 +196,41 @@ subprocess.check_call([sys.executable, "-m", "pip", "install", "paramiko"], **_P
 
 ## 6. P2：Dataset Manager 四類型專項（image / object_detection / line_following / table）
 
-### P2-10 類型能力矩陣盤點（需產出補完文件）
+### P2-10 類型能力矩陣盤點（✅ 已產出 2026-10-02 → `docs/dataset_types_matrix.md`）
 
 | 類型 | 入口 | 模式 | 匯出分流 | 訓練模板 | 已知殘餘 |
 |---|---|---|---|---|---|
 | image（分類） | stable | live+file | classifier | `classifier/classifier_train.py` + `common/classifier_dataset.py`（分層） | R9 雙平台實機、三主題目視 |
 | object_detection（偵測） | stable | live+file | detector（images/labels） | `detector/detector_train.py` + `common/detector_dataset.py`（依 class_id 分層） | 同上 |
-| line_following（循跡） | stable | live+file | line（images/lines/*.txt） | `line_follower/line_follower_train.py` + `common/line_dataset.py` | **切分策略待確認（見 P2-11）** |
+| line_following（循跡） | stable | live+file | line（images/lines/*.txt） | `line_follower/line_follower_train.py` + `common/line_dataset.py` | 切分策略**已結案**（P2-11，屬回歸型隨機切） |
 | table | stable | **file only** | `data.csv`（UTF-8） | `table/table_train.py` + `common/table_dataset.py`（label 分層／回歸隨機） | T-5 int8 量化本機驗證未完成 |
 
-- 計畫：產出 `docs/dataset_types_matrix.md` 為四類型能力 SSOT（模式/標註/匯出/訓練/推論/已知殘餘），並盤點 `docs/help/` 四類型 help 頁現況。
+- **SSOT 已產出**：`docs/dataset_types_matrix.md`（六節：命名對照／總覽矩陣／逐類型細節／已知殘餘／sidecar 雙處映射／雙佈局）。已加入 `FILE_STRUCTURE.md` 與 `log/KNOWLEDGE_BASE.md` 索引。
+- **盤點新發現（6 項落差，詳見文件 §3 G1~G6）**：
+  - **G1 `feature` 有訓練模板但無積木入口**：`TASK_TYPE` 下拉僅 4 項不含 feature（`ai_inference_blocks.js` L16-21），而 `feature_train.py` 存在且 `py_compile` 通過 → **UI 入口缺口**，DM 可建 feature 專案卻無法從積木訓練。
+  - **G2 `serial` 訓練模板目錄不存在**（`Test-Path` 實查 False），sidecar `script_rel` 卻有 serial 映射 → 走到必報「訓練模板不存在」。
+  - G3 `table` 無推論解析積木；G4 feature 卡片 dev 但 typePolicy stable（刻意）；G5 table 無 live 採集（＝P2-12 決策項）；G6 `docs/help/` 18 頁僅 3 頁有英文版。
+- **跨層命名不一致（已寫入文件 §0）**：`line_following`（DM）→ `line_follower`（訓練）、`image`（DM）→ `classifier`（訓練）；映射存在於 sidecar **兩處獨立實作**（`task_scripts` L1066 / `script_rel` L798），改動須同步。
 
-### P2-11 `line_following` 切分策略需對齊 AGENTS.md 分層鐵律（**待驗證**）
-- AGENTS.md 規定：帶類別標籤者必須分層；`line_following` 若資料含「線型/類別欄位」應比照 detector 依標註類別分層。
-- 現況（依 todo 記載）：`common/line_dataset.py` 為**隨機切**＋報告註明。
-- 計畫：
-  1. 檢查 `line/*.txt` 或 `dataset.json` 是否存在可作為類別的欄位（線型、方向、單/雙線）。
-  2. **有**類別欄位 → 改為依該欄位分層（重用 `detector_dataset` 分層函式，勿重寫）。
-  3. **無**類別欄位（純端點回歸）→ 維持隨機切，但訓練報告需明確註明「回歸型，隨機切分」，並在本計畫記錄結論。
-- 驗收：e2e（參考 `temp_scripts/e2e_c2_check.py`、`e2e_detector_curve_check.py`）新增 line 分層案例。
+### P2-11 `line_following` 切分策略需對齊 AGENTS.md 分層鐵律（✅ 已查證結案 2026-10-02）
+- ~~AGENTS.md 規定：帶類別標籤者必須分層；`line_following` 若資料含「線型/類別欄位」應比照 detector 依標註類別分層。~~
+- **結論：無類別欄位 → 屬回歸型，維持隨機切「符合鐵律」，無需改為分層。**（原計畫第 3 條分支）
+- **證據鏈（三層皆已實查，非憑空推論）**：
+  1. **UI 層**：`core/typePolicy.js::needsUnclassifiedCheck()` 僅對 `object_detection` 為真
+     → `ui/annotation.js` L340/L358 的類別選擇器與 `createLabelMapManager` 在 `line_following` **不渲染**。
+  2. **資料層**：line 標註結構為 `annotations = [{ class_id, line:[x1,y1,x2,y2] }]`
+     （`DatasetManagerTypeLockedWorkflow.md` §10 記錄「每張圖僅一條、class_id 恆 0、無多類 UI」）。
+     e2e 實測：8 張樣本的 `class_id` 集合 = `{0}`，annotation 欄位 = `['class_id', 'line']`
+     → **不存在線型/方向/單雙線等可作類別的欄位**。
+  3. **訓練層**：`common/line_dataset.py` 走隨機切（seed 固定可再現），
+     且輸出標題行註明回歸型態 → 滿足鐵律後半段「回歸型須在報告註明」。
+- **查證後修掉的一個真實缺陷**：切分報告標題行有贅字與括號不閉合
+  （原「隨機切分 (random split，無類別欄位（回歸），隨機切分)」→「隨機切分」重複兩次、右括號缺）。
+  改為「隨機切分 (random split，線段回歸任務無類別欄位):」。備份 `backup/line_dataset_pre_p211_20261003_000101.py`。
+- **證據工具**：`temp_scripts/e2e_p211_line_split_check.py`（自足、tmpfile 夾具、11 斷言 ALL PASS；
+  **已做變異測試**：把切分改成分層抽樣 → 5 項報紅，還原後 ALL PASS）。
+- **未來擴充路徑（若日後加多線型）**：啟用 `class_id` ＋ `label_map` ＋ 依 `class_id` 分層切
+  （比照 `detector_dataset`），schema 本身零改動。
 
 ### P2-12 `table` 類型僅 file 模式，live 採集未支援
 - 現況：`TYPE_CATALOG` 中 `table.modes = ['file']`；`ui_layout.js:910` 有 `projectType === 'feature'` 特化分支，table 無對應。

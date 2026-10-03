@@ -54,6 +54,10 @@ Blockly.Python.forBlock['py_ai_train_run'] = function(block, generator) {
       '        script_name = "line_follower_train.py"\n' +
       '    elif task_type == "table":\n' +
       '        script_name = "table_train.py"\n' +
+      // G1（2026-10-03）：feature 訓練鏈路實測可跑（temp_scripts/e2e_g1_feature_train_check.py
+      // 1 epoch PASS，產出 curve/history/report）。此前 feature 只在 DM 側可用、積木無入口。
+      '    elif task_type == "feature":\n' +
+      '        script_name = "feature_train.py"\n' +
       '    else:\n' +
       '        print(f"錯誤: 不支援的任務類型: {task_type}")\n' +
       '        return False\n' +
@@ -275,8 +279,10 @@ Blockly.Python.forBlock['py_ai_model_init'] = function(block, generator) {
       '        return {"type": "line_follower", "line": (x1, y1, x2, y2), "offset": offset, "angle": angle, "direction": direction, "confidence": 1.0}\n' +
       '    \n' +
       '    def _table_predict(self, data):\n' +
-      '        # 表格資料推論（預留接口）\n' +
-      '        return {"type": "table", "prediction": 0.0, "confidence": 0.0}\n' +
+      '        # G1 階段 2 待實作：表格型推論需要「特徵向量」輸入，與影像幀不同源。\n' +
+      '        # 舊實作回傳硬編碼 {"prediction": 0.0} 會讓使用者誤以為模型壞掉，\n' +
+      '        # 故改為明確回報未支援（見 docs/dataset_types_matrix.md §3 G3）。\n' +
+      '        return {"type": "table", "error": "table/feature inference not implemented yet"}\n' +
       '    \n' +
       '    def predict(self, frame):\n' +
       '        if self.task_type == "classifier":\n' +
@@ -285,7 +291,8 @@ Blockly.Python.forBlock['py_ai_model_init'] = function(block, generator) {
       '            return self._detect(frame)\n' +
       '        elif self.task_type == "line_follower":\n' +
       '            return self._follow_line(frame)\n' +
-      '        elif self.task_type == "table":\n' +
+      '        elif self.task_type in ("table", "feature"):\n' +
+      '            # 表格型（table / feature）共用預留接口：訓練可跑、推論待階段 2。\n' +
       '            return self._table_predict(frame)\n' +
       '        else:\n' +
       '            return {"type": "unknown", "error": "unknown task type"}\n';

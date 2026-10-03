@@ -50,10 +50,12 @@ Cocoya 是一個針對 Python AI 視覺的教學工具。它透過 Blockly 產�
 
 - **原因**：教學資料集普遍類別不平衡（例：none 32 / paper 124 張），全域隨機切會讓小類別驗證集樣本過少甚至為 0，驗證準確率失真且每次切分結果漂移。
 - **已實作**：`common/classifier_dataset.py`（依資料夾類別）、`common/detector_dataset.py`（依 YOLO class_id）——兩者含教學保護（類別 ≥2 張時驗證/訓練各至少 1 張；切後為空明確報錯）與分層報告輸出（`分層抽樣 (stratified split): <類別>: train N / val M`）。
-- **未來模板開發注意**：
-  - `line_following`（循跡，影像 + line 標註，若有線型/類別欄位）→ 比照 detector 依標註類別分層。
+- **已查證結論（2026-10-02，P2-11 結案）**：
+  - `line_following` **無類別欄位**（`class_id` 恆 0，UI 無類別選擇器、`typePolicy.needsUnclassifiedCheck()` 僅對 object_detection 為真）→ 屬**回歸型**，依鐵律**允許隨機切＋報告註明**，現行實作符合規範。切分報告標題須為 `隨機切分 (random split，線段回歸任務無類別欄位):`。
+  - 若日後啟用多線型：改為依 `class_id` 分層（比照 `detector_dataset`），schema 零改動。
   - `table` / `feature` / `serial`（表格型資料集，schema 有 label 欄位）→ **依 label 欄位值分層**；回歸型（label 為連續數值）才允許隨機切，但需在報告註明。
   - 新模板實作時請重用既有分層切分函式，勿重新實作全域隨機切。
+  - 證據工具：`temp_scripts/e2e_p211_line_split_check.py`（tempfile 夾具、自足）。
 
 ### 訓練資料集雙佈局鐵律（C2，2026-09-23）
 影像系訓練模板（classifier/detector/line）的 `DATASET_DIR` **永遠填資料集根 `dataset/<名稱>`**，loader 內部自理佈局：

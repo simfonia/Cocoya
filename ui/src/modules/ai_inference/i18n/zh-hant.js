@@ -44,6 +44,8 @@ Blockly.Msg["AI_TASK_CLASSIFIER"] = "分類器";
 Blockly.Msg["AI_TASK_DETECTOR"] = "偵測器";
 Blockly.Msg["AI_TASK_LINE_FOLLOWER"] = "循線";
 Blockly.Msg["AI_TASK_TABLE"] = "表格";
+// [G1 2026-10-03] feature（特徵）：訓練可跑；推論待階段 2（表格型推論尚未實作）
+Blockly.Msg["AI_TASK_FEATURE"] = "特徵";
 
 // Backend Options
 Blockly.Msg["AI_BACKEND_LOCAL"] = "本地";

@@ -1,4 +1,36 @@
-﻿// AI Inference Blocks: 訓練與推論積木
+// AI Inference Blocks: 訓練與推論積木
+
+// === task type SSOT（G1 階段 1，2026-10-03）=== 
+// 原本 py_ai_train_run（訓練）與 py_ai_model_init（推論）各自維護一份
+// 相同且各自只有 4 項的下拉清單 → 兩處漂移風險，且加新類型易只改一處。
+// 此處收斂為單一常數；兩處積木一律引用它。
+// 
+// 維護鐵律：新增 task type 必須同時滿足三件事，否則會半殘——
+//   ① 本清單（UI 可選）
+//   ② ai_inference_generators.js 的 train_model 分派（可訓練）
+//   ③ ai_inference_generators.js 的 predict 分派（可推論）
+// 守門測試 task_type_contract.test.mjs 會驗證①②③一致。
+//
+// 名稱對照（DM 專案類型 vs 訓練任務類型）：
+//   image(DM) → classifier ｜ line_following(DM) → line_follower ｜ object_detection(DM) → detector
+const TASK_TYPE_OPTIONS = [
+  [Blockly.Msg["AI_TASK_CLASSIFIER"], "classifier"],
+  [Blockly.Msg["AI_TASK_DETECTOR"], "detector"],
+  [Blockly.Msg["AI_TASK_LINE_FOLLOWER"], "line_follower"],
+  [Blockly.Msg["AI_TASK_TABLE"], "table"],
+  // G1：feature 訓練鏈路已實測可跑（temp_scripts/e2e_g1_feature_train_check.py）。
+  // 推論仍為階段 2（表格型推論需 _table_predict 真實實作＋解析積木，見
+  // docs/dataset_types_matrix.md §3 G3）。選 feature 推論會得到明確的
+  // unsupported 回報，不會假回傳 0.0。
+  [Blockly.Msg["AI_TASK_FEATURE"], "feature"],
+];
+
+/**
+ * task type 清單的讀取方式：測試以「掃描原始碼」取得（TASK_TYPE_OPTIONS 區段），
+ * 不走 module.exports —— 本檔是瀏覽器 script（非 ESM、無打包的匯出契約），
+ * 加 module.exports 反而要求 eslint 額外宣告 node 全域，且與專案慣例不符。
+ * 故此處只提供常數本體。
+ */
 
 Blockly.Blocks['py_ai_train_run'] = {
   init: function() {
@@ -13,12 +45,7 @@ Blockly.Blocks['py_ai_train_run'] = {
     // 類型 + 訓練主機
     this.appendDummyInput()
         .appendField(Blockly.Msg["AI_TRAIN_FIELD_TYPE"])
-        .appendField(new Blockly.FieldDropdown([
-          [Blockly.Msg["AI_TASK_CLASSIFIER"], "classifier"],
-          [Blockly.Msg["AI_TASK_DETECTOR"], "detector"],
-          [Blockly.Msg["AI_TASK_LINE_FOLLOWER"], "line_follower"],
-          [Blockly.Msg["AI_TASK_TABLE"], "table"]
-        ]), 'TASK_TYPE')
+        .appendField(new Blockly.FieldDropdown(TASK_TYPE_OPTIONS), 'TASK_TYPE')
         .appendField(Blockly.Msg["AI_TRAIN_FIELD_BACKEND"])
         .appendField(new Blockly.FieldDropdown([
           [Blockly.Msg["AI_BACKEND_LOCAL"], "local"],
@@ -130,15 +157,10 @@ Blockly.Blocks["py_ai_model_init"] = {
         .appendField(Blockly.Msg["AI_MODEL_INIT"])
         .appendField(new Blockly.FieldTextInput("model"), 'MODEL_PATH');
 
-    // 新增 TASK_TYPE 欄位
+    // 新增 TASK_TYPE 欄位（與訓練積木共用 SSOT 清單 TASK_TYPE_OPTIONS）
     this.appendDummyInput()
         .appendField(Blockly.Msg["AI_TRAIN_FIELD_TYPE"])
-        .appendField(new Blockly.FieldDropdown([
-          [Blockly.Msg["AI_TASK_CLASSIFIER"], "classifier"],
-          [Blockly.Msg["AI_TASK_DETECTOR"], "detector"],
-          [Blockly.Msg["AI_TASK_LINE_FOLLOWER"], "line_follower"],
-          [Blockly.Msg["AI_TASK_TABLE"], "table"]
-        ]), 'TASK_TYPE');
+        .appendField(new Blockly.FieldDropdown(TASK_TYPE_OPTIONS), 'TASK_TYPE');
 
     // 模型類型選擇（自動/量化/Float32）
     this.appendDummyInput()
