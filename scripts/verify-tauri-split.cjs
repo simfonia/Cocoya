@@ -20,7 +20,18 @@ const path = require('node:path');
 const repoRoot = path.resolve(__dirname, '..');
 const TAURI = 'ui/src/bridge/tauri.js';
 const HANDLER_DIR = path.join(repoRoot, 'ui/src/bridge/tauri');
-const BASE_REF = process.argv[2] || 'HEAD';
+const BASE_REF = process.argv[2] || '161d610';
+/*
+ * ⚠️ 為何釘選 ref 而不是預設 HEAD：
+ *   拆檔一旦 commit，HEAD 就是「拆分後」的內容，基準會跟著移動 → 比對永遠通過，
+ *   守門形同虛設。這正是 P2-5 記載的「編譯通過 ≠ 搬對了」的同型問題，
+ *   只不過這次是「守門通過 ≠ 守門有效」——危險的不是守門紅，是守門綠。
+ *
+ *   釘選值 = 拆分前的最後一個 commit（該 commit 只動 tauri_anchor.test.mjs，
+ *   未觸碰 tauri.js，故其 tauri.js 內容等同拆分前）。
+ *   若日後 rebase/squash 造成此 commit 不存在，腳本會明確報錯而不是靜默通過；
+ *   此時請改用 `node scripts/verify-tauri-split.cjs <新基準 ref>` 重新釘選。
+ */
 
 const readRef = (ref) => execSync(`git show ${ref}:${TAURI}`, { cwd: repoRoot, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 });
 const readNow = () => fs.readFileSync(path.join(repoRoot, TAURI), 'utf8');
