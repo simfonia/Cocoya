@@ -67,6 +67,8 @@
         "test:fast": "node scripts/test-related.cjs",
         "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
         "test:integration": "node scripts/run-integration.cjs",
+        "coverage": "node scripts/coverage.cjs",
+        "coverage:check": "node scripts/coverage.cjs --check",
         "eol:check": "node scripts/eol.cjs",
         "eol:fix": "node scripts/eol.cjs --fix",
         "eol:list": "node scripts/eol.cjs --list"
@@ -77,6 +79,7 @@
         "@typescript-eslint/eslint-plugin": "^5.45.0",
         "@typescript-eslint/parser": "^5.45.0",
         "@vscode/test-electron": "^2.2.0",
+        "c8": "^12.0.0",
         "eslint": "^8.28.0",
         "typescript": "^4.9.4"
     }

@@ -1,3 +1,15 @@
+# Cocoya 專案檔案結構（FILE_STRUCTURE）
+
+> **本檔是檔案樹狀清單，每個檔案一行、以 `#` 補一句功能說明。**
+>
+> 維護鐵律（[P3-4 2026-10-03]）：
+> 1. **樹狀縮排必須正確** —— 每個 `└──` 必須是它那一層的最後一個節點。
+>    本目錄結構是唯一事實來源，縮排錯位會讓「誰包含誰」被誤讀。
+>    守門：`ui/src/modules/core/file_structure_contract.test.mjs`（掃描型，驗縮排不變式）。
+> 2. **不寫行號** —— 行號會隨任何編輯立即失效，是本檔過去的主要腐敗來源。
+> 3. **改檔案結構就改本檔**，與 `log/COCOYA_STATE.md` §6 技術債分離
+>    （技術債總表指向本檔，不重複記載同一件事）。
+
 C:\Workspace\cocoya\
 ├── .vscodeignore          # VSIX 打包過濾清單
 ├── .eslintrc.json         # ESLint 8 + TypeScript 規則設定（npm run lint）
@@ -20,7 +32,7 @@ C:\Workspace\cocoya\
 │   │   ├── py_ai_get_label_zh-hant.html     # 取得標籤積木說明
 │   │   ├── py_ai_get_confidence_zh-hant.html # 取得信心度積木說明
 │   │   ├── py_ai_get_bbox_zh-hant.html      # 取得邊界框積木說明
-│   │   └── py_ai_get_direction_zh-hant.html # 取得方向積木說明
+│   │   ├── py_ai_get_direction_zh-hant.html # 取得方向積木說明
 │   │   ├── py_ai_pose_calc_angle_zh-hant.html # [NEW] 三點夾角積木說明 (計算內/外/符號角)
 │   │   └── py_ai_pose_calc_angle_en.html     # [NEW] Angle of 3 Points block help
 │   ├── system_spec.html   # 系統規格說明書 (v5.0 雙模架構版)
@@ -82,7 +94,6 @@ C:\Workspace\cocoya\
 │   │   ├── SenseTFLMFirmwareAndModelPush.md # [NEW 2026-09-19] Sense(XIAO ESP32-S3) TFLM 韌體 + 模型推送通道計畫（backlog；TFLM 路線定案/接線規格/P0~P5 六階段）
 │   │   ├── openTrainingReport.md # 開啟訓練報告計畫
 │   │   └── SpikeModuleDesign.md  # [NEW] Lego SPIKE Prime 模組開發計畫
-│   │   └── openTrainingReport.md # 開啟訓練報告計畫
 │   ├── work/              # 每日工作紀錄
 │   │   ├── 2026-05-03.md  # UI/UX 響應式佈局與收合面板實作
 │   │   ├── 2026-05-04.md  # 重大修復：Tauri 多視窗關閉攔截與備份隔離
@@ -100,20 +111,24 @@ C:\Workspace\cocoya\
 │       ├── DatasetManager.html      # Dataset Manager API 對照表（公開 API/UI 模式分流/路徑政策；遠端節已標記前端移除後端保留）
 │       ├── DatasetManager_DevGuide.html # [NEW Stage 6] Dataset Manager 開發手冊 SOP（新增資料集類型/i18n key/--dsm-* token 三處同步/bridge adapter/錯誤碼契約/測試）
 │       ├── Tauri_Sidecar_API.html   # Tauri Sidecar API 使用對照表
-│       └── Renderer_API.html        # UI Renderer API (syncSelection, findLocatableBlock)
-│       └── ThemeManager.html        # [NEW] 主題管理模組對照表（API/主題定義格式/reloadWebview 鏈/新增主題 SOP）
-│       └── HuskyLens.html           # [NEW 2026-09-19] mcu_huskylens 模組對照表（V1/V2 協定/幀格式/CMD 碼/欄位偏移/座標系/循線向量語意與 V2 中位三解法/15 積木生成碼契約/πCar 循線範例/限制）
-│       └── AI_Inference.html        # [NEW 2026-09-19] py_ai_* 模組對照表（推論結果契約 classifier/detector/line_following、循線 line/offset/angle 語意、int8 還原鐵律、兩個循線世界、P+D 控制實務）
-│       └── AppPlatformRestore.html  # [NEW 2026-09-22] App 層工作區還原契約（三條 XML→工作區路徑的平台切換順序、ensurePlatformForXml 鐵律、空積木症狀對照、currentPlatform 來源/origin 隔離、_describeCodegenError）
+│       ├── Renderer_API.html        # UI Renderer API (syncSelection, findLocatableBlock)
+│       ├── ThemeManager.html        # [NEW] 主題管理模組對照表（API/主題定義格式/reloadWebview 鏈/新增主題 SOP）
+│       ├── HuskyLens.html           # [NEW 2026-09-19] mcu_huskylens 模組對照表（V1/V2 協定/幀格式/CMD 碼/欄位偏移/座標系/循線向量語意與 V2 中位三解法/15 積木生成碼契約/πCar 循線範例/限制）
+│       ├── AI_Inference.html        # [NEW 2026-09-19] py_ai_* 模組對照表（推論結果契約 classifier/detector/line_following、循線 line/offset/angle 語意、int8 還原鐵律、兩個循線世界、P+D 控制實務）
+│       ├── AppPlatformRestore.html  # [NEW 2026-09-22] App 層工作區還原契約（三條 XML→工作區路徑的平台切換順序、ensurePlatformForXml 鐵律、空積木症狀對照、currentPlatform 來源/origin 隔離、_describeCodegenError）
+│       ├── DatasetManagerParityMatrix.md # Dataset Manager VSIX/Tauri 功能對齊矩陣
+│       ├── FontScale.html           # 字級縮放（--fs-* token）對照表
+│       └── HardwarePinMap.html      # 硬體腳位對照表
 
 
 ├── ui/                    # 雙模共用前端根目錄 (Vite Project)
 │   ├── index.html         # Webview 與 Tauri 共用入口（工具列韌體 Raw Dump 診斷開關）
 │   ├── .eslintrc.json     # 前端 ESLint 8 規則設定（npm run lint:ui，eslint:recommended + 3 條設計性關閉）
-│   ├── test/              # 共用測試夾具（T3：非正式產物，僅供 *.test.mjs 匯入）
-│   │   ├── fakeDom.js         # 扁平 fake element/document（annotation、classification）
-│   │   ├── depsBuilder.js     # 共用 deps 建構，注入真實 t()／escapeHtml
-│   │   └── fixtures.js        # DatasetSpec 假身、標籤樣本、樹狀 fake element（form）
+│   ├── test/              # 共用測試夾具（T3：正式產物，僅供 *.test.mjs 匯入）
+│   │   ├── fakeDom.js     # 扁平 fake element/document（annotation、classification、statusMessage、panels）
+│   │   ├── depsBuilder.js # 共用 deps 建構，注入真實 t()／escapeHtml
+│   │   ├── depsStubs.js   # [T3 殘項 2026-10-03] 共用 deps 假身：fallbackT/taggedT/rawEscapeHtml/angleEscapeHtml、optionListModal/optionListPanels（消除各測試檔自造假 t/escapeHtml/optionList；兩種 optionList 輸出格式不同故刻意分立）
+│   │   └── fixtures.js    # DatasetSpec 假身、標籤樣本、樹狀 fake element（form）
 │   ├── vite.config.js     # Vite 配置 (含資產同步外掛)
 │   ├── favicon.ico        # 本地圖示以解決 404 報錯
 │   ├── blockly/           # Blockly 核心庫與靜態插件
@@ -148,6 +163,7 @@ C:\Workspace\cocoya\
 │   │   │   └── search.js    # 積木搜尋引擎
 │   │   ├── modules/       # 雙模共用積木模組
 │   │   │   ├── core/      # Python／MicroPython 核心語法積木；`core_contract.test.mjs` 對帳 block、generator、toolbox、i18n、主題與平台契約（2026-09-30 T2 起涵蓋 core_manifest.json 全部 22 模組，含 3 項 i18n 守門）
+│   │   │   │   └── file_structure_contract.test.mjs # [P3-4 2026-10-03] FILE_STRUCTURE.md 樹狀縮排契約守門（5 測：每個「該層最後一項」後不得再有同層節點／無相鄰重複條目／縮排為 4 空格單位／根層不得掛多層路徑／不得出現行號引用；掃描型，變異測試三種真實回歸皆報紅）
 │   │   │   ├── theme_manager/ # [NEW] 主題管理模組（registry + 模式切換 + 系統深淺色偵測）
 │   │   │   │   ├── theme_manager.js # 核心：registerTheme/getThemes/setMode/getMode/apply/startWatching (window.CocoyaTheme)
 │   │   │   │   ├── theme_contract.test.mjs # [2026-10-01／2026-10-02] 主題契約守門（9 測：cssVars 鍵集合三主題一致／無重複／鍵名格式、msgColours 選配語意；[2026-10-02] 增守門 6「vscode 深色選擇器必須帶 :not(.cocoya-light-mode)」＋守門 7「全專案 CSS 結構健全性（註解不得提前閉合、大括號平衡）」——兩者皆掃描 ui/src 下所有 .css 且含自檢；守住 P2-16、VS Code 深色越權、CSS 語法壞掉三項不變式，npm run test:theme）
@@ -275,6 +291,9 @@ C:\Workspace\cocoya\
 │   ├── Cargo.toml         # Rust 專案配置
 │   ├── tauri.conf.json    # Tauri 應用配置 (含安裝與資源設定)
 │   ├── capabilities/      # 視窗權限配置 (default.json)
+│   ├── permissions/       # [P2 權限二階段] 自訂指令權限定義（commands.toml）
+│   ├── build.rs           # Tauri build script
+│   ├── resources/         # 打包進 app 的靜態資源（core_manifest.json）
 │   └── src/
 │       ├── main.rs        # 應用程式入口
 │       ├── lib.rs         # [REFACTORED] 瘦身後的生命週期管理
@@ -289,25 +308,6 @@ C:\Workspace\cocoya\
 │           ├── app.rs       # 視窗控制與系統資訊
 │           ├── dataset.rs   # [NEW] Sidecar 通訊 (start/send/stop)
 │           └── training.rs  # [NEW] 訓練報告開啟 (open_report, find_latest_training_report)
-│   ├── firmware/          # MCU 韌體資源
-│   │   └── MicroPython/   # MicroPython 韌體
-│   │       ├── MakerPi_RP2040/   # 內含 .uf2
-│   │       └── XIAO_ESP32_S3/    # 內含 .bin, .uf2, 及 project_config.json
-│   │           ├── Sense_microPython/  # 具備相機支援的 MicroPython
-│   │           └── Sense_Factory/      # 原廠出廠 C++ 韌體 (支援多段燒錄)
-│   ├── deploy_mcu.py      # [REFACTORED] CLI 入口（向後相容薄包裝，委派 deploy/ 套件）
-│   ├── deploy/            # [NEW] 部署器模組化套件（工廠模式）
-│   │   ├── __init__.py    #   工廠函式 get_deployer() 與登錄表
-│   │   ├── base.py        #   BaseDeployer 基底類別 + 序列埠監控 + detect_board() + 可選 RawDumper
-│   │   ├── micropython.py #   MicroPython Raw REPL 部署器
-│   │   └── pybricks.py    #   Pybricks SPIKE 部署器（新增）
-│   └── extension_icon.png # 插件圖示
-│   ├── deploy_mcu.py      # [OPTIMIZED] 具備硬體感知與分塊寫入的部署工具
-│   └── extension_icon.png # 插件圖示
-│       ├── dataset_sidecar.py   # Sidecar 主進程與指令解析
-│       ├── camera_service.py    # OpenCV 攝影機預覽與擷取服務
-│       ├── dataset_io.py        # 資料集檔案存取與打包工具
-│       └── media_pipe_service.py # AI 特徵提取服務 (MediaPipe)
 ├── mvp_hand_gesture/      # Phase 5 MVP 手勢分類驗證腳本
 │   ├── 01_collect_dataset.py # 本地資料收集
 │   ├── 02_train_local.py    # 本地訓練 (MobileNetV2)
@@ -366,9 +366,23 @@ C:\Workspace\cocoya\
 │   ├── remote_ssh.py        # [P2-3] 遠端 SSH 指令（checkRemoteEnvironment／uploadDataset／trainRemote／stopTraining）＋ REMOTE_SCRIPTS 映射 SSOT、_require_paramiko（P1-5 不自動 pip 安裝）
 │   ├── remote_sync.py       # [P2-3] 遠端 smart 同步（sync_dataset：smart/always/skip；sync_templates：模板增量同步，本地模板掃不到即報錯）
 │   ├── remote_docker.py     # [P2-3] 遠端 Docker 訓練執行：映像別名補齊、`docker run --gpus all` 串流解析（剝 ANSI／\r 切行）、SFTP 下載產物
-│   └── remote_tflite.py     # [P2-3] 本地 Keras→TFLite 轉換（乾淨環境子進程＋60s 無輸出 watchdog 傾印環境變數）
-├── temp_scripts/          # 執行期間暫存目錄
-    │   └── t_scan.cjs         # [2026-10-01] T-scan：掃描測試檔的計時器洩漏／未清除 handle／無 await（40 檔靜態掃描；只報「線索」不報「錯誤」，判定須人工確認）
+│   ├── remote_tflite.py     # [P2-3] 本地 Keras→TFLite 轉換（乾淨環境子進程＋60s 無輸出 watchdog 傾印環境變數）
+│   ├── firmware/            # MCU 韌體資源（[P3-4 2026-10-03] 由 src-tauri/ 誤植移回此處）
+│   │   └── MicroPython/
+│   │       ├── MakerPi_RP2040/     # 內含 .uf2
+│   │       └── XIAO_ESP32_S3/      # 內含 .bin, .uf2, 及 project_config.json
+│   │           ├── Sense_microPython/  # 具備相機支援的 MicroPython
+│   │           └── Sense_Factory/      # 原廠出廠 C++ 韌體 (支援多段燒錄)
+│   ├── deploy_mcu.py        # [REFACTORED] CLI 入口（向後相容薄包裝，委派 deploy/ 套件）
+│   ├── deploy/              # 部署器模組化套件（工廠模式 get_deployer()）
+│   │   ├── __init__.py      # 工廠函式 get_deployer() 與登錄表
+│   │   ├── base.py          # BaseDeployer 基底類別 + 序列埠監控 + detect_board() + 可選 RawDumper
+│   │   ├── micropython.py   # MicroPython Raw REPL 部署器
+│   │   └── pybricks.py      # Pybricks SPIKE 部署器
+│   └── extension_icon.png   # 插件圖示
+├── temp_scripts/          # 執行期間暫存目錄（gitignored；e2e_*.py 證據腳本、掃描工具）
+│   ├── t_scan.cjs         # [2026-10-01] T-scan：掃描測試檔的計時器洩漏／未清除 handle／無 await（40 檔靜態掃描；只報「線索」不報「錯誤」，判定須人工確認）
+│   ├── parity_check.mjs   # Dataset Manager i18n parity 檢查
+│   └── e2e_*.py           # 各主題端對端證據腳本（C2 雙佈局／G1 表格特徵／P2-11 循線切分／task type 改名）
 ├── package.json           # 根目錄設定
 └── tsconfig.json          # TS 編譯設定
-└── ui/src/modules/theme_manager/themes/cocoya_dark.js # [REFACTORED] 完全自足深色主題：componentStyles+cssVars+css（主題專屬規則由 ThemeManager 注入 <style>，style.css 不再含任何深色規則）
