@@ -298,6 +298,8 @@ C:\Workspace\cocoya\
 │   └── test-related.cjs  # L0 開發守門：依 git 變更自動挑出必要測試並只輸出摘要 [NEW 2026-09-30]
 ├── src-tauri/             # Tauri 後端專案 (Rust)
 │   ├── Cargo.toml         # Rust 專案配置
+│   ├── tests/             # [2026-10-04 新增] Integration 測試
+│   │   └── serde_contract.rs # Rust→JS 序列化契約守門（3 測；掃描全部 #[derive(Serialize)] struct 斷言 camelCase，含白名單同步自檢。npm run test:rust，已併入 npm test）
 │   ├── tauri.conf.json    # Tauri 應用配置 (含安裝與資源設定)
 │   ├── capabilities/      # 視窗權限配置 (default.json)
 │   ├── permissions/       # [P2 權限二階段] 自訂指令權限定義（commands.toml）

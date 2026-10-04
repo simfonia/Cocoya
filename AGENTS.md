@@ -436,6 +436,17 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
   直接 `bridge.send(...)` 會**永久 await**（測試整批超時，看起來像死結）。
   正解：`getSendHandler(cmd).call(bridge, cmd, data)` —— 與 `send()` 內部
   dispatch handler 的路徑完全相同，仍覆蓋真正實作碼。
+- **Rust 端序列化契約守門（2026-10-04 新增）**：`src-tauri/tests/serde_contract.rs`
+  （`npm run test:rust`，已併入 `npm test`，執行 0.01s）。
+  掃描全部 `#[derive(Serialize)]` struct，斷言跨邊界者皆有 `rename_all = "camelCase"`；
+  含白名單同步自檢（白名單 struct 若日後被加 camelCase 即報錯，防止白名單變永久漏洞）。
+  **為何是掃描原始碼而非序列化實例**：理想做法是 `to_value(Struct{..})`，但那需把
+  11 個 struct 從 `pub(crate)` 提升為 `pub` 並從 lib 匯出 —— 為測試改動公開 API，
+  風險大於收益。日後若 struct 可被測試存取，應改用實例斷言並刪除本檔。
+  - **已知例外**：`OpenFileResult.is_read_only` 走**送端** snake_case，
+    前端 `controller.js` / `persistence.js` 全鏈使用 `is_read_only`，功能正常。
+    ⚠️ 這與本節「讀端相容」雙保險**方向相反**：若依鐵律替它加上 `rename_all`，
+    前端會立刻壞掉且無任何報錯。白名單即為此而設。
 - **測試替身必須反映真實介面契約（2026-10-01 踩坑）**：替身方法的**回傳型別**也是契約。例：`persistence.setDirty` 直接回傳 `CocoyaBridge.send()` 的結果，替身若回傳 `undefined` 則 `await setDirty` 不構成任何保證。寫替身前先讀被測函式的回傳路徑。
 - **`tauriInvoke` reject 的是「字串」不是 Error 物件（2026-10-04 T7 踩坑）**：
   Rust `Err(format!("CODE: msg"))` 經 Tauri invoke reject 的是字串。
