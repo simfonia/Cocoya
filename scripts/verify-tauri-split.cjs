@@ -44,9 +44,17 @@ const readNow = () => fs.readFileSync(path.join(repoRoot, TAURI), 'utf8');
  *   case 'toggleSerialMonitor': {   ← 區塊式（宣告 const/let 需要自己的作用域）
  * 初版正則只抓第一種，導致基準被低估為 58（真實 61）→ 3 個區塊式 case
  * 完全沒被比對覆蓋，等於守門有洞。
+ *
+ * ⚠️ 縮排**刻意不錨定**（2026-10-03 第二次教訓）：初版寫死 `^\s{16}case`，
+ * 實測發現別人只要用不同縮排（如 20 空格）新增 case，這個守門就會完全抓不到，
+ * 且**不會報錯**（比「守門誤報」更危險 —— 是守門靜默失效）。
+ * 改為寬鬆比對，並過濾 `default:` 分支（它不是 command）。
+ * 縮排語意由「switch 內縮排必大於 switch 行」自然成立，不需在此額外斷言。
  */
 function switchCases(src) {
-    return [...src.matchAll(/^\s{16}case '([^']+)':/gm)].map((m) => m[1]);
+    return [...src.matchAll(/case\s+'([^']+)'\s*:/g)]
+        .map((m) => m[1])
+        .filter((c) => c !== 'default');
 }
 /** 所有 tauriInvoke('xxx') 的命令名。 */
 function invokes(src) {
@@ -116,6 +124,30 @@ if (missing.length || extra.length) {
     if (extra.length) console.error(`  多出：${extra.join(', ')}`);
 } else {
     console.log(`✔ 檢查 1：command 集合完全一致（${union.length} 個）`);
+}
+
+/*
+ * ── 1b. 同一 command 不得同時存在於 switch 與 handler 表 ──
+ * 2026-10-03 變異測試補上的缺口。
+ *
+ * 為何集合比對抓不到：`union` 對重複去重，所以「switch 有 X、handler 表也有 X」
+ * 與「switch 有 X、handler 表沒有 X」的 union 完全相同 → 檢查 1 照樣報綠。
+ * 但執行時 `getSendHandler` 會先命中並 return，**switch 裡那個 case 永遠走不到** ——
+ * 典型症狀是有人改了 switch 裡的邏輯卻「改了沒生效」。
+ */
+const dupInSwitch = afterCases.filter((c, i) => afterCases.indexOf(c) !== i);
+const dupInTable = handlers.filter((c, i) => handlers.indexOf(c) !== i);
+const bothPlaces = afterCases.filter((c) => handlers.includes(c));
+if (dupInSwitch.length || dupInTable.length || bothPlaces.length) {
+    failed = true;
+    console.error('✖ 檢查 1b 失敗：command 重複定義');
+    if (dupInSwitch.length) console.error(`  switch 內重複：${[...new Set(dupInSwitch)].join(', ')}`);
+    if (dupInTable.length) console.error(`  handler 表內重複：${[...new Set(dupInTable)].join(', ')}`);
+    if (bothPlaces.length) {
+        console.error(`  同時存在兩處（switch 分支將永遠走不到）：${bothPlaces.join(', ')}`);
+    }
+} else {
+    console.log('✔ 檢查 1b：無重複定義、無 command 同時存在於 switch 與 handler 表');
 }
 
 // ── 2. tauriInvoke 呼叫字串集 ──

@@ -30,6 +30,12 @@ import * as firmware from './firmware.js';
 import * as serial from './serial.js';
 import * as codeRun from './codeRun.js';
 import * as pythonEnv from './pythonEnv.js';
+import * as fileOps from './fileOps.js';
+import * as training from './training.js';
+import * as camera from './camera.js';
+import * as transfer from './transfer.js';
+import * as progress from './progress.js';
+import * as annotation from './annotation.js';
 
 export const sendHandlers = {
     ...backup,
@@ -38,7 +44,13 @@ export const sendHandlers = {
     ...firmware,
     ...serial,
     ...codeRun,
-    ...pythonEnv
+    ...pythonEnv,
+    ...fileOps,
+    ...training,
+    ...camera,
+    ...transfer,
+    ...progress,
+    ...annotation
 };
 
 /**

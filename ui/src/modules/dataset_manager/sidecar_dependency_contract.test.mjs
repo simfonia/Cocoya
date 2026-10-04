@@ -2,7 +2,7 @@
 // 原始缺陷：dataset_sidecar.py 於 module level 直接 `pip install paramiko`，
 // 會在使用者不知情下修改全域 Python 環境（離線必失敗、可能觸及權限提升）。
 // 現行契約：一律降級為錯誤碼 SSH_PARAMIKO_MISSING，由前端 i18n 顯示安裝指引。
-// 本檔為「掃描型」守門（遍历原始碼斷言），非清單式 —— 新增使用點時自動被涵蓋。
+// 本檔為「掃描型」守門（遍歷原始碼斷言），非清單式 —— 新增使用點時自動被涵蓋。
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -22,7 +22,22 @@ const scanAll = sidecar + '\n' + remoteSsh + '\n'
     + read('resources', 'dataset_manager', 'remote_tflite.py') + '\n'
     + read('resources', 'dataset_manager', 'remote_sync.py') + '\n'
     + read('resources', 'dataset_manager', 'remote_docker.py');
-const tauriJs = read('ui', 'src', 'bridge', 'tauri.js');
+/*
+ * [P2-1 2026-10-03] 掃描範圍擴及 bridge/tauri/ 子目錄。
+ * 原先只讀單一 tauri.js，而 P2 已把 startRemoteTraining 遷到 tauri/training.js，
+ * 守門 5 會因「找不到 case 'startRemoteTraining'」而誤報。
+ * ⚠️ 必須遞迴 —— 只列直接檔案會漏掉 tauri/ 子目錄（同 process_spawn_contract 守門 5 的踩坑）。
+ */
+const bridgeDir = path.join(repoRoot, 'ui', 'src', 'bridge');
+const tauriBridge = (function walk(dir) {
+    let acc = '';
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) acc += walk(full);
+        else if (e.name.endsWith('.js')) acc += '\n' + fs.readFileSync(full, 'utf8');
+    }
+    return acc;
+})(bridgeDir);
 const baseJs = read('ui', 'src', 'ui', 'base.js');
 const trainingOps = read('src', 'handlers', 'trainingOps.ts');
 const envOps = read('src', 'handlers', 'envOps.ts');
@@ -76,10 +91,18 @@ test('P1-5 守門 4：錯誤碼常數與 i18n 鍵雙語系齊備且值相同', (
 
 test('P1-5 守門 5：兩平台橋接層皆透傳 errorCode 給前端', () => {
     // Tauri：trainRemote 失敗與 uploadDataset 失敗
-    const trainDispatch = tauriJs.slice(tauriJs.indexOf("case 'startRemoteTraining'"), tauriJs.indexOf("case 'stopRemoteTraining'"));
+    // [P2-1] 改掃整個 bridge 目錄（startRemoteTraining 已遷至 tauri/training.js）。
+    const trainStart = tauriBridge.indexOf('function startRemoteTraining');
+    assert.ok(trainStart >= 0, '找不到 startRemoteTraining handler');
+    const trainDispatch = tauriBridge.slice(trainStart, tauriBridge.indexOf('export async function stopRemoteTraining', trainStart));
     assert.ok(/errorCode: response\.errorCode/.test(trainDispatch),
         'Tauri startRemoteTraining 未透傳 errorCode');
-    const uploadDispatch = tauriJs.slice(tauriJs.indexOf("case 'datasetUploadArchive'"));
+    // [P2-1 P3] datasetUploadArchive 已遷至 tauri/transfer.js，改以 handler 宣告為锚點。
+    // 註：不可改用「往後slice 到檔尾」——同一檔還有別的 command，會讓斷言失準。
+    const uploadAt = tauriBridge.indexOf('function datasetUploadArchive');
+    assert.ok(uploadAt >= 0, '找不到 datasetUploadArchive handler');
+    const uploadNext = tauriBridge.indexOf('export async function', uploadAt + 1);
+    const uploadDispatch = tauriBridge.slice(uploadAt, uploadNext >= 0 ? uploadNext : undefined);
     assert.ok(/command: 'datasetUploadResult'[\s\S]{0,200}errorCode: response\.errorCode/.test(uploadDispatch),
         'Tauri datasetUploadArchive 未透傳 errorCode');
 
