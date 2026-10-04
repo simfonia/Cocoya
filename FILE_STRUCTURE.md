@@ -138,6 +138,7 @@ C:\Workspace\cocoya\
 │   │   │   ├── tauri.js   # Tauri 專屬橋接 (含介面適配；datasetSaveProgress/datasetLoadProgress 路由 [NEW])
 │   │   │   ├── tauri_anchor.test.mjs # [2026-10-01] BridgeTauri 錨定與 capabilities 契約測試（13 測；_normalizeAnchor 的 serde camelCase/snake_case 雙保險、capabilities getter 欄位集合與即時反映、_refreshAnchor 成功/拋錯/null 三分支）
 │   │   │   ├── tauri_upload_chain.test.mjs # [2026-10-04 T7] _datasetUploadChain 併發上傳鏈契約測試（13 測；序列化/FIFO 不可並行、前棒失敗不中斷後續、catch 內拋錯時鏈仍存活（雙參數 then 的真實防護場景）、失敗必須 dispatch、分塊欄位清洗、datasetExport Canceled 分支）
+│   │   │   ├── tauri_progress_anchor.test.mjs # [2026-10-04 T7] saveProgress/getProjectAnchor 契約測試（17 測；三層專案根 fallback、不可信空快照須重查、snake_case 整合、未錨定回 PROJECT_ROOT_REQUIRED 且不靜默存檔、CODE 前綴解析、invoke reject 字串的型別契約）
 │   │   │   └── vscode.js  # VS Code 專屬橋接
 │   │   ├── ui/          # UI 功能子模組
 │   │   │   ├── terminal.js # 終端機邏輯（有界隊列、rAF 批次 flush、1000 行保護、單節點字元長度防護）
