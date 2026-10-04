@@ -8,6 +8,7 @@ import {
     buildSerialRawDumpEnvPrefix,
     detectSerialShellKind,
 } from './serialRawDump';
+import { runtimeTempDir } from '../runtimePaths';
 
 /**
  * 環境操作 Handler（環境檢查、模組安裝、更新檢查等）
@@ -244,7 +245,7 @@ print(json.dumps({
 
     public async handleRunCode(message: any) {
         const platform = message.platform || this.manager.currentPlatform;
-        const tempDir = path.join(this.manager.context.extensionPath, 'temp_scripts');
+        const tempDir = runtimeTempDir(this.manager.context.extensionPath);
         if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
 
         const cleanCode = message.code.replace(/\u0001ID:.*?\u0002/g, '');

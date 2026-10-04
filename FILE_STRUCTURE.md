@@ -261,6 +261,11 @@ C:\Workspace\cocoya\
 │   │   │           └── en.js      # 英文 i18n 鍵值 (同 zh-hant 142 key 全對齊)
 │   │   ├── main.js        # Legacy Entry Point
 │   │   ├── ui_manager.js  # Legacy Entry Point
+│   │   ├── core/          # [2026-10-04 新增] 使用者偏好 SSOT
+│   │   │   ├── settingsKeys.js   # 偏好 key 單一真實來源（ESM，供 bridge/* import）
+│   │   │   ├── settings.js       # 偏好存取實作（classic script，掛 globalThis.CocoyaSettings；含 SCHEMA 型別/預設值/coerce）
+│   │   │   ├── settingsApi.js    # ESM adapter：bridge/* 層用（有全域委派、無全域自行 coerce）
+│   │   │   └── settingsHarness.mjs# 測試用 vm 載入器（settings.js 非 ESM，Node 無法直接 import）
 │   │   ├── utils.js       # [REFACTORED] 入口與命名空間初始化
 │   │   ├── zh-hant.js     # 核心語系檔
 │   │   ├── en.js          # 核心語系檔
@@ -276,6 +281,7 @@ C:\Workspace\cocoya\
 │   ├── cocoyaManager.ts   # CocoyaManager 主類別 + 訊息分發
 │   ├── sidecarManager.ts  # DatasetSidecarManager：Python 進程生命週期
 │   ├── hostI18n.ts        # Host 端雙語訊息 SSOT（hostMsg：vscode.env.language 推導 zh-hant/en，訓練/資料集/Sidecar 訊息共用）
+│   ├── runtimePaths.ts    # 產品執行時路徑 SSOT：RUNTIME_TEMP_DIR_NAME（temp_scripts）+ runtimeTempDir/untitledBackupPath。改版前 'temp_scripts' 硬編碼於 6 檔 14 處；守門 scripts/verify-runtime-paths.cjs（已接入 test:unit）。⚠️ 與開發暫存 temp/ 完全不同，且不可改名
 │   └── handlers/          # 業務邏輯處理器
 │       ├── trainingOps.ts   # 訓練：startTraining, openTrainingReport, openLatestTrainingReport (+ TrainingTerminal：訓練日誌導向 VS Code Pseudoterminal「Cocoya Training」)
 │       ├── fileOps.ts       # 檔案：new/open/save/saveAs/backup/recovery

@@ -144,6 +144,28 @@ DM 專案類型（`typePolicy.ALL_TYPES`）、訓練任務類型（`TASK_TYPE` �
 
 
 
+### 使用者偏好 SSOT (core/settings)
+使用者偏好（語系、平台、主題、序列埠偏好、訓練參數、pythonPath…）一律經 `ui/src/core/` 的四個檔案存取，**不得直接寫 `localStorage`**。
+
+| 檔案 | 角色 | 載入方式 |
+| :--- | :--- | :--- |
+| `settingsKeys.js` | **key 單一真實來源**（ESM） | `import` |
+| `settings.js` | 存取實作（SCHEMA 型別/預設值/coerce） | `<script>` → 掛 `globalThis.CocoyaSettings` |
+| `settingsApi.js` | ESM adapter | `import`（bridge/* 層用） |
+| `settingsHarness.mjs` | 測試用 vm 載入器 | Node 測試 |
+
+- **為何要 adapter**：bridge/*.js 是 **ESM**（Node 測試直接 import），該情境**無 globalThis** → 直接寫 `CocoyaSettings.get()` 會 ReferenceError。實測曾讓 `resetFirmware` 的燒錄失敗提示分支靜默失效（錯誤訊息被 "CocoyaSettings is not defined" 取代）。
+- **⚠️ 載入順序是契約**：`index.html` 必須先載 `settings.js` 再載任何消費端（`ui/*.js`、`app/config.js`）。`hardware.js` 原先排在 `settings.js` 之後，由守門 6 抓出後修正。
+- **⚠️ boolean 序列化為 `'1'`/`'0'`**（舊碼為 `'true'`/`'false'`）。讀取端 `coerce` 兩者皆相容，**既有使用者設定不會遺失**；但新寫入一律為 `'1'`/`'0'`。
+- **`PYTHON_PATH` 保留歷史 key `pythonPath`**（無 `cocoya_` 前綴），改名會使既有使用者設定遺失。
+- **守門**：`ui/src/modules/core/settings.test.mjs`（12 測，6 掃描型 + 行為），已納入全量 `npm test`：
+  1. src 下不得有裸 `localStorage.getItem/setItem`
+  2. 偏好 key 不得以字面值散落（白名單須附原因，且須為定義處或 `typeof` 防護 fallback）
+  3. `settings.js` 內建 fallback ≡ `settingsKeys.js`（**防白名單變漏洞**）
+  4. adapter 與 SSOT **行為**一致（在 vm 沙箱跑兩條路徑，非掃字串 —— 掃字串會因轉義層數全數落空）
+  5. bridge 層必須經 adapter
+  6. `index.html` 載入順序
+
 ### 前端狀態訊息慣例 (showStatusMessage)
 Dataset Manager 的狀態/錯誤/結果訊息一律透過集中式函式 `showStatusMessage(message, options)` 顯示於 modal 頂部中央的 `#dataset-manager-message` 面板（**所有模式下皆可見**，含標註模式），取代直接寫入各處 `status.textContent` 或 `#dataset-import-status`。
 
@@ -364,9 +386,15 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
       - `temp/archive/YYYYMMDD/`    已歸檔的歷史腳本（按日期分層）
     寫任何臨時腳本、log、tmpfile 夾具**一律寫入 `temp/`**，不可寫在專案根目錄。
     ⚠️ **不要動 `temp_scripts/`**：它雖同名，但**是產品執行時目錄**（VSIX 存放
-    `untitled_backup.xml`、未錨定時的資料集降級路徑），`src/**/*.ts` 有 18 處硬編碼引用，
-    程式會自動 `mkdirSync` 建立。改名或刪除會直接破壞 VSIX 的備份宣示機制。
-    2026-10-04 已把根目錄 `temp_scripts/` 的一次性腳本（187 檔）全部併入 `temp/`。
+    `untitled_backup.xml`、未錨定時的資料集降級路徑），程式會自動 `mkdirSync` 建立。
+    改名或刪除會直接破壞 VSIX 的備份宣示機制，且**不會拋出任何錯誤**（只在使用者
+    未錨定專案時觸發，一般測試完全碰不到）。
+    - **2026-10-04 已收斂為 SSOT**：原 `src/**/*.ts` 14 處硬編碼全數改為
+      `src/runtimePaths.ts`（`RUNTIME_TEMP_DIR_NAME` / `runtimeTempDir()` /
+      `untitledBackupPath()`）。守門 `scripts/verify-runtime-paths.cjs`
+      （已接入 `npm run test:unit`）掃描 src/ 與 src-tauri/src/，
+      禁止裸 `'temp_scripts'` 字面值（註解除外）。
+    - 2026-10-04 已把根目錄 `temp_scripts/` 的一次性腳本（187 檔）全部併入 `temp/`。
   - **Pylance 診斷的工具限制**：`pyrightconfig.json` 的 `exclude` **只影響專案分析，
     不影響「使用者開啟該檔案時的診斷」** —— 設定改不了。因此根治方式是
     **不在專案內堆放一次性腳本**，這正是上述暫存區紀律存在的原因之一。

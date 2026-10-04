@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { untitledBackupPath, runtimeTempDir } from '../runtimePaths';
 
 /**
  * 檔案操作 Handler（開檔、存檔、備份、標題更新等）
@@ -185,7 +186,7 @@ export class FileOpsHandler {
                 const name = path.basename(this.manager.currentFilePath);
                 backupPath = path.join(dir, `.${name}.bak`);
             } else {
-                const tempDir = path.join(this.manager.context.extensionPath, 'temp_scripts');
+                const tempDir = runtimeTempDir(this.manager.context.extensionPath);
                 if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
                 backupPath = path.join(tempDir, 'untitled_backup.xml');
             }
@@ -201,7 +202,7 @@ export class FileOpsHandler {
                 const bPath = path.join(path.dirname(this.manager.currentFilePath), `.${path.basename(this.manager.currentFilePath)}.bak`);
                 if (fs.existsSync(bPath)) fs.unlinkSync(bPath);
             }
-            const tempBPath = path.join(this.manager.context.extensionPath, 'temp_scripts', 'untitled_backup.xml');
+            const tempBPath = untitledBackupPath(this.manager.context.extensionPath);
             if (fs.existsSync(tempBPath)) fs.unlinkSync(tempBPath);
         } catch (e) {}
     }
@@ -212,7 +213,7 @@ export class FileOpsHandler {
             if (this.manager.currentFilePath) {
                 backupPath = path.join(path.dirname(this.manager.currentFilePath), `.${path.basename(this.manager.currentFilePath)}.bak`);
             } else {
-                backupPath = path.join(this.manager.context.extensionPath, 'temp_scripts', 'untitled_backup.xml');
+                backupPath = untitledBackupPath(this.manager.context.extensionPath);
             }
             if (backupPath && fs.existsSync(backupPath)) {
                 const timestamp = new Date().toISOString().replace(/[:.]/g, '-');

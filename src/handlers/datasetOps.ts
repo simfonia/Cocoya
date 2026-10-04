@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import * as os from 'os';
 import { hostMsg } from '../hostI18n';
+import { runtimeTempDir } from '../runtimePaths';
 
 /**
  * 資料集操作 Handler（拍照、掃描、匯出、上傳等）
@@ -244,7 +245,7 @@ export class DatasetOpsHandler {
             ? path.dirname(this.manager.currentFilePath)
             : ((vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)
                 ? vscode.workspace.workspaceFolders[0].uri.fsPath
-                : path.join(this.manager.context.extensionPath, 'temp_scripts'));
+                : runtimeTempDir(this.manager.context.extensionPath));
         const baseDir = projectRoot;
         
         const datasetDir = path.join(baseDir, 'dataset', projectName);
@@ -350,7 +351,7 @@ export class DatasetOpsHandler {
 
         if (!isLast) return;
 
-        const tempDir = path.join(this.manager.context.extensionPath, 'temp_scripts');
+        const tempDir = runtimeTempDir(this.manager.context.extensionPath);
         if (!fs.existsSync(tempDir)) {
             fs.mkdirSync(tempDir, { recursive: true });
         }
@@ -557,7 +558,7 @@ export class DatasetOpsHandler {
             || ((vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)
                 ? vscode.workspace.workspaceFolders[0].uri.fsPath
                 : undefined)
-            || path.join(this.manager.context.extensionPath, 'temp_scripts');
+            || runtimeTempDir(this.manager.context.extensionPath);
 
         const projectName = message.projectName || 'dataset';
         const label = message.label || 'unlabeled';

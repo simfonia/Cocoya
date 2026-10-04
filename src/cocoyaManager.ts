@@ -8,6 +8,7 @@ import { DatasetOpsHandler } from './handlers/datasetOps';
 import { SerialOpsHandler } from './handlers/serialOps';
 import { EnvOpsHandler } from './handlers/envOps';
 import { getWebviewContent } from './extension';
+import { untitledBackupPath } from './runtimePaths';
 
 /**
  * Cocoya Extension 主管理器
@@ -409,7 +410,7 @@ export class CocoyaManager {
             capabilities: capabilities
         });
 
-        const tempBPath = path.join(this.context.extensionPath, 'temp_scripts', 'untitled_backup.xml');
+        const tempBPath = untitledBackupPath(this.context.extensionPath);
         if (require('fs').existsSync(tempBPath)) {
             const xml = require('fs').readFileSync(tempBPath, 'utf8');
             this.panel.webview.postMessage({ command: 'recoveryData', xml: xml });

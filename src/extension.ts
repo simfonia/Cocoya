@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { CocoyaManager, activeManagers } from './cocoyaManager';
+import { runtimeTempDir } from './runtimePaths';
 
 export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('cocoya.setPythonPath', async () => {
@@ -21,7 +22,7 @@ export function activate(context: vscode.ExtensionContext) {
         const roots: vscode.Uri[] = [
             vscode.Uri.joinPath(context.extensionUri, 'ui'),
             vscode.Uri.joinPath(context.extensionUri, 'resources'),
-            vscode.Uri.file(path.join(context.extensionPath, 'temp_scripts'))
+            vscode.Uri.file(runtimeTempDir(context.extensionPath))
         ];
         
         if (vscode.workspace.workspaceFolders) {

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { hostMsg } from '../hostI18n';
+import { runtimeTempDir, RUNTIME_TEMP_DIR_NAME } from '../runtimePaths';
 
 /**
  * 訓練/雲端訓練的 VS Code 終端機（方案 A）
@@ -83,7 +84,7 @@ export class TrainingOpsHandler {
 
         const baseDir = (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)
             ? vscode.workspace.workspaceFolders[0].uri.fsPath
-            : path.join(this.manager.context.extensionPath, 'temp_scripts');
+            : runtimeTempDir(this.manager.context.extensionPath);
 
         const finalDatasetDir = datasetDir || path.join(baseDir, 'dataset', projectName);
         const finalOutputDir = outputDir || path.join(baseDir, 'model', projectName);
@@ -183,7 +184,7 @@ export class TrainingOpsHandler {
         // 解析本地資料集目錄（相對路徑以專案目錄為基準）
         let baseDir = (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)
             ? vscode.workspace.workspaceFolders[0].uri.fsPath
-            : path.join(this.manager.context.extensionPath, 'temp_scripts');
+            : runtimeTempDir(this.manager.context.extensionPath);
         if (this.manager.currentFilePath) {
             baseDir = path.dirname(this.manager.currentFilePath);
         }
@@ -342,8 +343,8 @@ export class TrainingOpsHandler {
             baseDir = vscode.workspace.workspaceFolders[0].uri.fsPath;
             console.log(`[TrainingReport] Using workspace folder: ${baseDir}`);
         } else {
-            baseDir = path.join(this.manager.context.extensionPath, 'temp_scripts');
-            console.log(`[TrainingReport] Using fallback temp_scripts: ${baseDir}`);
+            baseDir = runtimeTempDir(this.manager.context.extensionPath);
+            console.log(`[TrainingReport] Using fallback ${RUNTIME_TEMP_DIR_NAME}: ${baseDir}`);
         }
 
         const modelDir = path.join(baseDir, 'model');
