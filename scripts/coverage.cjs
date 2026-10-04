@@ -110,14 +110,37 @@ function worstFiles(summary, n = 10) {
 
 function saveBaseline(summary) {
     fs.mkdirSync(coverageDir, { recursive: true });
+
+    // 保留既有基準的 history 與 note —— 否則每次產報告都會把趨勢紀錄洗掉，
+    // 「依實際值收緊門檻」（T5 原始設計）就失去了依據。
+    let prev = {};
+    if (fs.existsSync(baselinePath)) {
+        try { prev = JSON.parse(fs.readFileSync(baselinePath, 'utf8')); } catch (e) { prev = {}; }
+    }
+    const history = Array.isArray(prev.history) ? prev.history.slice() : [];
+    // 同一天重跑不重複追加（否則一次連跑會灌入多筆同日期紀錄）
+    const today = new Date().toISOString().slice(0, 10);
+    if (!history.length || history[history.length - 1].recordedAt !== today) {
+        if (prev.total && typeof prev.total.pct === 'number') {
+            history.push({
+                recordedAt: prev.recordedAt,
+                pct: prev.total.pct,
+                total: prev.total.total,
+                covered: prev.total.covered
+            });
+        }
+    }
+
     const baseline = {
         // T5 階段一：只產報告，不因低於門檻而失敗。
         // 改為 enforce: true 前，請先讀 README 說明「依實際值收緊」。
         enforce: false,
-        recordedAt: new Date().toISOString().slice(0, 10),
+        recordedAt: today,
         scope: SCOPE,
         total: summary.total.lines,
-        note: 'T5 階段一：基準值僅供趨勢對照，不代表品質目標。'
+        // note 為人工維護（記錄各批次的變動來源），只在舊值存在時沿用
+        note: prev.note || '基準值僅供趨勢對照，不代表品質目標。',
+        history
     };
     fs.writeFileSync(baselinePath, JSON.stringify(baseline, null, 2) + '\n');
     console.log(`\n[coverage] 基準已寫入 coverage/baseline.json（enforce: false）`);

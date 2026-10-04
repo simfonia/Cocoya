@@ -18,8 +18,15 @@ ui/dist/
 src-tauri/target/
 src-tauri/bin/
 src-tauri/gen/
-# 覆蓋率報告（T5：基準數據屬暫態產物，committed baseline 僅供本地趨勢對照）
-coverage/
+# 覆蓋率產物（HTML 報告、per-file JSON、暫存資料）—— 可重新生成，不進版控
+coverage/*
+# 但 baseline.json **必須進版控**，否則：
+#   1. 換台機器/clone 後基準失憶，coverage:check 永遠對照不到東西
+#   2. T5 原始設計「連續兩週後依實際值收緊門檻」失去依據
+#   3. 新增的 history 趨勢陣列會隨 gitignore 一起消失，等同白做
+!coverage/baseline.json
+# c8 在 ui/ 目錄下也會產生中間檔（cwd 為 ui/ 時）——同樣屬產物
+ui/coverage/
 
 # Cocoya Runtime / Temp
 #

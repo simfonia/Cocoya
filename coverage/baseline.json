@@ -1,0 +1,39 @@
+{
+  "enforce": false,
+  "recordedAt": "2026-10-04",
+  "scope": {
+    "include": [
+      "src/modules/**/*.js",
+      "src/app/**/*.js",
+      "src/bridge/**/*.js",
+      "src/utils/**/*.js"
+    ],
+    "exclude": [
+      "**/*.test.mjs",
+      "**/*.min.js",
+      "node_modules/**",
+      "src/blockly/**"
+    ]
+  },
+  "total": {
+    "total": 7878,
+    "covered": 4882,
+    "skipped": 0,
+    "pct": 61.97
+  },
+  "note": "基準值僅供趨勢對照，不代表品質目標。2026-10-04 更新（55.66% -> 61.97%）：P2-1 tauri.js 拆檔、使用者偏好 SSOT（core/settings）、runtimePaths SSOT、T7 橋接契約測試。仍待補：tauri.js 21.63%（switch 剩餘 command）、tauri/training.js 23.4%、tauri/progress.js 26.54%、dataset_manager/application/importUseCases.js 16.36%。",
+  "history": [
+    {
+      "recordedAt": "2026-10-03",
+      "pct": 55.66,
+      "total": 7279,
+      "covered": 4052
+    },
+    {
+      "recordedAt": "2026-10-04",
+      "pct": 61.97,
+      "total": 7878,
+      "covered": 4882
+    }
+  ]
+}
