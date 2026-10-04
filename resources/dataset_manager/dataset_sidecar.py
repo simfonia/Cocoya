@@ -30,9 +30,11 @@ except ImportError:
 #
 #   訓練模板（*_train.py）已有同樣的防護，這裡是 sidecar 端補齊。
 if hasattr(sys.stdout, 'reconfigure'):
-    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    # ⚠️ Pylance：sys.stdout 宣告型別是 TextIO（無 reconfigure，該方法屬 TextIOWrapper）。
+    #   hasattr() 不影響靜態型別推導，故需顯式忽略；此寫法與 train_templates/*_train.py 一致。
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')  # type: ignore[union-attr]
 if hasattr(sys.stderr, 'reconfigure'):
-    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')  # type: ignore[union-attr]
 
 from camera_service import CameraService
 # P2-3：本地 Keras → TFLite 轉換已抽出為獨立模組（原本夾在 trainRemote 分支中）
@@ -509,7 +511,8 @@ class DatasetSidecar:
         print(json.dumps(response), flush=True)
 
 if __name__ == "__main__":
-    # 確保輸出不被快取
-    sys.stdout.reconfigure(encoding='utf-8')
+    # [2026-10-04] 原本此處有 `sys.stdout.reconfigure(encoding='utf-8')`，
+    #   與檔頭新增的全域防護重複，已刪除 —— 集中一處才能同時處理 stdout/stderr
+    #   並帶 errors='replace'（避免單一字元無法編碼時整個程序崩潰）。
     sidecar = DatasetSidecar()
     sidecar.run()

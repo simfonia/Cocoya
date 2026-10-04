@@ -1,12 +1,14 @@
+name: CI
+
 # Cocoya CI
-#
+# ------------------------------------------------------------------
 # 【分層設計與實測依據】
 # 2026-10-04 量測：Node 409 例約 7s、Rust 12 例約 0.02s、
 # Python Tier1（8 例）約 9s、Tier2（含真實訓練）約 67s。
 #
 # 三個 job 拆開的理由是**依賴不同**，而非為了速度：
-#   - node 只需 Node.js
-#   - rust 只需 Rust toolchain（Tauri 的系統依賴在 Windows runner 已預裝）
+#   - node  需 Node.js + sidecar 守門用的最小 Python 依賴（numpy/cv2/paramiko）
+#   - rust  需 Rust toolchain（Tauri 的系統依賴在 Windows runner 已預裝）
 #   - python 需 Python + TensorFlow（TF import 實測 4.7s，佔 Tier1 一半）
 # 合在一起會迫使每個 job 都裝齊所有依賴。
 #
@@ -16,10 +18,12 @@
 # - push 到 master：跑全量（含 3 個真實訓練測試，約 67s）。
 #   理由：訓練模板改動只佔 2%，但在 master 上必須確保端到端可用。
 #
-# 【注意】若 `npm test` 報 timeout 而非失敗，先確認是否新增了 slow 測試
-# 而忘了加 marker（會拖慢預設路徑）。
-
-name: CI
+# ⚠️ 若測試報 timeout 而非失敗，先確認是否新增了 slow 測試而忘了加 marker。
+#
+# ⚠️ 本檔開頭原本是一大段註解，VS Code 的 GitHub Actions 語言服務會在
+#    第 2 行（空註解 `#`）報 schema 錯誤「Expected a scalar value, a sequence,
+#    or a mapping」—— YAML 語法本身正確（PyYAML 可解析），是該 linter
+#    對「文件開頭無有效內容」的處理所致。**故 `name:` 必須放在第一行。**
 
 on:
   push:

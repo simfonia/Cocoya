@@ -14,8 +14,8 @@ import json
 
 # === 輸出編碼修復：Windows 管線下預設 cp950，強制 UTF-8 避免終端機亂碼 ===
 if hasattr(sys.stdout, 'reconfigure'):
-    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
-    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')  # type: ignore[union-attr]
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')  # type: ignore[union-attr]
 
 # === 確定性運算控制（確保 VSIX 與 Tauri 環境訓練結果一致）===
 os.environ['TF_DETERMINISTIC_OPS'] = '1'
