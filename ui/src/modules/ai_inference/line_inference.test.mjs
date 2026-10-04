@@ -82,11 +82,15 @@ test('產生器輸出：value/statement 形式與欄位索引正確', () => {
   assert.equal(Py['py_ai_get_line_angle'](mk({}, {}), gen)[0], 'R.get("angle", 0.0)');
 });
 
+// ⚠️ probe 必須同時驗「可執行」**且**「有 numpy」——
+//   只驗版本號的話，會選到「可執行但缺套件」的直譯器，測試隨後報
+//   ModuleNotFoundError（症狀是缺套件、病因是選錯直譯器，排查成本高）。
+//   CI 實測踩過：node job 的 runner 預裝 Python 但沒 numpy。
 const findPython = () => {
   const cands = [process.env.COCOYA_PYTHON, 'C:\\WPy64-31160\\python-3.11.6.amd64\\python.exe', 'python', 'python3'];
   for (const exe of cands) {
     if (!exe) continue;
-    const r = spawnSync(exe, ['-c', 'import sys;print(sys.version_info[0])'], {
+    const r = spawnSync(exe, ['-c', 'import sys,numpy;print(sys.version_info[0])'], {
       encoding: 'utf8',
       env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' }
     });

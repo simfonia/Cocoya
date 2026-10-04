@@ -77,6 +77,25 @@ jobs:
           npm ci
           npm ci --prefix ui
 
+      # ⚠️ sidecar_module_split.test.mjs 有 13 個守門，其中 2 個（模組獨立匯入 /
+      #   py_compile）需要真的執行 Python。其餘 11 個是純檔案掃描，不需要。
+      #
+      #   這裡刻意**不**用 requirements-dev.txt：它含 tensorflow（350MB），
+      #   而這兩個守門只需要 sidecar 模組的頂層依賴。
+      #   sidecar 的**端到端**驗證（真的啟動並收 JSON）由 python job 的
+      #   tests/e2e/test_export_dataset.py 負責 —— 兩者分工不重疊。
+      #
+      #   用 opencv-python-headless 而非 opencv-python：後者會拉進 GUI 依賴，
+      #   在無桌面的 runner 上既用不到又佔空間（這裡只做 import 檢查）。
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: 安裝 sidecar 守門所需的最小 Python 依賴（不含 TF）
+        run: python -m pip install numpy opencv-python-headless paramiko cryptography
+
       - name: 測試（compile + lint + 409 例 + 行尾 + runtime paths 守門）
         # ⚠️ 刻意用 test:unit + test:ui，**不是** `npm test`。
         #   `npm test` 末端含 `test:rust`（cargo test），但本 job 未安裝 Rust

@@ -10,12 +10,42 @@ const repoRoot = path.join(here, '..', '..', '..', '..');
 const read = (...p) => fs.readFileSync(path.join(repoRoot, ...p), 'utf8');
 const dmDir = path.join(repoRoot, 'resources', 'dataset_manager');
 // 專案慣用 Python（AGENTS.md：python.exe 不在 PATH）。可用 COCOYA_PYTHON 覆寫。
-const pythonExe = process.env.COCOYA_PYTHON
-    || 'C:/WPy64-31160/python-3.11.6.amd64/python.exe';
+//
+// ⚠️ **為何必須 fallback 到 PATH 的 'python'**（2026-10-04 CI 實測教訓）：
+//   初版只認 COCOYA_PYTHON 與本機寫死路徑 `C:/WPy64-31160/...`，
+//   兩者都不存在時就**直接把寫死路徑當答案**，於是 GitHub runner 上
+//   spawn 到不存在的執行檔 -> 測試報 `ModuleNotFoundError: No module named 'numpy'`
+//   —— **症狀（缺套件）與病因（用錯 Python）完全無關**，浪費一輪排查。
+//
+//   正確做法：候選依序嘗試，都不可用才 null（測試 skip 並說明原因）。
+function resolvePython() {
+    const candidates = [
+        process.env.COCOYA_PYTHON,
+        'C:/WPy64-31160/python-3.11.6.amd64/python.exe',  // 本機慣用
+        'python',   // PATH（含 CI 上 setup-python 安裝的直譯器）
+        'py',       // Windows Python Launcher
+    ].filter(Boolean);
+    for (const exe of candidates) {
+        const probe = spawnSync(exe, ['-c', 'import sys,numpy;print(sys.version_info[0])'],
+            { encoding: 'utf8', env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' } });
+        // 同時驗「可執行」與「有 numpy」——缺套件的直譯器不比沒有的好
+        if (probe.status === 0) return exe;
+    }
+    return null;
+}
+
+const pythonExe = resolvePython();
+const PY_NOTE = pythonExe
+    ? ''
+    : '\n（找不到「可執行且具 numpy」的 Python：' +
+      '請設 COCOYA_PYTHON 指向專案慣用直譯器，或 pip install -r requirements-dev.txt）';
 
 const pyModules = fs.readdirSync(dmDir).filter((f) => f.endsWith('.py') && !f.startsWith('__'));
 
 test('P2-3 守門 1：每個 sidecar 模組皆可獨立匯入（循環 import 守門）', () => {
+    // ⚠️ 找不到 Python 時**明確失敗**而非靜默 skip ——
+    //   CI 上靜默 skip 會讓「守門通過」變成假綠燈（實際上一個測試都沒跑）。
+    assert.ok(pythonExe, '找不到可用的 Python' + PY_NOTE);
     // 本次拆分踩到的真實坑：remote_sync / remote_docker 反向 import remote_ssh 的 helper，
     // 頂層雙向 import 只有在特定 import 順序下才僥倖可用 —— 單獨 import remote_sync 立刻報
     // partially initialized module 的 ImportError。
@@ -46,6 +76,7 @@ test('P2-3 守門 1：每個 sidecar 模組皆可獨立匯入（循環 import �
 });
 
 test('P2-3 守門 2：每個 sidecar 模組皆可 py_compile 且具模組層 docstring', () => {
+    assert.ok(pythonExe, '找不到可用的 Python' + PY_NOTE);
     for (const f of pyModules) {
         const r = spawnSync(pythonExe, ['-m', 'py_compile', f], {
             cwd: dmDir, encoding: 'utf-8', timeout: 90000,
