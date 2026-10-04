@@ -1,0 +1,19 @@
+# Cocoya 測試依賴（CI 的 python job 使用）
+#
+# 【為何用 tensorflow-cpu 而非 tensorflow】
+# 測試不需要 GPU，tensorflow 會額外拉進 CUDA/cuDNN（數 GB），
+# 在 CI 上純粹浪費時間與磁碟。tensorflow-cpu 是相同 API 的精簡版。
+#
+# 【為何最低版本用 >= 而非 ==】
+# 訓練測試關心的是「API 行為」而非數值精度，允許較新版本能吃到修補與效能改善；
+# 但不鎖死是刻意的 —— 鎖死後套件更新需人工評估升級，容易讓 CI 卡在舊版。
+#
+# ⚠️ Tier 1（非 slow）也需要 TensorFlow：
+#   tests/e2e/test_classifier_dataloader.py 在**模組層級** import tensorflow
+#   （測的是真實 tf.data.Dataset 與 reduce_min/max，無法用假資料取代）。
+#   實測 TF import 約 4.7s，佔 Tier 1 時間的一半。
+
+pytest>=7.4
+numpy>=1.26
+pillow>=10.0
+tensorflow-cpu>=2.18

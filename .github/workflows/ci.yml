@@ -41,7 +41,14 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # ⚠️ 必須與本機一致（Node 24 / npm 11）。
+          #   實測教訓（2026-10-04）：package-lock.json 由 npm 11 產生，
+          #   但 npm 10（Node 20 內建）對 **optional peer dependency** 的解析不同，
+          #   會推導出 lock 檔裡沒有的 @emnapi/* 而報
+          #   「Missing: @emnapi/core from lock file」，npm ci 直接失敗。
+          #   同一份 lock 檔在本機 npm 11 下 `npm ci` 正常 —— 是版本差異，不是檔案壞掉。
+          #   故對齊版本是正解（比放寬成 `npm install` 好：後者會讓 lock 漂移）。
+          node-version: '24'
           cache: npm
           cache-dependency-path: |
             package-lock.json
@@ -90,7 +97,7 @@ jobs:
       - name: 安裝測試依賴
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest numpy pillow tensorflow-cpu
+          python -m pip install -r requirements-dev.txt
 
       - name: Tier 1（-m "not slow"）
         run: python -m pytest -q -m "not slow"
@@ -111,7 +118,7 @@ jobs:
       - name: 安裝測試依賴
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pytest numpy pillow tensorflow-cpu
+          python -m pip install -r requirements-dev.txt
 
       - name: 全量（含 slow 組）
         run: python -m pytest -q
