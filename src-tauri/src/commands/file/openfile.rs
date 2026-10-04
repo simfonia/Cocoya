@@ -28,6 +28,14 @@ pub async fn open_file(window: Window, handle: AppHandle, state: State<'_, AppSt
         let platform = if xml.contains("platform=\"MicroPython\"") { "MicroPython" } else { "PC" };
 
         // --- 檢查鎖定 ---
+        // ★ 開新檔前必須先釋放本視窗持有的**舊檔鎖**（2026-10-03 修正）。
+        //   原實作只 insert 新鎖、從不釋放舊鎖 → 鎖洩漏：
+        //     視窗1 開 A → 視窗1 開 B → 新視窗開 A，locks[A] 仍指向視窗1 → 誤判唯讀。
+        //   連續開檔會無限累積鎖，直到關窗或重啟 App 才清除。
+        //   釋放時機點：確定使用者選了新檔案之後（放在 blocking_pick_file 之後，
+        //   使用者取消時不該釋放 —— 取消代表仍持有原檔，釋放會讓他人誤搶）。
+        crate::state::release_file_locks_for(&state, window.label());
+
         let mut locks = state.file_locks.lock().unwrap();
         let is_read_only = if let Some(owner) = locks.get(&path) {
             owner != window.label()
@@ -87,6 +95,22 @@ pub async fn open_examples(window: Window, handle: AppHandle, state: State<'_, A
         
         let platform = if xml.contains("platform=\"MicroPython\"") { "MicroPython" } else { "PC" };
 
+        // --- 鎖定處理（2026-10-03 修正）---
+        // 原實作**完全不碰 file_locks**：既不檢查是否被其他視窗持有，也不釋放本視窗的舊鎖。
+        // 後果是 `open_examples` 開啟的檔案不會取得鎖（他人可同時寫入同一路徑），
+        // 且本視窗先前開檔留下的鎖仍懸空 —— 與 open_file 同型的鎖洩漏。
+        // 現與 open_file 對齊：先釋放本視窗舊鎖，再依同一規則判定唯讀與取得新鎖。
+        crate::state::release_file_locks_for(&state, window.label());
+        let is_read_only = {
+            let mut locks = state.file_locks.lock().unwrap();
+            if let Some(owner) = locks.get(&path) {
+                owner != window.label()
+            } else {
+                locks.insert(path.clone(), window.label().to_string());
+                false
+            }
+        };
+
         // 註冊路徑到 current_paths
         {
             let mut paths = state.current_paths.lock().unwrap();
@@ -98,7 +122,7 @@ pub async fn open_examples(window: Window, handle: AppHandle, state: State<'_, A
             filename,
             platform: platform.into(),
             backup_xml: None,
-            is_read_only: false
+            is_read_only
         })
     } else {
         Err("Canceled".into())

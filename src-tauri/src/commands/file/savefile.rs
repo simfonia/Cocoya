@@ -38,6 +38,17 @@ pub async fn save_file(window: Window, handle: AppHandle, state: State<'_, AppSt
     }
 
     if let Some(path) = path_to_save {
+        // ★ 另存到不同路徑時，釋放本視窗持有的**舊檔鎖**（2026-10-03 修正）。
+        //   「開新專案」流程（saveFileAs + tag=newProject）走的正是這條路徑：
+        //   視窗1 開 A → 開新專案存成 B → locks[A] 仍指向視窗1，與 open_file 同型洩漏。
+        //   只在「目標路徑 ≠ 目前路徑」時釋放：存回原檔（save_as=false）時必須保留鎖，
+        //   否則兩視窗可同時寫入同一檔案。
+        //   另注意不可無條件釋放 —— 使用者取消另存時（上面的 blocking_save_file 回 None），
+        //   本視窗仍持有原檔，釋放會讓他人誤以為可搶佔。
+        if current_path.as_ref() != Some(&path) {
+            crate::state::release_file_locks_for(&state, window.label());
+        }
+
         // ★ 防呆（2026-09-06）：另存/開新專案若命中「目前專案檔」位置，禁止覆寫自己。
         // 開新專案時 saveFileAs 寫入的是目標平台的乾淨初始積木（非工作區內容），
         // 若使用者誤把「另存」存到與原檔相同路徑，原檔內容會被乾淨初始積木覆寫。此判斷

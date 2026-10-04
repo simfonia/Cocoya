@@ -111,10 +111,8 @@ pub fn release_session(window: Window, state: State<'_, AppState>) -> Result<(),
         let mut paths = state.current_paths.lock().unwrap();
         paths.remove(&label);
     }
-    {
-        let mut locks = state.file_locks.lock().unwrap();
-        locks.retain(|_, owner| owner != &label);
-    }
+    // 釋放本視窗持有的所有檔案鎖（統一實作，與 lib.rs CloseRequested 同一函式）
+    crate::state::release_file_locks_for(&state, &label);
     {
         let mut dirty = state.dirty_states.lock().unwrap();
         dirty.remove(&label);

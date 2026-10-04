@@ -48,3 +48,29 @@ pub struct AppState {
     pub serial_monitors: Arc<Mutex<HashMap<String, SerialMonitorSession>>>, // Window Label -> 啟用中的監控 session
     pub serial_wants: Arc<Mutex<HashMap<String, SerialMonitorWant>>>, // Window Label -> 重設焦點時該視窗想重開的監控埠
 }
+
+/// 釋放指定視窗持有的**所有**檔案鎖（不動其他視窗的）。
+///
+/// 【為何需要這個函式 —— 2026-10-03 實測缺陷】
+/// `file_locks` 原本只在兩處被釋放：關窗（`lib.rs` CloseRequested）與回首頁（`release_session`）。
+/// 但**開新檔不會釋放舊檔的鎖**。實測症狀：
+///   視窗1 開 A → 視窗1 開 B → 新視窗開 A  →  被判定唯讀 ❌
+/// 原因是此時 `file_locks[A]` 仍指向視窗1，但視窗1 早已不持有 A —— 鎖洩漏（stale lock）。
+/// 連續開檔還會**無限累積**鎖，直到關窗或重啟 App 才清除。
+///
+/// 【呼叫時機】視窗將持有「不同於目前錨定路徑」的檔案時，即：
+///   - `open_file`   開啟某檔（可能換檔）
+///   - `open_examples` 開啟範例（切換工作副本）
+///   - `save_file`   另存到不同路徑（開新專案流程即走此路徑）
+///
+/// 【為何是「全釋放」而非「釋放單一路徑」】
+/// 一個視窗在任一時間只開啟一個檔案，故持有最多一把鎖。
+/// 全釋放語意等價且更不易漏（未來若支援分頁開檔，此處需改為精確釋放）。
+///
+/// 【回傳】實際釋放的鎖數，供呼叫端除錯／日誌使用。
+pub fn release_file_locks_for(state: &AppState, label: &str) -> usize {
+    let mut locks = state.file_locks.lock().unwrap();
+    let before = locks.len();
+    locks.retain(|_, owner| owner != label);
+    before - locks.len()
+}

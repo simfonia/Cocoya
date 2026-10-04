@@ -123,10 +123,9 @@ pub fn run() {
                     api.prevent_close();
                     let _ = window.emit_to(&label, "closeRequested", ());
                 } else {
-                    {
-                        let mut locks = state.file_locks.lock().unwrap();
-                        locks.retain(|_, owner| owner != &label);
-                    }
+                    // 釋放本視窗的檔案鎖（統一走 state::release_file_locks_for，
+                    // 與 open_file / open_examples / save_file / release_session 共用同一實作）
+                    crate::state::release_file_locks_for(&state, &label);
                     {
                         let mut paths = state.current_paths.lock().unwrap();
                         paths.remove(&label);
