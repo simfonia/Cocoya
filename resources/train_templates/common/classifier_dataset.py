@@ -8,6 +8,8 @@ import os
 import sys
 import tensorflow as tf
 
+from common.image_formats import IMAGE_EXTENSIONS, is_supported_image, decode_train_image
+
 AUTOTUNE = tf.data.AUTOTUNE
 
 
@@ -47,7 +49,7 @@ def load_image_dataset(dataset_dir, img_size=224, batch_size=32, validation_spli
     class_counts = {}
     for label in labels:
         count = len([f for f in os.listdir(os.path.join(dataset_dir, label))
-                     if f.lower().endswith(('.jpg', '.jpeg', '.png'))])
+                     if is_supported_image(f)])
         class_counts[label] = count
         print(f"  {label}: {count} 張")
 
@@ -59,14 +61,14 @@ def load_image_dataset(dataset_dir, img_size=224, batch_size=32, validation_spli
         import random
         rng = random.Random(seed)
 
-        exts = ('.jpg', '.jpeg', '.png')
+        # 司顎引定的副模名清單一覝為 common/image_formats.py (SSOT)
         train_pairs = []   # (file_path, class_index)
         val_pairs = []
         strat_report = []
         for idx, label in enumerate(labels):
             cls_dir = os.path.join(dataset_dir, label)
             files = sorted([f for f in os.listdir(cls_dir)
-                            if f.lower().endswith(exts)])
+                            if is_supported_image(f)])
             shuffled = files[:]
             rng.shuffle(shuffled)
             n = len(shuffled)
@@ -88,8 +90,7 @@ def load_image_dataset(dataset_dir, img_size=224, batch_size=32, validation_spli
 
         def _load_pair(path, idx):
             img = tf.io.read_file(path)
-            img = tf.io.decode_image(img, channels=3, expand_animations=False)
-            img = tf.image.resize(img, [img_size, img_size])
+            img = decode_train_image(img, img_size)
             label_onehot = tf.one_hot(idx, len(labels))
             return img, label_onehot
 

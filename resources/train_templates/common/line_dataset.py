@@ -17,6 +17,8 @@ import sys
 import numpy as np
 import tensorflow as tf
 
+from common.image_formats import is_supported_image, decode_train_image
+
 AUTOTUNE = tf.data.AUTOTUNE
 
 
@@ -29,9 +31,8 @@ def _collect_exported_lines(images_dir, lines_dir):
     image_paths = []
     lines = []
 
-    image_extensions = ('.jpg', '.jpeg', '.png', '.webp', '.bmp')
     for fname in sorted(os.listdir(images_dir)):
-        if not fname.lower().endswith(image_extensions):
+        if not is_supported_image(fname):
             continue
 
         img_path = os.path.join(images_dir, fname)
@@ -69,7 +70,6 @@ def _collect_dm_lines(dataset_dir):
     samples = ((spec.get('data_source') or {}).get('samples')) or []
 
     # 影像索引：掃所有標籤子資料夾（相對路徑優先，basename 唯一時兜底）
-    image_extensions = ('.jpg', '.jpeg', '.png', '.webp', '.bmp')
     by_rel = {}
     by_base = {}
     for entry in sorted(os.listdir(dataset_dir)):
@@ -77,7 +77,7 @@ def _collect_dm_lines(dataset_dir):
         if not os.path.isdir(sub) or entry in ('images', 'labels', 'lines'):
             continue
         for fn in sorted(os.listdir(sub)):
-            if not fn.lower().endswith(image_extensions):
+            if not is_supported_image(fn):
                 continue
             abs_p = os.path.join(sub, fn)
             by_rel[f'{entry}/{fn}'] = abs_p
@@ -186,8 +186,8 @@ def load_line_dataset(dataset_dir, img_size=224, batch_size=32, validation_split
     # 解碼影像函數（與 detector 同前處理：resize + /255，座標系不變）
     def load_and_preprocess(path, line):
         image = tf.io.read_file(path)
-        image = tf.io.decode_jpeg(image, channels=3)
-        image = tf.image.resize(image, [img_size, img_size])
+        # 解碼程序統一走專用入口（decode_image 可解 bmp/gif，decode_jpeg 不行）
+        image = decode_train_image(image, img_size)
         image = tf.cast(image, tf.float32) / 255.0
         return image, line
 
