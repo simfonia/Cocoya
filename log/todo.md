@@ -176,7 +176,21 @@
 - [ ] P2-15 中文 fallback 風險：`ui_layout.js`(292)／`base.js`(188)／`tauri.js`(164) 等 `t('KEY','中文')` 改無 fallback 或英文 fallback，讓缺鍵在開發期被 parity 抓到
 
 #### Batch 3（中風險架構，多視窗／emit_to 高危）
-- [ ] P2-1 `ui/src/bridge/tauri.js`（93KB／70 處 invoke）拆 `bridge/tauri/{events,dataset,serial,files}.js`，`tauri.js` 退薄 façade＋`capabilities`；對外 API 不變，每搬一模組跑雙視窗實機
+- [x] P2-1 `ui/src/bridge/tauri.js` 拆檔 ✅ 2026-10-03（**拆檔全階段完成**）
+  - **成果**：`tauri.js` 1865 → **882 行**；`send()` 內 1025 行／58 case 的 switch **完全移除**（殘留 0 case）；
+    61 個 command 全數遷入 `tauri/sendHandlers.js` 註冊表。實際切成 **11 個子模組**（非計畫原寫的 4 個）。
+  - **切法**：案 B（command → 函式對照表，`handler.call(this, command, data)`）。選 B 的理由：switch 消失後
+    「新增 command 只需加一行」，且子模組可獨立測試；案 A（mixin）方法不在 class 語法樹上、守門難寫。
+  - **分組依實際耦合而非計畫名稱**：`backup`(4) `manifest`(7) `window`(8) `firmware`(3) `serial`(4)
+    `codeRun`(2) `pythonEnv`(5) `fileOps`(10) `training`(4) `camera`(6) `transfer`(3) `progress`(3) `annotation`(2)。
+    其中 `dataset`（原計畫為單一檔 407 行）依使用者指示**再細切為 4 檔**：
+    `camera`（全走 `_handleDatasetCommand`）／`transfer`（唯一帶 mutable 實例狀態 `_datasetUploadChain`）／
+    `progress`（含 `getProjectAnchor`，三者共用 `_normalizeAnchor`）／
+    `annotation`（**唯一直接 `tauriInvoke` 不走 sidecar**，不合併進 camera 以免混雜兩種派送路徑）。
+  - **守門**：`scripts/verify-tauri-split.cjs` 5 項（command 集合／**1b 重複定義**／invoke 集／fallthrough 組／`this.*` 引用數）
+    ＋ `tauri_send_dispatch.test.mjs` 19 測（行為）。**基準 ref 釘選 `161d610`**，不可預設 HEAD（拆檔一 commit 基準就跟著移動）。
+  - **⚠️ 待實機**（測試無法證明）：DM 拍照、標註改名、匯入/匯出、上傳、多視窗 DM 開關流程。
+    每搬一模組皆未做雙視窗實機（AGENTS.md 要求），故**拆檔雖機械式比對全過，仍需人工實機確認**。
 - [ ] P2-2 `ui_layout.js`（80.5KB）階段一刪除約 20 個純委派薄包裝（`enterClassificationReviewMode` L668 等，呼叫端直接取 controller）；階段二協調邏輯搬 `ui/orchestrator/*`；**不得破壞** `#dataset-structure-content` 嚴禁覆寫 innerHTML 契約，`renderStructurePanel()`／`renderStatsPanels()`／`refreshThumbnailBadges()` 介面不變
 
 #### Batch 4（DM 四類型深化）
@@ -379,7 +393,10 @@
   已還原為原樣，diff 只留 c8 一行。**教論：npm 會順手格式化整檔，diff 出現無關行時要逐一還原。**
   **階段二**：連續兩週後依實際值把 `enforce` 改 true 並填 `minLines`。
 - [ ] **T6** CI 與 pre-commit：GitHub Actions workflow（`node --test`／`tsc --noEmit`／`lint`／`cargo check`／`cargo test`／`py_compile`）＋ husky pre-commit 跑快速子集（**待決策**：CI 平台是否採 GitHub Actions）
-- [ ] **T7** 高風險檔補契約測試（拆檔後）：`bridge/tauri.js` 拆檔後各子模組、sidecar 訊息協定（stdout 單一 JSON）。**Batch 0 已補前段**（anchor ＋ capabilities ＋ 快照／備份），拆檔後仍需逐子模組補
+- [ ] **T7** 高風險檔補契約測試（拆檔後）：`bridge/tauri.js` 拆檔後各子模組、sidecar 訊息協定（stdout 單一 JSON）。**Batch 0 已補前段**（anchor ＋ capabilities ＋ 快照／備份）
+  - **前置已達成（2026-10-03）**：P2-1 拆檔完成，`tauri/` 下已有 11 個子模組可獨立測試。
+    覆蓋率基準（T5）顯示 `tauri.js` 原為 8.0%（全專案唯一低於 20% 的超大檔），拆檔後應重跑 `npm run coverage` 取新基準。
+  - 仍需逐子模組補：優先 `transfer.js`（`_datasetUploadChain` 併發上傳鏈）與 `progress.js`（錨定雙保險）。
 - [ ] **T8** 測試分類標註：區分**契約測試**（守設計：manifest／i18n／色碼／主題 token）與**行為測試**（守重構：controller／use-case），禁止只有後者
   （**本批已補兩個契約測試**：`file_structure_contract`（文件契約）與既有 `sidecar_module_split`）
 
