@@ -131,8 +131,12 @@
   - 修正兩處規則本身的缺陷（非放寬斷言，是對齊設計事實）：① `<shadow type="...">` 影子積木納入 toolbox 公開集合（先前只抓 `<block>`，導致 py_ai_point／py_ai_color／mcu_pin_shadow 全被誤判）② blocks/generators 只用 `Msg['KEY']` 語法抓鍵（原本的正則會抓任何物件字串鍵，誤判 mcu_car 的 `note_map = {"CS":1,...}` 與 huskylens 的 `'V2'`）
   - 白名單（附原因，未來新增仍會被擋）：`py_ai_draw_rect_alpha`／`py_ai_get_bbox_center`（已定義未上架，**待決策**）、`py_ai_train_init`（死碼 generator，待確認專案 XML 相容性後清理）
 - [ ] **T3** 共用測試夾具：新增 `ui/test/`（`fakeDom.js` makeEl/makeFakeDocument、`depsBuilder.js` makeDeps 預設注入**真** `t()`／`escapeHtml`、`fixtures.js` DatasetSpec 樣本）；消除 `annotation`(211 行)／`classification`(194)／`statusMessage`(84)／`panels`(102)／`labelManager`(65)／`samplerPanel`(102) 六檔重複 fake（**純搬移，驗收＝194→194 全綠且斷言未改**）
-- [ ] T2 前置盤點：統計全部模組在五項對帳上的現存缺口，估算紅燈規模
-- [ ] T3 前置盤點：列出六檔 fake DOM 差異點，確認最小抽象介面（getElementById／querySelector／classList／style／listeners／innerHTML／insertAdjacentHTML）
+- [x] ~~T2 前置盤點~~ ✅ 2026-10-03 結案：**已被 T2 實際執行取代**，無需獨立盤點。
+      T2 於 2026-09-30 直接完成（`core_contract.test.mjs` 8/8 全綠，涵蓋 22 模組），
+      盤點階段即等同逐項對帳；事後複驗 8 測全通過，無殘留缺口可盤。
+- [x] ~~T3 前置盤點~~ ✅ 2026-10-03 結案：**已被 T3 實際執行取代**。
+      T3 於 2026-10-03 完成（`ui/test/` 四夾具 `fakeDom`／`depsBuilder`／`fixtures`／`depsStubs`，
+      6 檔重複 fake 已收攬）。最小抽象介面在實作中逐漸收斂，無需事前盤點。
 
 #### Batch 0（無風險）
 - [x] ~~**待決策（2026-09-30 由 T2 浮現）**~~ ✅ 已於 2026-09-30 處理：`py_ai_draw_rect_alpha`（cv_draw，補齊 START/END/COLOR/ALPHA 四個 shadow 預設值）與 `py_ai_get_bbox_center`（ai_inference，放進「結果解析積木」群組）**已上架 toolbox**；`py_ai_train_init` 死碼 generator **已刪除**（全專案確認無 block／toolbox／範例 XML 引用，功能已被 `py_ai_train_run` 取代）。契約測試的 `UNPUBLISHED_BLOCKS`／`ORPHAN_GENERATORS` 兩個白名單現已清空
