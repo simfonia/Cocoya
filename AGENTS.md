@@ -359,10 +359,17 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
     而非 `common/` 子目錄，否則檔案內部的 `from common.image_formats import` 仍無法解析。
   - 同理 **不要**把 `resources/train_templates/common` 直接加進 `sys.path`：實測會得到
     `ModuleNotFoundError: No module named 'common'`（繞過套件的寫法在 package 內部會失效）。
-  - **`temp_scripts/` 的一次性腳本已於 2026-10-04 歸檔**（`_archive_20261004/`，gitignored）。
-    該目錄曾累積 187 個臨時 .py/.cjs，每個都被 Pylance 掃出無關錯誤。
-    ⚠️ **Pylance 的 `exclude` 只影響專案分析，不影響「使用者開啟該檔案時的診斷」**——
-    這是工具限制，設定改不了；根治方式是不要在專案內堆放一次性腳本。
+  - **暫存區紀律（2026-10-04 確立）**：`temp/` 是**唯一的開發暫存區**，結構如下：
+      - `temp/scripts/`             當前使用的一次性分析與驗證腳本
+      - `temp/archive/YYYYMMDD/`    已歸檔的歷史腳本（按日期分層）
+    寫任何臨時腳本、log、tmpfile 夾具**一律寫入 `temp/`**，不可寫在專案根目錄。
+    ⚠️ **不要動 `temp_scripts/`**：它雖同名，但**是產品執行時目錄**（VSIX 存放
+    `untitled_backup.xml`、未錨定時的資料集降級路徑），`src/**/*.ts` 有 18 處硬編碼引用，
+    程式會自動 `mkdirSync` 建立。改名或刪除會直接破壞 VSIX 的備份宣示機制。
+    2026-10-04 已把根目錄 `temp_scripts/` 的一次性腳本（187 檔）全部併入 `temp/`。
+  - **Pylance 診斷的工具限制**：`pyrightconfig.json` 的 `exclude` **只影響專案分析，
+    不影響「使用者開啟該檔案時的診斷」** —— 設定改不了。因此根治方式是
+    **不在專案內堆放一次性腳本**，這正是上述暫存區紀律存在的原因之一。
 
 - **`lint:ui` 規則現況**（2026-09-30 建置）：`ui/.eslintrc.json` 以 `eslint:recommended` 為基底、掃描 **191 檔**（154 個 `.js` ＋ **34 個 `.mjs` 測試檔** ＋ 3 個共用夾具），**現況 0 error**。
   - 必須宣告的 globals：`Blockly`／`CocoyaLoader`／`CocoyaUtils`／`CocoyaMediaUri`／`CocoyaBoard`／`acquireVsCodeApi`／`hljs`（缺了會噴 2401 個 `no-undef`）。

@@ -394,8 +394,9 @@ C:\Workspace\cocoya\
     │       └── test_task_type_rename.py     # 四類型 task type 改名 + 實際訓練（slow）
     ├── pytest.ini             # pytest 設定（testpaths=tests、-q --strict-markers）
     ├── pyrightconfig.json      # [2026-10-03] Pylance/Pyright 設定（extraPaths 指向 resources/train_templates 以解析 common 包裝）
-    ├── temp_scripts/          # 執行期間暫存目錄（gitignored；原 e2e_*.py 已於 T4-2 轉入 tests/e2e/、掃描工具）
-    │   ├── t_scan.cjs         # [2026-10-01] T-scan：掃描測試檔計時器洩漏／未清除 handle／無 await（靜態掃描；只報線索）
-    │   └── parity_check.mjs   # Dataset Manager i18n parity 檢查
+    ├── temp/                  # [2026-10-04] 唯一的**開發暫存區**（gitignored）
+    │   ├── scripts/           #   當前使用的一次性分析與驗證腳本
+    │   └── archive/           #   已歸檔的歷史腳本（YYYYMMDD/ 分層）
+    ├── temp_scripts/          # ⚠️ **產品執行時**目錄（gitignored），非開發暫存區；VSIX 存放 untitled_backup.xml 與未錨定時的資料集降級路徑（src/**/*.ts 有 18 處硬編碼引用，程式會自動 mkdirSync 建立）
     ├── package.json           # 根目錄設定
     └── tsconfig.json          # TS 編譯設定

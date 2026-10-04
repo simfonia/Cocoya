@@ -152,3 +152,24 @@ test('FILE_STRUCTURE.md：不得出現行號引用（行號會隨編輯立即失
  *   ③ 在根層加一行 `└── ui/src/modules/core/core.js` → 守門 4 報紅。
  *   ④ 在註解加「見 L18-19」→ 守門 5 報紅。
  */
+
+test('Pylance 排除規則：根目錄不得出現未登錄的暫存目錄', () => {
+    /*
+     * [2026-10-04] 起因：temp_scripts/ 曾被當成開發暫存區使用，累積 187 個
+     * 一次性腳本，每個都被 Pylance 掃出無關錯誤（使用者開啟時仍會診斷，
+     * exclude 設定改不了）。AGENTS.md 規定唯一的開發暫存區是 temp/。
+     *
+     * ⚠️ temp_scripts/ **必須保留在白名單**：它雖同名，卻是產品執行時目錄
+     * （VSIX 存放 untitled_backup.xml，src 下的 TypeScript 檔有 18 處硬編碼引用）。
+     */
+    const ALLOWED_TEMP_DIRS = new Set(['temp', 'temp_scripts']);
+    const suspects = [];
+    for (const entry of fs.readdirSync(repoRoot, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue;
+        if (entry.name.startsWith('.')) continue;              // .git/.vscode/.pytest_cache
+        if (ALLOWED_TEMP_DIRS.has(entry.name)) continue;
+        if (/tmp|temp|scratch|cache/i.test(entry.name)) suspects.push(entry.name);
+    }
+    assert.deepEqual(suspects, [],
+        '根目錄出現未登錄的暫存目錄；一次性腳本請寫入 temp/scripts/（見 AGENTS.md 暫存區紀律）');
+});
