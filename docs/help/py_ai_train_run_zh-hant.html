@@ -55,6 +55,21 @@
       <tr><td>模型輸出 (Model output)</td><td>訓練完成後要產出哪些檔案：<strong>無</strong>（僅觀察訓練成績）/ 量化 TFLite (int8) / Float32 TFLite / Keras / 量化 + Float32 / 全部。建議先用「無」調好參數，再正式產出。</td><td>無</td></tr>
     </table>
     <div class="note">💡 不熟悉這些參數的初學者，保留預設值即可獲得良好訓練結果。</div>
+    <div class="tip">💡 各欄位的可輸入範圍與建議值，見下方「數值參數建議範圍」。</div>
+  </div>
+
+  <div class="section">
+    <h2>數值參數建議範圍</h2>
+    <p>積木上的欄位有下限與小數位數限制。這裡列出<strong>可輸入的範圍</strong>與常見建議值：</p>
+    <table class="param-table">
+      <tr><th>欄位</th><th>可輸入範圍</th><th>常見建議值</th><th>怎麼選</th></tr>
+      <tr><td>LR (Learning Rate)</td><td>0.00001 ～ 1<br><span style="font-size:0.9em;opacity:0.8">最多 5 位小數</span></td><td><code>0.001</code>（預設）<br><code>0.0001</code>（想更穩）<br><code>0.01</code>（想更快）</td><td>loss <strong>震盪或上升</strong> → 調小一個數量級（0.001 → 0.0001）<br>loss <strong>降得極慢</strong> → 調大（0.0001 → 0.001）<br>預設 0.001 對多數教學資料集都合適</td></tr>
+      <tr><td>Dropout</td><td>0 ～ 0.9<br><span style="font-size:0.9em;opacity:0.8">最多 2 位小數</span></td><td><code>0.2</code>（預設）<br><code>0.3</code>～<code>0.5</code>（資料少、易過擬合）</td><td>驗證準確率遠高於訓練準確率（過擬合）→ 調高<br>資料量充足 → 保持 0.2 即可</td></tr>
+      <tr><td>驗證比 (Val Split)</td><td>0.1 ～ 0.5<br><span style="font-size:0.9em;opacity:0.8">最多 2 位小數</span></td><td><code>0.2</code>（預設）<br><code>0.1</code>～<code>0.15</code>（每類圖片很少時）</td><td>每個分類只有 5～10 張時，驗證集切太大會導致每類驗證樣本過少甚至為 0</td></tr>
+      <tr><td>Epochs</td><td>1 ～ 1000（整數）</td><td><code>20</code>（預設）<br><code>30</code>～<code>50</code>（想練更久）</td><td>看 loss 曲線：已收斂（曲線變平）再增加只會過擬合</td></tr>
+      <tr><td>Batch</td><td>1 ～ 512（整數）</td><td><code>32</code>（預設）<br><code>16</code>（記憶體不足時）</td><td>出現記憶體不足（OOM）→ 調小</td></tr>
+    </table>
+    <div class="note">💡 以上範圍為積木欄位的限制。若要用更小的 LR（例如遷移學習常見的 <code>0.00001</code>～<code>0.00005</code>），現在已可直接輸入 —— 欄位支援到 5 位小數。</div>
   </div>
 
   <div class="section">
