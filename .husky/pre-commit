@@ -1,0 +1,59 @@
+#!/usr/bin/env sh
+# .husky/pre-commit — 提交前的快速守門
+#
+# 【設計原則：只擋「機械性」問題，不擋需要思考的問題】
+#
+# 擋（毫秒級、必然是錯誤）：
+#   - 行尾不一致（CRLF/LF 混雜）—— 本專案最常見的無謂 diff 來源
+#   - 新增裸 'temp_scripts' 字面值（必須走 src/runtimePaths.ts）
+#   - Python 測試忘了加 slow marker
+#
+# 不擋（留給 CI）：
+#   - 完整測試、lint、型別檢查 —— 本機跑得到的都能在 CI 跑，
+#     放進 pre-commit 只會讓人習慣用 --no-verify 繞過，反而架空守門。
+#
+# 【逃生門】
+# `git commit --no-verify` 可跳過。刻意保留：hook 不該變成無法工作的瓶頸。
+
+echo "[pre-commit] 檢查行尾…"
+node scripts/eol.cjs --check || {
+    echo "[pre-commit] 行尾不一致。執行 'npm run eol:fix' 後再提交。"
+    exit 1
+}
+
+echo "[pre-commit] 檢查產品執行時路徑 SSOT…"
+node scripts/verify-runtime-paths.cjs || exit 1
+
+echo "[pre-commit] 檢查 Python 測試是否需要 slow marker…"
+node -e '
+const fs = require("fs"), path = require("path");
+const dir = "tests/e2e";
+/*
+ * 判準是「subprocess 且執行訓練腳本」，不是「有 subprocess」。
+ *
+ * ⚠️ 過度寬泛的教訓（2026-10-04 實測）：初版只看 subprocess，結果
+ *   test_export_dataset.py / test_export_live_layout.py 被誤判 —— 但它們跑的是
+ *   sidecar 匯出（非訓練），實測僅 0.53s / 0.65s。
+ *   掃描型守門過度寬泛會逼人無聲放寬斷言，等於沒有守門（AGENTS.md 紀律）。
+ *
+ * 對照實測耗時：
+ *   subproc + _train.py -> 6.8s / 11.8s / 40.6s  確實 slow
+ *   subproc only        -> 0.53s / 0.65s          誤判來源
+ *   _train.py only      -> 1.64s（只讀檔檢查）
+ */
+const off = [];
+for (const f of fs.readdirSync(dir).filter((x) => x.endsWith(".py"))) {
+    const src = fs.readFileSync(path.join(dir, f), "utf8");
+    const runsTraining = /subprocess|Popen/.test(src) && /_train\.py/.test(src);
+    const marked = /@pytest\.mark\.slow/.test(src);
+    if (runsTraining && !marked) off.push(f);
+}
+if (off.length) {
+    console.error("[pre-commit] 以下測試會執行真實訓練但未標 slow marker，會拖慢預設路徑：");
+    off.forEach((f) => console.error("   " + f));
+    console.error("   請加上：@pytest.mark.slow");
+    process.exit(1);
+}
+' || exit 1
+
+echo "[pre-commit] 通過"

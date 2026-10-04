@@ -1,0 +1,117 @@
+# Cocoya CI
+#
+# 【分層設計與實測依據】
+# 2026-10-04 量測：Node 409 例約 7s、Rust 12 例約 0.02s、
+# Python Tier1（8 例）約 9s、Tier2（含真實訓練）約 67s。
+#
+# 三個 job 拆開的理由是**依賴不同**，而非為了速度：
+#   - node 只需 Node.js
+#   - rust 只需 Rust toolchain（Tauri 的系統依賴在 Windows runner 已預裝）
+#   - python 需 Python + TensorFlow（TF import 實測 4.7s，佔 Tier1 一半）
+# 合在一起會迫使每個 job 都裝齊所有依賴。
+#
+# 【Python 分層】
+# - PR：只跑 Tier 1（`-m "not slow"`）。9 秒，且仍覆蓋資料集匯出、
+#        佈局契約、分層切分、偵測曲線、dataloader。
+# - push 到 master：跑全量（含 3 個真實訓練測試，約 67s）。
+#   理由：訓練模板改動只佔 2%，但在 master 上必須確保端到端可用。
+#
+# 【注意】若 `npm test` 報 timeout 而非失敗，先確認是否新增了 slow 測試
+# 而忘了加 marker（會拖慢預設路徑）。
+
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+# 同一分支的新 push 會取消前一次未完成的執行（省 runner 時間）
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    name: Node（前端 + TS + 行尾 + 路徑守門）
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            ui/package-lock.json
+
+      - name: 安裝依賴（根 + ui）
+        run: |
+          npm ci
+          npm ci --prefix ui
+
+      - name: 測試（compile + lint + 409 例 + rust + 行尾 + runtime paths 守門）
+        run: npm test
+
+  rust:
+    name: Rust（序列化契約 / command 註冊 / 多視窗 emit）
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      # Tauri 在 Windows 需要 WebView2 與 MSVC；runner 已預裝，
+      # 但 cargo test 只需編譯測試目標，仍需 tauri 的 build 依賴。
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+
+      - name: cargo test
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+
+  python-fast:
+    name: Python Tier 1（9s，不含真實訓練）
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      # ⚠️ TensorFlow 雖只在「訓練」時才需要，但
+      #   tests/e2e/test_classifier_dataloader.py 在**模組層級** import tensorflow
+      #   （它測的是真實 tf.data.Dataset + reduce_min/max，無法用假資料取代），
+      #   故 Tier 1 仍必須安裝 TF。實測 TF import 佔 Tier 1 時間的一半。
+      - name: 安裝測試依賴
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest numpy pillow tensorflow-cpu
+
+      - name: Tier 1（-m "not slow"）
+        run: python -m pytest -q -m "not slow"
+
+  python-full:
+    name: Python 全量（含真實訓練，僅 master）
+    runs-on: windows-latest
+    # 只在 push 到 master 時跑；PR 不跑（避免重複消耗且 67s 對 PR 反饋無益）
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: 安裝測試依賴
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest numpy pillow tensorflow-cpu
+
+      - name: 全量（含 slow 組）
+        run: python -m pytest -q
