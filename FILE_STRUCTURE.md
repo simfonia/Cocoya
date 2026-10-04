@@ -379,10 +379,22 @@ C:\Workspace\cocoya\
 │   │   ├── base.py          # BaseDeployer 基底類別 + 序列埠監控 + detect_board() + 可選 RawDumper
 │   │   ├── micropython.py   # MicroPython Raw REPL 部署器
 │   │   └── pybricks.py      # Pybricks SPIKE 部署器
-│   └── extension_icon.png   # 插件圖示
-├── temp_scripts/          # 執行期間暫存目錄（gitignored；e2e_*.py 證據腳本、掃描工具）
-│   ├── t_scan.cjs         # [2026-10-01] T-scan：掃描測試檔的計時器洩漏／未清除 handle／無 await（40 檔靜態掃描；只報「線索」不報「錯誤」，判定須人工確認）
-│   ├── parity_check.mjs   # Dataset Manager i18n parity 檢查
-│   └── e2e_*.py           # 各主題端對端證據腳本（C2 雙佈局／G1 表格特徵／P2-11 循線切分／task type 改名）
-├── package.json           # 根目錄設定
-└── tsconfig.json          # TS 編譯設定
+│   ├── extension_icon.png   # 插件圖示
+    ├── tests/                 # [2026-10-03 T4-2] Python 測試（pytest，進版控；npm run test:python）
+    │   ├── conftest.py        # pytest 全域設定與共用夾具（write_image / repo_root / slow 標記）
+    │   └── e2e/               # 由 temp_scripts/e2e_*.py 轉入的 11 個測試（自足，無外部資料集依賴）
+    │       ├── test_c2_layout.py            # 訓練資料集雙佈局契約
+    │       ├── test_classifier_dataloader.py # 分類 loader：bmp/gif 可解碼、webp 排除
+    │       ├── test_detector_curves.py      # 偵測訓練曲線三面板
+    │       ├── test_export_dataset.py        # sidecar exportDataset
+    │       ├── test_export_live_layout.py    # live 落盤影像必須進 ZIP
+    │       ├── test_feature_train.py         # feature 訓練模板端到端（slow）
+    │       ├── test_line_split_stratified.py # line 切分策略
+    │       ├── test_line_following_rename.py # line_following 改名一致性
+    │       └── test_task_type_rename.py     # 四類型 task type 改名 + 實際訓練（slow）
+    ├── pytest.ini             # pytest 設定（testpaths=tests、-q --strict-markers）
+    ├── temp_scripts/          # 執行期間暫存目錄（gitignored；原 e2e_*.py 已於 T4-2 轉入 tests/e2e/、掃描工具）
+    │   ├── t_scan.cjs         # [2026-10-01] T-scan：掃描測試檔計時器洩漏／未清除 handle／無 await（靜態掃描；只報線索）
+    │   └── parity_check.mjs   # Dataset Manager i18n parity 檢查
+    ├── package.json           # 根目錄設定
+    └── tsconfig.json          # TS 編譯設定
