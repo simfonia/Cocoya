@@ -436,7 +436,23 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
   直接 `bridge.send(...)` 會**永久 await**（測試整批超時，看起來像死結）。
   正解：`getSendHandler(cmd).call(bridge, cmd, data)` —— 與 `send()` 內部
   dispatch handler 的路徑完全相同，仍覆蓋真正實作碼。
-- **Rust 端序列化契約守門（2026-10-04 新增）**：`src-tauri/tests/serde_contract.rs`
+- **Rust 端契約守門（2026-10-04 新增，`npm run test:rust`，已併入 `npm test`）**：
+  `src-tauri/tests/` 下 3 支 integration 測試，共 9 例（執行 0.01s）：
+  1. **`serde_contract.rs`** — 掃描全部 `#[derive(Serialize)]` struct，斷言跨邊界者皆有
+     `rename_all = "camelCase"`。**已知例外** `OpenFileResult.is_read_only` 走**送端**
+     snake_case（前端全鏈一致，功能正常）；⚠️ 與本節「讀端相容」雙保險**方向相反**，
+     若依鐵律替它加 `rename_all` 前端會立刻壞掉且無任何報錯 → 已加白名單同步自檢。
+  2. **`command_registration.rs`** — 比對 `#[tauri::command]` 定義與
+     `generate_handler!` 註冊兩份清單。**P2-5 教訓：編譯通過 ≠ 搬對了**；
+     漏註冊的症狀是執行期 "command not found"（功能無聲失效）。
+     **已知例外** `start_training` 定義了但未註冊 → 前端 `startTraining` 在 Tauri 端
+     無 handler 也無 switch case，會落到 default 只印 warn（待補接線）。
+  3. **`multi_window_emit.rs`** — 擋全域廣播（`emit` / `emit_all` / `emit_filter`）。
+     現況 23 處全為 `emit_to`，鐵則已遵守；此守門防止未來退化。
+     ⚠️ 違規症狀隨開窗數量變化，極難重現，故事前阻斷。
+  - 三支皆為**掃描原始碼**而非編譯期/序列化實例檢查：後者需改動公開 API 或
+    重構 `generate_handler!` 展開方式，屬架構變更而非測試。日後若可行應改用更強的形式。
+- **測試替身必須反映真實介面契約（2026-10-01 踩坑）**
   （`npm run test:rust`，已併入 `npm test`，執行 0.01s）。
   掃描全部 `#[derive(Serialize)]` struct，斷言跨邊界者皆有 `rename_all = "camelCase"`；
   含白名單同步自檢（白名單 struct 若日後被加 camelCase 即報錯，防止白名單變永久漏洞）。
