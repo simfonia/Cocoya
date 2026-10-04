@@ -224,30 +224,11 @@ export class BaseBridge {
     }
 
     /**
-     * 開始訓練模型（本地或 DGX）
-     * @param {Object} config - 訓練配置
-     * @param {string} config.projectName - 專案名稱
-     * @param {string} config.taskType - 任務類型
-     * @param {string} config.backend - 訓練後端 ('local' 或 'dgx')
-     * @param {Object} [config.sshConfig] - SSH 配置（DGX 模式需要）
-     * @returns {Promise<Object>} 訓練結果
+     * [2026-10-04 移除死碼] 舊的 `startTraining(config)`。
+     * 訓練已遷移至 `py_ai_train_run` 積木（產生 Python 程式碼執行），
+     * 原按鈕入口（btn-train）早已從 index.html 移除，故無任何呼叫者。
+     * 若日後要恢復按鈕式訓練，請一併補上 index.html 元素與 Rust 端註冊。
      */
-    startTraining(config) {
-        const requestId = 'train_' + Date.now();
-        return new Promise((resolve) => {
-            const handler = (msg) => {
-                if (msg.command === 'trainingComplete' && msg.requestId === requestId) {
-                    this.offMessage(handler);
-                    resolve({ success: true, ...msg });
-                } else if (msg.command === 'trainingError' && msg.requestId === requestId) {
-                    this.offMessage(handler);
-                    resolve({ success: false, error: msg.error });
-                }
-            };
-            this.onMessage(handler);
-            this.send('startTraining', { ...config, requestId });
-        });
-    }
 
     /**
      * 儲存資料集標註進度（寫入 dataset.json）

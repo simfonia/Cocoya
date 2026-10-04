@@ -177,23 +177,11 @@ test('⑥ i18n 雙語系皆有 AI_TASK_FEATURE（parity）', () => {
 // 是一次跨 20+ 檔的破壞性改名。事後驗證：任一處漏改都會在執行期才爆，
 // 故以下兩測把「改名後的一致性」變成可持續生效的守門。
 
-test('⑦ 訓練對話框（dialogs.js）的 task type 不得含已淘汰的舊名', () => {
-  // 病根：ui/src/ui/dialogs.js 的 showTrainingDialog 是**第四處**獨立的
-  // task type 定義，與 TASK_TYPE_OPTIONS 無關 → 改名時極易漏改。
-  // 它原本就只有 3 項（classifier/detector/line_follower），不含 table/feature。
-  const dialogPath = path.join(here, '..', '..', 'ui', 'dialogs.js');
-  const src = fs.readFileSync(dialogPath, 'utf8');
-  // 只掃該對話框的 option value（避免誤傷其他文字）
-  const seg = src.slice(src.indexOf('training-task-type'),
-                        src.indexOf('training-task-type') + 2000);
-  for (const old of ['"classifier"', '"detector"', '"line_follower"']) {
-    assert.ok(!seg.includes(old),
-      `dialogs.js 訓練對話框仍含舊 task type ${old}（改名遺漏）`);
-  }
-  for (const t of ['"image_classification"', '"object_detection"', '"line_following"']) {
-    assert.ok(seg.includes(t), `dialogs.js 訓練對話框應含新 task type ${t}`);
-  }
-});
+// [2026-10-04 移除守門 ⑦] 原守門針對 ui/src/ui/dialogs.js 的 showTrainingDialog，
+//   該對話框是 task type 的「第四處獨立定義」，改名時極易漏改。
+//   但訓練已遷移至 py_ai_train_run 積木、對話框全鏈為死碼並已刪除，
+//   守門對象已不存在 -> 移除此測試（而非放寬斷言）。
+//   現存 task type 定義處由守門 ①（積木）與 ⑥（sidecar）涵蓋。
 
 test('⑧ 訓練模板目錄與 sidecar 兩處映射一致（改名後的核心不變式）', () => {
   // 訓練模板目錄名 == task type 名（image_classification/、object_detection/、line_following/）

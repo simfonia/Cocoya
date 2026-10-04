@@ -37,7 +37,7 @@ Cocoya 是一個針對 Python AI 視覺的教學工具。它透過 Blockly 產�
     let _ = window_clone_err.emit_to(&own_label, "python-error", payload);
     ```
   - **前端對應**：前端以 `getCurrentWebviewWindow().listen("事件名", cb)` 訂閱即可（`ui/src/bridge/tauri.js` 已一致採用 `appWindow.listen(...)`）。
-  - **已轉換清單（SSOT）**：`run_python`（`python-log`/`python-error`）、`start_training`（`training-*`）、`deploy_mcu`、`open_serial_monitor`、`erase_filesystem`、`reset_firmware`（`python-log`/`python-error`）皆已由 `.emit()` 改為 `.emit_to(&own_label, ...)`。
+  - Rust `run_python` / sidecar：`Command.env("PYTHONIOENCODING","utf-8").env("PYTHONUTF8","1")`
 - **視窗焦點切換／串列埠交接 (方案 B)**：多視窗下，串列埠監控採「失焦自動釋放、重新聚焦自動重取」。
   - 前端 `ui/src/bridge/tauri.js` 以 `document.addEventListener('blur'/'focus', ...)` 偵測視窗層級失焦/聚焦，呼叫 `this.tauriInvoke('set_window_focus', { focused: bool })`。
   - 後端 `mcu.rs::set_window_focus`：`focused=true` 時若該視窗有 `serial_wants`（曾開過監看-Label → 埠）且無啟用 session → 自動 `spawn_serial_monitor` 重取；`focused=false` 時 `stop_serial_monitor` 釋放（保留 wants 供下次聚焦重開）。
@@ -144,6 +144,34 @@ DM 專案類型（`typePolicy.ALL_TYPES`）、訓練任務類型（`TASK_TYPE` �
 
 
 
+### 死碼清理紀錄：訓練錄錖（P3-3，2026-10-04）
+
+**背景**：訓練功能已從 UI/DM 對話框鈒組が轉移至 `py_ai_train_run` 積木（產生 Python 程式碼執行）。
+舊的「訓練按鍵」流程三層一致為死碼，但**代碼存在**，曾謟負避歸人。
+
+| 層 | 位置 | 狀態 |
+| :--- | :--- | :--- |
+| DOM | `index.html` | 無 `btn-train` 元素（只有 `btn-training-result`） |
+| UI | `ui/src/ui/base.js` | `getElementById('btn-train')` → `null` → onclick 未結定 |
+| UI | `ui/src/ui/dialogs.js` `showTrainingDialog` | 無任何呼叫者 |
+| Bridge | `ui/src/bridge/base.js` `startTraining()` | 無任何呼叫者 |
+| VSIX | `cocoyaManager.ts` `case 'startTraining'` | 只會被上頁那條鏈觸發 |
+| Tauri | `python.rs` `start_training` | 定義但未註冄 → `command not found` |
+
+**已刪除**（共 335 行）：上表除 DOM 外全部。**未碰**：
+- `py_ai_train_run` 積木（現行訓練入口）
+- `startRemoteTraining` / `stopRemoteTraining`（遠端訓練，走 sidecar `trainRemote`）
+- `btn-training-result` → `openLatestTrainingReport`（查看報告）
+
+**連帶修掉**：稽核計畫 P1-6 的 **F3** 缺陷（原白名單注記為「待 P3-3 刪除」）。
+
+**與死碼一起刪掉的守门**（3 支，均為「守门對象已不存在」並非於紮斷断言）：
+- `task_type_contract.test.mjs` 守門⑦（對應 `showTrainingDialog`）
+- `process_spawn_contract.test.mjs` 守門 8 的 `start_training` 白名單
+- `sidecar_stdout_contract.test.mjs` 守門 4（會一起經：原掃測錄不明，已改為掃全部 `src-tauri/src/**.rs`）
+
+**守門掃描範圍必須與實際來源寫指向一致**：本次守門 4 原只掃 `python.rs`，卻還需修正；若未发現，死碼被刪當來反而有人謝成「契約被碰垮」。
+
 ### 使用者偏好 SSOT (core/settings)
 使用者偏好（語系、平台、主題、序列埠偏好、訓練參數、pythonPath…）一律經 `ui/src/core/` 的四個檔案存取，**不得直接寫 `localStorage`**。
 
@@ -208,7 +236,7 @@ Cocoya 混合架構（VSIX + Tauri）兩端都會以 Python 子進程執行訓�
 
 - **產生器產出的 Python 碼（`ai_inference_generators.js` 等 `train_model()`）**：`subprocess.Popen(..., text=True, encoding="utf-8", errors="replace")`——**必帶** `encoding="utf-8"`（父端解碼固定 UTF-8）。
 - **Tauri/VISX Host 啟動 Python**：
-  - Rust `run_python` / `start_training` / sidecar：`Command.env("PYTHONIOENCODING","utf-8").env("PYTHONUTF8","1")`。
+  - Rust `run_python` / sidecar：`Command.env("PYTHONIOENCODING","utf-8").env("PYTHONUTF8","1")`
   - VSIX `envOps.ts handleRunCode` spawn：`env: { ...process.env, PYTHONIOENCODING:'utf-8', PYTHONUTF8:'1', ... }`。
 - **Python sidecar（`dataset_sidecar.py`）內部子進程**：所有 `Popen`/`check_call` 帶 `encoding="utf-8", errors="replace"`（trainLocal Popen、TFLite 轉換 Popen、pip 安裝）——先前 trainLocal Popen 漏帶曾致 cp950 亂碼。
 - **被執行的模板/腳本本身**：`classifier_train.py`/`detector_train.py` 開頭 `sys.stdout/stderr.reconfigure(encoding='utf-8', errors='replace')`；檔案寫入 `open(..., encoding='utf-8')`。
@@ -445,7 +473,7 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
   2. **`command_registration.rs`** — 比對 `#[tauri::command]` 定義與
      `generate_handler!` 註冊兩份清單。**P2-5 教訓：編譯通過 ≠ 搬對了**；
      漏註冊的症狀是執行期 "command not found"（功能無聲失效）。
-     **已知例外** `start_training` 定義了但未註冊 → 前端 `startTraining` 在 Tauri 端
+          **[2026-10-04 P3-3]** `start_training` 已逦同舊訓練鏈一併刪除（見下節），故目前無例外。
      無 handler 也無 switch case，會落到 default 只印 warn（待補接線）。
   3. **`multi_window_emit.rs`** — 擋全域廣播（`emit` / `emit_all` / `emit_filter`）。
      現況 23 處全為 `emit_to`，鐵則已遵守；此守門防止未來退化。

@@ -572,78 +572,11 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             window.CocoyaUI.initSerialRawDumpToggle();
         }
 
-        // 綁定訓練按鈕
-        const trainBtn = document.getElementById('btn-train');
-        if (trainBtn) {
-            trainBtn.onclick = async () => {
-                if (self.showTrainingDialog) {
-                    const config = await new Promise((resolve) => {
-                        self.showTrainingDialog({
-                            onConfirm: resolve,
-                            onCancel: () => resolve(null)
-                        });
-                    });
-                    
-                    if (!config) {
-                        return;
-                    }
-                    
-                    // 顯示 loading
-                    if (self.showLoadingModal) {
-                        self.showLoadingModal(config.backend === 'dgx' ? '正在上傳資料集至 DGX...' : '正在啟動本地訓練...');
-                    }
-                    
-                    try {
-                        // 根據後端選擇處理訓練
-                        let trainingConfig = {
-                            projectName: config.projectName,
-                            taskType: config.taskType,
-                            backend: config.backend
-                        };
-                        
-                        if (config.backend === 'dgx') {
-                            // DGX 模式：需要 SSH 設定
-                            if (self.ensureSshConfig) {
-                                const sshConfig = await new Promise((resolve) => {
-                                    self.ensureSshConfig(resolve, () => resolve(null));
-                                });
-                                
-                                if (!sshConfig) {
-                                    console.log('[UI] DGX training cancelled (no SSH config)');
-                                    if (self.hideLoadingModal) self.hideLoadingModal();
-                                    return;
-                                }
-                                
-                                trainingConfig.sshConfig = sshConfig;
-                            }
-                        }
-                        
-                        // 使用 Bridge API 開始訓練
-                        const result = await window.CocoyaBridge.startTraining(trainingConfig);
-                        
-                        if (result.success) {
-                            // 顯示訓練結果浮動視窗
-                            if (self.showTrainingResultPanel) {
-                                self.showTrainingResultPanel(result);
-                            }
-                        } else {
-                            if (window.CocoyaBridge.alert) {
-                                window.CocoyaBridge.alert('訓練失敗: ' + (result.error || '未知錯誤'));
-                            }
-                        }
-                    } catch (error) {
-                        console.error('[UI] Training error:', error);
-                        if (window.CocoyaBridge.alert) {
-                            window.CocoyaBridge.alert('訓練過程發生錯誤: ' + error.message);
-                        }
-                    } finally {
-                        if (self.hideLoadingModal) {
-                            self.hideLoadingModal();
-                        }
-                    }
-                }
-            };
-        }
+        // [2026-10-04 移除死碼] 舊的「訓練按鈕」流程：
+        //   btn-train（index.html 早已無此元素）-> showTrainingDialog
+        //   -> CocoyaBridge.startTraining -> Rust start_training（未註冊）
+        // 全鏈為死碼：訓練已遷移至 `py_ai_train_run` 積木，由產生的 Python 執行。
+        // VSIX 端 cocoyaManager 的 `case 'startTraining'` 同樣只會被這條鏈觸發。
 
         bind('btn-run', 'runCode');
         bind('btn-update', 'checkUpdate');

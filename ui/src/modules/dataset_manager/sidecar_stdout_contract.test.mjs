@@ -101,11 +101,28 @@ test('sidecar 契約 3：三種訊息型別齊備（Rust 端各有一條對應�
 });
 
 test('sidecar 契約 4：Rust 端確實解析這三種型別（兩端不可漂移）', () => {
-    const rust = fs.readFileSync(
-        path.join(repoRoot, 'src-tauri', 'src', 'commands', 'python.rs'), 'utf8');
-    // Rust 以 get("type") == Some(String("...")) 比對字面值
+    // [修正 2026-10-04] 原版只掃 python.rs，連帶診把「訓練 stdout 解析」
+    // 当成 sidecar 契約的實作。python.rs 那份代碼已階死碼一併刪除，
+    // 本保門並非因為那份代碼而紅。
+    // 真正的 sidecar stdout 解析在 dataset.rs（sidecar_send 的線程」。
+    // ⇒ 改為掃描全部 src-tauri/src/**.rs，避免再讓刪除任何正必碼當來接錯。
+    const rustDir = path.join(repoRoot, 'src-tauri', 'src');
+    const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+        const full = path.join(dir, e.name);
+        return e.isDirectory() ? walk(full)
+            : (e.name.endsWith('.rs') ? [full] : []);
+    });
+    const all = walk(rustDir).map((f) => fs.readFileSync(f, 'utf8')).join(String.fromCharCode(10));
+    assert.ok(all.length > 0, '掃描到的 Rust 源碼為空');
+
+    // Rust 常見的兩種 type 比對寫法：
+    //   Some(String("x".to_string()))  舊式（直接比 Value）
+    //   Some("x")                     新式（as_str() 後比 &str，dataset.rs 用此式）
     for (const t of ['response', 'event']) {
-        assert.ok(rust.includes(`String("${t}".to_string())`),
+        const found = all.includes(`String("${t}".to_string())`)
+            || all.includes(`Some("${t}")`)
+            || all.includes(`Some(String("${t}"))`);
+        assert.ok(found,
             `Rust 端未解析 type="${t}"；sidecar 若送出該型別將被靜默丟棄`);
     }
 });

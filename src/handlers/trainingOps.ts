@@ -77,83 +77,11 @@ export class TrainingOpsHandler {
     }
 
     /**
-     * 處理模型訓練請求（本地或遠端）
+     * [2026-10-04 移除死碼] 原 `handleStartTraining`（舊的按鈕式訓練流程）。
+     * 訓練已遷移至 `py_ai_train_run` 積木；原按鈕入口 btn-train 早已從
+     * index.html 移除，前端不再送 'startTraining' message，故本方法無呼叫者。
+     * 遠端訓練（startRemoteTraining）與訓練報告功能不受影響，仍是活的。
      */
-    public async handleStartTraining(message: any) {
-        const { projectName, taskType, backend, datasetDir, outputDir } = message;
-
-        const baseDir = (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0)
-            ? vscode.workspace.workspaceFolders[0].uri.fsPath
-            : runtimeTempDir(this.manager.context.extensionPath);
-
-        const finalDatasetDir = datasetDir || path.join(baseDir, 'dataset', projectName);
-        const finalOutputDir = outputDir || path.join(baseDir, 'model', projectName);
-
-        console.log(`[Training] Starting training:`);
-        console.log(`[Training]   projectName: ${projectName}`);
-        console.log(`[Training]   baseDir: ${baseDir}`);
-        console.log(`[Training]   datasetDir: ${finalDatasetDir}`);
-        console.log(`[Training]   outputDir: ${finalOutputDir}`);
-        console.log(`[Training]   backend: ${backend}`);
-
-        if (backend === 'local') {
-            this.manager.sidecar.start();
-            this.manager.sidecar.send('trainLocal', {
-                projectName,
-                taskType,
-                datasetDir: finalDatasetDir,
-                outputDir: finalOutputDir,
-                hyperparams: {
-                    epochs: 30,
-                    batchSize: 32,
-                    learningRate: 0.001
-                }
-            }, (resp: any) => {
-                if (resp.success) {
-                    console.log(`[Training] Training completed successfully:`);
-                    console.log(`[Training]   modelDir: ${resp.modelDir}`);
-                    console.log(`[Training]   reportPath: ${resp.reportPath}`);
-                    console.log(`[Training]   curvePath: ${resp.curvePath}`);
-                    
-                    vscode.window.showInformationMessage(hostMsg('localComplete', resp.modelDir));
-                    this.manager.panel.webview.postMessage({
-                        command: 'trainingComplete',
-                        success: true,
-                        modelDir: resp.modelDir,
-                        projectName: resp.projectName,
-                        accuracy: resp.accuracy,
-                        epochs: resp.epochs,
-                        curvePath: resp.curvePath,
-                        historyPath: resp.historyPath,
-                        reportPath: resp.reportPath
-                    });
-                } else {
-                    console.error(`[Training] Training failed:`, resp.error);
-                    vscode.window.showErrorMessage(hostMsg('localFailed', resp.error || 'Unknown error'));
-                    this.manager.panel.webview.postMessage({
-                        command: 'trainingError',
-                        success: false,
-                        error: resp.error || hostMsg('localFailedErr')
-                    });
-                }
-            });
-
-            this.setSidecarEventListener((event: string, data: any) => {
-                if (event === 'trainingLog') {
-                    // 方案 A：導向 VS Code 原生終端機，而非 webview 自訂 terminal
-                    TrainingTerminal.writeLine(data.message || '');
-                }
-            });
-
-        } else if (backend === 'dgx' || backend === 'remote') {
-            vscode.window.showWarningMessage(hostMsg('remoteNotAvailable'));
-            this.manager.panel.webview.postMessage({
-                command: 'trainingError',
-                success: false,
-                error: hostMsg('remoteNotAvailableErr')
-            });
-        }
-    }
 
     /**
      * 處理遠端訓練請求（RemoteTrainingRefactor D3/D4：backend=remote 執行當下由 host 觸發）

@@ -236,10 +236,12 @@ test('P1-6 守門 8：#[tauri::command] 未註冊於 invoke_handler 者須列入
     // 故比對時取路徑最後一段為函式名。
     const registered = new Set([...handler.matchAll(/commands::([\w:]+)/g)]
         .map((m) => m[1].split('::').pop()));
-    // 白名單：每項必須附原因，且真的存在（避免過期白名單默默放寬守門）
-    const UNREGISTERED_OK = [
-        { name: 'start_training', reason: 'P1-6 F3：已停用（Tauri 訓練走 py_ai_train_run → run_python / trainRemote），待 P3-3 刪除' },
-    ];
+    // [2026-10-04 P3-3] 原白名單項 start_training 已刪除。
+    // py_ai_train_run 積木是現行記體積業的唯一入口（產生 Python 程式碼執行）。
+    // 前端按鍵鏈（btn-train / bridge startTraining / VSIX case）全數為死碼並一併移除。
+    // 連帶修掉稽核計畫 P1-6 的 F3 缺陷。
+    // 目前為空陣列：若日後新增未註冄的 command，必須在此附原因。
+    const UNREGISTERED_OK = [];
     const okSet = new Set(UNREGISTERED_OK.map((x) => x.name));
     const commands = new Set();
     for (const { src } of rust) {

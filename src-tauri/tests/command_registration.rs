@@ -143,15 +143,9 @@ fn command_scanner_finds_definitions() {
 
 #[test]
 fn every_defined_command_is_registered() {
-    // 已知例外：start_training 定義了 command 但未註冊。
-    //
-    // 查證（2026-10-04）：前端 `base.js` 送 `startTraining`，但 BridgeTauri
-    // 既無對應 handler、殘留 switch 也無該 case → 會落到 default 分支只印 warn。
-    // 故 Tauri 模式下訓練功能實際未接通（疑為已知限制或待補的接線）。
-    //
-    // 這正是本守門要抓的型態：定義了、編譯通過、但執行期無效。
-    // **若有人把前端接上並希望啟用，必須移除此白名單。**
-    const KNOWN_UNREGISTERED: &[&str] = &["start_training"];
+    // [2026-10-04 P3-3] `start_training` 已連同整條舊訓練鏈刪除，故無需白名單。
+    // 若日後新增 command 卻未註冊，必須在此附原因並確認真的存在。
+    const KNOWN_UNREGISTERED: &[&str] = &[];
 
     let registered: Vec<String> = parse_registered_commands();
     let offenders: Vec<String> = scan_defined_commands()

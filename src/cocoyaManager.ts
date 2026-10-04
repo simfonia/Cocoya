@@ -316,9 +316,8 @@ export class CocoyaManager {
                 case 'openDatasetManager':
                     this.datasetOps.handleOpenDatasetManager();
                     break;
-                case 'startTraining':
-                    await this.trainingOps.handleStartTraining(message);
-                    break;
+                // [2026-10-04 移除死碼] 原 `case 'startTraining'`：前端已不再送此 message
+                //   （訓練改由 py_ai_train_run 積木執行）。startRemoteTraining 仍保留。
                 case 'checkRemoteEnvironment':
                     await this.envOps.handleCheckRemoteEnvironment(message);
                     break;
