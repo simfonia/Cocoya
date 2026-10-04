@@ -4,6 +4,7 @@
  * 匯出編排自 ui_layout.js 原地搬移：未標註/未分類確認、Spec 同步驗證、
  * datasetExport request correlation（timeout 120s）。UI 呈現與對話以依賴注入，通訊經 io/bridge.js。
  */
+import { localizeValidationIssue } from './validationMessages.js';
 import { datasetBridge } from '../io/bridge.js';
 import { countUnannotated, countUnclassifiedBoxes } from './annotationMutations.js';
 import { needsAnnotationCheck, needsUnclassifiedCheck, isDevType } from '../core/typePolicy.js';
@@ -71,7 +72,9 @@ export function createExportUseCases(deps) {
             // 2. 驗證 Spec
             const result = state.spec.validate();
             if (!result.ok) {
-                throw new Error(t('ERROR_EXPORT_VALIDATE', '資料集規格驗證失敗: %1').replace('%1', result.errors[0]));
+                // [P2-13] errors[0] 現在是 {code, params}，必須翻譯才能顯示綜樣文字
+                const first = localizeValidationIssue(result.errors[0], t);
+                throw new Error(t('ERROR_EXPORT_VALIDATE', '資料集規格驗證失敗: %1').replace('%1', first));
             }
 
             // 3. 透過 io/bridge.js 發送匯出指令並等待結果（Stage 2 correlation + timeout）

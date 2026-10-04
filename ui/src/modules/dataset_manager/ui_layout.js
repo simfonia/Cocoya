@@ -1441,6 +1441,7 @@ function bindModalEvents(modal) {
         const result = state.spec.validate();
         const validation = modal.querySelector('#dataset-validation');
         if (validation) validation.innerHTML = renderValidation(result);
+        // [P2-13] 只用 errors.length（不讀取文案），無需翻譯
         showStatusMessage(result.ok
             ? t('VALIDATE_OK_STATUS', '✅ 驗證通過：Spec 可用')
             : t('VALIDATE_FAIL_STATUS', '❌ 驗證發現 %1 個錯誤，請查看右欄訊息框').replace('%1', result.errors.length));

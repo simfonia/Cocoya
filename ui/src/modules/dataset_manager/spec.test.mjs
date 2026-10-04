@@ -5,6 +5,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DatasetSpec, TABLE_SAMPLES_PERSIST_LIMIT } from './spec.js';
 
+/** [P2-13] validate() 回傳的 code 清單（不讀文案，避免文案改寫就變紪測試） */
+const codesOf = (list) => (list || []).map((i) => i.code);
+
 test('TABLE_SAMPLES_PERSIST_LIMIT 為 2000', () => {
     assert.equal(TABLE_SAMPLES_PERSIST_LIMIT, 2000);
 });
@@ -68,14 +71,14 @@ function makeFeatureSpec(mode, sampleCount = 0) {
 test('feature live 無欄位無樣本：不出現 COLUMN_REQUIRED error，出現樣本引導 warning', () => {
     const v = makeFeatureSpec('live').validate();
     assert.equal(v.ok, true);
-    assert.ok(!v.errors.some((e) => e.includes('欄位')));
-    assert.ok(v.warnings.some((w) => w.includes('feature samples') || w.includes('特徵樣本')));
+    assert.ok(!codesOf(v.errors).includes('VALIDATE_COLUMN_REQUIRED'));
+    assert.ok(codesOf(v.warnings).includes('VALIDATE_NO_SAMPLES_FEATURE'));
 });
 
 test('feature live 無欄位無樣本：不發 NO_LABEL / NO_FEATURES', () => {
     const v = makeFeatureSpec('live').validate();
-    assert.ok(!v.warnings.some((w) => w.includes('Label')));
-    assert.ok(!v.warnings.some((w) => w.includes('Feature 欄位')));
+    assert.ok(!codesOf(v.warnings).includes('VALIDATE_NO_LABEL'));
+    assert.ok(!codesOf(v.warnings).includes('VALIDATE_NO_FEATURES'));
 });
 
 test('feature file 模式無欄位：維持 COLUMN_REQUIRED error（匯出必要條件不變）', () => {
@@ -98,8 +101,10 @@ function makeImageSpec(sampleCount, labelCounts = {}) {
 test('image_classification live 已拍樣本：不發 NO_LABEL；有未標籤照片時真實警告', () => {
     const v = makeImageSpec(3, { unlabeled: 2, cat: 1 }).validate();
     assert.equal(v.ok, true);
-    assert.ok(!v.warnings.some((w) => w.includes('Label 欄位')), '不應出現 NO_LABEL 誤導訊息');
-    assert.ok(v.warnings.some((w) => w.includes('3') && w.includes('2')), '應回報未標籤照片數');
+    assert.ok(!codesOf(v.warnings).includes('VALIDATE_NO_LABEL'), '不懂出現 NO_LABEL 誤導訊息');
+    const un = v.warnings.find((w) => w.code === 'VALIDATE_UNLABELED_SAMPLES');
+    assert.ok(un, '應有 VALIDATE_UNLABELED_SAMPLES');
+    assert.deepEqual(un.params, [3, 2], '參數應為 [總樣本數, 未標約數]');
 });
 
 test('image_classification live 全部照片已標籤：乾淨無警告', () => {

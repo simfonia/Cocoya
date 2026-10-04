@@ -1,4 +1,5 @@
-import { t } from './i18n.js';
+// [P2-13 2026-10-04] 本檔已不再 import t()：validate() 改回傳 {code, params}，
+//   文案由 application/validationMessages.js 翻譯（分層理由見 validate() 註解）。
 import { projectTypes, isKnownType, isImageType as typeIsImageType, isFeatureType } from './core/typePolicy.js';
 
 const SPEC_VERSION = '1.0';
@@ -167,23 +168,36 @@ export class DatasetSpec {
         this.schema = normalizeSchema(Object.assign({}, this.schema, newSchema));
     }
 
+    /**
+     * 驗證 Spec，回傳**結構化**問題清單（不含文案）。
+     *
+     * [P2-13 2026-10-04] 原本這裡直接呼叫 t() 產出字串，讓 core 層依賴 i18n。
+     * 改為 `{ code, params }`，文案交由 ui/application 層用 localizeValidation()
+     * 翻譯。分層理由（AGENTS.md「錯誤碼在後端定義、文案由 i18n 負責」）：
+     *   - 本檔是純函式層，不該知道 Blockly / 語系存在 → 測試不需掛 i18n
+     *   - params 順序與 %1/%2 的對應被釘在 spec.js，不會與翻譯脫鉤
+     *   - 上游呼叫端（後端錯誤碼）已有同樣慣例
+     *
+     * @returns {{ok: boolean, errors: Array<{code: string, params: any[]}>, warnings: Array}}
+     */
     validate() {
         const errors = [];
         const warnings = [];
         const spec = this.toJSON();
         const columnNames = new Set();
+        const issue = (code, ...params) => ({ code, params });
 
         if (spec.version !== SPEC_VERSION) {
-            warnings.push(t('VALIDATE_VERSION_UNSUPPORTED', 'Unsupported spec version "%1". Expected "%2".', spec.version, SPEC_VERSION));
+            warnings.push(issue('VALIDATE_VERSION_UNSUPPORTED', spec.version, SPEC_VERSION));
         }
         if (!spec.project.name) {
-            errors.push(t('VALIDATE_PROJECT_NAME_REQUIRED', 'Project name is required.'));
+            errors.push(issue('VALIDATE_PROJECT_NAME_REQUIRED'));
         }
         if (!isKnownType(spec.project.type)) {
-            errors.push(t('VALIDATE_PROJECT_TYPE_INVALID', 'Project type must be one of: %1.', Array.from(PROJECT_TYPES).join(', ')));
+            errors.push(issue('VALIDATE_PROJECT_TYPE_INVALID', Array.from(PROJECT_TYPES).join(', ')));
         }
         if (!SOURCE_MODES.has(spec.data_source.mode)) {
-            errors.push(t('VALIDATE_SOURCE_MODE_INVALID', 'Data source mode must be one of: %1.', Array.from(SOURCE_MODES).join(', ')));
+            errors.push(issue('VALIDATE_SOURCE_MODE_INVALID', Array.from(SOURCE_MODES).join(', ')));
         }
         const isImageType = typeIsImageType(spec.project.type);
         const isFeatureLive = isFeatureType(spec.project.type) && spec.data_source.mode === 'live';
@@ -194,44 +208,44 @@ export class DatasetSpec {
             if (isImageType) {
                 // 影像類：欄位由匯入/採集自動生成；尚未有樣本時以引導式 warning 呈現
                 if (sampleCount === 0) {
-                    warnings.push(t('VALIDATE_NO_SAMPLES', 'No images imported yet. Select an image folder or capture photos with the camera.'));
+                    warnings.push(issue('VALIDATE_NO_SAMPLES'));
                 }
             } else if (isFeatureLive) {
                 // M4：feature live 採集——欄位由 featureSchema 動態生成，與影像類同採引導式 warning
                 if (sampleCount === 0) {
-                    warnings.push(t('VALIDATE_NO_SAMPLES_FEATURE', 'No feature samples captured yet. Start the camera and click "Capture Feature" to collect samples.'));
+                    warnings.push(issue('VALIDATE_NO_SAMPLES_FEATURE'));
                 }
             } else {
                 // 表格類：欄位為匯出必要條件，維持 error 但文案改為引導式
-                errors.push(t('VALIDATE_COLUMN_REQUIRED', 'No columns defined yet. Import a CSV/JSON file, or click "Add Feature / Add Label" to create one.'));
+                errors.push(issue('VALIDATE_COLUMN_REQUIRED'));
             }
         }
 
         spec.schema.columns.forEach((column, index) => {
             if (!column.name) {
-                errors.push(t('VALIDATE_COLUMN_MISSING_NAME', 'Column %1 is missing a name.', index + 1));
+                errors.push(issue('VALIDATE_COLUMN_MISSING_NAME', index + 1));
                 return;
             }
             if (columnNames.has(column.name)) {
-                errors.push(t('VALIDATE_COLUMN_DUPLICATE', 'Duplicate column name: %1.', column.name));
+                errors.push(issue('VALIDATE_COLUMN_DUPLICATE', column.name));
             }
             columnNames.add(column.name);
             if (!COLUMN_TYPES.has(column.type)) {
-                errors.push(t('VALIDATE_COLUMN_INVALID_TYPE', 'Column "%1" has invalid type "%2".', column.name, column.type));
+                errors.push(issue('VALIDATE_COLUMN_INVALID_TYPE', column.name, column.type));
             }
             if (!COLUMN_ROLES.has(column.role)) {
-                errors.push(t('VALIDATE_COLUMN_INVALID_ROLE', 'Column "%1" has invalid role "%2".', column.name, column.role));
+                errors.push(issue('VALIDATE_COLUMN_INVALID_ROLE', column.name, column.role));
             }
         });
 
         spec.schema.features.forEach((name) => {
             if (!columnNames.has(name)) {
-                errors.push(t('VALIDATE_FEATURE_NOT_FOUND', 'Feature column "%1" does not exist in schema.columns.', name));
+                errors.push(issue('VALIDATE_FEATURE_NOT_FOUND', name));
             }
         });
 
         if (spec.schema.label && !columnNames.has(spec.schema.label)) {
-            errors.push(t('VALIDATE_LABEL_NOT_FOUND', 'Label column "%1" does not exist in schema.columns.', spec.schema.label));
+            errors.push(issue('VALIDATE_LABEL_NOT_FOUND', spec.schema.label));
         }
         // Label 檢查（2026-09-16 重構）：
         // - 影像類：標籤存於每張樣本（live 分類的 image.label / 標註的 class_id），
@@ -242,16 +256,16 @@ export class DatasetSpec {
                 const labelCounts = isPlainObject(spec.stats.label_counts) ? spec.stats.label_counts : {};
                 const unlabeled = Number(labelCounts['unlabeled']) || 0;
                 if (unlabeled > 0) {
-                    warnings.push(t('VALIDATE_UNLABELED_SAMPLES', 'Captured %1 photos, %2 of them have no label yet.', sampleCount, unlabeled));
+                    warnings.push(issue('VALIDATE_UNLABELED_SAMPLES', sampleCount, unlabeled));
                 }
             }
         } else if (!isFeatureLive && !spec.schema.label
             && spec.project.type !== 'table' && spec.project.type !== 'line_following') {
-            warnings.push(t('VALIDATE_NO_LABEL', 'No label column is assigned yet.'));
+            warnings.push(issue('VALIDATE_NO_LABEL'));
         }
         // Features 檢查：補上 object_detection 豁免；僅在有欄位但未指定 role=feature 時提醒，避免與無欄位的 COLUMN_REQUIRED 重複
         if (spec.schema.features.length === 0 && !isImageType && !isFeatureLive && spec.schema.columns.length > 0) {
-            warnings.push(t('VALIDATE_NO_FEATURES', 'No feature columns are assigned yet.'));
+            warnings.push(issue('VALIDATE_NO_FEATURES'));
         }
 
         return {

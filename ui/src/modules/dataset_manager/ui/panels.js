@@ -1,3 +1,5 @@
+import { localizeValidationResult } from '../application/validationMessages.js';
+
 /**
  * Panels presenter：source/schema/preview 面板的欄位列與預覽呈現（Stage 4 切片 7，§7.2 步驟 7）
  * - 職責：欄位列模板（renderColumnRow）、驗證結果模板（renderValidation）、
@@ -41,7 +43,10 @@ export function createPanelsPresenter({
     /**
      * 渲染驗證結果（ok/error + errors/warnings 清單）
      */
-    function renderValidation(result) {
+    function renderValidation(rawResult) {
+        // [P2-13] validate() 現在回傳 {code, params}，文案在這層翻譯
+        //（見 application/validationMessages.js）；spec.js 不再知道語系存在
+        const result = localizeValidationResult(rawResult, t);
         const errors = result.errors.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
         const warnings = result.warnings.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
         // 2026-09-16：ok 但存在警告時改顯「可用，尚有提醒」，避免「Spec 可用」配警告的矛盾
