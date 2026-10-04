@@ -881,3 +881,71 @@ VS Code 報「L44 必須是 {」「L52 預期為 at-rule 或選取器」，整�
   該 class 由 VS Code webview 注入、非 Cocoya 控制。需實測「VSIX ＋ VS Code 深色 ＋ 選 candy」
   是否會讓 44 處 dark 字面值蓋掉 candy 的淺色 token（尚未確認，非已驗證缺陷）。
 - [ ] P1-4 `style.css` 242 hex：可比照 P1-3 的分類法（設計常數／主題值／純冗餘）處理
+
+---
+
+### [2026-10-04] P2-15 / P2-13 完成（i18n 分層與翻譯失效）
+
+**P2-15 真實 bug：英文語系下永遠顯示中文**（`4fdd160`）
+
+`i18n.js` 的 `t()` 會自動補前綴（`'DSM_' + key`），但 4 處呼叫端自己又寫了：
+
+    t('DSM_ANNOTATION_CROSSHAIR', '尺規')   → 實際查 DSM_DSM_ANNOTATION_CROSSHAIR
+
+這些鍵在 `i18n/en.js` **都有翻譯**（"Crosshair"）卻永遠讀不到，每次都掉回中文 fallback。
+影響：標註畫布尺規、尺規顏色、側車啟動失敗、攝影機啟動失敗 —— **英文用戶看到中文**，
+且無任何報錯。症狀與病因相隔極遠（多寫 4 個字元）。
+
+既有 `core_contract` 只驗積木層 `Blockly.Msg['KEY']`，**不涵蓋 `t()` 呼叫端**。
+
+- [x] 修 4 處重複前綴（`ui_layout.js` 2 處、`ui/annotation.js` 3 處）
+- [x] 新增 `t_call_contract.test.mjs`（6 測，掃描型）
+- [x] mutation 驗證 4 次全會紅
+
+**教訓（掃描型守門的失效模式）**：本守門曾三度寫成**假綠燈**——
+「先剝字串、後找呼叫」會讓 `t('KEY')` 的引號被刪、連 key 一起消失，掃描恆為空，
+守門「全綠」卻毫無作用。最終解法：**不剝字串**，直接在原始碼上找 `t('...`，
+用 `inComment()` 從位置判斷註解。另設自檢 B2（掃描量下限 ≥150）專門攔截這種空集合失效。
+
+**P2-13：`validate()` 改回傳結構化問題清單**（`4258ad2`）
+
+    - errors.push(t('VALIDATE_COLUMN_MISSING_NAME', 'Column %1 is missing a name.', i+1));
+    + errors.push(issue('VALIDATE_COLUMN_MISSING_NAME', i + 1));
+
+- [x] `spec.js` 16 處 `t()` → `{code, params}`，移除 `import t`
+- [x] 新增 `application/validationMessages.js`（MESSAGES 查表 + 2 個函式）
+- [x] 更新 3 個呼叫端：`ui/panels.js`、`application/exportUseCases.js`、`ui_layout.js`
+- [x] `spec.test.mjs` 3 個測試由斷言**文案**改為斷言 **code**（附帶改進：改寫文案不再誤報）
+- [x] 新增 `validation_layer_contract.test.mjs`（7 測），mutation 驗證 3 次全會紅
+
+> **設計決定：fallback 一律用英文。** fallback 是「翻譯失效的最後防線」，
+> 對非中文語系用戶而言中文 fallback 反而更糟 —— P2-15 已證實這條路會出事。
+> 未知 code 顯示 `[未定義的驗證代碼：XXX]`，不靜默吞掉。
+
+> **事故紀錄**：mutation 還原時用 `git checkout spec.js`，把**整個未提交的改造一併還原**。
+> **教訓：mutation 還原一律用 `cp` 備份檔，不要用 `git checkout`** —— 對未提交的變更而言
+> 它是「還原到上次 commit」，而非「還原到 mutation 前」。本次有備份才沒出事。
+
+### [2026-10-04] py_ai_train_run 小數欄位 precision 修正（用戶提問觸發）
+
+**根因**：`Blockly.FieldNumber` 簽名是 `(value, min, max, precision)`，**沒有 step 參數**。
+`precision` 是「舍入倍數」，Blockly 從它推導小數位數 = `ceil(|log10(precision)|)`。
+原三個欄位都以為第 4 參數是 step 而填 `0.1` / `0.0001`，導致**靜默捨入且無任何提示**：
+
+| 欄位 | 原 precision | 實測症狀 |
+|---|---|---|
+| `LEARNING_RATE` | `0.0001`（4 位） | 打 `1e-5` / `3e-5` → **變成 0.0001（差 10 倍）** |
+| `DROPOUT` | `0.1`（1 位） | 打 `0.05` → 0.1；`0.35` → 0.4 |
+| `VALIDATION_SPLIT` | `0.1`（1 位） | 打 `0.15` → 0.2；`0.25` → 0.3 |
+
+`LEARNING_RATE` 這條最嚴重 —— **Adam fine-tune 最常用的 1e-5 / 3e-5 根本打不進去**。
+
+- [x] `LEARNING_RATE` → `(0.001, 0.00001, 1, 0.00001)`（5 位小數，1e-5~1e-3 皆可精確輸入）
+- [x] `DROPOUT` → `precision 0.01`（`0.05` / `0.35` 可輸入）
+- [x] `VALIDATION_SPLIT` → `precision 0.01`（`0.15` / `0.25` 可輸入）
+- [x] 於積木定義處註明簽名與原值後果（避免日後有人再以為是 step）
+- [ ] **待實機確認**：教學上 LR 的建議範圍是否需同步寫入 `docs/help/py_ai_train_run_*.html`
+      （現況 help 只說「看 loss 曲線調整」，未列舉具體數值）
+
+> **用戶決策**：不加守門測試，直接改。（本欄位無其他呼叫端依賴其精確值，
+> 且 Blockly 本身即為 SSOT；`ai_inference_blocks.js` 已加註說明。）

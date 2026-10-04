@@ -84,18 +84,31 @@ Blockly.Blocks['py_ai_train_run'] = {
         .appendField(new Blockly.FieldLabel("model/classifier_dataset"), 'MODEL_DIR');
 
     // 驗證比 + 擴增 + Dropout（餵資料策略）
+    //
+    // ⚠️ FieldNumber 簽名是 (value, min, max, precision)，**沒有 step 參數**。
+    //   precision 是「舍入倍數」，Blockly 從它推導小數位數 = ceil(|log10(precision)|)。
+    //   原先三個欄位都用 0.1 作為第 4 參數（誤以為是 step），實測導致：
+    //     dropout 打 0.05 → 0.1、0.35 → 0.4；validation_split 打 0.15 → 0.2。
+    //   靜默捨入且無任何提示，屬數值失真，故 precision 收到 0.01（2 位小數）。
     this.appendDummyInput()
         .appendField(Blockly.Msg["AI_TRAIN_FIELD_VAL_SPLIT"])
-        .appendField(new Blockly.FieldNumber(0.2, 0.1, 0.5, 0.1), 'VALIDATION_SPLIT')
+        .appendField(new Blockly.FieldNumber(0.2, 0.1, 0.5, 0.01), 'VALIDATION_SPLIT')
         .appendField(Blockly.Msg["AI_TRAIN_FIELD_AUG"])
         .appendField(new Blockly.FieldCheckbox(true), 'AUGMENTATION')
         .appendField(Blockly.Msg["AI_TRAIN_FIELD_DROPOUT"])
-        .appendField(new Blockly.FieldNumber(0.2, 0.0, 0.9, 0.1), 'DROPOUT');
+        .appendField(new Blockly.FieldNumber(0.2, 0.0, 0.9, 0.01), 'DROPOUT');
 
     // LR + Epochs + Batch（訓練過程節奏）
+    //
+    // ⚠️ LR 的 precision 同樣是舍入倍數。原值 0.0001 → 只允許 4 位小數，
+    //   導致 Adam fine-tune 最常用的 1e-5 / 3e-5 被**靜默捨入成 1e-4（差 10 倍）**。
+    //   實測：輸入 0.00001 / 0.00003 一律變成 0.0001。
+    //   precision 收到 0.00001（5 位小數）後，1e-5~1e-3 皆可精確輸入。
+    //   min=0.00001：輸入更小的值會被夾到下限，而不是舍入成 0（0 等同凍結權重、
+    //   完全不訓練，同屬靜默失真）。
     this.appendDummyInput()
         .appendField(Blockly.Msg["AI_TRAIN_FIELD_LR"])
-        .appendField(new Blockly.FieldNumber(0.001, 0.0001, 1, 0.0001), 'LEARNING_RATE')
+        .appendField(new Blockly.FieldNumber(0.001, 0.00001, 1, 0.00001), 'LEARNING_RATE')
         .appendField(Blockly.Msg["AI_TRAIN_FIELD_EPOCHS"])
         .appendField(new Blockly.FieldNumber(20, 1, 1000), 'EPOCHS')
         .appendField(Blockly.Msg["AI_TRAIN_FIELD_BATCH"])
