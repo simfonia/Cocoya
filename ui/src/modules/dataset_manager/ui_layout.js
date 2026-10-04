@@ -114,10 +114,14 @@ const samplerPanel = createSamplerPanel({
         if (!ok) {
             // sidecar 啟動失敗（Python 路徑未設／無效或缺 opencv-python）給出可執行的提示
             const err = Sampler.state.lastCameraError || '';
+            // ⚠️ [P2-15 2026-10-04] 這裡原本寫成 t('DSM_SIDECAR_START_FAILED', ...)，
+            //   但 t() 會自動補前綴（'DSM_' + key）→ 實際查 DSM_DSM_SIDECAR_START_FAILED，
+            //   永遠查不到翻譯，英文語系下這些訊息**永遠顯示中文 fallback**。
+            //   這兩個鍵在 i18n/en.js 都有翻譯卻讀不到，即為此故。
             showStatusMessage(
                 err.indexOf('SIDECAR_START_FAILED') !== -1
-                    ? t('DSM_SIDECAR_START_FAILED', '❌ 無法啟動資料集服務：請於硬體頁設定有效的 Python 路徑，並確認該 Python 已安裝 opencv-python（pip install opencv-python）')
-                    : t('DSM_SAMPLER_START_FAILED', '❌ 攝影機啟動失敗，請確認裝置後重試')
+                    ? t('SIDECAR_START_FAILED', '❌ 無法啟動資料集服務：請於硬體頁設定有效的 Python 路徑，並確認該 Python 已安裝 opencv-python（pip install opencv-python）')
+                    : t('SAMPLER_START_FAILED', '❌ 攝影機啟動失敗，請確認裝置後重試')
             , { duration: 0 });
         } else {
             Sampler.state.lastCameraError = null;

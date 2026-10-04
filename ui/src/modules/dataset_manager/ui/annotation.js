@@ -114,10 +114,13 @@ export function createAnnotationController({
                              註：原本這裡另有一顆「匯出資料集」按鈕，已依使用者指示移除 ——
                              匯出僅存在於 P2 資料集管理頁（視窗標頭），P3 標註頁不提供匯出。 -->
                         <label class="dataset-annotation-crosshair-picker" id="annotation-crosshair-picker"
-                               title="${t('DSM_ANNOTATION_CROSSHAIR_COLOR', '十字尺規顏色')}">
-                            <span class="dataset-annotation-crosshair-label">${t('DSM_ANNOTATION_CROSSHAIR', '尺規')}</span>
+                               <!-- ⚠ [P2-15 2026-10-04] 下面單元树原本寫成 t('DSM_ANNOTATION_CROSSHAIR*', ...)，
+     但 t() 會自動補前綴（'DSM_' + key）→ 實際查 DSM_DSM_* 永道查不到。
+     這兩個鍵在 i18n/en.js 都有翻譯卻讀不到 —— 英文語系下永道顯示中文。 -->
+                            title="${t('ANNOTATION_CROSSHAIR_COLOR', '十字尺規顏色')}">
+                            <span class="dataset-annotation-crosshair-label">${t('ANNOTATION_CROSSHAIR', '尺規')}</span>
                             <input type="color" id="annotation-crosshair-color" value="#00ff88"
-                                   aria-label="${t('DSM_ANNOTATION_CROSSHAIR_COLOR', '十字尺規顏色')}">
+                                   aria-label="${t('ANNOTATION_CROSSHAIR_COLOR', '十字尺規顏色')}">
                         </label>
                     </div>
                     <div class="dataset-annotation-image-container" id="annotation-image-container">
