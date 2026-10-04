@@ -345,6 +345,20 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
 | **L1.5** | `npm run lint:ui` | 改了 `ui/src/**` 的 JS | ESLint（`ui/.eslintrc.json`） |
 | **L2 全閘** | `npm test` | 發布前 | compile + lint(ts) + lint:ui + 全量 |
 | **其他** | `npm run test:rust` / `cargo check` | Rust 異動 | 不併入 `npm test` |
+| **其他** | `npm run test:python` | Python 異動 | 不併入 `npm test`（見下方 T4-2 說明） |
+
+- **Python 測試（`npm run test:python`，T4-2 2026-10-03）**：`tests/e2e/` 共 **11 個 pytest 測試**，
+  由原 `temp_scripts/e2e_*.py` 轉入（原腳本在 gitignore 目錄、不被任何 CI 執行，
+  實測有 5 支已靜默腐化數月）。
+  - **⚠️ 刻意不併入 `npm test`**：訓練組需 TensorFlow 且實測 `test_task_type_rename` 需 50 秒，
+    併入會讓 `npm test` 從 **1 秒變數十秒**，違反本表「不同階段只跑該跑的層級」原則。
+  - 跳過慢速組：`python -m pytest -m "not slow"`。
+  - **`pyrightconfig.json`（Pylance）**：`tests/e2e/*.py` 以 `from common.xxx import` 匯入訓練模板，
+    **執行時靠 `tests/conftest.py` 的 `sys.path.insert`，但 Pylance 是靜態分析器、不執行 conftest** →
+    全部報「無法解析匯入」。`extraPaths` 必須指向 **`resources/train_templates`（套件根，含 `common/__init__.py`）**
+    而非 `common/` 子目錄，否則檔案內部的 `from common.image_formats import` 仍無法解析。
+  - 同理 **不要**把 `resources/train_templates/common` 直接加進 `sys.path`：實測會得到
+    `ModuleNotFoundError: No module named 'common'`（繞過套件的寫法在 package 內部會失效）。
 
 - **`lint:ui` 規則現況**（2026-09-30 建置）：`ui/.eslintrc.json` 以 `eslint:recommended` 為基底、掃描 **191 檔**（154 個 `.js` ＋ **34 個 `.mjs` 測試檔** ＋ 3 個共用夾具），**現況 0 error**。
   - 必須宣告的 globals：`Blockly`／`CocoyaLoader`／`CocoyaUtils`／`CocoyaMediaUri`／`CocoyaBoard`／`acquireVsCodeApi`／`hljs`（缺了會噴 2401 個 `no-undef`）。

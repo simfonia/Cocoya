@@ -1,0 +1,24 @@
+{
+    "extraPaths": [
+        "resources/train_templates"
+    ],
+    "include": [
+        "resources/train_templates",
+        "resources/dataset_manager",
+        "tests"
+    ],
+    "exclude": [
+        "**/__pycache__",
+        "node_modules",
+        "ui/node_modules",
+        "ui/dist",
+        "src-tauri/target",
+        "temp",
+        "temp_scripts",
+        "backup"
+    ],
+    "typeCheckingMode": "basic",
+    "reportMissingImports": "error",
+    "reportMissingModuleSource": "warning",
+    "pythonVersion": "3.11"
+}

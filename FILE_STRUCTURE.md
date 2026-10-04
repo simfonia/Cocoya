@@ -393,6 +393,7 @@ C:\Workspace\cocoya\
     │       ├── test_line_following_rename.py # line_following 改名一致性
     │       └── test_task_type_rename.py     # 四類型 task type 改名 + 實際訓練（slow）
     ├── pytest.ini             # pytest 設定（testpaths=tests、-q --strict-markers）
+    ├── pyrightconfig.json      # [2026-10-03] Pylance/Pyright 設定（extraPaths 指向 resources/train_templates 以解析 common 包裝）
     ├── temp_scripts/          # 執行期間暫存目錄（gitignored；原 e2e_*.py 已於 T4-2 轉入 tests/e2e/、掃描工具）
     │   ├── t_scan.cjs         # [2026-10-01] T-scan：掃描測試檔計時器洩漏／未清除 handle／無 await（靜態掃描；只報線索）
     │   └── parity_check.mjs   # Dataset Manager i18n parity 檢查
