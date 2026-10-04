@@ -36,6 +36,10 @@ jobs:
   node:
     name: Node（前端 + TS + 行尾 + 路徑守門）
     runs-on: windows-latest
+    env:
+      # husky 在 CI 不需要安裝 git hook（那是本機工作樹的事）。
+      # npm ci 會執行 prepare 腳本 -> husky，該命令在 CI 下是無意義的開銷。
+      HUSKY: '0'
     steps:
       - uses: actions/checkout@v4
 
@@ -59,8 +63,11 @@ jobs:
           npm ci
           npm ci --prefix ui
 
-      - name: 測試（compile + lint + 409 例 + rust + 行尾 + runtime paths 守門）
-        run: npm test
+      - name: 測試（compile + lint + 409 例 + 行尾 + runtime paths 守門）
+        # ⚠️ 刻意用 test:unit + test:ui，**不是** `npm test`。
+        #   `npm test` 末端含 `test:rust`（cargo test），但本 job 未安裝 Rust
+        #   —— 那是獨立 job 的職責。在這裡跑會因「cargo 不存在」而 exit code 1。
+        run: npm run test:unit && npm run test:ui
 
   rust:
     name: Rust（序列化契約 / command 註冊 / 多視窗 emit）
