@@ -49,3 +49,31 @@ export function nextLabelId(labelMap) {
     if (ids.length === 0) return 0;
     return Math.max.apply(null, ids) + 1;
 }
+
+/**
+ * 依字母序取出標籤 [name, id] 配對清單。
+ *
+ * [T4 2026-10-03] 為何需要這個 SSOT：
+ *   專案有 4 處渲染標籤下拉清單，排序一度不一致 ——
+ *     classification.js  有排序（localeCompare）
+ *     annotation.js       無排序（取鍵插入順序，使用者增刪標籤後順序會跳動）
+ *     featurePanel.js     無排序（同上）
+ *     samplerPanel.js     無排序（同上）
+ *   同一份 label_map 在不同面板顯示不同順序，使用者會誤以為資料不一致。
+ *
+ * @param {object} labelMap
+ * @returns {Array<[string, number]>}
+ */
+export function sortedLabelEntries(labelMap) {
+    const current = cleanLabelMap(labelMap);
+    return Object.entries(current).sort((a, b) => a[0].localeCompare(b[0]));
+}
+
+/**
+ * 依字母序取出標籤名稱陣列（下拉清單用）。
+ * @param {object} labelMap
+ * @returns {string[]}
+ */
+export function sortedLabelNames(labelMap) {
+    return sortedLabelEntries(labelMap).map(([name]) => name);
+}

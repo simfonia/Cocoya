@@ -12,12 +12,16 @@ export function createSamplerPanel({
     state, Sampler, UIComponents,
     updateStatsFromImages, refreshPreview, refreshStructurePanel,
     onSnapshot, onBurstToggle, onStartCamera, onStopCamera, onSampleCaptured,
-    nextLabelId
+    nextLabelId,
+    // [T4 2026-10-03] 標籤下拉排序 SSOT（見 core/labelMap.js:sortedLabelNames）
+    sortedLabelNames
 }) {
     function setupLiveSamplerView(modal, samplerView) {
         samplerView.style.display = 'block';
 
-        const labels = Object.keys(state.spec.toJSON().schema.label_map || {});
+        // [T4 2026-10-03] 依字母序取標籤（SSOT 見 core/labelMap.js:sortedLabelNames）
+        //   原先 Object.keys() 直出取鍵插入順序，與 classification.js / annotation.js 不一致。
+        const labels = sortedLabelNames(state.spec.toJSON().schema.label_map || {});
         // 移除自動推入 label_1，改為讓使用者手動新增標籤
 
         // [關鍵修正] 如果目前沒有選定標籤且有現成標籤，預設選取第一個
@@ -92,7 +96,8 @@ export function createSamplerPanel({
         }
 
         // 更新採集面板的 dropdown 選項清單（新增標籤後讓新標籤出現在下拉選單）
-        const updatedLabels = Object.keys(state.spec.toJSON().schema.label_map || {});
+        // [T4 2026-10-03] 依字母序，與 renderSamplerView 的初始排序一致
+        const updatedLabels = sortedLabelNames(state.spec.toJSON().schema.label_map || {});
         const labelSelect = samplerView.querySelector('#dataset-sampler-label-select');
         if (labelSelect) {
             labelSelect.innerHTML = updatedLabels.map((lb) =>

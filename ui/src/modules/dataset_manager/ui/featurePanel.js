@@ -28,6 +28,15 @@ export function createFeaturePanel({
 }) {
     let currentUseZ = false;
 
+    // [T4 2026-10-03] 標籤下拉一律依字母序（SSOT 見 core/labelMap.js:sortedLabelNames）
+    //   原先直接用傳入的 labels（= Object.keys(label_map)，取鍵插入順序），
+    //   使用者新增/刪除標籤後順序會跳動，且與 classification.js 不一致。
+    //   ⚠️ 保持函式形式：deps 注入的 sortedLabelNames 只接受 labelMap 物件，
+    //   此處拿到的是已取鍵的陣列，故沿用相同的 localeCompare 語意。
+    function sortedLabels(labels) {
+        return [...labels].sort((a, b) => String(a).localeCompare(String(b)));
+    }
+
     function buildDom(labels, targetLabel, cameraScanning) {
         const camOptions = cameraScanning
             ? '<option value="" disabled selected>' + escapeHtml(t('SAMPLER_SCANNING', '⏳ 掃描攝影機中...')) + '</option>'
@@ -35,7 +44,7 @@ export function createFeaturePanel({
             '<option value="' + c.id + '"' + (c.id === Sampler.state.selectedDeviceId ? ' selected' : '') + '>'
             + escapeHtml(c.name) + '</option>'
         ).join('');
-        const labelOptions = labels.map((l) =>
+        const labelOptions = sortedLabels(labels).map((l) =>
             '<option value="' + escapeHtml(l) + '"' + (l === targetLabel ? ' selected' : '') + '>'
             + escapeHtml(l) + '</option>'
         ).join('');
@@ -128,7 +137,7 @@ export function createFeaturePanel({
             labelSelect.onchange = () => {
                 const l = labelSelect.value;
                 rebuildLabelMap(modal, l);
-                refreshLabelSelect(view, Object.keys(state.spec.toJSON().schema.label_map || {}), l);
+                refreshLabelSelect(view, sortedLabels(Object.keys(state.spec.toJSON().schema.label_map || {})), l);
             };
         }
 
@@ -221,7 +230,8 @@ export function createFeaturePanel({
     function setupFeatureLiveView(modal, view) {
         if (!view) return;
         view.style.display = 'block';
-        const labels = Object.keys(state.spec.toJSON().schema.label_map || {});
+        // [T4 2026-10-03] 依字母序（與 buildDom 內的 sortedLabels 一致）
+        const labels = sortedLabels(Object.keys(state.spec.toJSON().schema.label_map || {}));
         currentUseZ = false;
         view.innerHTML = buildDom(labels, labels.length ? labels[0] : '', Sampler.state.cameraList.length === 0);
         bind(modal, view);

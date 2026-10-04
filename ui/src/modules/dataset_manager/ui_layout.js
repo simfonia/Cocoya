@@ -3,7 +3,7 @@ import { Sampler } from './sampler.js';
 import { UIComponents } from './ui_components.js';
 import { UICanvas } from './ui_canvas.js';
 import { t } from './i18n.js';
-import { buildLabelMap as buildCoreLabelMap, nextLabelId as getNextLabelId } from './core/labelMap.js';
+import { buildLabelMap as buildCoreLabelMap, nextLabelId as getNextLabelId, sortedLabelEntries, sortedLabelNames } from './core/labelMap.js';
 import { calculateStats, countAnnotatedImages } from './core/stats.js';
 import { createInitialDatasetState, DatasetStore } from './core/state.js';
 import { sanitizeProjectName, detectDatasetNameDrift } from './core/projectNaming.js';
@@ -128,7 +128,10 @@ const samplerPanel = createSamplerPanel({
     onSampleCaptured: (blob, savePath) => addSampleFromSampler(blob, savePath),
     // P2：結構面板重繪回呼（重建中欄統一標籤管理器＋統計，不再覆寫 innerHTML）
     refreshStructurePanel: () => renderStructurePanel(),
-    nextLabelId: (map) => nextLabelId(map)
+    nextLabelId: (map) => nextLabelId(map),
+    // [T4 2026-10-03] 標籤下拉清單排序 SSOT（見 core/labelMap.js:sortedLabelNames）
+    sortedLabelNames: (map) => sortedLabelNames(map),
+    sortedLabelEntries: (map) => sortedLabelEntries(map)
 });
 
 // M4 Phase 4：feature 類型 live 特徵採集面板（組 row → 依標籤累計 tableRows）
@@ -141,6 +144,8 @@ const featurePanel = createFeaturePanel({
     buildFeatureSchema,
     landmarksToRow,
     nextLabelId: (map) => nextLabelId(map),
+    sortedLabelNames: (map) => sortedLabelNames(map),
+    sortedLabelEntries: (map) => sortedLabelEntries(map),
     onFeatureCollected: (data) => addFeatureRow(data),
     renderTablePreview: (container, rows) => renderPreviewTable(container, rows),
     // P2：結構面板重繪回呼（重建中欄統一標籤管理器＋統計，不再覆寫 innerHTML）
@@ -1068,7 +1073,8 @@ function refreshLiveLabelOptions() {
     const modal = getModal();
     const view = modal ? modal.querySelector('#dataset-sampler-view') : null;
     if (!view) return;
-    const labels = Object.keys(state.spec.toJSON().schema.label_map || {});
+    // [T4 2026-10-03] 依字母序（與 samplerPanel / featurePanel 一致，SSOT 見 core/labelMap.js）
+    const labels = sortedLabelNames(state.spec.toJSON().schema.label_map || {});
 
     // 影像採集下拉（sampler）
     const labelSelect = view.querySelector('#dataset-sampler-label-select');

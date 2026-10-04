@@ -8,13 +8,15 @@
  * - 分流職責（projectType === 'image_classification' → 分類校正模式）留在 ui_layout 協調層
  * - 畫布生命週期：UICanvas 為共享 singleton，init 由本 controller 呼叫；
  *   unbindEvents / 面板清理仍由 ui_layout 的 exitAnnotationMode 統一處理
- * - 依賴全注入；annotation mutation 純函式直接 import application/annotationMutations.js
+ * - 依賴全注入；標籤下拉排序改用 SSOT：import { sortedLabelEntries } from '../core/labelMap.js'
  */
 import {
     countAnnotated, resolveDeleteIndex, removeAnnotationAt, setAnnotationClassId
 } from '../application/annotationMutations.js';
 // 2026-10-01（P1-2）：類型判斷改走 core/typePolicy.js（SSOT）。
 import { needsUnclassifiedCheck } from '../core/typePolicy.js';
+// [T4 2026-10-03] 標籤下拉排序 SSOT（四處渲染處統一，見 labelMap.js:sortedLabelEntries）
+import { sortedLabelEntries } from '../core/labelMap.js';
 
 /**
  * @param {object} options
@@ -370,7 +372,11 @@ export function createAnnotationController({
         const list = doc().getElementById('annotation-list-ui');
         if (!list) return;
         const labelMap = state.spec.toJSON().schema.label_map || {};
-        const labelEntries = Object.entries(labelMap);
+        // [T4 2026-10-03] 依字母序排列，與 classification.js 對齊。
+        //   原先直接 Object.entries() 直出 → 順序取自 label_map 的鍵插入順序，
+        //   使用者新增/刪除標籤後順序會跳動，且與分類審核的下拉不一致。
+        //   ⚠️ 只排序顯示，不改 label_map 的 id 對應（id === ann.class_id 判定不受影響）。
+        const labelEntries = sortedLabelEntries(labelMap);
 
         list.innerHTML = anns.map((ann, i) => {
             if (ann.line) {

@@ -5,6 +5,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createSamplerPanel } from './samplerPanel.js';
 import { makeSpecStub } from '../../../../test/fixtures.js';
+// [T4 2026-10-03] 斷言直接對齊 SSOT，避免測試內複製排序語意
+import { sortedLabelNames } from '../core/labelMap.js';
 
 function makeHarness({ labelMap = {}, targetLabel = '' } = {}) {
     // 單一 spec 假身：specData 與 state.spec 共用 backing 物件（斷言讀 h.specData）。
@@ -41,7 +43,12 @@ function makeHarness({ labelMap = {}, targetLabel = '' } = {}) {
         onSnapshot: () => {}, onBurstToggle: () => {},
         onStartCamera: () => {}, onStopCamera: () => {},
         onSampleCaptured: () => { calls.captured++; },
-        nextLabelId: (map) => Object.keys(map).length
+        nextLabelId: (map) => Object.keys(map).length,
+        // [T4 2026-10-03] 標籤下拉排序 SSOT。
+        //   ⚠️ 測試替身必須反映真實介面契約（AGENTS.md）：此處不可只回傳空陣列當擋箭牌，
+        //   否則「下拉清單是否有值」的所有斷言都會失效。
+        //   刻意沿用 production 的 localeCompare 語意，讓排序行為可被驗證。
+        sortedLabelNames: (map) => Object.keys(map || {}).sort((a, b) => String(a).localeCompare(String(b)))
     });
     return { state, specData, calls, Sampler, rendered, panel };
 }
@@ -77,12 +84,18 @@ test('背景列舉完成後只補下拉選單（渲染時為掃描中佔位）',
     assert.equal(sel.disabled, false);
 });
 
-test('有標籤時預選首標籤', () => {
+test('有標籤時預選首標籤（[T4] 字母序第一個，非鍵插入順序）', () => {
+    // ⚠️ 行為變更（2026-10-03）：預選項由「label_map 鍵插入順序第一個」
+    //   改為「**字母序第一個**」以對齊其他面板的下拉排序。
+    //   刻意用 dog:0 / cat:1（dog 先建立）區分兩種語意 —— 若實作退回
+    //   Object.keys 直出，本測試會紅（dog ≠ cat）。
     const h = makeHarness({ labelMap: { dog: 0, cat: 1 } });
     const modal = { querySelector: () => null };
     const view = makeView();
     h.panel.setupLiveSamplerView(modal, view);
-    assert.equal(h.Sampler.state.targetLabel, 'dog');
+    assert.equal(h.Sampler.state.targetLabel, 'cat');
+    assert.equal(h.Sampler.state.targetLabel,
+        sortedLabelNames({ dog: 0, cat: 1 })[0], '預選項必須等於字母序第一個');
 });
 
 test('onLabelChange 新標籤補 label_map 並以 refreshStructurePanel 重建中欄面板（不覆寫 innerHTML）', () => {
