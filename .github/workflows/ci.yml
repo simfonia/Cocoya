@@ -58,6 +58,20 @@ jobs:
             package-lock.json
             ui/package-lock.json
 
+      # ⚠️ **釘選 npm 版本**（不是只靠 node-version）。
+      #   實測教訓兩次（2026-10-04）：
+      #     1. Node 20(→npm 10) 報 @emnapi 缺漏
+      #     2. 改成 Node 24 後仍報 —— 因為 Node 24 對應的 npm 版本比本機的
+      #        11.6.2 更新，兩者對 **optional peer dependency** 的推導不同。
+      #
+      #   這是 npm 的已知行為差異，不是 lock 檔壞掉（同一份 lock 在本機可正常 npm ci）。
+      #   猜「node 24 對應哪個 npm」不可靠 —— 直接釘選最省事也最保險。
+      #
+      #   本機版本可查：npm --version（改動 lock 檔時務必用同一版本驗證）
+      - name: 釘選 npm 版本（與產生 lock 檔的環境一致）
+        run: npm install -g npm@11.6.2
+        # ↑ 請與本機 `npm --version` 的輸出保持一致
+
       - name: 安裝依賴（根 + ui）
         run: |
           npm ci
