@@ -132,4 +132,61 @@ if (missing.size) {
 }
 ' || exit 1
 
+echo "[pre-commit] 檢查 Python 子進程的 UTF-8 鐵律…"
+node -e '
+const fs = require("fs"), path = require("path");
+/*
+ * AGENTS.md「Python 子進程編碼鐵律」第 (2) 項：Host 啟動 Python 必帶
+ *   PYTHONIOENCODING / PYTHONUTF8。
+ *
+ * 為何需要守門：CI 首次執行時 huskylens_protocol.test.mjs 在 GitHub runner 上
+ * UnicodeEncodeError 失敗（runner 是 cp1252）。原因是只寫了 encoding:utf8 ——
+ * 那只管 Node **讀取**時的解碼，**管不到 Python 寫出時**的編碼。
+ *
+ * 實測：本專案當時 5 處 spawn Python **全部漏帶**，故立此守門。
+ */
+const targets = [];
+const walk = (d, filter) => {
+    if (!fs.existsSync(d)) return;
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+        const full = path.join(d, e.name);
+        if (e.isDirectory()) {
+            if (!["node_modules", "coverage", "temp", "target"].includes(e.name)) walk(full, filter);
+        } else if (filter(e.name)) targets.push(full);
+    }
+};
+walk("ui/src", (n) => n.endsWith(".test.mjs"));
+walk("scripts", (n) => n.endsWith(".cjs"));
+
+/*
+ * ⚠️ 掃描時必須**排除註解行** —— 初版用整檔 includes("PYTHONIOENCODING")
+ *   判斷，結果自己寫的說明註解裡出現了這個字就讓守門永遠放行
+ *   （mutation 驗證時才發現）。
+ *   同理，比對範圍限「spawn 呼叫所在行 + 後續 6 行」，
+ *   避免檔案其他地方碰巧提到就整檔豁免。
+ */
+const offenders = [];
+for (const f of targets) {
+    const lines = fs.readFileSync(f, "utf8").split("\n");
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const code = line.replace(/\/\/.*$/, "");          // 去掉行註解
+        if (!/spawnSync\s*\(|spawn\s*\(/.test(code)) continue;
+        if (!/\bpy\b|python|\bPY\b|exe\b|pythonExe/.test(code)) continue;
+        // 看 spawn 之後 6 行是否有帶 env（多行寫法的 env 在下一行）
+        const window = lines.slice(i, i + 7)
+            .map((l) => l.replace(/\/\/.*$/, "")).join("\n");
+        if (/PYTHONIOENCODING/.test(window)) continue;
+        offenders.push(f + ":" + (i + 1) + "  " + code.trim().slice(0, 66));
+    }
+}
+if (offenders.length) {
+    console.error("[pre-commit] 啟動 Python 未帶 PYTHONIOENCODING/PYTHONUTF8：");
+    offenders.forEach((o) => console.error("   " + o));
+    console.error("   需補： env: { ...process.env, PYTHONIOENCODING: \x27utf-8\x27, PYTHONUTF8: \x271\x27 }");
+    console.error("   理由：encoding 只管讀取端；Python 寫出端在 Windows 上預設是系統 ANSI 編碼。");
+    process.exit(1);
+}
+' || exit 1
+
 echo "[pre-commit] 通過"

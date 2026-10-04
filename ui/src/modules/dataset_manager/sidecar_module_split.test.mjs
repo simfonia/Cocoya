@@ -34,7 +34,12 @@ test('P2-3 守門 1：每個 sidecar 模組皆可獨立匯入（循環 import �
         '    importlib.import_module(n)',
         'print("ALL_OK")',
     ].join('\n');
-    const r = spawnSync(pythonExe, ['-c', script], { cwd: dmDir, encoding: 'utf-8', timeout: 180000 });
+    // ⚠️ PYTHONIOENCODING 必須携：`encoding` 只管讀取端，
+    //   Python 寫出端在 Windows 預設是系統 ANSI 編碼（CI runner 是 cp1252）。
+    const r = spawnSync(pythonExe, ['-c', script], {
+        cwd: dmDir, encoding: 'utf-8', timeout: 180000,
+        env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' }
+    });
     assert.equal(r.status, 0,
         `側車模組獨立匯入失敗（循環 import？）\n${(r.stderr || '').slice(0, 500)}`);
     assert.ok((r.stdout || '').includes('ALL_OK'), '匯入批次未完成');
@@ -43,7 +48,8 @@ test('P2-3 守門 1：每個 sidecar 模組皆可獨立匯入（循環 import �
 test('P2-3 守門 2：每個 sidecar 模組皆可 py_compile 且具模組層 docstring', () => {
     for (const f of pyModules) {
         const r = spawnSync(pythonExe, ['-m', 'py_compile', f], {
-            cwd: dmDir, encoding: 'utf-8', timeout: 90000
+            cwd: dmDir, encoding: 'utf-8', timeout: 90000,
+            env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' }
         });
         assert.equal(r.status, 0, `py_compile ${f} 失敗：\n${(r.stderr || '').slice(0, 300)}`);
         if (f === 'dataset_sidecar.py') continue;

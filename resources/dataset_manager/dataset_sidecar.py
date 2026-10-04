@@ -18,6 +18,22 @@ try:
 except ImportError:
     pass
 
+# ⚠️ 強制 UTF-8 I/O（AGENTS.md「Python 子進程編碼鐵律」第 (4) 項）。
+#
+#   為什麼必要：stdout 的**寫出**編碼不由父進程的 Popen(encoding=...) 決定 ——
+#   那是父進程的「讀取解碼器」。子進程寫出時用的是自己的 stdout 編碼，
+#   在 Windows 上預設跟隨系統 ANSI codepage（CI 的 GitHub runner 是 **cp1252**）。
+#
+#   本檔的診斷訊息幾乎都是中文（`[Sidecar Log] ...`），一旦在 cp1252 環境執行，
+#   print() 會在寫入階段直接拋 UnicodeEncodeError —— 而 stdout 還承載著
+#   對 Host 的 JSON 回應，一次崩潰會讓整條命令鏈無回應（症狀與病因完全無關）。
+#
+#   訓練模板（*_train.py）已有同樣的防護，這裡是 sidecar 端補齊。
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+if hasattr(sys.stderr, 'reconfigure'):
+    sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
 from camera_service import CameraService
 # P2-3：本地 Keras → TFLite 轉換已抽出為獨立模組（原本夾在 trainRemote 分支中）
 from remote_tflite import convert_keras_to_tflite

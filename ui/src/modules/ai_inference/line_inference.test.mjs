@@ -86,7 +86,10 @@ const findPython = () => {
   const cands = [process.env.COCOYA_PYTHON, 'C:\\WPy64-31160\\python-3.11.6.amd64\\python.exe', 'python', 'python3'];
   for (const exe of cands) {
     if (!exe) continue;
-    const r = spawnSync(exe, ['-c', 'import sys;print(sys.version_info[0])'], { encoding: 'utf8' });
+    const r = spawnSync(exe, ['-c', 'import sys;print(sys.version_info[0])'], {
+      encoding: 'utf8',
+      env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' }
+    });
     if (r.status === 0 && String(r.stdout).trim() === '3') return exe;
   }
   return null;
@@ -175,7 +178,12 @@ test('推論行為：_follow_line 端點/橫向偏移/角度/方向（含 int8 �
 
   const tmp = path.join(os.tmpdir(), 'cocoya_ai_line_' + Date.now() + '.py');
   fs.writeFileSync(tmp, cls + PY_HARNESS, 'utf8');
-  const res = spawnSync(py, [tmp], { encoding: 'utf8' });
+  // ⚠️ 必須帶 PYTHONIOENCODING/PYTHONUTF8（理由見 huskylens_protocol.test.mjs 同處註解）：
+    //   `encoding` 只管讀取端；Python 寫出端在 Windows 上預設是系統 ANSI 編碼。
+    const res = spawnSync(py, [tmp], {
+        encoding: 'utf8',
+        env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' }
+    });
   fs.unlinkSync(tmp);
   assert.equal(res.status, 0, 'Python harness 執行失敗：' + res.stderr);
 

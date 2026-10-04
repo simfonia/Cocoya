@@ -90,7 +90,10 @@ const findPython = () => {
   const cands = [process.env.COCOYA_PYTHON, 'C:\\WPy64-31160\\python-3.11.6.amd64\\python.exe', 'python', 'python3'];
   for (const exe of cands) {
     if (!exe) continue;
-    const r = spawnSync(exe, ['-c', 'import sys;print(sys.version_info[0])'], { encoding: 'utf8' });
+    const r = spawnSync(exe, ['-c', 'import sys;print(sys.version_info[0])'], {
+        encoding: 'utf8',
+        env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' }
+    });
     if (r.status === 0 && String(r.stdout).trim() === '3') return exe;
   }
   return null;
@@ -197,7 +200,16 @@ test('協定層：V1/V2 假解析與指令內容', (t) => {
 
   const tmp = path.join(os.tmpdir(), 'cocoya_hl_proto_' + Date.now() + '.py');
   fs.writeFileSync(tmp, hlClass + PY_HEAD, 'utf8');
-  const res = spawnSync(py, [tmp], { encoding: 'utf8' });
+  // ⚠️ 必須帶 PYTHONIOENCODING/PYTHONUTF8 —— `encoding: 'utf8'` 只決定 Node **讀取**
+    //   stdout 時用什麼解碼，**管不到 Python 端寫出時用什麼編碼**。
+    //   Windows 上 Python 的 stdout 預設跟隨系統 ANSI 編碼（CI runner 是 cp1252），
+    //   一旦 harness 印出中文就會在**寫入階段**拋 UnicodeEncodeError，
+    //   連哨兵行都沒產出 -> 測試報「執行失敗」，症狀與病因完全無關。
+    //   （AGENTS.md「Python 子進程編碼鐵律」第 (2) 項：Host env 必帶）
+    const res = spawnSync(py, [tmp], {
+        encoding: 'utf8',
+        env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' }
+    });
   fs.unlinkSync(tmp);
   assert.equal(res.status, 0, 'Python harness 執行失敗：' + res.stderr);
   // 類別內部的 V1 守門訊息會混入 stdout，僅取哨兵行

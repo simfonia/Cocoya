@@ -126,7 +126,12 @@ function main() {
     console.log(`[pytest] 執行：${py} ${args.join(' ')}\n`);
 
     const t0 = Date.now();
-    const r = spawnSync(py, args, { cwd: repoRoot, stdio: 'inherit' });
+    // ⚠️ 同理：Python 寫出端需在 Windows 上被從制為 UTF-8，
+    //   否則裡會印出中文的 pytest 失敗診日司會在寫出朝階狂。
+    const r = spawnSync(py, args, {
+        cwd: repoRoot, stdio: 'inherit',
+        env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' }
+    });
     const secs = ((Date.now() - t0) / 1000).toFixed(1);
     console.log(`\n[pytest] 耗時 ${secs}s（${run ? 'Tier 2' : 'Tier 1'}）`);
     process.exit(r.status === null ? 1 : r.status);
