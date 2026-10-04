@@ -359,6 +359,10 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
     而非 `common/` 子目錄，否則檔案內部的 `from common.image_formats import` 仍無法解析。
   - 同理 **不要**把 `resources/train_templates/common` 直接加進 `sys.path`：實測會得到
     `ModuleNotFoundError: No module named 'common'`（繞過套件的寫法在 package 內部會失效）。
+  - **`temp_scripts/` 的一次性腳本已於 2026-10-04 歸檔**（`_archive_20261004/`，gitignored）。
+    該目錄曾累積 187 個臨時 .py/.cjs，每個都被 Pylance 掃出無關錯誤。
+    ⚠️ **Pylance 的 `exclude` 只影響專案分析，不影響「使用者開啟該檔案時的診斷」**——
+    這是工具限制，設定改不了；根治方式是不要在專案內堆放一次性腳本。
 
 - **`lint:ui` 規則現況**（2026-09-30 建置）：`ui/.eslintrc.json` 以 `eslint:recommended` 為基底、掃描 **191 檔**（154 個 `.js` ＋ **34 個 `.mjs` 測試檔** ＋ 3 個共用夾具），**現況 0 error**。
   - 必須宣告的 globals：`Blockly`／`CocoyaLoader`／`CocoyaUtils`／`CocoyaMediaUri`／`CocoyaBoard`／`acquireVsCodeApi`／`hljs`（缺了會噴 2401 個 `no-undef`）。

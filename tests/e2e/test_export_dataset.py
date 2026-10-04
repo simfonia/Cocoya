@@ -50,22 +50,28 @@ def run_sidecar(source_dir, out_zip):
         encoding="utf-8",
         errors="replace",
     )
+    # Popen 的 stdin/stdout/stderr 型別上皆為 Optional（未設 PIPE 時為 None）。
+    # 這裡已明確傳入 PIPE，但仍需在型別層面收斂 —— 否則 .write() 是潛在的
+    # AttributeError（Pyright reportOptionalMemberAccess 抓到）。
+    stdin, stdout, stderr = proc.stdin, proc.stdout, proc.stderr
+    assert stdin is not None and stdout is not None and stderr is not None, \
+        "Popen 未取得 stdio（檢查 stdin/stdout/stderr=PIPE 是否仍存在）"
     try:
-        proc.stdin.write(json.dumps({"command": "ping", "requestId": "p0"}) + "\n")
-        proc.stdin.flush()
-        resp = json.loads(proc.stdout.readline().strip())
+        stdin.write(json.dumps({"command": "ping", "requestId": "p0"}) + "\n")
+        stdin.flush()
+        resp = json.loads(stdout.readline().strip())
         assert resp.get("success"), "ping failed: %s" % resp
-        proc.stdin.write(json.dumps({
+        stdin.write(json.dumps({
             "command": "exportDataset",
             "requestId": "e1",
             "sourceDir": source_dir,
             "outputZip": out_zip,
         }) + "\n")
-        proc.stdin.flush()
+        stdin.flush()
         while True:
-            line = proc.stdout.readline()
+            line = stdout.readline()
             if not line:
-                raise RuntimeError("sidecar died: " + proc.stderr.read())
+                raise RuntimeError("sidecar died: " + stderr.read())
             line = line.strip()
             if not line:
                 continue
@@ -74,7 +80,7 @@ def run_sidecar(source_dir, out_zip):
                 return r
     finally:
         try:
-            proc.stdin.close()
+            stdin.close()
         except Exception:
             pass
         proc.terminate()

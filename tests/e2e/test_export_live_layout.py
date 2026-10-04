@@ -81,24 +81,29 @@ def run_sidecar_export(source_dir, output_zip):
         encoding="utf-8",
         errors="replace",
     )
+    # Popen 的 stdio 型別上為 Optional（未設 PIPE 時為 None）；
+    # 先收斂型別再使用，避免潛在 AttributeError（Pyright 報告的風險）。
+    stdin, stdout = proc.stdin, proc.stdout
+    assert stdin is not None and stdout is not None, \
+        "Popen 未取得 stdio（檢查 stdin/stdout=PIPE 是否仍存在）"
     try:
-        proc.stdin.write(json.dumps({
+        stdin.write(json.dumps({
             "command": "ping", "requestId": "p0"}) + "\n")
-        proc.stdin.flush()
-        proc.stdout.readline()  # ping 回應
+        stdin.flush()
+        stdout.readline()  # ping 回應
 
-        proc.stdin.write(json.dumps({
+        stdin.write(json.dumps({
             "command": "exportDataset",
             "requestId": "e1",
             "sourceDir": source_dir,
             "outputZip": output_zip,
         }) + "\n")
-        proc.stdin.flush()
-        line = proc.stdout.readline()
+        stdin.flush()
+        line = stdout.readline()
         return json.loads(line)
     finally:
         try:
-            proc.stdin.close()
+            stdin.close()
         except Exception:
             pass
         proc.kill()

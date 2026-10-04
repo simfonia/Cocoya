@@ -46,6 +46,11 @@ def img(path, fmt):
 
 
 def one_batch(ds):
+    """取一個 batch 的 (x shape, y shape, min, max)。
+
+    空資料集回傳 (None, None, None, None) —— 呼叫端**必須**先確認非 None，
+    否則對 None 做比較會 TypeError（此為 Pyright reportOptionalOperand 抓到的真實風險）。
+    """
     for x, y in ds.take(1):
         return tuple(x.shape), tuple(y.shape), float(tf.reduce_min(x)), float(tf.reduce_max(x))
     return None, None, None, None
@@ -140,6 +145,7 @@ def test_classifier_dataloader(tmp_path):
         d_train, _, d_labels, d_counts = load_detector_dataset(
             dp, img_size=64, batch_size=1, validation_split=0)
         dx, dy, dlo, dhi = one_batch(d_train)
+        assert dlo is not None and dhi is not None, 'detector 空資料集（測試夾具有誤）'
         check(d_labels == ['ball'] and d_counts == {'ball': 2}, f"detector 只收 bmp: {d_counts}")
         check(dx == (1, 64, 64, 3) and dy == (1, 4), f"detector bmp batch: {dx} / {dy}")
         check(0.0 <= dlo and dhi <= 1.0, f"detector 正規化範圍: [{dlo:.2f}, {dhi:.2f}]")
