@@ -12,9 +12,11 @@
  * 執行程式：PC 端走 run_python，MicroPython 平台走 deploy_mcu 上傳到 MCU。
  * @this {import('../tauri.js').BridgeTauri}
  */
+import { getSetting, SETTINGS_KEY } from '../../core/settingsApi.js';
+
 export async function runCode(_command, data) {
     try {
-        const pythonPath = localStorage.getItem('pythonPath') || 'python';
+        const pythonPath = getSetting(SETTINGS_KEY.PYTHON_PATH) || 'python';
         const lang = (window.Blockly && Blockly.Msg['BKY_LANG']) || 'zh-hant';
 
         if (data.platform === 'MicroPython') {
@@ -30,7 +32,7 @@ export async function runCode(_command, data) {
                 code: data.code,
                 serialUploadOnly: data.serialUploadOnly || false,
                 rawDumpEnabled: data.rawDumpEnabled === undefined
-                    ? localStorage.getItem('cocoya_serial_raw_dump_enabled') === 'true'
+                    ? getSetting(SETTINGS_KEY.SERIAL_RAW_DUMP_ENABLED)
                     : !!data.rawDumpEnabled,
                 lang: lang
             });

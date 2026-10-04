@@ -329,7 +329,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         if (langSwitch) {
             langSwitch.setAttribute('title', (Blockly.Msg['BKY_STARTUP_LANG'] || 'Language'));
             let savedLang = '';
-            try { savedLang = localStorage.getItem('cocoya_lang') || ''; } catch (e) { }
+            try { savedLang = CocoyaSettings.get(CocoyaSettings.SETTINGS_KEY.LANG) || ''; } catch (e) { }
             const currentLang = savedLang || this.currentLang || 'zh-hant';
             for (const opt of langSwitch.querySelectorAll('.lang-switch-opt')) {
                 opt.classList.toggle('active', opt.getAttribute('data-lang') === currentLang);
@@ -338,7 +338,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         this._bindStartupHome();
         // 首次執行：尚未完成過 Python 環境設定 → 自動彈出環境設定視窗（僅一次；關閉視窗即寫入完成旗標）
         let envSetupDone = false;
-        try { envSetupDone = localStorage.getItem('cocoya_env_setup_done') === 'true'; } catch (e) { }
+        try { envSetupDone = CocoyaSettings.get(CocoyaSettings.SETTINGS_KEY.ENV_SETUP_DONE); } catch (e) { }
         if (!envSetupDone) {
             setTimeout(() => {
                 // 首頁仍顯示中才彈出（使用者若已先開新/開啟專案離開首頁則略過）
@@ -456,7 +456,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         const langSwitch = document.getElementById('startup-lang-switch');
         if (langSwitch) {
             let currentLang = 'zh-hant';
-            try { currentLang = localStorage.getItem('cocoya_lang') || this.currentLang || 'zh-hant'; } catch (e) { }
+            try { currentLang = CocoyaSettings.get(CocoyaSettings.SETTINGS_KEY.LANG) || this.currentLang || 'zh-hant'; } catch (e) { }
             for (const opt of langSwitch.querySelectorAll('.lang-switch-opt')) {
                 opt.onclick = (e) => {
                     e.stopPropagation();
@@ -470,7 +470,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
                         if (window.CocoyaBridge && window.CocoyaBridge.alert) window.CocoyaBridge.alert(lockMsg);
                         return;
                     }
-                    try { localStorage.setItem('cocoya_lang', nextLang); } catch (err) { }
+                    try { CocoyaSettings.set(CocoyaSettings.SETTINGS_KEY.LANG, nextLang); } catch (err) { }
                     if (window.CocoyaApp && window.CocoyaApp.snapshotWorkspaceForReload) window.CocoyaApp.snapshotWorkspaceForReload();
                     if (window.CocoyaBridge && typeof window.CocoyaBridge.send === 'function') {
                         window.CocoyaBridge.send('reloadWebview');

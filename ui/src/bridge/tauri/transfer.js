@@ -14,12 +14,14 @@
  * @this {import('../tauri.js').BridgeTauri}
  */
 
+import { getSetting, SETTINGS_KEY } from '../../core/settingsApi.js';
+
 /**
  * @this {import('../tauri.js').BridgeTauri}
  */
 export async function datasetExport(_command, data) {
     try {
-        const pythonPath = localStorage.getItem('pythonPath') || 'python';
+        const pythonPath = getSetting(SETTINGS_KEY.PYTHON_PATH) || 'python';
         const result = await this.tauriInvoke('export_dataset', {
             specJson: JSON.stringify(data.spec),
             sourceFolderPath: data.sourceFolderPath || '',

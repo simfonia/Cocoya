@@ -10,7 +10,8 @@
 (function() {
     'use strict';
 
-    var MODE_KEY = 'cocoya_theme_mode';
+    // [2026-10-04] 偏好 key 收斂至 core/settings.js（單一 SSOT）。原區域常數 MODE_KEY 已移除。
+    var MODE_KEY = CocoyaSettings.SETTINGS_KEY.THEME_MODE;
 
     var CocoyaTheme = {
         /** @type {Object.<string, Object>} 主題註冊表 */
@@ -55,7 +56,7 @@
          */
         getMode: function() {
             var m = 'auto';
-            try { m = localStorage.getItem(MODE_KEY) || 'auto'; } catch (e) { }
+            try { m = CocoyaSettings.get(MODE_KEY) || 'auto'; } catch (e) { }
             if (m === 'light') m = 'cocoya_light';
             else if (m === 'dark') m = 'cocoya_dark';
             return m;
@@ -83,7 +84,7 @@
             // 一律直接保留：快照後 reload（dirty 保留未存修改；乾淨時快照=當前內容，無副作用）
             if (app && app.snapshotWorkspaceForReload) app.snapshotWorkspaceForReload();
 
-            try { localStorage.setItem(MODE_KEY, mode); } catch (e) { }
+            try { CocoyaSettings.set(MODE_KEY, mode); } catch (e) { }
             console.log('[ThemeManager] setMode ->', mode);
             // VSIX 的 webview 沒有真實文件 URL，location.reload() 會白屏 → 交由 host 重建 HTML
             if (window.CocoyaBridge && typeof window.CocoyaBridge.send === 'function') {

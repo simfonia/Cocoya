@@ -178,8 +178,14 @@ test('P1-6 守門 5：前端 reset_firmware invoke 必須帶 pythonPath（跨語
         assert.ok(new RegExp('\\b' + camel + ':').test(invokeBlock),
             `reset_firmware 未送 ${camel}（Rust 參數 ${p.name}: ${p.type}）`);
     }
-    assert.ok(/pythonPath: localStorage\.getItem\('pythonPath'\)/.test(invokeBlock),
-        'pythonPath 應取自 localStorage 權威來源（非不存在的欄位）');
+    // pythonPath 必須來自使用者偏好（pythonPath key），不可用不存在的欄位或寫死值。
+    // [2026-10-04 遷移] 存取形式由 localStorage.getItem('pythonPath')
+    //   改為 SSOT adapter getSetting(SETTINGS_KEY.PYTHON_PATH)；
+    //   斷言改驗「值來源正確」而非綁死舊寫法，兩種形式皆接受。
+    assert.ok(
+        /pythonPath:\s*(CocoyaSettings\.get\(CocoyaSettings\.SETTINGS_KEY\.PYTHON_PATH\)|getSetting\(SETTINGS_KEY\.PYTHON_PATH\)|localStorage\.getItem\('pythonPath'\))/.test(invokeBlock),
+        'pythonPath 應取自偏好 SSOT 的 PYTHON_PATH（getSetting(SETTINGS_KEY.PYTHON_PATH)）'
+    );
 });
 test('P1-6 守門 6：terminal.sendText 的插入值必須經 psQuote 跳脫（F2 注入）', () => {
     const fw = read('src', 'handlers', 'firmwareOps.ts');

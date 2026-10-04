@@ -14,6 +14,7 @@
     "CocoyaUtils": "readonly",
     "CocoyaMediaUri": "readonly",
     "CocoyaBoard": "readonly",
+    "CocoyaSettings": "readonly",
     "acquireVsCodeApi": "readonly",
     "hljs": "readonly"
   },
@@ -21,7 +22,12 @@
   "ignorePatterns": ["*.min.js"],
   "overrides": [
     {
-      "files": ["src/**/*.test.mjs", "test/**/*.js", "test/**/*.mjs"],
+      "files": [
+        "src/**/*.test.mjs",
+        "src/**/*.mjs",
+        "test/**/*.js",
+        "test/**/*.mjs"
+      ],
       "env": { "node": true }
     }
   ],

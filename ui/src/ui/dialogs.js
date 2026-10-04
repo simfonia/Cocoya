@@ -113,7 +113,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         const preview = document.getElementById('highlight-color-preview');
         if (preview) preview.style.backgroundColor = color;
         
-        localStorage.setItem('cocoya_highlight_color', color);
+        CocoyaSettings.set(CocoyaSettings.SETTINGS_KEY.HIGHLIGHT_COLOR, color);
     },
 
     /**
@@ -335,7 +335,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         const taskType = options.taskType || 'image_classification';
         
         // 從 localStorage 讀取上次選擇的後端
-        const savedBackend = localStorage.getItem('cocoya_training_backend') || 'local';
+        const savedBackend = CocoyaSettings.get(CocoyaSettings.SETTINGS_KEY.TRAINING_BACKEND) || 'local';
         
         let dialog = document.getElementById('training-backend-dialog');
         if (dialog) dialog.remove();
@@ -430,9 +430,9 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             }
 
             // 記住使用者的選擇
-            localStorage.setItem('cocoya_training_backend', selectedBackend);
-            localStorage.setItem('cocoya_training_project_name', projectName);
-            localStorage.setItem('cocoya_training_task_type', taskType);
+            CocoyaSettings.set(CocoyaSettings.SETTINGS_KEY.TRAINING_BACKEND, selectedBackend);
+            CocoyaSettings.set(CocoyaSettings.SETTINGS_KEY.TRAINING_PROJECT_NAME, projectName);
+            CocoyaSettings.set(CocoyaSettings.SETTINGS_KEY.TRAINING_TASK_TYPE, taskType);
 
             dialog.remove();
             

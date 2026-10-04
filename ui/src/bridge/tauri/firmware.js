@@ -13,18 +13,20 @@
  * send() 的 try/catch，語意不變 —— 切勿「順手改成 return」否則燒錄失敗會靜默無提示。
  */
 
+import { getSetting, SETTINGS_KEY } from '../../core/settingsApi.js';
+
 /**
  * 部署 MicroPython 韌體到 MCU（deploy_mcu）。
  * @this {import('../tauri.js').BridgeTauri}
  */
 export async function deployMcu(_command, data) {
     await this.tauriInvoke('deploy_mcu', {
-        pythonPath: localStorage.getItem('pythonPath') || 'python',
+        pythonPath: getSetting(SETTINGS_KEY.PYTHON_PATH) || 'python',
         port: data.port,
         code: data.code,
         serialUploadOnly: false,
         rawDumpEnabled: data.rawDumpEnabled === undefined
-            ? localStorage.getItem('cocoya_serial_raw_dump_enabled') === 'true'
+            ? getSetting(SETTINGS_KEY.SERIAL_RAW_DUMP_ENABLED)
             : !!data.rawDumpEnabled,
         lang: (window.Blockly && Blockly.Msg['BKY_LANG']) || 'zh-hant'
     });
@@ -41,7 +43,7 @@ export async function eraseFilesystem(_command, data) {
         window.CocoyaUI.toggleTerminal(true);
         const loadingMsg = window.Blockly?.Msg['MSG_ERASING_FS'] || 'Rebuilding filesystem... Please wait about 15 seconds.';
         window.CocoyaUI.showLoadingModal(loadingMsg);
-        const pythonPath = localStorage.getItem('pythonPath') || 'python';
+        const pythonPath = getSetting(SETTINGS_KEY.PYTHON_PATH) || 'python';
         const lang = (window.Blockly && Blockly.Msg['BKY_LANG']) || 'zh-hant';
         await this.tauriInvoke('erase_filesystem', {
             port: data.serialPort,
@@ -73,7 +75,7 @@ export async function resetFirmware(_command, data) {
             shouldClear: data.shouldClear,
             serialPort: data.serialPort || '',
             // P1-6 F1：esptool 必須用與使用者設定一致的 Python（venv/conda 環境）
-            pythonPath: localStorage.getItem('pythonPath') || ''
+            pythonPath: getSetting(SETTINGS_KEY.PYTHON_PATH) || ''
         });
         window.CocoyaUI.hideLoadingModal();
         this.alert(window.Blockly?.Msg['MSG_FIRMWARE_BURN_SUCCESS'] || 'Burn success!');

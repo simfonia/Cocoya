@@ -6,6 +6,8 @@ import { getSendHandler } from './tauri/sendHandlers.js';
 /**
  * Tauri 桌面應用專屬橋接實作
  */
+import { getSetting, SETTINGS_KEY } from '../core/settingsApi.js';
+
 export class BridgeTauri extends BaseBridge {
     constructor() {
         super();
@@ -140,7 +142,7 @@ export class BridgeTauri extends BaseBridge {
                     if (this.tauriInvoke) {
                         this.tauriInvoke('set_window_focus', {
                             focused: false,
-                            rawDumpEnabled: localStorage.getItem('cocoya_serial_raw_dump_enabled') === 'true'
+                            rawDumpEnabled: getSetting(SETTINGS_KEY.SERIAL_RAW_DUMP_ENABLED)
                         }).catch(() => {
                             // 失焦時釋放序列埠失敗不需打擾使用者（可能本就沒有 monitor）。
                         });
@@ -150,7 +152,7 @@ export class BridgeTauri extends BaseBridge {
                     if (this.tauriInvoke) {
                         this.tauriInvoke('set_window_focus', {
                             focused: true,
-                            rawDumpEnabled: localStorage.getItem('cocoya_serial_raw_dump_enabled') === 'true'
+                            rawDumpEnabled: getSetting(SETTINGS_KEY.SERIAL_RAW_DUMP_ENABLED)
                         }).catch(() => {
                             // 重新取得序列埠失敗（埠被拔除／被其他程式佔用）時靜默，
                             // 使用者再次點擊序列埠選單即可重試。
@@ -363,7 +365,7 @@ export class BridgeTauri extends BaseBridge {
     async _handleDatasetCommand(sidecarCommand, data, callback, opts) {
         try {
             // 1. 確保 sidecar 已啟動（使用輕量 ping 健康檢查 + 狀態快取）
-            const pythonPath = localStorage.getItem('pythonPath') || 'python';
+            const pythonPath = getSetting(SETTINGS_KEY.PYTHON_PATH) || 'python';
             let sidecarReady = false;
 
             // 啟動失敗統一回結構化錯誤碼，讓面板能以 i18n 文案提示使用者

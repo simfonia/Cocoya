@@ -55,6 +55,7 @@
         "CocoyaUtils": "readonly",
         "CocoyaMediaUri": "readonly",
         "CocoyaBoard": "readonly",
+        "CocoyaSettings": "readonly",
         "acquireVsCodeApi": "readonly",
         "hljs": "readonly"
       },

@@ -273,7 +273,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                     msg.code = code;
                     msg.platform = window.CocoyaApp?.currentPlatform;
                     msg.serialPort = window.CocoyaUI && window.CocoyaUI.getSerialPort ? window.CocoyaUI.getSerialPort() : (document.getElementById('serial-selector')?.getAttribute('data-value') || '') || '';
-                    msg.serialUploadOnly = localStorage.getItem('cocoya_serial_upload_only') === 'true';
+                    msg.serialUploadOnly = CocoyaSettings.get(CocoyaSettings.SETTINGS_KEY.SERIAL_UPLOAD_ONLY);
                     msg.rawDumpEnabled = window.CocoyaUI?.isSerialRawDumpEnabled?.() === true;
                     if (self.flashButton) self.flashButton(id, '#e8f5e9'); // 綠色回饋
 
@@ -405,7 +405,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             const langTip = Blockly.Msg['BKY_STARTUP_LANG'] || 'Language';
             langToggleBtn.setAttribute('title', langTip);
             const currentLang = (() => {
-                try { return localStorage.getItem('cocoya_lang') || 'zh-hant'; } catch (e) { return 'zh-hant'; }
+                try { return CocoyaSettings.get(CocoyaSettings.SETTINGS_KEY.LANG) || 'zh-hant'; } catch (e) { return 'zh-hant'; }
             })();
             // 高亮目前語系側
             const langOpts = langToggleBtn.querySelectorAll('.lang-switch-opt');
@@ -424,7 +424,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                         if (window.CocoyaBridge && window.CocoyaBridge.alert) window.CocoyaBridge.alert(lockMsg);
                         return;
                     }
-                    try { localStorage.setItem('cocoya_lang', nextLang); } catch (err) { }
+                    try { CocoyaSettings.set(CocoyaSettings.SETTINGS_KEY.LANG, nextLang); } catch (err) { }
                     if (window.CocoyaApp && window.CocoyaApp.snapshotWorkspaceForReload) window.CocoyaApp.snapshotWorkspaceForReload();
                     if (window.CocoyaBridge && typeof window.CocoyaBridge.send === 'function') {
                         window.CocoyaBridge.send('reloadWebview');
@@ -469,13 +469,13 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         const serialUploadCheck = document.getElementById('serial-upload-check');
         if (serialUploadBtn && serialUploadCheck) {
             const updateUI = () => {
-                const isEnabled = localStorage.getItem('cocoya_serial_upload_only') === 'true';
+                const isEnabled = CocoyaSettings.get(CocoyaSettings.SETTINGS_KEY.SERIAL_UPLOAD_ONLY);
                 serialUploadCheck.textContent = isEnabled ? '✔' : '';
             };
             updateUI();
             serialUploadBtn.onclick = () => {
-                const current = localStorage.getItem('cocoya_serial_upload_only') === 'true';
-                localStorage.setItem('cocoya_serial_upload_only', !current);
+                const current = CocoyaSettings.get(CocoyaSettings.SETTINGS_KEY.SERIAL_UPLOAD_ONLY);
+                CocoyaSettings.set(CocoyaSettings.SETTINGS_KEY.SERIAL_UPLOAD_ONLY, !current);
                 updateUI();
             };
         }
@@ -888,7 +888,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         const colorInput = document.getElementById('highlight-color-input');
         if (colorInput) {
             // 從 localStorage 恢復顏色
-            const savedColor = localStorage.getItem('cocoya_highlight_color') || '#fff59d';
+            const savedColor = CocoyaSettings.get(CocoyaSettings.SETTINGS_KEY.HIGHLIGHT_COLOR) || '#fff59d';
             colorInput.value = savedColor;
             if (self.applyHighlightColor) self.applyHighlightColor(savedColor);
 

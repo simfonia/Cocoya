@@ -23,10 +23,12 @@
  * 開啟序列埠監看（open_serial_monitor）。
  * @this {import('../tauri.js').BridgeTauri}
  */
+import { getSetting, SETTINGS_KEY } from '../../core/settingsApi.js';
+
 export async function openSerialMonitor(_command, data) {
     try {
         if (!data.serialPort) return;
-        const pythonPath = localStorage.getItem('pythonPath') || 'python';
+        const pythonPath = getSetting(SETTINGS_KEY.PYTHON_PATH) || 'python';
         const lang = (window.Blockly && Blockly.Msg['BKY_LANG']) || 'zh-hant';
         if (window.CocoyaUI) {
             window.CocoyaUI.toggleTerminal(true);
@@ -36,7 +38,7 @@ export async function openSerialMonitor(_command, data) {
             port: data.serialPort,
             pythonPath: pythonPath,
             rawDumpEnabled: data.rawDumpEnabled === undefined
-                ? localStorage.getItem('cocoya_serial_raw_dump_enabled') === 'true'
+                ? getSetting(SETTINGS_KEY.SERIAL_RAW_DUMP_ENABLED)
                 : !!data.rawDumpEnabled,
             lang: lang
         });
@@ -55,13 +57,13 @@ export async function toggleSerialMonitor(_command, data) {
     // 序列監看鈕 toggle：後端已啟用中 → 停止；否則對指定埠啟動
     try {
         if (!data.serialPort) return;   // 原碼為 break（區塊式 case），函式內改用 return
-        const monPython = localStorage.getItem('pythonPath') || 'python';
+        const monPython = getSetting(SETTINGS_KEY.PYTHON_PATH) || 'python';
         const monLang = (window.Blockly && Blockly.Msg['BKY_LANG']) || 'zh-hant';
         const res = await this.tauriInvoke('toggle_serial_monitor', {
             port: data.serialPort,
             pythonPath: monPython,
             rawDumpEnabled: data.rawDumpEnabled === undefined
-                ? localStorage.getItem('cocoya_serial_raw_dump_enabled') === 'true'
+                ? getSetting(SETTINGS_KEY.SERIAL_RAW_DUMP_ENABLED)
                 : !!data.rawDumpEnabled,
             lang: monLang
         });

@@ -3,16 +3,19 @@
  * 負責主題同步、縮排設定、平台管理與環境變數
  */
 window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
+    // [2026-10-04] 偏好存取統一走 core/settings.js（單一 SSOT，含型別驗證與預設值）。
+    //   直接寫 localStorage.getItem/setItem 會讓設定靜默失效（拼錯 key 也不報錯）。
     currentPlatform: (function() {
-        try { 
-            let p = localStorage.getItem('cocoya_platform');
+        try {
+            let p = CocoyaSettings.get(CocoyaSettings.SETTINGS_KEY.PLATFORM);
+            // 相容舊資料：曾寫入過 CircuitPython / MCU 兩種過時名稱
             if (p === 'CircuitPython' || p === 'MCU') {
                 p = 'MicroPython';
-                localStorage.setItem('cocoya_platform', p);
+                CocoyaSettings.set(CocoyaSettings.SETTINGS_KEY.PLATFORM, p);
             }
             return p || 'MicroPython';
-        } catch (e) { 
-            return 'MicroPython'; 
+        } catch (e) {
+            return 'MicroPython';
         }
     })(),
     currentLang: 'zh-hant',
@@ -114,7 +117,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
      */
     setPlatformUI: async function(platform) {
         this.currentPlatform = platform;
-        localStorage.setItem('cocoya_platform', platform);
+        CocoyaSettings.set(CocoyaSettings.SETTINGS_KEY.PLATFORM, platform);
         this.updatePlatformLabel();
         if (Blockly.Python) Blockly.Python.PLATFORM = platform;
         

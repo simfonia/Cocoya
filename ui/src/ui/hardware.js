@@ -154,12 +154,12 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
     _rememberPreferredPort: function(port) {
         if (!port) return;
         this._preferredSerialPort = port;
-        try { localStorage.setItem('cocoya_serial_preferred_port', port); } catch (e) {}
+        try { CocoyaSettings.set(CocoyaSettings.SETTINGS_KEY.SERIAL_PREFERRED_PORT, port); } catch (e) {}
     },
 
     _restorePreferredPort: function() {
         if (this._preferredSerialPort) return;
-        try { this._preferredSerialPort = localStorage.getItem('cocoya_serial_preferred_port') || ''; } catch (e) {}
+        try { this._preferredSerialPort = CocoyaSettings.get(CocoyaSettings.SETTINGS_KEY.SERIAL_PREFERRED_PORT) || ''; } catch (e) {}
     },
 
     /** 序列監看鈕狀態（toggle 亮燈；由 bridge 收到結果/結束事件時呼叫） */
@@ -242,16 +242,18 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         if (eraseBtn) eraseBtn.style.display = isMCU ? 'flex' : 'none';
     },
 
-    /** MCU Raw Dump 診斷偏好鍵；false 為安全預設。 */
-    SERIAL_RAW_DUMP_KEY: 'cocoya_serial_raw_dump_enabled',
+    /** MCU Raw Dump 診斷偏好鍵；false 為安全預設。[2026-10-04] 收斂至 core/settings.js */
+    SERIAL_RAW_DUMP_KEY: (typeof CocoyaSettings !== 'undefined'
+        ? CocoyaSettings.SETTINGS_KEY.SERIAL_RAW_DUMP_ENABLED
+        : 'cocoya_serial_raw_dump_enabled'),
 
     isSerialRawDumpEnabled: function() {
-        return localStorage.getItem(this.SERIAL_RAW_DUMP_KEY) === 'true';
+        return CocoyaSettings.get(this.SERIAL_RAW_DUMP_KEY);
     },
 
     _setSerialRawDumpEnabled: function(enabled) {
         const value = !!enabled;
-        localStorage.setItem(this.SERIAL_RAW_DUMP_KEY, String(value));
+        CocoyaSettings.set(this.SERIAL_RAW_DUMP_KEY, value);
         const toggle = document.getElementById('btn-serial-raw-dump');
         if (toggle) {
             toggle.classList.toggle('enabled', value);
@@ -371,7 +373,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         }
         const modal = document.getElementById('diagnose-modal');
         if (modal) modal.style.display = 'none';
-        try { localStorage.setItem('cocoya_env_setup_done', 'true'); } catch (e) { /* 隱私模式等情境忽略 */ }
+        try { CocoyaSettings.set(CocoyaSettings.SETTINGS_KEY.ENV_SETUP_DONE, true); } catch (e) { /* 隱私模式等情境忽略 */ }
     },
 
     /**

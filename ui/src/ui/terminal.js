@@ -131,19 +131,19 @@
      * @param {string} btnId 按鈕 id
      * @param {string} targetId 套用字體大小的目標元素 id
      * @param {number[]} sizes 循環的大小序列 (px)
-     * @param {string} storageKey localStorage 儲存 key
+     * @param {string} storageKey 偏好 key（[2026-10-04] 走 core/settings.js 統一存取）
      */
     UI.setupFontSizeCycler = function(btnId, targetId, sizes, storageKey) {
         const btn = document.getElementById(btnId);
         const target = document.getElementById(targetId);
         if (!btn || !target) return;
 
-        let idx = sizes.indexOf(parseInt(localStorage.getItem(storageKey), 10));
+        let idx = sizes.indexOf(parseInt(CocoyaSettings.get(storageKey), 10));
         if (idx < 0) idx = 0;
 
         const apply = () => {
             target.style.fontSize = `${sizes[idx]}px`;
-            localStorage.setItem(storageKey, String(sizes[idx]));
+            CocoyaSettings.set(storageKey, String(sizes[idx]));
         };
         apply();
 

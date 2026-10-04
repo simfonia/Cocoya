@@ -13,11 +13,13 @@
  * 選擇 Python 執行檔路徑並回報環境狀態。
  * @this {import('../tauri.js').BridgeTauri}
  */
+import { getSetting, setSetting, SETTINGS_KEY } from '../../core/settingsApi.js';
+
 export async function setPythonPath() {
     try {
         const newPath = await this.tauriInvoke('pick_python_path');
         if (newPath) {
-            localStorage.setItem('pythonPath', newPath);
+            setSetting(SETTINGS_KEY.PYTHON_PATH, newPath);
             const msg = (window.Blockly?.Msg['MSG_PYTHON_UPDATED'] || 'Python path updated to: %1').replace('%1', newPath);
             this.alert(msg);
             // 回報新路徑給環境設定視窗並自動重新檢查套件
@@ -38,7 +40,7 @@ export async function getPythonPath() {
     // 環境設定視窗路徑列：回報目前 pythonPath（Tauri 權威來源 = localStorage）
     this._dispatchToFrontend({
         command: 'pythonPathData',
-        pythonPath: localStorage.getItem('pythonPath') || 'python'
+        pythonPath: getSetting(SETTINGS_KEY.PYTHON_PATH) || 'python'
     });
 }
 
@@ -52,7 +54,7 @@ export async function getPythonPath() {
  */
 export async function checkEnvironment() {
     try {
-        const pythonPath = localStorage.getItem('pythonPath') || 'python';
+        const pythonPath = getSetting(SETTINGS_KEY.PYTHON_PATH) || 'python';
         const envData = await this.tauriInvoke('check_environment', { pythonPath: pythonPath });
         console.log('[Bridge] check_environment returned:', envData);
         this._dispatchToFrontend({ command: 'environmentStatus', ...envData });
@@ -81,7 +83,7 @@ export async function checkEnvironment() {
  */
 export async function installModule(_command, data) {
     try {
-        const pythonPath = localStorage.getItem('pythonPath') || 'python';
+        const pythonPath = getSetting(SETTINGS_KEY.PYTHON_PATH) || 'python';
         await this.tauriInvoke('install_python_module', {
             pythonPath: pythonPath,
             moduleId: data.module,

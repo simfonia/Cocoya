@@ -45,7 +45,14 @@ export const UICanvas = {
     LABEL_FONT_SIZE: 15,
     LABEL_FONT_SIZE_SELECTED: 17,
     CROSSHAIR_DEFAULT_COLOR: '#00ff88',
-    CROSSHAIR_STORAGE_KEY: 'cocoya_dm_crosshair_color',
+    /*
+     * [2026-10-04] 偏好 key 收斂至 core/settings.js（單一 SSOT）。
+     * 本檔同時被當作 ESM 直接 import（Node 測試），該情境下無 window 全域，
+     * 故以 typeof 防護並保留字面值 fallback —— 兩者必須一致，否則設定會分叉。
+     */
+    CROSSHAIR_STORAGE_KEY: (typeof CocoyaSettings !== 'undefined'
+        ? CocoyaSettings.SETTINGS_KEY.DM_CROSSHAIR_COLOR
+        : 'cocoya_dm_crosshair_color'),
 
     // bbox / 線段框線顏色（2026-10-01）
     // 選取中的框固定用醒目青色：選取狀態必須與類別色脫鉤，
@@ -114,7 +121,7 @@ export const UICanvas = {
         this.state.crosshairColor = color.trim();
         if (persist) {
             try {
-                localStorage.setItem(this.CROSSHAIR_STORAGE_KEY, this.state.crosshairColor);
+                CocoyaSettings.set(this.CROSSHAIR_STORAGE_KEY, this.state.crosshairColor);
             } catch (e) { /* 隱私模式忽略 */ }
         }
         this.render();
@@ -126,7 +133,7 @@ export const UICanvas = {
      */
     loadCrosshairColor() {
         let saved = null;
-        try { saved = localStorage.getItem(this.CROSSHAIR_STORAGE_KEY); } catch (e) { /* 忽略 */ }
+        try { saved = CocoyaSettings.get(this.CROSSHAIR_STORAGE_KEY); } catch (e) { /* 忽略 */ }
         this.state.crosshairColor = saved || this.CROSSHAIR_DEFAULT_COLOR;
         return this.state.crosshairColor;
     },

@@ -324,6 +324,12 @@
     <script src="src/utils/generators.js"></script>
     <script src="src/utils/mutator.js"></script>
     <script src="src/utils/search.js"></script>
+    <!-- 使用者偏好 SSOT（單一事實來源）。
+         載入順序是契約：必須早於所有讀取 CocoyaSettings 的 script
+         （hardware.js / config.js / ...），否則讀到 undefined。
+         守門：modules/core/settings.test.mjs 守門 6 會驗證本順序。 -->
+    <script src="src/core/settings.js"></script>
+
     <script src="src/ui/terminal.js"></script>
     <script src="src/ui/renderer.js"></script>
     <script src="src/ui/hardware.js"></script>
