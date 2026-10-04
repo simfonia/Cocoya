@@ -11,6 +11,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import pytest  # [2026-10-04] slow marker（見 scripts/pytest-layers.cjs）
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PY = sys.executable
@@ -39,6 +40,7 @@ def make_line_dataset(root, n=10):
     return root
 
 
+@pytest.mark.slow
 def test_line_following_rename(tmp_path):
     # ---- 1. 訓練模板目錄/檔名已改名 ----
     check(os.path.isdir(os.path.join(TEMPLATES, "line_following")),

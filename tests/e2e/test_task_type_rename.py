@@ -13,6 +13,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import pytest  # [2026-10-04] slow marker（見 scripts/pytest-layers.cjs）
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 PY = sys.executable
@@ -95,6 +96,7 @@ def run(script, ds, name, base):
     return proc, produced
 
 
+@pytest.mark.slow
 def test_task_type_rename(tmp_path):
     # 1. 目錄與檔名
     for d, f in [("image_classification", "image_classification_train.py"),

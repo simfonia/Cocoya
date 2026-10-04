@@ -46,6 +46,8 @@ const SKIP_DIR_PARTS = new Set([
   'node_modules', 'target', 'dist', 'out', 'build', '__pycache__',
   '.git', 'gen',              // gen：Tauri 自動產生的 schema
   'backup',                   // 歷史備份，依專案規範不得改寫
+   // coverage：產物（HTML / per-file JSON）可重新生成。baseline.json 已进版控，
+   //   但其行尾由 scripts/coverage.cjs 自身保è­（它已改為寫入 CRLF）
 ]);
 
 // 明確以 -text 標示的 vendored 資產（與 .gitattributes 對應）

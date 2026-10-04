@@ -142,7 +142,11 @@ function saveBaseline(summary) {
         note: prev.note || '基準值僅供趨勢對照，不代表品質目標。',
         history
     };
-    fs.writeFileSync(baselinePath, JSON.stringify(baseline, null, 2) + '\n');
+    // è¨ç£æ¬å°è¦å¼ï¼bline æ¬è¡å°é ææå©ä»¦ææ CRLF
+    // å¤çæ¬å入 LF ââ äå°é½å¦å©ç¨
+    // JSON.stringify ä¸åæ¼èª¿çº¿æ，éæå·¥ææå¨
+    const json = JSON.stringify(baseline, null, 2);
+    fs.writeFileSync(baselinePath, json.replace(/\n/g, '\r\n') + '\r\n');
     console.log(`\n[coverage] 基準已寫入 coverage/baseline.json（enforce: false）`);
 }
 

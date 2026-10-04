@@ -12,6 +12,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import pytest  # [2026-10-04] slow marker（見 scripts/pytest-layers.cjs）
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 FEATURE = os.path.join(REPO, "resources", "train_templates", "feature", "feature_train.py")
@@ -47,6 +48,7 @@ def build_dataset(root, n=12):
     return root
 
 
+@pytest.mark.slow
 def test_feature_train(tmp_path):
     tmp = tempfile.mkdtemp(prefix="cocoya_g1check_")
     ds = build_dataset(os.path.join(tmp, "dataset", "g1check"))
