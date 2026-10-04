@@ -424,6 +424,18 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
 - **計時器洩漏紅線**：測試中呼叫會啟動 `setTimeout` 的 API 時，必須傳明確 `duration` 或於測試結束前 `dispose()`。未清除的 timer 會吊住 Node event loop，單檔實測多等 5 秒（`ui/statusMessage.test.mjs` 曾因此讓全量測試 5.7s → 0.6s 失守）。
 - **禁止真等待驗 debounce（2026-10-01 踩坑）**：要驗「N 毫秒後才觸發」**必須用 `t.mock.timers.enable({ apis: ['setTimeout'] })` ＋ `t.mock.timers.tick(N)`**，不可 `await new Promise(r => setTimeout(r, N+100))`。`node --test` 會**並發**執行同一檔內的測試，真等待會疊在同一時間軸上：3 個 2.1 秒的 debounce 測試曾讓單檔耗時 6.4 秒。改 mock 後 112ms，且能在同一 tick 內驗「1999ms 不送／2000ms 送一份」這個真等待根本驗不到的邊界。
 - **新守門一律做變異測試（2026-10-01 確立）**：新增契約測試後，必須**刻意破壞來源碼確認測試會紅**，再還原（`git status` 確認乾淨）。只驗「綠燈」無法區分有效守門與假安全感 —— 稽核計畫 §9.2 正是本專案「測試很多但抓不到 bug」的病根。
+- **變異測試可能證明「測試本身是假安全感」（2026-10-04 T7 實例）**：
+  `_datasetUploadChain` 的「前一棒失敗後後續仍執行」測試，我原本當作雙參數
+  `.then(uploadTask, uploadTask)` 的保護證據。mutation 成單參數後**測試仍全綠** ——
+  因為 `uploadTask` 內部有完整 try/catch，永不 reject，鏈永遠處於 fulfilled 狀態，
+  兩種寫法行為完全相同。**真正能區分的是「catch 內的 `_dispatchToFrontend` 拋錯」**
+  （前端訊號線斷掉時才會發生），單參數 then 會讓整條鏈從此永久 rejected。
+  教訓：測試的判準必須落在「真正會變動的不變式」，而非「看起來相關的程式碼形狀」。
+- **`send()` 開頭有 `await this.ready`，測試不可直接呼叫（2026-10-04 T7 踩坑）**：
+  `ready` 只在 `init()`（動態 import Tauri api 套件，Node 無此模組）中 resolve。
+  直接 `bridge.send(...)` 會**永久 await**（測試整批超時，看起來像死結）。
+  正解：`getSendHandler(cmd).call(bridge, cmd, data)` —— 與 `send()` 內部
+  dispatch handler 的路徑完全相同，仍覆蓋真正實作碼。
 - **測試替身必須反映真實介面契約（2026-10-01 踩坑）**：替身方法的**回傳型別**也是契約。例：`persistence.setDirty` 直接回傳 `CocoyaBridge.send()` 的結果，替身若回傳 `undefined` 則 `await setDirty` 不構成任何保證。寫替身前先讀被測函式的回傳路徑。
 - **清單式守門 vs 掃描型守門（2026-10-01 確立）**：清單式（列幾個檔案、檢查幾個字串）永遠只等於「當初想到的範圍」；掃描型（遍歷目錄、對整條不變式斷言）才會持續生效。P1-1 依計畫原文改了 4 個檔案，實際有 7 個檔案 16 處 —— 漏掉的 `core/stats.js` 是被新增的掃描型守門抓出來的。
 - **跨端檢索鐵則（2026-10-01）**：判定「某符號無使用點」必須同時檢索**前端 `ui/src` ＋ VSIX Host `src` ＋ Rust `src-tauri`**。混合架構中同一份邏輯分散三處，只掃一端會得出假陰性（`isRemoteConnected` 的誤判即為此例）。

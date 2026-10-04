@@ -137,6 +137,7 @@ C:\Workspace\cocoya\
 │   │   │   ├── base.js    # 橋接基底類別 (含 saveDatasetProgress/loadDatasetProgress 便捷方法 [NEW])
 │   │   │   ├── tauri.js   # Tauri 專屬橋接 (含介面適配；datasetSaveProgress/datasetLoadProgress 路由 [NEW])
 │   │   │   ├── tauri_anchor.test.mjs # [2026-10-01] BridgeTauri 錨定與 capabilities 契約測試（13 測；_normalizeAnchor 的 serde camelCase/snake_case 雙保險、capabilities getter 欄位集合與即時反映、_refreshAnchor 成功/拋錯/null 三分支）
+│   │   │   ├── tauri_upload_chain.test.mjs # [2026-10-04 T7] _datasetUploadChain 併發上傳鏈契約測試（13 測；序列化/FIFO 不可並行、前棒失敗不中斷後續、catch 內拋錯時鏈仍存活（雙參數 then 的真實防護場景）、失敗必須 dispatch、分塊欄位清洗、datasetExport Canceled 分支）
 │   │   │   └── vscode.js  # VS Code 專屬橋接
 │   │   ├── ui/          # UI 功能子模組
 │   │   │   ├── terminal.js # 終端機邏輯（有界隊列、rAF 批次 flush、1000 行保護、單節點字元長度防護）
@@ -256,6 +257,7 @@ C:\Workspace\cocoya\
 │   │   │       ├── ui_canvas.js # 標註互動畫布 (物件偵測拉框與自駕循線畫線，座標限幅防護、bbox 高亮與雙模互動；[2026-10-01] 跨畫面十字尺規可調色、框線雙色描邊（白外框＋標籤色內框）且不依主題變明度（框線畫在照片上）、標註列表 hover 時的 2Hz 閃爍虛線高亮)
 │   │   │       ├── ui_canvas.test.mjs # [2026-10-01] 標註畫布呈現守門（24 測：尺規、標註文字、labelMap 即時重繪、resolveBoxColor、掃描型自檢）
 │   │   │       ├── dataset_theme_contract.test.mjs # [2026-10-01／2026-10-02] DM 樣式表契約守門（8 測：暗色 class 對齊、縮圖 contain、縮圖底色走 token、狀態變體**有效值**；[2026-10-02] P1-3 增守門 5「dark 不得重複宣告 light 已有 var」；守門 4 判準升級為「dark 主題有效值不得沿用淺色值」（解析 var→主題 cssVars 真值）；守門 7「註解提前閉合」已移交 theme_contract.test.mjs 全專案版）
+│   │   │       ├── sidecar_stdout_contract.test.mjs # [2026-10-04 T7] sidecar stdout 單一 JSON 訊息契約守門（6 測：stdout 僅經 send_response/send_event/send_error、JSON 輸出必須 flush=True、三種 type 齊備、Rust 端確實解析（兩端不可漂移）、反向保護訓練模板 RESULT 錨點）
 │   │   │       └── i18n/      # 語系檔目錄
 │   │   │           ├── zh-hant.js # 繁體中文 i18n 鍵值 (VALIDATE_*/ANNOTATION_*/ENTRY_*/PAGE_*/DEV_BANNER_*/SWITCH_TYPE_*；142 key 與 en parity)
 │   │   │           └── en.js      # 英文 i18n 鍵值 (同 zh-hant 142 key 全對齊)
