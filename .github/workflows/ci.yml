@@ -89,6 +89,11 @@ jobs:
         with:
           python-version: '3.11'
           cache: pip
+          # ⚠️ 必須指定：setup-python 的 pip 快取默記只找
+          #   **/requirements.txt 與 pyproject.toml，不會找 requirements-dev.txt。
+          #   實測錯誤：未指定時报
+          #   "No file matched to [**/requirements.txt or **/pyproject.toml]"。
+          cache-dependency-path: requirements-dev.txt
 
       # ⚠️ TensorFlow 雖只在「訓練」時才需要，但
       #   tests/e2e/test_classifier_dataloader.py 在**模組層級** import tensorflow
@@ -114,6 +119,11 @@ jobs:
         with:
           python-version: '3.11'
           cache: pip
+          # ⚠️ 必須指定：setup-python 的 pip 快取默記只找
+          #   **/requirements.txt 與 pyproject.toml，不會找 requirements-dev.txt。
+          #   實測錯誤：未指定時报
+          #   "No file matched to [**/requirements.txt or **/pyproject.toml]"。
+          cache-dependency-path: requirements-dev.txt
 
       - name: 安裝測試依賴
         run: |
