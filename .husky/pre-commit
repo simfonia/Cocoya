@@ -56,4 +56,80 @@ if (off.length) {
 }
 ' || exit 1
 
+echo "[pre-commit] 檢查 Python 測試依賴是否已宣告…"
+node -e '
+const fs = require("fs"), path = require("path");
+/*
+ * 首次上 CI 的教訓（2026-10-04）：Tier 1 三個測試失敗，
+ * 逐一查證後才發現是「requirements-dev.txt 漏了套件」：
+ *   - sklearn        -> training_loop.py 頂層 import
+ *   - cv2 / paramiko -> dataset_sidecar.py 頂層 import（sidecar 啟動失敗，
+ *                       症狀卻是 JSONDecodeError，與病因完全無關）
+ *
+ * 本守門比對「測試**直接** import 的第三方套件」與「requirements 已宣告者」，
+ * 讓漏宣告在 commit 前就暴露，而不是等 CI。
+ *
+ * ⚠️ **已知盲點（實測確認，勿以為它能擋全部）**：
+ *   它**只看測試檔案自己的 import**，看不到「透過 subprocess 啟動的腳本
+ *   所需依賴」。實例：scikit-learn 是 training_loop.py（訓練模板）需要的，
+ *   但 test_detector_curves.py 並未 import 它 —— 移除 requirements 裡的
+ *   scikit-learn，本守門仍然放行（mutation 驗證）。
+ *
+ *   換言之：**本守門只保證「直接依賴」，間接依賴仍需靠 CI 或人工察覺。**
+ *   這也是為什麼它不能取代 CI，而是 CI 的前置篩選（省下 1-2 分鐘來回）。
+ *
+ * 已能攔到的實例：matplotlib（test_detector_curves.py 直接 import）——
+ *   首次上 CI 時我漏了它，是本守門在 commit 前就抓出來的。
+ */
+const STD = new Set(["json","os","sys","io","csv","re","time","tempfile","shutil",
+    "subprocess","zipfile","pathlib","base64","hashlib","contextlib","random","math",
+    "struct","typing","collections","itertools","functools","shlex","uuid","platform",
+    "importlib","inspect","traceback","textwrap","copy","warnings","abc","enum","glob",
+    "stat","fnmatch","threading","datetime","pickle","unittest","argparse","logging",
+    "dataclasses","numbers","string","socket","ssl","http","urllib","email","xml",
+    "sqlite3","csv","gzip","bz2","lzma","calendar","decimal","fractions","heapq",
+    "array","bisect","operator","reprlib","types","unicodedata","zlib","getpass",
+    "webbrowser","pprint","filecmp","fileinput","linecache","tokenize","trace","gc",
+    "atexit","signal","errno","locale","site","sysconfig","distutils","pkgutil"]);
+const KNOWN_IGNORE = new Set(["common","camera_service","remote_tflite","local_training",
+    "remote_ssh","dataset_io","media_pipe_service","training_loop","classifier_dataset",
+    "detector_dataset","line_dataset","table_dataset","feature_dataset","cocoya_shared",
+    "image_formats"]);
+
+const req = fs.readFileSync("requirements-dev.txt", "utf8");
+const declared = new Set();
+// pip 名稱與 import 名稱不同者需對照（cv2 -> opencv-python 等）
+const ALIAS = { cv2: "opencv-python", PIL: "pillow", PILImage: "pillow", sklearn: "scikit-learn",
+    skimage: "scikit-image", yaml: "pyyaml", Crypto: "pycryptodome", dateutil: "python-dateutil",
+    dotenv: "python-dotenv", serial: "pyserial", usb: "pyusb" };
+
+const dir = "tests/e2e";
+const missing = new Map();
+const scan = (d) => {
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+        const full = path.join(d, e.name);
+        if (e.isDirectory()) { scan(full); continue; }
+        if (!e.name.endsWith(".py")) continue;
+        const src = fs.readFileSync(full, "utf8");
+        for (const m of src.matchAll(/^\s*(?:import|from)\s+([A-Za-z_][\w]*)/gm)) {
+            const mod = m[1];
+            if (STD.has(mod) || KNOWN_IGNORE.has(mod)) continue;
+            const pkg = ALIAS[mod] || mod;
+            if (!req.toLowerCase().includes(pkg.toLowerCase().split("-")[0])) {
+                if (!missing.has(mod)) missing.set(mod, []);
+                missing.get(mod).push(path.relative(".", full));
+            }
+        }
+    }
+};
+scan(dir);
+if (missing.size) {
+    console.error("[pre-commit] 測試 import 了未宣告於 requirements-dev.txt 的套件：");
+    for (const [m, files] of missing) console.error(`   ${m}  (${files[0]})`);
+    console.error("   若確為專案內本地模組，請加進腳本的 KNOWN_IGNORE；");
+    console.error("   若確為第三方套件，請加進 requirements-dev.txt。");
+    process.exit(1);
+}
+' || exit 1
+
 echo "[pre-commit] 通過"

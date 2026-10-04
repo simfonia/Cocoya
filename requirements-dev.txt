@@ -1,19 +1,40 @@
 # Cocoya 測試依賴（CI 的 python job 使用）
 #
+# 【分層說明】
+# Tier 1（`-m "not slow"`，8 例）與 Tier 2（全量，11 例）都需要下列套件。
+# 首次上 CI 時 Tier 1 失敗，逐一查出缺這幾個 —— 已全部納入：
+#
+#   scikit-learn  test_detector_curves -> training_loop.py:9 頂層 import sklearn
+#   opencv-python test_export_dataset / test_export_live_layout
+#                 -> 這兩支會**真的啟動 sidecar**，而 dataset_sidecar.py 頂層
+#                    import camera_service（內含 cv2）與 remote_ssh（paramiko）
+#                    缺任一項時 sidecar 直接啟動失敗 -> stdout 無 JSON
+#                    -> 測試報 JSONDecodeError（症狀與「JSON 格式錯」完全無關）
+#   paramiko      同上（remote_ssh.py 頂層）
+#
+# ⚠️ **症狀與病因分離的實例**：CI 首次報 JSONDecodeError，直覺是
+#   「sidecar 輸出的 JSON 格式壞了」，實際是 sidecar 根本沒啟動成功。
+#   判讀 subprocess 型測試的失敗時，要先確認子進程是否成功啟動。
+#
 # 【為何用 tensorflow-cpu 而非 tensorflow】
 # 測試不需要 GPU，tensorflow 會額外拉進 CUDA/cuDNN（數 GB），
 # 在 CI 上純粹浪費時間與磁碟。tensorflow-cpu 是相同 API 的精簡版。
 #
-# 【為何最低版本用 >= 而非 ==】
-# 訓練測試關心的是「API 行為」而非數值精度，允許較新版本能吃到修補與效能改善；
-# 但不鎖死是刻意的 —— 鎖死後套件更新需人工評估升級，容易讓 CI 卡在舊版。
+# ⚠️ Tier 1 也需要 TensorFlow：test_classifier_dataloader.py 在**模組層級**
+#   import tensorflow（測的是真實 tf.data.Dataset 與 reduce_min/max，
+#   無法用假資料取代）。實測 TF import 約 4.7s，佔 Tier 1 時間的一半。
 #
-# ⚠️ Tier 1（非 slow）也需要 TensorFlow：
-#   tests/e2e/test_classifier_dataloader.py 在**模組層級** import tensorflow
-#   （測的是真實 tf.data.Dataset 與 reduce_min/max，無法用假資料取代）。
-#   實測 TF import 約 4.7s，佔 Tier 1 時間的一半。
+# 【刻意不安裝 mediapipe】
+# media_pipe_service.py 需要它，但 dataset_sidecar.py **未在頂層** import
+# （僅在使用該功能時才載入），故 Tier 1/2 都不需要。
+# 它的安裝量遠大於其他套件，屬「用到才裝」。
 
 pytest>=7.4
 numpy>=1.26
 pillow>=10.0
 tensorflow-cpu>=2.18
+scikit-learn>=1.3
+opencv-python>=4.8
+paramiko>=3.3
+cryptography>=41.0
+matplotlib>=3.7
