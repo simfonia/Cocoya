@@ -35,6 +35,7 @@ class HuskyLens:
         self.blocks = {}
         self.arrows = {}
         self.bad_frames = 0             # checksum 不符而丟棄的幀數（除錯用）
+        self._rbuf = bytearray()        # UART 分片累積：跨呼叫殘留的未完整幀
         if self.version == 2:
             self._send_v2(0x00, 0, bytes([0]) + bytes(9))  # KNOCK
 
@@ -50,18 +51,55 @@ class HuskyLens:
             return False
 
     def _read_some(self, wait_ms=60):
-        try:
+        # 分片累積讀取：UART 單次 any()/read() 可能只拿到半個幀（資料量大時尤其明顯，
+        # 例如手部 21 點／姿態 33 點的結果會超過 UART 緩衝區容量）。
+        # 因此反覆「讀 → 累積 → 再讀」，直到連續 drain_idle_ms 都讀不到新位元組為止。
+        # _rbuf 保存跨呼叫殘留（上次沒讀完的半幀），避免每次呼叫都從新位元組開始解析。
+        # 讀到資料時 idle 歸零，故終止條件以「總時 budget」而非固定輪數表達：
+        # 固定 max_rounds=24 會在資料量大於 24×chunk 時提前中止（回歸測試實測抓到
+        # 216 bytes 僅累積到 192）。改以 wait_ms/drain_idle + 緩衝，確保讀得到就繼續讀。
+        drain_idle_ms = 8
+        max_rounds = (wait_ms // drain_idle_ms) + 16
+        buf = self._rbuf
+        rounds = 0
+        idle = 0
+        while rounds < max_rounds and idle * drain_idle_ms < wait_ms:
+            rounds += 1
+            chunk = b""
             if isinstance(self.bus, machine.UART):
-                time.sleep_ms(wait_ms)
-                n = self.bus.any()
+                time.sleep_ms(drain_idle_ms)
+                try:
+                    n = self.bus.any()
+                except Exception:
+                    n = 0
                 if n:
-                    return self.bus.read(n)
-                return b""
-            time.sleep_ms(wait_ms)
-            return self.bus.readfrom(self.addr, 128)
-        except Exception as e:
-            print("HL read error:", e)
-            return b""
+                    try:
+                        chunk = self.bus.read(n)
+                    except Exception as e:
+                        print("HL read error:", e)
+                        break
+            else:
+                time.sleep_ms(drain_idle_ms)
+                try:
+                    chunk = self.bus.readfrom(self.addr, 128)
+                except Exception as e:
+                    print("HL read error:", e)
+                    break
+            if chunk:
+                buf += chunk
+                idle = 0
+            else:
+                idle += 1
+        self._rbuf = bytearray()
+        return bytes(buf)
+
+    def _parse_drain(self, wait_ms):
+        # 讀取並解析；解析後把「不足以構成完整幀」的尾端殘留放回 _rbuf 供下次呼叫接續。
+        buf = bytearray(self._read_some(wait_ms))
+        if buf:
+            consumed = self._parse(buf)
+            if 0 < consumed < len(buf):
+                self._rbuf = bytearray(buf[consumed:])
 
     def _send_v2(self, cmd, algo, data=b""):
         frame = bytes([0x55, 0xAA, cmd, algo, len(data)]) + bytes(data)
@@ -83,8 +121,10 @@ class HuskyLens:
 
     def _parse(self, buf):
         # 逐幀掃描並驗證 checksum；V2: 55 AA CMD ALGO LEN…、V1: 55 AA 11 LEN CMD…
+        # 回傳「已完整消耗的位元組數」：尾端不足一個完整幀者不計入，由呼叫端存入 _rbuf 接續。
         i = 0
         n = len(buf)
+        consumed = 0
         while i + 6 <= n:
             if buf[i] == 0x55 and buf[i + 1] == 0xAA:
                 if self.version == 2:
@@ -96,8 +136,9 @@ class HuskyLens:
                 dstart = i + 5
                 tail = dstart + length          # checksum 索引
                 if length > 120 or tail >= n:
-                    i += 1
-                    continue
+                    # 幀頭已出現但資料未收齊 → 視為半幀，停止掃描並回報目前進度，
+                    # 讓呼叫端把殘留（含前導雜訊）一併留待下次接續。
+                    return consumed
                 if not self._ck(buf, i, tail):
                     self.bad_frames += 1
                     i += 1
@@ -107,8 +148,10 @@ class HuskyLens:
                 else:
                     self._on_v1(cmd, buf[dstart:tail])
                 i = tail + 1
+                consumed = i
             else:
                 i += 1
+        return consumed
 
     def _u16(self, d, off):
         return d[off] | (d[off + 1] << 8)
@@ -199,12 +242,12 @@ class HuskyLens:
         try:
             if self.version == 2:
                 self._send_v2(0x01, 0)  # GET_RESULT
-                self._parse(bytes(self._read_some(80)))
+                self._parse_drain(80)
             else:
                 self._send_v1(0x20)  # REQUEST_BLOCKS
-                self._parse(bytes(self._read_some(60)))
+                self._parse_drain(60)
                 self._send_v1(0x21)  # REQUEST_ARROWS
-                self._parse(bytes(self._read_some(60)))
+                self._parse_drain(60)
         except Exception as e:
             print("HuskyLens Error:", e)
 
@@ -242,7 +285,12 @@ class HuskyLens:
             print("HL V1: Cocoya 尚未實作程式學習，請在 HuskyLens 螢幕上學習")
             return 0
         self._send_v2(0x22, algo)
-        return self._args_id(bytes(self._read_some(400)))
+        self._rbuf = bytearray()
+        buf = bytearray(self._read_some(400))
+        consumed = self._parse(buf)
+        if 0 < consumed < len(buf):
+            self._rbuf = bytearray(buf[consumed:])
+        return self._args_id(bytes(buf))
 
     def forget(self, algo=0):
         # V2 only（FORGET 0x23，無 data；忘記目前演算法的所有學習結果）
