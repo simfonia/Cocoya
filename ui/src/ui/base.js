@@ -180,6 +180,18 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             if (stopBtn) stopBtn.style.display = 'flex'; // 停止鈕兩者皆有
             if (closeBtn) closeBtn.style.display = caps.canClose ? 'flex' : 'none';
             if (terminalToggleBtn) terminalToggleBtn.style.display = caps.hasTerminal ? 'flex' : 'none';
+
+            // 2026-10-05：VSIX 端的 webview 虛擬終端是**空殼**，整塊隱藏以騰出版面。
+            // 實查依據（src/**/*.ts）：VSIX 端完全沒有 appendTerminal 呼叫，也沒有任何
+            // postMessage 把 python-log／序列埠資料轉發進 webview；訓練
+            // （trainingOps.ts TrainingTerminal）、序列埠監看（serialOps.ts createTerminal）、
+            // 執行程式（envOps.ts）、韌體燒錄（firmwareOps.ts）**全數走 VS Code 原生終端機**，
+            // sidecar 日誌走 OutputChannel。故此面板在 VSIX 下永遠是空的，只佔版面。
+            // Tauri 端 hasTerminal=true，虛擬終端是唯一輸出管道，必須保留。
+            if (!caps.hasTerminal) {
+                const terminalArea = document.getElementById('terminalArea');
+                if (terminalArea) terminalArea.style.display = 'none';
+            }
             
             // AI 下拉選單：VSIX 與 Tauri 皆顯示
             const aiDropdown = document.getElementById('ai-dropdown');

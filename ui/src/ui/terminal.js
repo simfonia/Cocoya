@@ -174,6 +174,11 @@
         const panel = document.getElementById('terminalArea');
         if (!panel) return;
 
+        // 2026-10-05：面板已被隱藏時（VSIX，webview 虛擬終端為空殼）不得再展開。
+        // 否則序列埠開啟（bridge/tauri/serial.js 會呼叫 toggleTerminal(true)）
+        // 會把 display:none 的面板撐出 collapsed 類別，語意互相矛盾。
+        if (panel.style.display === 'none') return;
+
         const isCollapsed = panel.classList.contains('collapsed');
         const targetState = (force !== undefined && force !== null) ? !force : !isCollapsed;
 
