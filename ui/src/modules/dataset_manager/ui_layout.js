@@ -1,3 +1,47 @@
+/**
+ * ui_layout.js — Dataset Manager 的組裝層（composition root）
+ *
+ * 【本檔職責】只做三件事：① 建立四層的各模組實例（core/io/ui/application）
+ *   ② 注入依賴 ③ 提供跨層協調。**不持有業務邏輯** —— 邏輯一律在
+ *   core/（純函式）／application/（用例）／ui/（呈現）三層之內。
+ *
+ * 【為什麼需要這份註解】本檔 1891 行、70+ 個內部函式，是全專案最大的單一檔案，
+ * 且四層架構（Stage 0~6 重構成果）已在 2026-09-01 落地，但本檔**未隨之收斂**。
+ * 新增功能時容易在此「順手寫一段」，繞過分層 —— 那正是架構腐化的入口。
+ *
+ * 【四層架構與 SSOT】
+ *   core/          純函式，無 DOM／無 bridge：typePolicy / stats / labelMap / pathPolicy
+ *   io/bridge.js   與宿主通訊的唯一出口（datasetBridge）
+ *   application/   用例編排：import / export / progress / session / labelRenameReconcile
+ *   ui/            呈現與控制器：modal / form / panels / thumbnails / classification / annotation
+ *
+ * 【新增功能時的紀律】
+ *   ✅ 純計算 → core/；✅ 有副作用的用例 → application/；✅ 只管畫面 → ui/
+ *   ❌ 不要在本檔新增業務邏輯；本檔只做「組裝 + 跨層協調」。
+ *   若某段協調邏輯 > ~50 行，考慮搬到 ui/orchestrator/（見 todo 的 P2-2 階段二）。
+ *
+ * 【已知架構債（暫緩施工，勿重蹈覆轍）】
+ *   下列函式為**純委派薄包裝**（只做 `return xxxController.yyy()`），理論上可刪除後
+ *   讓呼叫端直接取 controller。但實測每個薄包裝有 2~4 處內部呼叫點，刪除須同步
+ *   改動 40+ 處，**風險遠高於收益（僅減約 100 行 / 5%）** → 已決策不做。
+ *   代表：loadClassificationImage / saveCurrentAnnotations / loadAnnotationImage /
+ *         renderValidation / addColumn / renderAllColumns / renderPreviewTable /
+ *         getColumnsFromUI / updateAnnotationProgress / renderClassificationControls /
+ *         unbindClassificationKeyboardEvents / createLabelMapManager /
+ *         renderAnnotationControls / renderAnnotationListUI
+ *
+ * 【最大函式（搬移成本高，勿輕易嘗試）】
+ *   bindModalEvents（190 行）依賴 **16 個本檔符號**（含 `refreshTimeout` 等可變狀態、
+ *   `state` / `Sampler` / `refreshPreview` / `backToEntry` 等）。搬到 ui/modalEvents.js
+ *   需注入 16 個依賴 → 新檔會比原函式更難懂，屬依賴注入反模式。維持現狀。
+ *
+ * 【契約红线 — 改本檔前必讀（AGENTS.md 有完整說明）】
+ *   `#dataset-structure-content` 是**複合容器**，嚴禁覆寫其 innerHTML。
+ *   統計只寫 `#view-label-stats`；需重建整面板時呼叫 `renderStructurePanel()`。
+ *   改 `img.path` / `img.label` / `img.diskPath` 後**必**呼叫 `refreshThumbnailBadges()`。
+ *   標註改名磁碟對帳一律走 `application/labelRenameReconcile.js`。
+ */
+
 import { DatasetSpec, DatasetSpecConstants, TABLE_SAMPLES_PERSIST_LIMIT } from './spec.js';
 import { Sampler } from './sampler.js';
 import { UIComponents } from './ui_components.js';

@@ -116,9 +116,13 @@
 #### Batch 3（中風險架構，多視窗／emit_to 高危）
 - [x] P2-1 ui/src/bridge/tauri.js 拆檔 （拆檔全階段完成） - 成果：tauri.js 1865 → 882 行 ✅ （細節見 log/work/2026-09-27.md）
 - [ ] **P2-2 / S1~S5 `ui_layout.js` 拆分（ui_layout 單一 SSOT｜2026-10-05 合併原 Batch 3 P2-2 與 2026-09-17 切片條目）**
-  **⚠️ 狀態：暫緩施工 PAUSED（使用者拍板先不動）**。實查現況（2026-10-05）：82.2 KB / 1689 行 / 72 個內部函式；`ui/orchestrator/` 資料夾**不存在**；薄包裝 `enterClassificationReviewMode` 仍在 L675/678/691。四層架構（core/io/ui/application）已建立但 `ui_layout.js` 仍是繞過該架構的旁路 —— 這是 DM 目前最大的架構債。
-  **階段一（低風險，建議先做）**：刪除約 20 個純委派薄包裝（`enterClassificationReviewMode` 等），呼叫端直接取 controller。
-  **階段二（高風險）**：協調邏輯搬 `ui/orchestrator/*`。
+  **⚠️ 狀態：暫緩施工 PAUSED（使用者拍板先不動）**。實查現況（2026-10-05）：**1891 行 / 72 個內部函式**；`ui/orchestrator/` 資料夾**不存在**。四層架構（core/io/ui/application）已建立但 `ui_layout.js` 仍是繞過該架構的旁路 —— 這是 DM 目前最大的架構債。
+  **⚠️ 2026-10-05 實查後重新評估：原「階段一」效益極低，已建議不做（使用者同意）**
+    - 死碼掃描結果：**無死碼**。僅定義未使用的函式 0 個、未使用頂層 const 0 個、重複函式定義 0 個、註解掉的程式碼 0 處；8 個匯出符式全部有外部使用（2~7 處）。此檔已被反覆清理過，**「移除死碼」無對象**。
+    - 階段一（刪薄包裝）實際成本：18 個候選，但每個有 **2~4 處內部呼叫點**，刪除須同步改動 **40+ 處**，僅減約 100 行（5%）。**風險遠高於收益**。
+    - S4（`bindModalEvents`，最大函式 190 行）依賴 **16 個本檔符號**（含 `refreshTimeout` 可變狀態、`state`/`Sampler`/`refreshPreview`/`backToEntry`），搬移需注入 16 個依賴 → **新檔比原函式更難懂**，屬依賴注入反模式。
+  **✅ 2026-10-05 已完成零風險子集**：補齊檔頭 SSOT 註解（44 行，純新增、**零邏輯變更**），明載職責邊界／四層對應／新增功能紀律／已知架構債與其不做的理由／契約紅線。驗收 `node --test` 428/428 綠、ESLint 0 error、diff 僅 `44 insertions(+)`。
+  **階段二（高風險，維持暫緩）**：協調邏輯搬 `ui/orchestrator/*`。
   **S1~S5 切片順序**（預估 1823 → S1~S4 約 1330 → 含 S5 約 1150；動工前置 SSOT 見 `log/plan/DatasetManagerTypeLockedWorkflow.md` §11）：S1 `application/specSync.js`（syncSpecFromUI）／S2 `application/progressApply.js`（applyLoadedProgress）／S3 `ui/navigation.js`（P1/P2/P3 導航）／S4 `ui/modalEvents.js`（bindModalEvents）／S5 `application/imageSamples.js`（handleDeleteImage→addSampleFromSampler）。
   **明確不做**：硬拆 `refreshDynamicPanels`、刪仍被呼叫的 wrapper。
   **不得破壞的契約**：`#dataset-structure-content` 嚴禁覆寫 innerHTML；`renderStructurePanel()`／`renderStatsPanels()`／`refreshThumbnailBadges()` 介面不變（見 AGENTS.md「Dataset Manager 結構面板與縮圖同步契約」）。
