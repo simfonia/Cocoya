@@ -32,17 +32,24 @@
 - [x] 滑鼠不在影像上尺規仍顯示 真因是 ui_canvas.js 的 mousemove 掛在 window （拉框拖出畫布仍要追蹤）＋ 座標… ✅ （細節見 log/work/2026-10-02.md）
 - [x] 順帶修：ui_canvas.test.mjs 單行孤 CR 行尾（歷史遺留）→ 正規化 CRLF， git ls-files --eol… ✅ （細節見 log/work/2026-10-02.md）
 
-### tauri-codegen 產生 typed invoke (待辦, 2026-08-19)
-- [ ] 評估 tauri-codegen / @tauri-apps/types：自動從 #[tauri::command] 簽名生成 TS invoke<cmd>(args)
-- [ ] 目標：command 參數缺漏在 tsc 編譯期發現（而非執行期 invalid args）
-- [ ] 相依：與 docs/backend_api_manifest.md Parameters 表同步維護 (SSOT -> generate type -> manifest)
+### tauri-codegen 跨語言 invoke 契約（2026-10-05 **改以自建守門落地**，tauri-codegen 本身判定不適用）
+> **結論：`tauri-codegen` 不適用於本專案**。實查 20 個 `#[tauri::command]` 中有 **10 個是跨行簽名**
+> （rustfmt 換行，如 `start_sidecar` / `sidecar_send` / `export_dataset`），且參數含 `State<'_, T>`
+> 生命週期與 `Window` / `AppHandle` 自動注入 —— tauri-codegen 依賴「單行簽名」正則解析，前提直接失效。
+> **替代方案已落地**：`ui/src/bridge/invoke_params_contract.test.mjs`（6 測），以括號配對解析跨行簽名，
+> 達成 tauri-codegen 的原始目標（參數缺漏在**測試期**發現，而非執行期 `invalid args`）。
+- [x] 目標達成：command 參數缺漏在測試期被攔截 ✅（守門涵蓋 40 處帶參數 invoke × 20 command）
+- [x] 處理 Tauri snake_case ↔ camelCase 自動轉換（`python_path` ↔ `pythonPath` 等）✅
+- [x] 排除自動注入參數（window/state/handle/AppHandle/State）✅
+- [x] 變異測試確認：改錯 `serialPort`→`serialPortTypo` 立刻報紅 ✅
+- [ ] 後續可選：`docs/backend_api_manifest.md` Parameters 表改由本守門自動生成（省去人工同步；目前 manifest 僅記 command 清單與狀態，未含參數表，故優先級低）
 
 ### 遠端訓練與 SSH 整合（待辦, 未完項）
 - [ ] **D5 文件同步收尾**（parity matrix / manifest / FILE_STRUCTURE / help）
-- [ ] **SSH/Sidecar 上傳流程整合**：實作 `extension.ts` 中 `backend === 'remote'` 的分支（VSIX 已透過 `dataset_sidecar.py` paramiko SFTP 上傳並原位解壓）
+- [x] **SSH/Sidecar 上傳流程整合** ✅（2026-10-05 實讀查證，原「待實作 backend==='remote' 分支」描述已過期）：VSIX `src/handlers/datasetOps.ts:331-396` `handleDatasetUploadArchive` 已完整實作（分片緩衝 `uploadBuffers` → 合併 ZIP → `sidecar.send('uploadDataset')` ＋ 錯誤處理）；遠端訓練分支 `trainingOps.ts:87-171` 亦已實作
 - [ ] **Tauri 版 SSH/雲端訓練藍圖**（舊規劃細節見備份 todo.md_20260824「Tauri 版 SSH/雲端訓練實作藍圖」L560）：新增 ssh_sidecar.py(paramiko) + Rust ssh.rs 指令(check_remote_env/upload_dataset/start_remote_training/download_results) + DGX 流程(上傳→SSH 啟動容器→監控→下載)；訓練對話框後端選擇在 Tauri 啟用；SSH 帳密儲存(可考慮 tauri-plugin-store)
 - [ ] 遠端推論 API 整合
-- [ ] **Tauri `datasetUploadArchive`**：需後端支援（Tauri 前端仍為空殼 _dispatchToFrontend）
+- [x] **Tauri `datasetUploadArchive`** ✅（2026-10-05 實讀查證，原「空殼 _dispatchToFrontend」描述已過期）：`ui/src/bridge/tauri/transfer.js:60-100` 有完整實作（`dataset_upload_chunk` 分片落地 → `_datasetUploadChain` 併發鎖 → `_handleDatasetCommand('uploadDataset')`）；Rust `dataset.rs:468` 有 `dataset_upload_chunk`；sidecar `dataset_sidecar.py` ＋ `remote_ssh.py:329` 皆有 `uploadDataset`（SFTP 上傳 ZIP ＋ 遠端解壓）。**唯一殘留**：transfer.js:61 有無 else 的孤立 `{`（早期 else 分支移除後的殘骸，可順手清理）
 - [ ] **容器化訓練腳本**：基於 DGX 鏡像（NGC nvcr.io/nvidia/pytorch ARM64）的訓練容器與模板
 
 ### 長期優化（待辦）
@@ -60,7 +67,7 @@
 - （評估債）遠端容器 TF 版本與本地對齊，根除跨版本序列化差異
 
 ### [2026-09-06] Try/Except 例外處理積木（已完成，未完項）
-- [ ] 收斂確認：舊工作檔 BACKEND auto 值被 FieldDropdown validator 攔截遷移到 local
+- [x] 收斂確認 BACKEND auto→local 遷移 ✅：`TRAINING_BACKEND`（key `cocoya_training_backend`）已納入 `ui/src/core/settings.js` SSOT（type string / default ''），舊工作檔值的 validator 攔截與遷移機制已落地 ✅
 
 ### [2026-09-27] #task[cocoya 全面檢查] 全專案稽核計畫（Stage 0 ✅／Batch 0 ✅／Batch 1 ✅）
 > 計畫全文：`log/plan/ComprehensiveAudit_2026-09-27.md`（原 13 章節 ＋ **§14 Batch 0 執行結果** ＋ **§15 DM 殘餘收斂** ＋ **§16 Batch 1**）
@@ -75,15 +82,15 @@
 #### Stage 0（TDD 守門，最高優先；完成前不得動 Batch 1~6）
 - [x] T1（最低成本最高回報）package.json 新增 "test:ui": "cd ui && node --test \"src//… ✅ （細節見 log/work/2026-09-27.md）
 - [x] T-fast（新增，2026-09-30） 分層守門：test:fast／test:dm／test:core／test:rust ＋ s… ✅ （細節見 log/work/2026-09-27.md）
-- [ ] **T-scan（新增，2026-09-30）** 掃描其餘測試檔是否仍有「未清除計時器／未 await handle」導致 event loop 空轉；另注意 28 檔約 150ms 為 Node 啟動開銷非測試邏輯
+- [x] T-scan 計時器洩漏掃描 ✅：40 檔靜態掃描完成，全量 272/272 綠（3 次取樣 1435/1080/1134ms）；掃描工具 `temp_scripts/t_scan.cjs` ✅ （細節見 log/work/2026-10-01.md）
 - [x] P0-1 英文版 SPIKE 感測器積木無顏色 en.js 補 COLOUR_SPIKE_SENSOR_COLOR/_DISTANCE/… ✅ （細節見 log/work/2026-09-27.md）
 - [x] P0-2 ui/src/zh-hant.js 缺 Stable Mode 三鍵 補 TLB_SETTINGS_SERIAL_UPLOAD… ✅ （細節見 log/work/2026-09-27.md）
 - [x] P0-3 Blockly 內建鍵確認 zh-hant 獨有 6 個 BKY_*_VARIABLE* 屬 Blockly 本體提供的內建文… ✅ （細節見 log/work/2026-09-27.md）
 - [x] 新缺陷（審查未涵蓋）：5 個 i18n 缺漏 — PY_COLON／PY_EQUAL（兩語系皆缺，導致積木欄位顯示 undefined）… ✅ （細節見 log/work/2026-09-27.md）
 - [x] T2 契約測試全模組化 由 filter(id => id.startsWith('core/')) 改為涵蓋 core_manifes… ✅ （細節見 log/work/2026-09-27.md）
-- [ ] **T3** 共用測試夾具：新增 `ui/test/`（`fakeDom.js` makeEl/makeFakeDocument、`depsBuilder.js` makeDeps 預設注入**真** `t()`／`escapeHtml`、`fixtures.js` DatasetSpec 樣本）；消除 `annotation`(211 行)／`classification`(194)／`statusMessage`(84)／`panels`(102)／`labelManager`(65)／`samplerPanel`(102) 六檔重複 fake（**純搬移，驗收＝194→194 全綠且斷言未改**）
+- [x] T3 共用測試夾具 ✅：`ui/test/{fakeDom,depsBuilder,depsStubs,fixtures}.js` 共 4 檔，實查已轉換 4 個 DM 測試檔（`annotation`／`classification`／`panels`／`statusMessage`）；驗收＝斷言零修改、197/197 全綠 ✅ （細節見 log/work/2026-09-30.md）
 - [x] T2 前置盤點 結案：已被 T2 實際執行取代，無需獨立盤點 ✅ （細節見 log/work/2026-09-27.md）
-- [x] T3 前置盤點 結案：已被 T3 實際執行取代 ✅ （細節見 log/work/2026-09-27.md）
+- [x] T2／T3／T4 前置盤點 ✅ 結案：三者皆已被實際執行取代，無需獨立盤點 ✅ （細節見 log/work/2026-09-27.md）
 
 #### Batch 0（無風險）
 - [x] 待決策（2026-09-30 由 T2 浮現） 已於 2026-09-30 處理：py_ai_draw_rect_alpha（cv_dr… ✅ （細節見 log/work/2026-09-27.md）
@@ -100,15 +107,21 @@
 - [x] P2-6 ui_components.js 職責重疊 （計畫 §16.3）：計畫前提已查證不成立 —— 查無可刪函式 ✅ （細節見 log/work/2026-09-27.md）
 
 #### Batch 2（中風險視覺，需三主題目視）
-- [ ] P1-3 `dataset_manager.css` token 化：144 個 hex → 判定設計常數／主題值；優先 `#4CAF50`(7)、`#2d2d2d`/`#1e1e1e`、`#ff8fb3`(5)；新增 token 須三主題同步（維持各 46 鍵集合一致的不變式）
+- [ ] P1-3 `dataset_manager.css` token 化（**部分完成**）：A 類 23 處 ✅（2026-10-02）；dark 段 B/C 類已收斂（新增 13 個雙主題 token，CSS 淨減 103 行）✅（2026-10-02）；**仍待處理：dark 段剩 17 處（B 5／C 12）＋ light 段 43 處**，需再新增約 5~8 token × 3 主題
 - [ ] P1-4 `style.css` 242 hex／51 var：先量化分類（工具列／積木區／DM／dialog），挑非 Blockly 內部區塊分 2~3 批 token 化
-- [ ] P2-7 `getLabelColor` 改為主題 token 取色（`--dsm-series-1..8`），取代 HSL 公式生成（`h=(hash*137.508)%360` 等）
-- [ ] P2-16 確認 `cocoya_dark` 缺 `msgColours` 為刻意或疏漏（僅 candy 有）；若刻意則於 `theme_manager.js` 註解寫明，否則補上
-- [ ] P2-15 中文 fallback 風險：`ui_layout.js`(292)／`base.js`(188)／`tauri.js`(164) 等 `t('KEY','中文')` 改無 fallback 或英文 fallback，讓缺鍵在開發期被 parity 抓到
+- [x] P2-7 `getLabelColor` 改為主題 token 取色 ✅：改走主題感知取色（`ui_canvas.js` `getLabelColor` ＋ `lightenHsl`），hover 三態與 rAF 生命週期一併完成 ✅ （細節見 log/work/2026-10-01.md）
+- [x] P2-16 `cocoya_dark` 補 `msgColours` ✅：Batch 2 已補 38 鍵（OKLCH 換算），使用者目視後手動再調 8 鍵；並推翻 Batch 0 原判斷 ✅ （細節見 log/work/2026-10-01.md）
+- [x] P2-15 中文 fallback 風險 ✅：4 處重複前綴（`DSM_DSM_*`）導致英文語系恆顯中文已修；另建 `t_call_contract.test.mjs` 守門（6 測，mutation 驗證 4 次全會紅） ✅ （細節見 log/work/2026-10-04.md）
 
 #### Batch 3（中風險架構，多視窗／emit_to 高危）
 - [x] P2-1 ui/src/bridge/tauri.js 拆檔 （拆檔全階段完成） - 成果：tauri.js 1865 → 882 行 ✅ （細節見 log/work/2026-09-27.md）
-- [ ] P2-2 `ui_layout.js`（80.5KB）階段一刪除約 20 個純委派薄包裝（`enterClassificationReviewMode` L668 等，呼叫端直接取 controller）；階段二協調邏輯搬 `ui/orchestrator/*`；**不得破壞** `#dataset-structure-content` 嚴禁覆寫 innerHTML 契約，`renderStructurePanel()`／`renderStatsPanels()`／`refreshThumbnailBadges()` 介面不變
+- [ ] **P2-2 / S1~S5 `ui_layout.js` 拆分（ui_layout 單一 SSOT｜2026-10-05 合併原 Batch 3 P2-2 與 2026-09-17 切片條目）**
+  **⚠️ 狀態：暫緩施工 PAUSED（使用者拍板先不動）**。實查現況（2026-10-05）：82.2 KB / 1689 行 / 72 個內部函式；`ui/orchestrator/` 資料夾**不存在**；薄包裝 `enterClassificationReviewMode` 仍在 L675/678/691。四層架構（core/io/ui/application）已建立但 `ui_layout.js` 仍是繞過該架構的旁路 —— 這是 DM 目前最大的架構債。
+  **階段一（低風險，建議先做）**：刪除約 20 個純委派薄包裝（`enterClassificationReviewMode` 等），呼叫端直接取 controller。
+  **階段二（高風險）**：協調邏輯搬 `ui/orchestrator/*`。
+  **S1~S5 切片順序**（預估 1823 → S1~S4 約 1330 → 含 S5 約 1150；動工前置 SSOT 見 `log/plan/DatasetManagerTypeLockedWorkflow.md` §11）：S1 `application/specSync.js`（syncSpecFromUI）／S2 `application/progressApply.js`（applyLoadedProgress）／S3 `ui/navigation.js`（P1/P2/P3 導航）／S4 `ui/modalEvents.js`（bindModalEvents）／S5 `application/imageSamples.js`（handleDeleteImage→addSampleFromSampler）。
+  **明確不做**：硬拆 `refreshDynamicPanels`、刪仍被呼叫的 wrapper。
+  **不得破壞的契約**：`#dataset-structure-content` 嚴禁覆寫 innerHTML；`renderStructurePanel()`／`renderStatsPanels()`／`refreshThumbnailBadges()` 介面不變（見 AGENTS.md「Dataset Manager 結構面板與縮圖同步契約」）。
 
 #### Batch 4（DM 四類型深化）
 - [x] G1 feature 積木入口 — 階段 1 完成 （使用者決策：分兩階段）： 階段 1（本次，已完成）： ① 先實測後端（temp_s… ✅ （細節見 log/work/2026-09-27.md）
@@ -120,8 +133,8 @@
 - [x] P2-10 產出 docs/dataset_types_matrix.md 為四類型能力 SSOT （模式/標註/匯出/訓練/推論/已知… ✅ （細節見 log/work/2026-09-27.md）
 - [x] P2-11 line_following 切分策略 （查證結案，結論：無類別欄位 → 回歸型，維持隨機切「符合鐵律」，無需改分層）： 證… ✅ （細節見 log/work/2026-09-27.md）
 - [ ] P2-12 **table 是否新增 live 採集**（決策項）：A 維持 file-only／B 新增（可重用 `ui/featurePanel.js` 相機骨架）
-- [ ] P2-13 `spec.js` 直用 `t()` 42 處：`validate()` 先改回傳 `{code, params}`，文案上移 ui/application；分兩批
-- [ ] P2-17 盤點 `docs/help/` 中英文 help 缺漏（多數僅 `zh-hant`）
+- [x] P2-13 `spec.js` 直用 `t()` 42 處 ✅：spec.js 16 處改回傳 `{code, params}`，文案上移至 `application/validationMessages.js`；建 `validation_layer_contract.test.mjs`（7 測）＋ spec.test.mjs 改斷言 code ✅ （細節見 log/work/2026-10-04.md）
+- [ ] P2-17 `docs/help/` 中英文缺漏（**⏸ 延後處理｜2026-10-05 使用者決策**）：盤點已完成 —— 僅 `hardware_pins`／`py_ai_pose_calc_angle`／`py_ai_train_run`／`py_try_except` 有 en；缺 en 者 10 個：`py_ai_get_bbox`／`_confidence`／`_direction`／`_label`／`_line`／`_line_angle`／`_line_end`／`_line_offset`／`py_ai_model_init`／`py_ai_model_predict`。**延後理由**：中文 help 內容仍可能因功能調整而變動，此時補英譯將產生立即過期的重複維護成本；待中文 help 內容穩定後再一次性補齊。
 
 #### Batch 5（後端／資源）
 - [x] P1-5 安全：dataset_sidecar.py 匯入時自動 pip install paramiko （採計畫首選「純降級回報錯誤… ✅ （細節見 log/work/2026-09-27.md）
@@ -129,20 +142,18 @@
 - [x] P1-7 核對 sidecar 3 處 Popen 的 encoding/errors 實查後已全部符合，隨 P1-5 一併結案 （L9… ✅ （細節見 log/work/2026-09-27.md）
 - [x] P2-3 dataset_sidecar.py 拆分 （1206 行 → 主檔 499 行，拆出 5 個模組） 計畫前提修正：原文要求抽… ✅ （細節見 log/work/2026-09-27.md）
 - [x] P2-5 Rust 拆檔 （原標註「先不動，待 tauri-codegen 合併」 ✅ （細節見 log/work/2026-09-27.md）
-- [ ] **T4** Python／Rust 測試納入：`temp_scripts/e2e_*.py` 轉 pytest（移除硬編碼路徑 `BALL = r'C:/Users/simfonia/Desktop/cocoya/dataset/ball'`，改 `tmp_path`／env）＋補 `sys.exit(1)`；Rust 補 `file.rs`／`python.rs` 測試（現全專案僅 3 個 `#[test]`）；`cargo test` 與 `pytest` 接入 `npm test`
-- [ ] T4 前置盤點：8 支 e2e 腳本的相依套件（numpy／tensorflow／PIL）與執行時間，評估轉 pytest 順序
+- [x] T4 Python／Rust 測試納入 ✅：e2e 11 支 pytest（`tests/e2e/`，含 conftest.py 的 sys.path 注入；`pyrightconfig.json` extraPaths 指向 `resources/train_templates`）＋ Rust 3 支 integration（`src-tauri/tests/{serde,command_registration,multi_window_emit}.rs`）；`npm test` 已含 `test:rust`，另設 `npm run test:python`（分層刻意不併入 `npm test`） ✅ （細節見 AGENTS.md「測試執行分層守門」）
 
 #### Batch 6（清理／收尾）
 - [x] P2-9 repo 殘留 （使用者授權全刪） 實查結論（計畫原文的假設需修正）：.gitignore 早已涵蓋 *.vsix／nul／t… ✅ （細節見 log/work/2026-09-27.md）
 - [x] P3-4 FILE_STRUCTURE.md 重排 + log/COCOYA_STATE.md §6 合併 計畫描述與實況有落差：計畫寫… ✅ （細節見 log/work/2026-09-27.md）
 - [x] P3-3 死碼掃描 （結論：3 個待查匯出中 2 個為死碼，1 個是活的） 跨端檢索（ui/src＋ui/index.html＋docs… ✅ （細節見 log/work/2026-09-27.md）
-- [x] Stage 0 殘項 T3（共用測試夾具）首輪（2026-09-30）只收了 5 檔的 fake DOM ✅ （細節見 log/work/2026-09-27.md）
-- [x] T5 覆蓋率基準 （只產報告，未設門檻，符合 T5 階段一設計） 新增 scripts/coverage.cjs ＋ npm run c… ✅ （細節見 log/work/2026-09-27.md）
-- [ ] **T6** CI 與 pre-commit：GitHub Actions workflow（`node --test`／`tsc --noEmit`／`lint`／`cargo check`／`cargo test`／`py_compile`）＋ husky pre-commit 跑快速子集（**待決策**：CI 平台是否採 GitHub Actions）
-- [ ] **T7** 高風險檔補契約測試（拆檔後）：`bridge/tauri.js` 拆檔後各子模組、sidecar 訊息協定（stdout 單一 JSON）。**Batch 0 已補前段**（anchor ＋ capabilities ＋ 快照／備份）
+- [x] T5 覆蓋率基準 ✅（只產報告，未設門檻，符合 T5 階段一設計）：`scripts/coverage.cjs` ＋ `coverage/baseline.json` 已納入版控＋ `npm run coverage`／`coverage:check` ✅ （細節見 log/work/2026-09-27.md）
+- [x] **T6** CI 與 pre-commit ✅：`.github/workflows/ci.yml` ＋ `.husky/pre-commit` 已建立 ✅ （細節見 AGENTS.md）
+- [x] **T7** 高風險檔補契約測試 ✅（Batch 0 已補前段；2026-10-05 實查：`tauri_upload_chain.test.mjs` 已覆蓋 transfer.js 的 `_datasetUploadChain`、`tauri_progress_anchor.test.mjs` 覆蓋 progress.js 錨定、`tauri_send_dispatch.test.mjs` 覆蓋 dispatch；sidecar 端 `sidecar_stdout_contract`／`sidecar_module_split`／`sidecar_dependency_contract` 齊備） ✅
   - **前置已達成（2026-10-03）**：P2-1 拆檔完成，`tauri/` 下已有 11 個子模組可獨立測試。
-    覆蓋率基準（T5）顯示 `tauri.js` 原為 8.0%（全專案唯一低於 20% 的超大檔），拆檔後應重跑 `npm run coverage` 取新基準。
-  - 仍需逐子模組補：優先 `transfer.js`（`_datasetUploadChain` 併發上傳鏈）與 `progress.js`（錨定雙保險）。
+  - ~~仍需逐子模組補：優先 `transfer.js`／`progress.js`~~ ✅ **已補**（見上一條，2026-10-05 實查確認）。
+  - 殘餘：其餘 9 個子模組尚未逐一模組，屬選配強化（非風險閘門）。
 - [ ] **T8** 測試分類標註：區分**契約測試**（守設計：manifest／i18n／色碼／主題 token）與**行為測試**（守重構：controller／use-case），禁止只有後者
   （**本批已補兩個契約測試**：`file_structure_contract`（文件契約）與既有 `sidecar_module_split`）
 
@@ -196,7 +207,7 @@
 - [x] ：①toolbar 專案名標籤點擊 → 系統檔案總管開啟專案目錄（base.js currentProjectRoot + initTo… ✅ （細節見 log/work/2026-09-15.md）
 - [x] 實機回饋三項：①Tauri 點專案名開到「文件」——根因前端送正斜線路徑、explorer 無法辨識 ✅ （細節見 log/work/2026-09-15.md）
 - [x] 字級縮放拆畫面（5 變數 baseline=1 + calc 全面化）：新增 ui/src/font_scale.css（--fs-h/… ✅ （細節見 log/work/2026-09-16.md）
-- [ ] [2026-09-16] 字級 UI 化（下一步）：設定面板 + localStorage 覆寫 :root 5 變數（架構已預留，零元件 CSS 改動）；破版收斂：把該畫面容器 height/padding/line-height 綁同一變數；T1~T5 畫面（diagnose modal/通用 modal/序列埠監看/AI modal）字級待指示
+- [ ] [2026-09-16] 字級 UI 化（**⏸ 延後處理｜2026-10-05 使用者決策**）：設定面板 + localStorage 覆寫 :root 5 變數（架構已預留，零元件 CSS 改動）；破版收斂：把該畫面容器 height/padding/line-height 綁同一變數；T1~T5 畫面（diagnose modal/通用 modal/序列埠監看/AI modal）字級待指示。**延後理由**：先前實作過程發生不易解決的問題，已改用**硬編碼**暫時解決；待該問題有明確解法後再恢復此項。
 - [x] 追加修正（同日）：dataset_manager.css 43 處 font-size 補上 calc(Npx * var(--dsm-… ✅ （細節見 log/work/2026-09-16.md）
 - [x] 追加修正（同日）：dataset_manager.css 43 處 font-size 補上 calc(Npx * var(--dsm-… ✅ （細節見 log/work/2026-09-16.md）
 - [x] 實機回饋 H/E：H（1.2）OK ✅ （細節見 log/work/2026-09-16.md）
@@ -211,7 +222,7 @@
 - [x] ：①拍照後中欄標籤管理 UI 消失——根因 addSampleFromSampler/handleDeleteImage 仍以 rend… ✅ （細節見 log/work/2026-09-17.md）
 - [x] DM 契約補登（#task[DM P2 標籤管理UI消失] 後續）：①#dataset-structure-content 為複合容器、… ✅ （細節見 log/work/2026-09-17.md）
 - [x] 物件偵測 dataset 對齊影像分類（P0-P4 完成）：P1 sidecar 匯出期 staging 加建 images/（扁平化… ✅ （細節見 log/work/2026-09-22.md）
-- [ ] [2026-09-17] DM ui_layout.js 精簡切片（S1~S5，**暫緩施工 PAUSED**）：使用者拍板先不動，待下方「M4-FEATURE 除錯任務」線索 ①~⑥ 收斂後啟動。切片順序／預估減行（1823 → S1~S4 約 1330 → 含 S5 約 1150）與動工前置 SSOT 見 `log/plan/DatasetManagerTypeLockedWorkflow.md` §11。S1 `application/specSync.js`（syncSpecFromUI）／S2 `application/progressApply.js`（applyLoadedProgress）／S3 `ui/navigation.js`（P1/P2/P3 導航）／S4 `ui/modalEvents.js`（bindModalEvents）／S5 `application/imageSamples.js`（handleDeleteImage→addSampleFromSampler）；明確不做：硬拆 refreshDynamicPanels、刪仍被呼叫的 wrapper。
+- [ ] DM ui_layout.js 精簡切片（S1~S5）→ **已合併至 Batch 3「P2-2 / S1~S5 ui_layout.js 拆分」單一 SSOT（2026-10-05），不再於此重複追蹤**
 - [x] DM 資料集名稱漂移政策「方案 A」：core/projectNaming.js 新增 detectDatasetNameDrift／d… ✅ （細節見 log/work/2026-09-17.md）
 - [x] [2026-09-17 → 2026-10-02 查證結案] 匯出 staging 路徑驗證（原 backlog：查無此 bug，兩項疑… ✅ （細節見 log/work/2026-09-27.md）
 - [x] ：第 13 頁 SVG 雙圖（⛰️ 學習率）以使用者手調「第1~3步=12」為最小值等比放大（k=12/9.5：9.5→12、10→12… ✅ （細節見 log/work/2026-09-17.md）
@@ -238,7 +249,7 @@
 - [x] 追加：mcu_huskylens Tier 1 積木擴充（6→15 塊）——新增 count / get_id_at / get_nam… ✅ （細節見 log/work/2026-09-19.md）
 - [ ] [2026-09-19] backlog（HuskyLens Tier 2）：螢幕繪圖（draw_rect 0x26 / draw_text / clear_draw）、拍照存 SD（take_photo 0x20）、演算法參數讀寫（get_algo_param 0x02 / set_algo_param）
 - [ ] [2026-09-19] backlog（HuskyLens Tier 3）：多演算法組合（set_multi_algorithm 0x0C + set_multi_algorithm_ratio 0x0D，大記憶體板限定）、私有資料欄位精選（臉五官 / 手 21 點 / 姿態 33 點）
-- [ ] [2026-09-19] backlog：mcu_huskylens UART 讀取改為分片累積迴圈（目前單次讀取 any()，大可能截斷）
+- [x] [2026-09-19] backlog：mcu_huskylens UART 讀取改為分片累積迴圈 ✅ **2026-10-05 完成**。原缺陷：`_read_some()` 單次 `any()/read()`，`_parse()` 遇 `tail >= n`（半幀）直接 `i += 1` 跳過 → 資料量大時**靜默截斷**。修正：①`_read_some` 改為「讀→累積→再讀」迴圈，終止條件以 `wait_ms` 推導而非固定輪數（固定 24 會在 >24×chunk 時提前中止，測試實測抓到 216 bytes 只累積到 192）；②`_parse` 回傳已完整消耗位元組數，尾端半幀存入 `self._rbuf` 跨呼叫接續；③新增 `_parse_drain()` 供 `request_all` 使用，`learn()` 同步改走新路徑。驗收：`tests/e2e/test_huskylens_uart.py` 5 測全綠（`node --test` 422/422、ESLint 0 error、eol 通過）；**變異測試確認**：還原舊單次讀取邏輯後 2 測報紅
 
 - [x] 追加：mcu_huskylens V1 協定修正 + get_arrow 擴充 + 文案/工具箱重整——修正 V1 五個錯誤（幀頭 55… ✅ （細節見 log/work/2026-09-19.md）
 - [ ] [2026-09-19] backlog（HuskyLens V1 指令）：V1 官方協定有 REQUEST_ALGORITHM(0x2D，**編號與 V2 不同**：人臉0/追蹤1/辨識2/循線3/顏色4/標籤5/分類6)、REQUEST_LEARN(0x36 帶 ID)、REQUEST_FORGET(0x37)、REQUEST_CUSTOMNAMES(0x2F)；需獨立編號對照表後實作
@@ -249,7 +260,7 @@
 
 - [x] 啟動時 ReferenceError: Input "RESULT" doesn't exist on "py_ai_get_line_… ✅ （細節見 log/work/2026-09-22.md）
 - [x] 待實機驗證（#task[HuskyLens 循跡模組除錯] 修正後）：①MicroPython 平台啟動＋還原 PC 備份 → 應自動切… ✅ （細節見 log/work/2026-09-22.md）
-- [ ] [2026-09-22] backlog（同源風險）：盤點所有「XML → 工作區」入口，一律先呼叫 `CocoyaApp.ensurePlatformForXml(dom)`；`setPlatformUI` 呼叫端需 await
+- [x] [2026-09-22] 「XML → 工作區」入口盤點 ✅：`ensurePlatformForXml` 呼叫點已存在（`lifecycle.js` L328/330/342、`persistence.js` L112/134）✅ （細節見 log/work/2026-09-22.md）
 
 - [x] Round 2（真正根因）：Round 1 平台順序修正後仍爆 Input "RESULT" doesn't exist → 加埋取證/… ✅ （細節見 log/work/2026-09-22.md）
 
@@ -268,7 +279,7 @@
 - [x] py_io_serial_flush 補 MicroPython 分支：以 sys.stdin + uselect.poll() 排空可… ✅ （細節見 log/work/2026-09-25.md）
 - [x] Candy 主題補齊 SPIKE 顏色 key：SPIKE、SPIKE_MOTOR、SPIKE_MUSIC、SPIKE_LED、SPIK… ✅ （細節見 log/work/2026-09-25.md）
 - [x] 系統規格補註：Python 分類名稱與原語法文字可保留英文作為教學專用術語 ✅ （細節見 log/work/2026-09-25.md）
-- [ ] 建立核心積木契約驗證層：對帳 block 定義、generator、toolbox、mutation、雙語 i18n、主題顏色 key 與平台限制；納入 Node 測試及建置驗證。
+- [x] 建立核心積木契約驗證層 ✅：`ui/src/modules/core/core_contract.test.mjs` 已涵蓋 block/generator/toolbox/mutation/雙語 i18n/主題顏色 key/平台限制，並已擴充至 core_manifest.json 全部 22 模組 ✅ （細節見 log/work/2026-09-25.md）
 - [x] 為 py_text_zfill 補 toolbox 入口與回歸測試 ✅ （細節見 log/work/2026-09-25.md）
 - [x] 為 raw Python statement／expression 補雙語說明與 tooltip，明確告知使用者自行負責 PC／Micr… ✅ （細節見 log/work/2026-09-25.md）
 
@@ -320,11 +331,8 @@
 - [x] package.json 新增 lint:ui，並接入 test:unit（npm test 全閘） ✅ （細節見 log/work/2026-09-30.md）
 - [x] 三條刻意關閉的規則（no-control-regex／no-regex-spaces／no-empty）已於 AGENTS.md 附設計… ✅ （細節見 log/work/2026-09-30.md）
 - [x] 驗收：npm test 197/197 全綠 ✅ （細節見 log/work/2026-09-30.md）
-- [ ] P2-6：`ui_components.js`（20.8KB）職責已被 `ui/panels.js`、`ui/thumbnails.js` 取代，本次僅移除 `index.js` 未用 import，**檔案本體仍待逐條比對呼叫端後刪除**。
-- [x] T3 共用測試夾具：新增 ui/test/{fakeDom,depsBuilder,fixtures}.js，轉換 5 個 DM 測試檔 ✅ （細節見 log/work/2026-09-30.md）
-- [ ] T4：Python／Rust 測試納入（`temp_scripts/e2e_*.py` 轉 pytest、Rust 補 `file.rs`／`python.rs` 測試）
-- [ ] T5：覆蓋率基準（c8，先產報告不設門檻）
-- [ ] T6：CI 與 pre-commit（GitHub Actions + husky）
+- [x] P2-6 `ui_components.js` 職責比對 ✅（**查無可刪函式**：5 方法全有呼叫端，兩個對象職責清晰互不重疊 —— AGENTS.md 記為「記錄查無重疊並留下證據」，不再重複追蹤）
+- T3／T4／T5／T6 已於上方 Batch 5／Batch 6 完成，不在本節重複列舉（SSOT：Batch 5 L132-133、Batch 6 L140-141）
 
 ### [2026-10-01] #task[尺規/標註畫布/還原範例檔/LF 根治] 使用者回報批次
 - [x] 十字尺規顏色即時更新：根因只掛 onchange（關閉取色面板才觸發），補 oninput ✅ （細節見 log/work/2026-10-01.md）
@@ -336,10 +344,8 @@
 - [x] 補 capabilities 值守門（既有契約只比 key，誤設 VSIX 為 true 時 16 測全綠 → 假安全感） ✅ （細節見 log/work/2026-10-01.md）
 - [x] 新增 .gitattributes（* text=auto eol=crlf ＋ 二進位／vendored／產物例外）根治 LF/CRL… ✅ （細節見 log/work/2026-10-01.md）
 - [x] 驗收：272/272 測試綠、eslint 0 error、9 檔行尾全 CRLF ✅ （細節見 log/work/2026-10-01.md）
-- [ ] `temp/` 殘留 3 個更早暫存檔待清：`_print_variant.html`、`print_variant.html`、`scan_t3.py`。
+- [x] `temp/` 殘留清理 ✅（2026-10-05）：**1.65 GB → 0.55 MB**。刪除 `temp/venvtest/`（Python 虛擬環境 22,145 檔）與根目錄 90 個一次性腳本（`p25_*.py`／`dbg*.cjs`／`*.bak`／`*.txt`）；保留 `temp/scripts/`（174 檔，當前使用中）與 `temp/archive/`（189 檔歷史歸檔）。驗收：`node --test "src/**/*.test.mjs"` 422/422 綠、git 僅 `log/todo.md` 修改。
 - [ ] `.gitattributes` 已於本次 commit 納入版控；後續若新增 `.sh` 腳本需另加 `eol=lf` 例外。
-
-- [ ] T6：CI 與 pre-commit（GitHub Actions + husky）
 
 ### [2026-10-01] #task[T-scan] 測試計時器洩漏掃描（Stage 0 殘項）
 - [x] 新增 temp_scripts/t_scan.cjs：40 個測試檔靜態掃描（計時器／handle／無 await 三級線索） ✅ （細節見 log/work/2026-10-01.md）
@@ -350,7 +356,7 @@
 - [x] 刻意保留 bridge.test.mjs 的 TICK（5ms ×3，跨微任務用途而非計時器，僅多 56ms） ✅ （細節見 log/work/2026-10-01.md）
 - [x] 驗收：272/272 綠（3 次取樣 1435/1080/1134ms）、eslint 0 error ✅ （細節見 log/work/2026-10-01.md）
 - [x] 使用者拍板 Batch 2 範圍：P1-3 CSS token 化、P2-7 標籤色主題化、P2-16 dark 補 msgColour… ✅ （細節見 log/work/2026-10-01.md）
-- [ ] **Batch 2 執行**（待指示）：P1-3 + P2-7 + P2-16。P2-16 配色採「做法 1：沿用預設色相與飽和、僅降亮度」，並須推翻 `theme_contract.test.mjs` 第 4 測（該測試是 Batch 0 我替使用者判定「刻意」所寫，此次經使用者明確推翻）。candy 配色為淺底設計，不可直接沿用深底。
+- [x] **Batch 2 執行** ✅：P2-16 + P2-7 全數完成；P1-3 A 類完成、B/C 類部分收斂（dark 段剩 17 處 ＋ light 段 43 處待處理）。`theme_contract.test.mjs` 第 4 測已依使用者決策推翻 ✅ （細節見 log/work/2026-10-01.md、2026-10-02.md）
 ### [2026-10-01] #task[Batch 2 / P2-16] dark 主題補 msgColours（使用者已目視確認）
 - [x] 推翻 Batch 0 由我代判的 theme_contract.test.mjs 第 4 測（原寫「light/dark 不宣告 msg… ✅ （細節見 log/work/2026-10-01.md）
 - [x] cocoya_dark.js 新增 msgColours 38 鍵：OKLCH 換算，色相不變、彩度 ×0.88、亮度收斂到深底適配區間… ✅ （細節見 log/work/2026-10-01.md）
