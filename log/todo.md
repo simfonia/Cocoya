@@ -53,6 +53,7 @@
 - [ ] **容器化訓練腳本**：基於 DGX 鏡像（NGC nvcr.io/nvidia/pytorch ARM64）的訓練容器與模板
 
 ### 長期優化（待辦）
+- [ ] **Plotter（序列繪圖）移植**：CodeBridge `ui/src/lib/plot/` 4 檔 55 KB → Cocoya `ui/src/modules/plot/`。零新增相依（自繪 Canvas，非 Chart.js）、零 Rust。唯一需改的是資料源（`CodeBridgeSerialMonitor` → Cocoya `UI.appendTerminal`）。**執行計畫見 `docs/plan/Plotter移植計畫.md`**（階段 A 純搬移／B 資料接線／C UI+主題+i18n／D 測試）。⚠️ 待決策：VSIX 端序列埠資料走 VS Code 原生終端，webview 拿不到 → 建議 VSIX 不支援並依 `caps.hasTerminal` 隱藏按鈕
 - [ ] 跨平台序列埠 Friendly Name（macOS/Linux；Windows 已有 VID/PID 映射）
 - [ ] 重置韌體 esptool 整合為 Tauri Sidecar 的可行性評估
 
