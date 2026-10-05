@@ -257,12 +257,17 @@
             const inline = !!item.inline;
 
             const isSameType = curLast && curLast.className === `term-${type}`;
-            const isNotTooLong = curLast && (curLast.textContent.length + text.length <= MAX_SPAN_TEXT_LEN);
+            // 2026-10-05：用 ?. / ?? 取代直接 .length。
+            // 原碼 `curLast.textContent.length` 在 DOM 節點 textContent 為 undefined
+            // 時會整個 flushTerminal 拋錯（整批日誌全丟失且不中斷佇列 → UI 看起來停住）。
+            // 這在壓力情境下真實發生過（大量日誌 → 節點異常 → flush 中斷）。
+            const curText = (curLast && curLast.textContent) || '';
+            const isNotTooLong = curLast && (curText.length + text.length <= MAX_SPAN_TEXT_LEN);
 
-            if (isSameType && inline && !curLast.textContent.endsWith('\n') && isNotTooLong) {
-                curLast.textContent += text;
-            } else if (isSameType && !curLast.textContent.endsWith('\n') && isNotTooLong) {
-                curLast.textContent += '\n' + text;
+            if (isSameType && inline && !curText.endsWith('\n') && isNotTooLong) {
+                curLast.textContent = curText + text;
+            } else if (isSameType && !curText.endsWith('\n') && isNotTooLong) {
+                curLast.textContent = curText + '\n' + text;
             } else {
                 const span = document.createElement('span');
                 span.className = `term-${type}`;
@@ -276,17 +281,66 @@
             content.appendChild(fragment);
         }
 
-        // 行數限制保護 (保留最多 1000 行)
-        const excess = content.children.length - 1000;
-        if (excess > 0) {
-            for (let k = 0; k < excess; k++) {
-                if (content.firstChild) content.removeChild(content.firstChild);
-            }
-        }
+        // === 容量修剪（2026-10-05 新增）===
+        // 問題：原保護是「行數上限 1000」，但 flushTerminal 有「同類型合併到同一 span」
+        // 最佳化（curLast.textContent += '\n' + text），每個 span 最多可長到
+        // MAX_SPAN_TEXT_LEN(20000) 字元。兩者相乘 → 1000 節點 × 20000 字元 =
+        // **2000 萬字元留在 DOM**，瀏覽器渲染必然卡死。
+        // 使用者實測症狀：`while True: print("hello")` 塞住 UI，手動按「清除」才恢復。
+        //
+        // 解法：以「**DOM 字元總量**」為真正不變式，從最舊節點開始修剪。
+        // 節點數上限保留（避免節點碎片過多），字元上限為主要防線。
+        this._trimTerminalContent(content);
 
         // 自動捲動到底部（單次 flush 僅計算一次 scrollHeight）
         if (this.isTerminalAutoScroll) {
             content.scrollTop = content.scrollHeight;
+        }
+    };
+
+    /** DOM 字元總量上限（1000 節點 × 每節 20000 字元 = 2000 萬字元會卡死瀏覽器） */
+    const MAX_TERMINAL_CHARS = 400000;
+
+    /**
+     * 修剪終端機 DOM 內容：同時限制「節點數」與「字元總量」，從最舊節點開始刪。
+     *
+     * 註：字元總量採每次 flush 重掃（O(節點數)）而非增量計數 —— 節點數已被
+     * 上限壓在 1000 以內，重掃成本可接受；增量計數需處理「節點被外部改動」
+     * 導致計數漂移的風險，那是更難除錯的失效模式。
+     */
+    UI._trimTerminalContent = function(content) {
+        if (!content) return;
+
+        // 節點數修剪（原行為）
+        const excessNodes = content.children.length - 1000;
+        for (let k = 0; k < excessNodes; k++) {
+            if (!content.firstChild) break;
+            content.removeChild(content.firstChild);
+        }
+
+        // 字元總量修剪（新增）
+        // 節點數上限無法保證字元量：合併最佳化讓單一 span 可達 20000 字元。
+        let total = 0;
+        const children = content.children;
+        for (let i = children.length - 1; i >= 0; i--) {
+            const t = children[i] && children[i].textContent;
+            total += (t && t.length) || 0;
+        }
+        if (total <= MAX_TERMINAL_CHARS) return;
+
+        // 從最舊節點開始刪，直到降回上限以內（保留至少一個節點，避免全空）
+        let idx = 0;
+        while (total > MAX_TERMINAL_CHARS && idx < children.length - 1) {
+            const t = children[idx] && children[idx].textContent;
+            total -= (t && t.length) || 0;
+            content.removeChild(children[idx]);
+            idx++;
+        }
+
+        // 最後一個節點若本身就超長（單一巨量訊息），直接截斷字串
+        const last = content.lastElementChild;
+        if (last && last.textContent && last.textContent.length > MAX_TERMINAL_CHARS) {
+            last.textContent = last.textContent.slice(-MAX_TERMINAL_CHARS);
         }
     };
 
