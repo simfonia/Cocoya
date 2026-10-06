@@ -142,10 +142,21 @@ _reset（僅測試用）
 
 ## 7. 相關決策記錄
 
-- **VSIX 保留**（2026-10-05 使用者決策）：Plotter 在 VSIX 下**同樣適用**——
-  因為序列埠資料走 VS Code 原生終端，webview 拿不到資料。
-  → **需決策**：VSIX 是否也支援 plotter？
-  - 選項 A：VSIX 不支援（webview 無資料源）
-  - 選項 B：VSIX 端由 `serialOps.ts` 透過 `postMessage` 轉發序列埠行給 webview（需新增機制）
+- **VSIX：先不支援**（**2026-10-06 使用者更正決策**，覆蓋下方原「建議選項 A」的推論）：
 
-  **目前建議選項 A**（範圍最小），並在 UI 依 `caps.hasTerminal` 隱藏 plot 按鈕。
+  > **決策**：Plotter **只在 Tauri 端支援**，VSIX 先不支援。
+  > **理由**：VSIX 的序列埠資料走 VS Code 原生終端（`deploy_mcu.py <port> --monitor-only`，
+  > 由 `serialOps.ts` 以終端機啟動），**webview 完全拿不到資料行**，沒有資料源就無從繪圖。
+  > 需求方已確認此範圍。
+
+  - **UI 處置**：依 `bridge.capabilities` 隱藏 plot 按鈕
+    —— 與 `caps.hasTerminal` 同一套機制（`ui/src/ui/base.js` 已用它隱藏 `#terminalArea`）。
+  - **與 Editor 計畫一致**：Editor 亦「VSIX 先不支援」。**兩者共用同一條 caps 判斷**，
+    避免「plot 按鈕藏了但 editor 按鈕還在」的不一致。
+  - **日後若要支援**（記錄為備選，非本次範圍）：
+    - 選項 B：VSIX 端由 `serialOps.ts` 透過 `postMessage` 轉發序列埠行給 webview（需新增機制）
+    - 選項 C：獨立 VS Code 插件自行開啟序列埠 —— ⚠️ **不可行**：
+      Windows 序列埠是**獨佔**的，Cocoya 的 monitor 已持有該 COM 埠，
+      第二個程序開啟會直接 `PermissionError 13`
+      （此衝突本專案已修過一次，見「Terminal Singleton 模式」）。
+      **這條路要成立，必須放棄既有 monitor 或改用資料轉發。**
