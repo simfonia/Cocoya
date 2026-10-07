@@ -128,6 +128,13 @@ class BaseDeployer:
             hint = " (按 Ctrl+C 停止)" if lang == "zh-hant" else " (Press Ctrl+C to stop)"
             title = title.replace("---\n", hint + "\n---")
         print(title)
+
+        # Tauri 端：Rust forwarder 偵測此標記後發出 serial-monitor-started
+        # （只在 tauri 才印，避免 VS Code 終端把雜訊寫進使用者終端；部署與 --monitor-only
+        # 兩條路徑都會到這裡，不需調整呼叫點。）
+        if is_tauri:
+            print("__COCOYA_MONITOR_ACTIVE__")
+            sys.stdout.flush()
         ser = existing_ser
         banner_pending = True if welcome_msg else False
         banner_timer = time.time()
