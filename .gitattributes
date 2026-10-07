@@ -46,3 +46,11 @@ ui/src/python.min.js     -text
 # ----------------------------------------------------------
 ui/dist/       -text -diff
 target/        -text -diff
+# ----------------------------------------------------------
+# 例外：Cargo.toml（2026-10-06）
+# 每次 cargo / tauri build 流程會以 LF 重寫此檔（工具行為，非本專案可控）。
+# 若維持 eol=crlf，工作區會在每次 build 後回 LF、與規範衝突 → 檢查永遠紅。
+# 明確指定 eol=lf：git 與工具行為一致，此檔永不反覆出現在 status。
+# 對應例外：.editorconfig [src-tauri/Cargo.toml]、scripts/eol.cjs SKIP_FILES
+# ----------------------------------------------------------
+src-tauri/Cargo.toml text eol=lf

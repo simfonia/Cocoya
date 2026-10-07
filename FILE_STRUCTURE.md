@@ -166,6 +166,11 @@ C:\Workspace\cocoya\
 │   │   ├── modules/       # 雙模共用積木模組
 │   │   │   ├── core/      # Python／MicroPython 核心語法積木；`core_contract.test.mjs` 對帳 block、generator、toolbox、i18n、主題與平台契約（2026-09-30 T2 起涵蓋 core_manifest.json 全部 22 模組，含 3 項 i18n 守門）
 │   │   │   │   └── file_structure_contract.test.mjs # [P3-4 2026-10-03] FILE_STRUCTURE.md 樹狀縮排契約守門（5 測：每個「該層最後一項」後不得再有同層節點／無相鄰重複條目／縮排為 4 空格單位／根層不得掛多層路徑／不得出現行號引用；掃描型，變異測試三種真實回歸皆報紅）
+│   │   │   ├── editor/      # [2026-10-06 階段 A] 純文字編輯器（pre 疊層高亮 + textarea 輸入，零新增相依；計畫 docs/plan/Editor純文字模式計畫.md）
+│   │   │   │   ├── highlight.js        # Python tokenizer 純函式（關鍵字/字串/註解/數字/內建；輸出必經 escape；掛 globalThis.CocoyaPyHighlight）
+│   │   │   │   ├── highlight.test.mjs  # tokenizer 契約 15 測（escape／註解／三引號／未閉合／f-string／數字／變異測試驗有效）
+│   │   │   │   ├── editor.js           # 疊層元件（捲動同步／Tab 縮排／rAF 合併；縮排讀 Blockly.Python.INDENT；掛 globalThis.CocoyaTextEditor）
+│   │   │   │   └── editor.css          # 疊層佈局＋8 token（--editor-bg/fg／--tok-*；三主題 cssVars 同步，由 theme_contract 守門）
 │   │   │   ├── theme_manager/ # [NEW] 主題管理模組（registry + 模式切換 + 系統深淺色偵測）
 │   │   │   │   ├── theme_manager.js # 核心：registerTheme/getThemes/setMode/getMode/apply/startWatching (window.CocoyaTheme)
 │   │   │   │   ├── theme_contract.test.mjs # [2026-10-01／2026-10-02] 主題契約守門（9 測：cssVars 鍵集合三主題一致／無重複／鍵名格式、msgColours 選配語意；[2026-10-02] 增守門 6「vscode 深色選擇器必須帶 :not(.cocoya-light-mode)」＋守門 7「全專案 CSS 結構健全性（註解不得提前閉合、大括號平衡）」——兩者皆掃描 ui/src 下所有 .css 且含自檢；守住 P2-16、VS Code 深色越權、CSS 語法壞掉三項不變式，npm run test:theme）

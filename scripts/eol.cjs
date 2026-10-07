@@ -50,8 +50,11 @@ const SKIP_DIR_PARTS = new Set([
    //   但其行尾由 scripts/coverage.cjs 自身保è­（它已改為寫入 CRLF）
 ]);
 
-// 明確以 -text 標示的 vendored 資產（與 .gitattributes 對應）
-const SKIP_FILES = new Set(['highlight.min.js', 'python.min.js']);
+// 明確以 -text 或 eol=lf 標示、刻意不強制 CRLF 的檔案（與 .gitattributes 對應）
+// Cargo.toml：cargo / tauri build 每次以 LF 重寫（2026-10-06 使用者確認），
+//   統一 LF 與工具行為一致；強制 CRLF 會讓檢查在每次 build 後永遠紅。
+//   ⚠️ verifyAgainstGit 亦以本清單排除，避免交叉比對把它當漏掃。
+const SKIP_FILES = new Set(['highlight.min.js', 'python.min.js', 'Cargo.toml']);
 
 const TEXT_EXT = new Set([
   '.js', '.mjs', '.cjs', '.ts', '.tsx', '.json', '.md', '.xml', '.html',

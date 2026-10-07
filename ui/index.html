@@ -13,6 +13,8 @@
     <link rel="stylesheet" href="/src/font_scale.css">
     <link rel="stylesheet" href="/src/style.css">
     <link rel="stylesheet" href="/src/modules/dataset_manager/dataset_manager.css">
+    <!-- 2026-10-06 階段 A：純文字編輯器樣式（pre 疊層高亮 + textarea 輸入；預設隱藏 #codeEditor，積木模式不受影響） -->
+    <link rel="stylesheet" href="/src/modules/editor/editor.css">
 </head>
 <body class="cocoya-editor">
     <div id="resizer-overlay"></div>
@@ -229,6 +231,17 @@
             </div>
             <div id="block-type-info" style="display: none; padding: 4px 12px; font-size: calc(11px * var(--fs-e)); color: #FE2F89; background: #FFF0F5; border-bottom: 1px solid #FDE0E8; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
             <div id="codeContent"></div>
+            <!-- 2026-10-06 階段 B：純文字編輯器容器（計畫 §2 pre 疊層高亮 + textarea 輸入）。
+                 預設 display:none（editor.css），積木模式仍由 #codeContent 呈現唯讀預覽；
+                 切換由 body.cocoya-text-mode 驅動（階段 C）。兩層像素對齊依賴相同字型/padding。
+                 wrap="off" 對應 white-space: pre —— 兩層皆不換行，行數 1:1 捲動同步才有意義。 -->
+            <div id="codeEditor">
+                <pre class="editor-highlight" aria-hidden="true"><code></code></pre>
+                <!-- aria-label 刻意用英文常值：applyI18n 只掃 title 與 textContent，
+                     不掃 aria-label（寫 %{BKY_} 會原樣殘留）。階段 C 模式切換接線時，
+                     由 CocoyaTextEditor 以 Blockly.Msg 顯式填充。 -->
+                <textarea class="editor-input" spellcheck="false" wrap="off" aria-label="Python code editor"></textarea>
+            </div>
         </div>
     </div>
 
@@ -337,6 +350,10 @@
     <script src="src/ui/base.js"></script>
     <script src="src/ui_manager.js"></script>
     <script src="src/module_loader.js"></script>
+
+    <!-- 2026-10-06 階段 A：純文字編輯器（Python tokenizer + 疊層元件；純全域掛載，無積木依賴） -->
+    <script src="src/modules/editor/highlight.js"></script>
+    <script src="src/modules/editor/editor.js"></script>
 
     <!-- 主題管理模組（registry：一主題一檔，需在 app 子模組前載入） -->
     <script src="src/modules/theme_manager/theme_manager.js"></script>

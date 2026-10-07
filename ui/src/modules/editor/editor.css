@@ -1,0 +1,125 @@
+/**
+ * modules/editor/editor.css — 純文字模式編輯器（<pre> 疊層高亮 + <textarea> 輸入）
+ *
+ * 設計要點（對齊 docs/plan/Editor純文字模式計畫.md §2/§4）：
+ *   - 兩層像素對齊：同 font-family / font-size / line-height / padding / border，
+ *     任一差異都會造成游標與高亮文字錯位（計畫風險表首項）。
+ *   - textarea 文字透明 + caret-color 可見，讓下層 <pre> 的高亮透出；
+ *     選取區底色刻意用半透明，避免蓋掉下層高亮字。
+ *   - wrap="off"（於 HTML）＋ white-space: pre：兩層都不換行，行數 1:1，
+ *     捲動同步才有意義。
+ *   - 主題 token 走 theme_manager cssVars（P1-3 鐵律：不得寫死 hex），
+ *     var() 帶樣式表 fallback，主題未載入時也可用。
+ *
+ * 版面（body.cocoya-text-mode）：
+ *   左欄固定寬（toolbar 換行 + 虛擬終端保留），codeArea 佔滿剩餘 —— 編輯器
+ *   成為主體。panel-resizer 在文字模式隱藏（版面固定，拖曳無意義）。
+ *
+ * token 清單（8 個，三主題 cssVars 皆有定義，由 theme_contract 守門同步）：
+ *   --editor-bg / --editor-fg / --tok-keyword / --tok-string /
+ *   --tok-comment / --tok-number / --tok-builtin / --tok-operator
+ */
+
+#codeEditor {
+    display: none;              /* 預設隱藏：積木模式由 #codeContent 呈現 */
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    background-color: var(--editor-bg, var(--code-bg, #ffffff));
+    color: var(--editor-fg, var(--text-primary, #333333));
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: calc(13px * var(--fs-e));
+    line-height: 1.5;
+}
+
+/* 兩層絕對疊合、樣式必須完全一致（對齊關鍵） */
+#codeEditor .editor-highlight,
+#codeEditor .editor-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 4px 8px;
+    border: none;
+    border-radius: 0;
+    box-sizing: border-box;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    letter-spacing: normal;
+    tab-size: 4;
+    white-space: pre;
+    overflow-wrap: normal;
+    word-break: normal;
+    overflow: auto;
+}
+
+#codeEditor .editor-highlight {
+    z-index: 1;
+    pointer-events: none;
+    background-color: transparent;
+    color: var(--editor-fg, var(--text-primary, #333333));
+}
+
+#codeEditor .editor-highlight code {
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+}
+
+#codeEditor .editor-input {
+    z-index: 2;
+    resize: none;
+    outline: none;
+    background: transparent;
+    color: transparent;          /* 文字交給下層 pre 顯示 */
+    caret-color: var(--editor-fg, #333333);
+}
+
+/* 選取底色半透明：選中區仍看得見下層高亮字 */
+#codeEditor .editor-input::selection {
+    background: rgba(0, 120, 215, 0.28);
+}
+
+/* --- 語法 token（值來自 theme_manager cssVars，三主題各自定義） --- */
+#codeEditor .tok-keyword  { color: var(--tok-keyword, #0000ff); }
+#codeEditor .tok-string   { color: var(--tok-string, #a31515); }
+#codeEditor .tok-comment  { color: var(--tok-comment, #008000); }
+#codeEditor .tok-number   { color: var(--tok-number, #098658); }
+#codeEditor .tok-builtin  { color: var(--tok-builtin, #795e26); }
+#codeEditor .tok-operator { color: var(--tok-operator, #333333); }
+
+/* --- 文字模式版面（body.cocoya-text-mode 由 CocoyaTextMode 切換） --- */
+body.cocoya-text-mode #blocklyDiv {
+    display: none;              /* 隱藏積木區（含 toolbox；terminalArea 是 sibling，保留） */
+}
+
+body.cocoya-text-mode #codeContent {
+    display: none;              /* 積木模式的唯讀預覽退場 */
+}
+
+body.cocoya-text-mode #codeEditor {
+    display: block;
+}
+
+body.cocoya-text-mode #blocklyArea {
+    flex: 0 0 400px;            /* 左欄縮為 toolbar（會換行）＋ terminal */
+    min-width: 0;
+}
+
+body.cocoya-text-mode #codeArea {
+    flex: 1 1 auto;
+    width: auto;                /* 佔滿剩餘寬度；收合時仍由 .collapsed width:0 !important 接管 */
+}
+
+body.cocoya-text-mode #panel-resizer {
+    display: none;              /* 版面固定，拖曳無意義 */
+}
+
+/* codeArea 收合時編輯器一併退場（與 #codeContent 同待遇） */
+#codeArea.collapsed #codeEditor {
+    opacity: 0;
+    pointer-events: none;
+}

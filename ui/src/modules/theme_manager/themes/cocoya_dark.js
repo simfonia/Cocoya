@@ -127,7 +127,16 @@
             '--dsm-shadow-brand': 'rgba(254, 47, 137, 0.3)',
             '--dsm-autosave-indicator': '#6fdd8a',
             '--dsm-select-border': '#ff8fb3',
-            '--dsm-select-bg': '#3a2b32'
+            '--dsm-select-bg': '#3a2b32',
+            /* Editor tokens（2026-10-06 階段 A：深色值對齊 VS Code Dark+ Python 配色）*/
+            '--editor-bg': '#1e1e1e',
+            '--editor-fg': '#d4d4d4',
+            '--tok-keyword': '#569cd6',
+            '--tok-string': '#ce9178',
+            '--tok-comment': '#6a9955',
+            '--tok-number': '#b5cea8',
+            '--tok-builtin': '#dcdcaa',
+            '--tok-operator': '#d4d4d4'
         },
         css: `
 /* --- VS Code / System Theme Integration --- */

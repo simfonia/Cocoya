@@ -109,7 +109,16 @@
             '--dsm-shadow-brand': 'rgba(254, 47, 137, 0.3)',
             '--dsm-autosave-indicator': '#2F6B3C',
             '--dsm-select-border': '#D6417E',
-            '--dsm-select-bg': '#FFE3F0'
+            '--dsm-select-bg': '#FFE3F0',
+            /* Editor tokens（2026-10-06 階段 A：糖果值沿用粉紫調色盤，註解綠沿用 dsm 成功色系）*/
+            '--editor-bg': '#FFFDF7',
+            '--editor-fg': '#6A4A8C',
+            '--tok-keyword': '#8E7CF8',
+            '--tok-string': '#D6417E',
+            '--tok-comment': '#2F6B3C',
+            '--tok-number': '#FF8FA3',
+            '--tok-builtin': '#45B7D1',
+            '--tok-operator': '#8A4A6A'
         }
     });
 })();

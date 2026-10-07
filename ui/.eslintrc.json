@@ -15,6 +15,8 @@
     "CocoyaMediaUri": "readonly",
     "CocoyaBoard": "readonly",
     "CocoyaSettings": "readonly",
+    "CocoyaPyHighlight": "readonly",
+    "CocoyaTextEditor": "readonly",
     "acquireVsCodeApi": "readonly",
     "hljs": "readonly"
   },

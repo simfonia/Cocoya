@@ -397,6 +397,23 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
 | **其他** | `npm run test:rust` / `cargo check` | Rust 異動 | 不併入 `npm test` |
 | **其他** | `npm run test:python` | Python 異動 | 不併入 `npm test`（見下方 T4-2 說明） |
 
+### 修改→測試對應表
+
+| 改到 | 優先跑 |
+|---|---|
+| `ui/src/modules/<X>/<X>_blocks.js` | `npm run test:fast -- <X>_blocks.test.mjs` |
+| `ui/src/modules/<X>/<X>_generators.js` | `npm run test:fast -- <X>_generators.test.mjs` |
+| `src/` 核心（`application/*`、`core/*`、`pathPolicy` 與 `settingsKeys`） | `npm run test:fast` + `npm run test:core` |
+| `ui/src/modules/dataset_manager/` | `npm run test:dm` |
+| `ui/src/modules/theme_manager/` | `npm run test:theme` |
+| `src-tauri/src/commands/` | `cargo check` + `npm run test:rust` |
+| `config/python_modules.json` | `npm run test:unit` |
+| `docs/*` / `log/*` / `temp/*` | 視情況，不跑測試 |
+
+補充：
+- 以上只保證「不漏掉同名與同目錄測試」，不代表無副作用；一旦改到多個目錄、公共 API、模板目錄名稱或 `src-tauri/src/commands` 簽名，另須跑 `npm run test:ui`。
+- Tauri 命令簽名變動時，前端 `ui/src/bridge/tauri.js`、VSIX `cocoyaManager.ts` → `src/handlers/<module>Ops.ts` 都要同步更新。
+
 - **Python 測試（`npm run test:python`，T4-2 2026-10-03）**：`tests/e2e/` 共 **11 個 pytest 測試**，
   由原 `temp_scripts/e2e_*.py` 轉入（原腳本在 gitignore 目錄、不被任何 CI 執行，
   實測有 5 支已靜默腐化數月）。

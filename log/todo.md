@@ -55,6 +55,7 @@
 ### 長期優化（待辦）
 - [ ] **Plotter（序列繪圖）移植**：CodeBridge `ui/src/lib/plot/` 4 檔 55 KB → Cocoya `ui/src/modules/plot/`。零新增相依（自繪 Canvas，非 Chart.js）、零 Rust。唯一需改的是資料源（`CodeBridgeSerialMonitor` → Cocoya `UI.appendTerminal`）。**執行計畫見 `docs/plan/Plotter移植計畫.md`**（階段 A 純搬移／B 資料接線／C UI+主題+i18n／D 測試）。✅ **決策（2026-10-06）：VSIX 先不支援**（序列埠資料走 VS Code 原生終端、webview 無資料源），UI 依 `bridge.capabilities` 隱藏 plot 按鈕 —— **與 Editor 計畫共用同一條 caps 判斷**
 - [ ] **純文字模式 ＋ 內建編輯器（TinkerCAD 式單向轉換）**：轉換後隱藏積木區、保留程式碼區（升級為可編輯）與虛擬終端，**不可逆**。採 `<pre>` 疊層高亮 ＋ `<textarea>` 輸入，**約 500 行、零新增相依**（不引入 CodeMirror/Monaco，遵循專案規範）。**執行計畫見 `docs/plan/Editor純文字模式計畫.md`**（階段 A 編輯器元件＋Python tokenizer／B 整合 codeArea／C 模式切換＋存檔／D 邊界守門）。✅ **決策（2026-10-06）：①存檔改 `.py` ②VSIX 先不支援**（VS Code 已有文字編輯器，直接開 `.py` 即可）
+  - **進度（2026-10-06）**：階段 A ✅（三檔＋highlight 15 測＋三主題 8 token＋接線；變異測試驗守門有效）、階段 B ✅（`#codeEditor` 容器入 `#codeArea`，唯讀預覽零變動，build/lint/451 測全綠）。**待辦：C（caps 閘門＋確認對話框＋Blockly.dispose＋備份＋存 .py）、D（editor_contract 守門）**。詳見 `log/work/2026-10-06.md`
 - [ ] 跨平台序列埠 Friendly Name（macOS/Linux；Windows 已有 VID/PID 映射）
 - [ ] 重置韌體 esptool 整合為 Tauri Sidecar 的可行性評估
 

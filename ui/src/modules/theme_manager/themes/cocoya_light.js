@@ -74,7 +74,16 @@
             '--dsm-shadow-brand': 'rgba(254, 47, 137, 0.15)',
             '--dsm-autosave-indicator': '#4CAF50',
             '--dsm-select-border': '#FE2F89',
-            '--dsm-select-bg': '#FFF0F6'
+            '--dsm-select-bg': '#FFF0F6',
+            /* Editor tokens（2026-10-06 階段 A：純文字編輯器語法高亮；淺色值對齊 editor.css fallback）*/
+            '--editor-bg': '#ffffff',
+            '--editor-fg': '#333333',
+            '--tok-keyword': '#0000ff',
+            '--tok-string': '#a31515',
+            '--tok-comment': '#008000',
+            '--tok-number': '#098658',
+            '--tok-builtin': '#795e26',
+            '--tok-operator': '#333333'
         }
     });
 })();

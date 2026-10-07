@@ -83,12 +83,16 @@ Cocoya 規範明定**零新增 dependency**（CodeBridge 的 plotter 亦遵循�
 
 ## 4. 主題化
 
-新增 CSS token（三主題）：
+新增 CSS token（三主題，2026-10-06 階段 A 收斂為 8 個）：
 ```
---editor-bg / --editor-fg / --editor-gutter-bg / --editor-gutter-fg
+--editor-bg / --editor-fg
 --tok-keyword / --tok-string / --tok-comment / --tok-number
---tok-builtin / --tok-operator / --tok-line-number
+--tok-builtin / --tok-operator
 ```
+> 收斂說明：原列 11 個，`--editor-gutter-bg/fg` 與 `--tok-line-number`
+> 屬行號欄位，階段 A 的 pre+textarea 疊層**無行號欄**（行號由 Blockly 側既有
+> 機制處理），實作未引用 → 不新增，避免無人讀取的死 token。
+> 若階段 C 需要行號欄，再補此 3 token（須三主題同步）。
 在 `theme_manager.js` 的 `cssVars` 補值，**不得寫死 hex**（P1-3 已確立此規範）。
 
 ---
