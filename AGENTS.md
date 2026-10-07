@@ -95,6 +95,12 @@ Cocoya 是一個針對 Python AI 視覺的教學工具。它透過 Blockly 產�
 - **AI／腳本寫檔鐵律**：改檔案後一律 `npm run eol:fix` 收尾。
   Python 用 `io.open(p,'wb').write(data.replace(b'\r\n',b'\n').replace(b'\n',b'\r\n'))`，
   **不要用 `write_text()`**（預設寫 `\n`，會造成全檔 diff）。
+- **寫檔工具優先序（2026-10-07）**：建立／改寫多行檔案**優先用 Node**
+  （`editor` 工具或 Node 腳本，明確控制 `\r\n`），其次 Python `wb` 模式；
+  **避免 PowerShell `Add-Content` / `Set-Content` / here-string 寫入** ——
+  實測（2026-10-07 探針）cmdlet **不正規化內容行尾**：here-string 內容由指令字串決定，
+  指令字串帶 LF 就原樣寫入 LF（cmdlet 自身補的結尾才是 CRLF），混行尾靜默產生且不報錯。
+  執行、查詢、git 操作仍用 PowerShell；只有「寫檔」收斂給 Node。
 
 ### Task Type 命名統一鐵律（2026-10-03）
 DM 專案類型（`typePolicy.ALL_TYPES`）、訓練任務類型（`TASK_TYPE` 下拉）、訓練模板目錄
