@@ -69,7 +69,6 @@ export async function toggleSerialMonitor(_command, data) {
         });
         const opened = res === 'opened';
         if (window.CocoyaUI) {
-            window.CocoyaUI.setSerialMonitorActive(opened);
             window.CocoyaUI.appendTerminal(
                 opened ? `--- Opening Monitor: ${data.serialPort} ---` : '--- Monitor Stopped ---',
                 'info'

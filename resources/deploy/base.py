@@ -123,6 +123,28 @@ class BaseDeployer:
 
     def monitor(self, port, lang="en", baud=115200, welcome_msg=None, existing_ser=None, is_tauri=False):
         """雙向序列埠監看模式"""
+        hub_mode = is_tauri and os.environ.get("COCOYA_SERIAL_HUB_ENABLED") == "1"
+        hub_serial_proxy = None
+        ser = existing_ser
+        if hub_mode:
+            if ser is not None:
+                try:
+                    if ser.is_open:
+                        ser.close()
+                except Exception:
+                    pass
+            ser = None
+            from .serial_hub import SerialProxy, release_active_upload_lease
+            hub_serial_proxy = SerialProxy
+            release_active_upload_lease()
+
+        def emit_tauri_connection_state(connected):
+            if not is_tauri:
+                return
+            marker = "__COCOYA_SERIAL_CONNECTED__" if connected else "__COCOYA_SERIAL_DISCONNECTED__"
+            print(marker)
+            sys.stdout.flush()
+
         title = get_msg("monitor_title", lang) % port
         if not is_tauri:
             hint = " (按 Ctrl+C 停止)" if lang == "zh-hant" else " (Press Ctrl+C to stop)"
@@ -135,7 +157,10 @@ class BaseDeployer:
         if is_tauri:
             print("__COCOYA_MONITOR_ACTIVE__")
             sys.stdout.flush()
-        ser = existing_ser
+        last_hub_connected = None
+        last_hub_dot = 0.0
+        if not hub_mode:
+            emit_tauri_connection_state(bool(ser and ser.is_open))
         banner_pending = True if welcome_msg else False
         banner_timer = time.time()
         # 「收到 OK 之後補一行空白行」只處理一次；用執行個體旗標跨讀取區塊保持
@@ -168,11 +193,29 @@ class BaseDeployer:
 
         while True:
             try:
+                if hub_mode and ser is not None and ser.is_open:
+                    connected = bool(getattr(ser, "connected", False))
+                    if connected != last_hub_connected:
+                        emit_tauri_connection_state(connected)
+                        last_hub_connected = connected
+                        if connected:
+                            print(get_msg("connected", lang) % port)
+                    if not connected and time.time() - last_hub_dot >= 1.0:
+                        sys.stdout.write("."); sys.stdout.flush()
+                        last_hub_dot = time.time()
+
                 if ser is None or not ser.is_open:
                     try:
-                        ser = serial.Serial(port, baud, timeout=0.1)
-                        ser.dtr = True; ser.rts = True
-                        print(get_msg("connected", lang) % port)
+                        if hub_mode:
+                            ser = hub_serial_proxy(port, baudrate=baud, timeout=0.1, role="monitor")
+                        else:
+                            ser = serial.Serial(port, baud, timeout=0.1)
+                            ser.dtr = True; ser.rts = True
+                        if not hub_mode:
+                            print(get_msg("connected", lang) % port)
+                            emit_tauri_connection_state(True)
+                        else:
+                            last_hub_connected = None
                         banner_timer = time.time()
                         # 重連（如使用者按 MCU reset）＝新一輪執行：重置一次性旗標，
                         # 讓 OK 空行與「程式執行完畢」提示在新一輪重新生效。
@@ -183,7 +226,13 @@ class BaseDeployer:
                         # 若送 Ctrl-C 會中斷使用者的程式、送 Ctrl-D 會造成程式重跑兩次。
                         # 開機最初段的輸出因 USB 尚未列舉完成而遺失（物理限制），
                         # 但程式後續的 print 會在連線建立後正常顯示。
-                    except Exception:
+                    except Exception as error:
+                        if hub_mode and "SERIAL_PORT_BUSY_UPLOAD" in str(error):
+                            sys.stdout.write("."); sys.stdout.flush()
+                            time.sleep(0.1)
+                            continue
+                        if hub_mode:
+                            raise
                         sys.stdout.write("."); sys.stdout.flush()
                         time.sleep(1.0); continue
                 if ser.in_waiting > 0:
@@ -267,6 +316,17 @@ class BaseDeployer:
                     raw_dumper.stop()
                 break
             except Exception as e:
+                if hub_mode and str(e).startswith(("SERIAL_HUB_", "SERIAL_PORT_BUSY", "SERIAL_WRITER_BUSY")):
+                    print(f"[Cocoya Serial Hub] {e}", file=sys.stderr, flush=True)
+                    try:
+                        if ser:
+                            ser.close()
+                    except Exception:
+                        pass
+                    if raw_dumper:
+                        raw_dumper.stop()
+                    raise
+                emit_tauri_connection_state(False)
                 if not is_tauri:
                     print(get_msg("disconnected", lang) % str(e))
                 try:

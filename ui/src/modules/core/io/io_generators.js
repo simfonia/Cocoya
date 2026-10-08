@@ -18,10 +18,21 @@ Blockly.Python.forBlock['py_io_serial_init'] = function(block, generator) {
     // MicroPython 預設透過 USB REPL (sys.stdin/stdout) 通訊，無須初始化
     return '# Serial initialized via REPL (default)\n';
   }
-  generator.definitions_['import_serial'] = 'import serial';
+  generator.definitions_['import_serial'] = `
+import os as _cocoya_os
+if _cocoya_os.environ.get('COCOYA_SERIAL_HUB_ENABLED') == '1':
+    import sys as _cocoya_sys
+    _cocoya_hub_script = _cocoya_os.environ.get('COCOYA_SERIAL_HUB_SCRIPT', '')
+    if _cocoya_hub_script:
+        _cocoya_sys.path.insert(0, _cocoya_os.path.dirname(_cocoya_hub_script))
+    from serial_hub import SerialProxy as _CocoyaSerial
+else:
+    import serial as _cocoya_serial
+    _CocoyaSerial = _cocoya_serial.Serial
+`;
   var port = generator.valueToCode(block, 'PORT', Blockly.Python.ORDER_NONE) || "'COM1'";
   var baud = block.getFieldValue('BAUD');
-  return 'ser = serial.Serial(' + port + ', ' + baud + ', timeout=0.01, write_timeout=0)\n';
+  return 'ser = _CocoyaSerial(' + port + ', ' + baud + ', timeout=0.01, write_timeout=0)\n';
 };
 
 Blockly.Python.forBlock['py_io_serial_read'] = function(block, generator) {

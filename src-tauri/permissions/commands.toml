@@ -12,6 +12,7 @@ commands.allow = [
   "deploy_mcu",
   "open_serial_monitor",
   "toggle_serial_monitor",
+  "get_serial_monitor_state",
   "erase_filesystem",
   "auto_backup",
   "clear_backup",

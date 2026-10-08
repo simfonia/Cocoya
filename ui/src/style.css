@@ -390,6 +390,16 @@ body.cocoya-dark-mode {
     background-color: #f0f0f0;
 }
 
+.toolbar-btn.active {
+    background-color: color-mix(in srgb, var(--dsm-success-accent, #4CAF50) 24%, var(--toolbar-bg, #ffffff));
+    box-shadow: inset 0 0 0 1px var(--dsm-success-accent, #4CAF50);
+}
+
+.toolbar-btn.reconnecting {
+    outline: 1px dashed var(--dsm-success-accent, #4CAF50);
+    outline-offset: -2px;
+}
+
 .toolbar-btn img {
     width: 24px;
     height: 24px;

@@ -138,6 +138,8 @@
     "TLB_SERIAL_PORT": "序列埠",
     "TLB_SERIAL_REFRESH": "偵測板子",
     "TLB_SERIAL_MONITOR": "序列監看（點擊開啟/再點停止）",
+    "TLB_SERIAL_MONITOR_ACTIVE": "序列監看中（點擊停止）",
+    "TLB_SERIAL_MONITOR_WAITING": "等待序列埠重新連線中（點擊停止）",
     "TLB_SERIAL_CONNECT": "連接序列埠",
     "TLB_SERIAL_DISCONNECT": "斷開序列埠",
     "TLB_FILE_NEW": "未命名專案",

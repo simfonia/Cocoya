@@ -29,6 +29,7 @@ This document serves as the Technical Reference and Source of Truth (SSOT) for t
 | `get_serial_ports` | Lists available serial ports with smart labeling | Migrated | `commands/mcu.rs` |
 | `deploy_mcu` | Invokes `deploy_mcu.py` to upload code to hardware | Migrated | `commands/mcu.rs` |
 | `open_serial_monitor` | Starts serial monitor mode via `deploy_mcu.py` | Migrated | `commands/mcu.rs` |
+| `get_serial_monitor_state` | Returns the current window's monitor session/connection snapshot | Migrated | `commands/mcu/monitor.rs` |
 | `erase_filesystem` | Rebuilds the MCU filesystem (formatting) | Migrated | `commands/mcu.rs` |
 | `reset_firmware` | Burns MicroPython firmware to RPI-RP2 drive | Migrated | `commands/mcu.rs` |
 | `set_window_focus` | Releases/re-acquires serial monitor on window focus change (Multi-window handover) | Migrated | `commands/mcu.rs` |
@@ -87,6 +88,7 @@ Notation: `key?` = Optional. **Rule: changing a Rust signature -> immediately up
 | mcu | get_serial_ports    | -- | {} | Result<Vec<SerialPortResult>, String>（欄位 camelCase：port/label/vid/pid/boardId；boardId 對應 board_defs.json，未知板空字串） |
 | mcu | deploy_mcu          | python_path, port, code, serial_upload_only: bool, lang, raw_dump_enabled: Option<bool> | {pythonPath, port, code, serialUploadOnly, lang, rawDumpEnabled?} | Result<(), String>（Raw Dump 開啟時路徑固定為 `<ProjectRoot>/raw_dump.log`；未錨定回 `PROJECT_ROOT_REQUIRED`） |
 | mcu | open_serial_monitor | port: String, python_path, lang, raw_dump_enabled: Option<bool> | {port, pythonPath, lang, rawDumpEnabled?} | Result<(), String> |
+| mcu | get_serial_monitor_state | -- | {} | SerialMonitorSnapshot {active, connected, port?, generation, revision} (camelCase; per-window snapshot; events use `serial-monitor-state`) |
 | mcu | toggle_serial_monitor | port: Option<String>, python_path, lang: Option<String>, raw_dump_enabled: Option<bool> | {port?, pythonPath?, lang?, rawDumpEnabled?} | Result<String, String>（回 "opened"/"stopped"；設定保存於 serial_wants，聚焦重取沿用） |
 | mcu | erase_filesystem    | port: String, python_path, lang | {port, pythonPath, lang} | Result<(), String> |
 | mcu | reset_firmware      | model: String, should_clear: bool, serial_port: Option<String>, python_path: Option<String> | {model, shouldClear, serialPort?, pythonPath?} | Result<(), String>（`pythonPath` 為 P1-6 F1 新增：esptool 燒錄須用使用者設定的 Python，空白則回退 `python`） |

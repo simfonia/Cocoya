@@ -19,6 +19,7 @@ export class BridgeTauri extends BaseBridge {
         this._isClosing = false;
         this._datasetUploadChain = Promise.resolve();
         this._anchor = null; // { isAnchored, projectRoot } 由 init() 從後端取得
+        this._serialMonitorSnapshot = { generation: 0, revision: 0 };
     }
 
     /**
@@ -221,9 +222,9 @@ export class BridgeTauri extends BaseBridge {
                 this._dispatchToFrontend({ command: 'serialPortsData', ports: event.payload || [] });
             });
 
-            // 序列監看行程結束（被停止/自行退出）→ 熄滅監看鈕狀態
-            await appWindow.listen('serial-monitor-stopped', () => {
-                if (window.CocoyaUI) window.CocoyaUI.setSerialMonitorActive(false);
+            // 序列監看狀態由 Rust generation/revision 管理；事件以 emit_to 僅送至本視窗。
+            await appWindow.listen('serial-monitor-state', (event) => {
+                this._applySerialMonitorSnapshot(event.payload);
             });
 
             // 監聽 sidecar 事件（如 cameraStatus 變化）
@@ -253,8 +254,32 @@ export class BridgeTauri extends BaseBridge {
                     console.warn('[Bridge] Failed to parse sidecar event:', e);
                 }
             });
+
+            // 必須在 state event listener 註冊後查 snapshot；若期間收到較新的事件，
+            // _applySerialMonitorSnapshot 會以 generation/revision 拒絕舊 snapshot。
+            if (this.tauriInvoke) {
+                try {
+                    const snapshot = await this.tauriInvoke('get_serial_monitor_state');
+                    this._applySerialMonitorSnapshot(snapshot);
+                } catch (e) {
+                    console.warn('[Bridge] Failed to get serial monitor state:', e);
+                }
+            }
         } catch (e) {
             console.error('[Bridge] Failed to setup Tauri listeners:', e);
+        }
+    }
+
+    _applySerialMonitorSnapshot(snapshot) {
+        if (!snapshot || typeof snapshot !== 'object') return;
+        const generation = Number(snapshot.generation) || 0;
+        const revision = Number(snapshot.revision) || 0;
+        const current = this._serialMonitorSnapshot;
+        if (generation < current.generation
+            || (generation === current.generation && revision < current.revision)) return;
+        this._serialMonitorSnapshot = { generation, revision };
+        if (window.CocoyaUI && window.CocoyaUI.setSerialMonitorState) {
+            window.CocoyaUI.setSerialMonitorState(snapshot);
         }
     }
 

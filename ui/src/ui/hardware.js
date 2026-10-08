@@ -164,10 +164,31 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
 
     /** 序列監看鈕狀態（toggle 亮燈；由 bridge 收到結果/結束事件時呼叫） */
     _serialMonitorActive: false,
+    _serialMonitorConnected: false,
     setSerialMonitorActive: function(on) {
-        this._serialMonitorActive = !!on;
+        this.setSerialMonitorState({ active: !!on, connected: !!on });
+    },
+
+    setSerialMonitorState: function(snapshot) {
+        const active = !!(snapshot && snapshot.active);
+        const connected = active && !!snapshot.connected;
+        this._serialMonitorActive = active;
+        this._serialMonitorConnected = connected;
         const btn = document.getElementById('btn-serial-monitor');
-        if (btn) btn.style.backgroundColor = on ? '#c8e6c9' : '';
+        if (!btn) return;
+        btn.classList.toggle('active', active);
+        btn.classList.toggle('reconnecting', active && !connected);
+        btn.setAttribute('aria-pressed', String(active));
+        btn.setAttribute('data-serial-state', !active ? 'stopped' : connected ? 'connected' : 'reconnecting');
+        if (active && !connected) {
+            btn.title = (window.Blockly && Blockly.Msg['TLB_SERIAL_MONITOR_WAITING'])
+                || 'Serial monitor is waiting for the port to reconnect';
+        } else if (active) {
+            btn.title = (window.Blockly && Blockly.Msg['TLB_SERIAL_MONITOR_ACTIVE'])
+                || 'Serial monitor active (click to stop)';
+        } else {
+            btn.title = (window.Blockly && Blockly.Msg['TLB_SERIAL_MONITOR']) || 'Serial Monitor';
+        }
     },
 
     /** 綁定 serial 自繪下拉的開闔與點選 */

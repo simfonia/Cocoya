@@ -135,6 +135,8 @@
     "TLB_SERIAL_PORT": "Serial Port",
     "TLB_SERIAL_REFRESH": "Detect Board",
     "TLB_SERIAL_MONITOR": "Serial Monitor (click to open / click again to stop)",
+    "TLB_SERIAL_MONITOR_ACTIVE": "Serial monitor active (click to stop)",
+    "TLB_SERIAL_MONITOR_WAITING": "Serial monitor waiting for the port to reconnect (click to stop)",
     "TLB_SERIAL_CONNECT": "Connect Serial",
     "TLB_SERIAL_DISCONNECT": "Disconnect Serial",
     "TLB_FILE_NEW": "Untitled Project",

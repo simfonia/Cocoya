@@ -6,13 +6,47 @@ use std::process::{Command, Stdio};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, State, Window};
+use tauri::{AppHandle, Emitter, State, Window};
 use crate::state::AppState;
 use crate::utils::get_deployer_path;
 use crate::commands::python::stop_python;
 
 use super::raw_dump::{configure_serial_raw_dump, resolve_serial_raw_dump_path};
-use super::stream::forward_stream_with_backpressure;
+use super::stream::{forward_stream_with_backpressure, forward_stream_with_controls, StreamMarker};
+
+fn emit_monitor_snapshot(window: &Window, label: &str, snapshot: crate::state::SerialMonitorSnapshot) {
+    let _ = window.emit_to(label, "serial-monitor-state", snapshot);
+}
+
+fn monitor_marker(
+    token: &'static str,
+    registry: Arc<crate::state::SerialMonitorRegistry>,
+    window: Window,
+    label: String,
+    generation: u64,
+    connected: Option<bool>,
+) -> StreamMarker {
+    StreamMarker {
+        token,
+        on_detected: Arc::new(move || {
+            let snapshot = match connected {
+                Some(value) => registry.set_connected(&label, generation, value),
+                None => registry.start_dedicated(&label, String::new(), generation),
+            };
+            if let Some(snapshot) = snapshot {
+                emit_monitor_snapshot(&window, &label, snapshot);
+            }
+        }),
+    }
+}
+
+#[tauri::command]
+pub async fn get_serial_monitor_state(
+    window: Window,
+    state: State<'_, AppState>,
+) -> Result<crate::state::SerialMonitorSnapshot, String> {
+    Ok(state.serial_monitor_registry.snapshot(window.label()))
+}
 
 pub fn stop_serial_monitor(state: State<'_, AppState>, label: String) -> bool {
     let session_opt = {
@@ -40,7 +74,11 @@ pub fn stop_serial_monitor(state: State<'_, AppState>, label: String) -> bool {
                     }
                     std::thread::sleep(Duration::from_millis(25));
                 }
-                Err(_) => break,
+                Err(_) => {
+                    let _ = session.child.kill();
+                    let _ = session.child.wait();
+                    break;
+                }
             }
         }
 
@@ -65,22 +103,6 @@ pub(crate) fn spawn_serial_monitor(
     // 在搶占其他視窗序列埠前先驗證 ProjectRoot。
     resolve_serial_raw_dump_path(&state, &label, raw_dump_enabled)?;
 
-    // 若同一埠已被其他視窗佔用 → 先停止該視窗，避免雙重衝突
-    let occupied_by: Option<String> = {
-        let mut owner: Option<String> = None;
-        let monitors = state.serial_monitors.lock().unwrap();
-        for (other_label, sess) in monitors.iter() {
-            if *other_label != label && sess.port == port {
-                owner = Some(other_label.to_string());
-                break;
-            }
-        }
-        owner
-    };
-    if let Some(occupier) = occupied_by {
-        let _ = stop_serial_monitor(state.clone(), occupier);
-    }
-
     // 記錄「想要」的監看埠（跨失焦保留，供重新聚焦後自動重開）
     {
         let mut wants = state.serial_wants.lock().unwrap();
@@ -98,6 +120,13 @@ pub(crate) fn spawn_serial_monitor(
     // 編碼修復（對齊 deploy_mcu）：monitor 轉發 MCU 回傳的中文 print，Host 端必須同樣強制 UTF-8
     cmd.env("PYTHONIOENCODING", "utf-8")
         .env("PYTHONUTF8", "1");
+    let serial_hub_path = get_deployer_path(&handle)
+        .parent()
+        .unwrap_or_else(|| std::path::Path::new("."))
+        .join("deploy")
+        .join("serial_hub.py");
+    cmd.env("COCOYA_SERIAL_HUB_ENABLED", "1")
+        .env("COCOYA_SERIAL_HUB_SCRIPT", serial_hub_path);
     configure_serial_raw_dump(&mut cmd, &state, &label, raw_dump_enabled)?;
     #[cfg(target_os = "windows")]
     {
@@ -121,12 +150,14 @@ pub(crate) fn spawn_serial_monitor(
     let stderr = child.stderr.take().unwrap();
 
     let stopped = Arc::new(AtomicBool::new(false));
+    let generation = state.serial_monitor_registry.next_generation();
 
     {
         let mut monitors = state.serial_monitors.lock().unwrap();
         monitors.insert(
             label.clone(),
             crate::state::SerialMonitorSession {
+                generation,
                 port: port.clone(),
                 python_path: python_path.clone(),
                 lang: lang.clone(),
@@ -136,13 +167,64 @@ pub(crate) fn spawn_serial_monitor(
         );
     }
 
-    forward_stream_with_backpressure(
+    let registry = state.serial_monitor_registry.clone();
+    registry.register_dedicated_process(&label, port.clone(), generation);
+    if let Some(snapshot) = registry.start_dedicated(&label, port.clone(), generation) {
+        emit_monitor_snapshot(&window, &label, snapshot);
+    }
+
+    let active_marker = monitor_marker(
+        "__COCOYA_MONITOR_ACTIVE__\n",
+        registry.clone(),
+        window.clone(),
+        label.clone(),
+        generation,
+        None,
+    );
+    let connected_marker = monitor_marker(
+        "__COCOYA_SERIAL_CONNECTED__\n",
+        registry.clone(),
+        window.clone(),
+        label.clone(),
+        generation,
+        Some(true),
+    );
+    let disconnected_marker = monitor_marker(
+        "__COCOYA_SERIAL_DISCONNECTED__\n",
+        registry.clone(),
+        window.clone(),
+        label.clone(),
+        generation,
+        Some(false),
+    );
+    let finished_window = window.clone();
+    let finished_label = label.clone();
+    let finished_registry = registry.clone();
+    let finished_monitors = state.serial_monitors.clone();
+    forward_stream_with_controls(
         stdout,
         window.clone(),
         label.clone(),
         "python-log",
         Some(stopped.clone()),
         Some("serial-monitor-stopped"),
+        vec![active_marker, connected_marker, disconnected_marker],
+        Some(Arc::new(move || {
+            if let Some(snapshot) = finished_registry.finish(&finished_label, generation) {
+                let finished_session = {
+                    let mut monitors = finished_monitors.lock().unwrap();
+                    if monitors.get(&finished_label).map(|session| session.generation) == Some(generation) {
+                        monitors.remove(&finished_label)
+                    } else {
+                        None
+                    }
+                };
+                if let Some(mut session) = finished_session {
+                    let _ = session.child.wait();
+                }
+                emit_monitor_snapshot(&finished_window, &finished_label, snapshot);
+            }
+        })),
     );
 
     forward_stream_with_backpressure(
@@ -171,11 +253,29 @@ pub async fn toggle_serial_monitor(
     raw_dump_enabled: Option<bool>,
 ) -> Result<String, String> {
     let label = window.label().to_string();
-    let had = stop_serial_monitor(state.clone(), label.clone());
-    if had {
+    if let Some((generation, source)) = state.serial_monitor_registry.current_source(&label) {
+        match source {
+            crate::state::SerialMonitorSource::Dedicated => {
+                let _ = stop_serial_monitor(state.clone(), label.clone());
+                let snapshot = state.serial_monitor_registry.finish(&label, generation);
+                if let Some(snapshot) = snapshot {
+                    emit_monitor_snapshot(&window, &label, snapshot);
+                }
+            }
+            crate::state::SerialMonitorSource::Deploy => {
+                stop_python(window.clone(), state.clone()).await?;
+            }
+        }
         state.serial_wants.lock().unwrap().remove(&label);
         return Ok("stopped".to_string());
     }
+    if state.serial_monitor_registry.has_deploy_process(&label) {
+        stop_python(window.clone(), state.clone()).await?;
+        state.serial_wants.lock().unwrap().remove(&label);
+        return Ok("stopped".to_string());
+    }
+    let _ = stop_serial_monitor(state.clone(), label.clone());
+    state.serial_wants.lock().unwrap().remove(&label);
     let port = port.ok_or_else(|| "NO_PORT".to_string())?;
     let pp = python_path.unwrap_or_else(|| "python".to_string());
     let lg = lang.unwrap_or_else(|| "en".to_string());
@@ -203,9 +303,8 @@ pub async fn open_serial_monitor(
     Ok(())
 }
 
-/// 視窗焦點切換（前端 document blur/focus 事件觸發）。
-/// - focused=true ：若此視窗先前有串列埠監看設定 → 自動重新開啟監看。
-/// - focused=false：釋放此視窗的串列埠監看（保留 wants 供下次聚焦自動重取）。
+/// 視窗焦點切換（前端 document blur/focus 事件觸發）。Hub 支援多個讀取訂閱，
+/// 因此 blur 不再釋放本視窗 monitor；focus 只恢復意外結束且仍有 wants 的 session。
 #[tauri::command]
 pub async fn set_window_focus(
     window: Window,
@@ -257,8 +356,7 @@ pub async fn set_window_focus(
             }
         }
     } else {
-        // 失焦：釋放監看（保留 wants）
-        let _ = stop_serial_monitor(state, label);
+        // Hub 是實體埠唯一 owner；其他視窗切為前景時，本視窗仍保留自己的讀取訂閱。
     }
     Ok(())
 }

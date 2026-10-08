@@ -43,12 +43,96 @@ pub(crate) fn utf8_incomplete_tail_len(buf: &[u8]) -> usize {
 /// 具備背壓與時間窗聚合的串流轉發函式
 /// 解決高頻 print (如 while True: print("hello")) 造成的 Tauri IPC 洪水與 WebView 卡死
 pub(crate) fn forward_stream_with_backpressure<R: Read + Send + 'static>(
+    reader: R,
+    window: Window,
+    label: String,
+    event_name: &'static str,
+    stopped: Option<Arc<AtomicBool>>,
+    on_finished_event: Option<&'static str>,
+) {
+    forward_stream_with_controls(
+        reader,
+        window,
+        label,
+        event_name,
+        stopped,
+        on_finished_event,
+        Vec::new(),
+        None,
+    );
+}
+
+pub(crate) struct StreamMarker {
+    pub token: &'static str,
+    pub on_detected: Arc<dyn Fn() + Send + Sync>,
+}
+
+/// Incremental marker filter: recognizes markers across arbitrary read boundaries,
+/// invokes control callbacks before ordinary log chunks enter the lossy backpressure queue.
+struct MarkerFilter {
+    markers: Vec<StreamMarker>,
+    seen: Vec<bool>,
+    pending: Vec<u8>,
+}
+
+impl MarkerFilter {
+    fn new(markers: Vec<StreamMarker>) -> Self {
+        let seen = vec![false; markers.len()];
+        Self { markers, seen, pending: Vec::new() }
+    }
+
+    fn push(&mut self, chunk: &[u8]) -> Vec<u8> {
+        self.pending.extend_from_slice(chunk);
+        let mut output = Vec::new();
+
+        loop {
+            let found = self.markers.iter().enumerate().find_map(|(marker_index, marker)| {
+                let token = marker.token.as_bytes();
+                self.pending.windows(token.len())
+                    .position(|window| window == token)
+                    .map(|index| (index, token.len(), marker_index))
+            });
+
+            if let Some((index, token_len, marker_index)) = found {
+                output.extend_from_slice(&self.pending[..index]);
+                self.pending.drain(..index + token_len);
+                if !self.seen[marker_index] {
+                    self.seen[marker_index] = true;
+                    (self.markers[marker_index].on_detected)();
+                }
+                continue;
+            }
+
+            let keep_from = (0..self.pending.len()).rev().find(|start| {
+                let suffix = &self.pending[*start..];
+                self.markers.iter().any(|marker| marker.token.as_bytes().starts_with(suffix))
+            });
+            if let Some(start) = keep_from {
+                output.extend_from_slice(&self.pending[..start]);
+                self.pending.drain(..start);
+            } else {
+                output.append(&mut self.pending);
+            }
+            break;
+        }
+
+        output
+    }
+
+    fn finish(&mut self) -> Vec<u8> {
+        std::mem::take(&mut self.pending)
+    }
+}
+
+pub(crate) fn forward_stream_with_controls<R: Read + Send + 'static>(
     mut reader: R,
     window: Window,
     label: String,
     event_name: &'static str,
     stopped: Option<Arc<AtomicBool>>,
     on_finished_event: Option<&'static str>,
+    markers: Vec<StreamMarker>,
+    on_finished: Option<Arc<dyn Fn() + Send + Sync>>,
 ) {
     std::thread::spawn(move || {
         use std::sync::mpsc::sync_channel;
@@ -57,6 +141,7 @@ pub(crate) fn forward_stream_with_backpressure<R: Read + Send + 'static>(
         let dropped_bytes = Arc::new(std::sync::atomic::AtomicUsize::new(0));
         let dropped_clone = dropped_bytes.clone();
         let stopped_reader = stopped.clone();
+        let mut marker_filter = MarkerFilter::new(markers);
 
         // 讀取執行緒：以阻塞方式讀取 pipe，在隊列滿時丟棄並記錄 dropped，保證快速清空 stdout pipe 避免 Python 子進程卡死
         let reader_thread = std::thread::spawn(move || {
@@ -70,8 +155,19 @@ pub(crate) fn forward_stream_with_backpressure<R: Read + Send + 'static>(
                         break;
                     }
                 }
-                let chunk = buf[..n].to_vec();
+                let chunk = marker_filter.push(&buf[..n]);
+                if chunk.is_empty() {
+                    continue;
+                }
+                let chunk_len = chunk.len();
                 if let Err(std::sync::mpsc::TrySendError::Full(_)) = tx.try_send(chunk) {
+                    dropped_clone.fetch_add(chunk_len, Ordering::Relaxed);
+                }
+            }
+            let remainder = marker_filter.finish();
+            if !remainder.is_empty() {
+                let n = remainder.len();
+                if let Err(std::sync::mpsc::TrySendError::Full(_)) = tx.try_send(remainder) {
                     dropped_clone.fetch_add(n, Ordering::Relaxed);
                 }
             }
@@ -150,5 +246,49 @@ pub(crate) fn forward_stream_with_backpressure<R: Read + Send + 'static>(
         if let Some(finished_event) = on_finished_event {
             let _ = window.emit_to(&label, finished_event, ());
         }
+        if let Some(callback) = on_finished {
+            callback();
+        }
     });
+}
+
+#[cfg(test)]
+mod marker_filter_tests {
+    use super::{MarkerFilter, StreamMarker};
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    #[test]
+    fn filters_markers_split_across_chunks_and_preserves_other_bytes() {
+        let hits = Arc::new(AtomicUsize::new(0));
+        let marker_hits = hits.clone();
+        let mut filter = MarkerFilter::new(vec![StreamMarker {
+            token: "__ACTIVE__",
+            on_detected: Arc::new(move || { marker_hits.fetch_add(1, Ordering::SeqCst); }),
+        }]);
+
+        let mut output = filter.push(b"before __ACT");
+        output.extend(filter.push(b"IVE__ after __ACTIVE__"));
+        output.extend(filter.finish());
+
+        assert_eq!(output, b"before  after ");
+        assert_eq!(hits.load(Ordering::SeqCst), 1);
+    }
+
+    #[test]
+    fn nonmatching_marker_prefix_is_not_lost() {
+        let hits = Arc::new(AtomicUsize::new(0));
+        let marker_hits = hits.clone();
+        let mut filter = MarkerFilter::new(vec![StreamMarker {
+            token: "__ACTIVE__",
+            on_detected: Arc::new(move || { marker_hits.fetch_add(1, Ordering::SeqCst); }),
+        }]);
+
+        let mut output = filter.push(b"x__ACT");
+        output.extend(filter.push(b"IVE_X"));
+        output.extend(filter.finish());
+
+        assert_eq!(output, b"x__ACTIVE_X");
+        assert_eq!(hits.load(Ordering::SeqCst), 0);
+    }
 }

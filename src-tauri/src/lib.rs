@@ -23,6 +23,7 @@ pub fn run() {
             sidecar_responses: Arc::new(Mutex::new(HashMap::new())),
             serial_monitors: Arc::new(Mutex::new(HashMap::new())),
             serial_wants: Arc::new(Mutex::new(HashMap::new())),
+            serial_monitor_registry: Arc::new(crate::state::SerialMonitorRegistry::default()),
         })
         .invoke_handler(tauri::generate_handler![
             commands::run_python, 
@@ -37,6 +38,7 @@ pub fn run() {
             commands::mcu::deploy::deploy_mcu,
             commands::mcu::monitor::open_serial_monitor,
             commands::mcu::monitor::toggle_serial_monitor,
+            commands::mcu::monitor::get_serial_monitor_state,
             commands::mcu::firmware::erase_filesystem,
             commands::file::backup::auto_backup,
             commands::file::backup::clear_backup,
@@ -135,8 +137,8 @@ pub fn run() {
                     {
                         let mut procs = state.python_processes.lock().unwrap();
                         if let Some(mut child) = procs.remove(&label) {
-                            let _: std::process::Child = child;
-                            let _ = child.kill();
+                            crate::commands::python::kill_tree(&mut child);
+                            let _ = child.wait();
                         }
                     }
                     {
@@ -160,6 +162,7 @@ pub fn run() {
                         let mut wants = state.serial_wants.lock().unwrap();
                         wants.remove(&label);
                     }
+                    let _ = state.serial_monitor_registry.finish_current(&label);
                 }
             }
         })

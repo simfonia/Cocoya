@@ -59,6 +59,14 @@
 - [ ] 跨平台序列埠 Friendly Name（macOS/Linux；Windows 已有 VID/PID 映射）
 - [ ] 重置韌體 esptool 整合為 Tauri Sidecar 的可行性評估
 
+### [2026-10-07] #task[cocoya 多視窗 Serial port 獨佔]
+- [x] **Phase 1 程式整合**：generation-scoped 工作階段與可靠 marker/lifecycle events；初始 snapshot race-safe；stop 等待 child exit/reap；UI 分開呈現 active session／實體連線狀態。自動驗證通過，細節見 `log/work/2026-10-07.md`。
+- [x] **Phase 1 拔插重連實測**：使用者確認拔除 MCU 再插回同一 COM 可自動重連 ✅（2026-10-07）。
+- [ ] **Phase 1 其餘實機 E2E（延至 Phase 2 完成後合併測）**：上傳後按鈕亮、停止不重開第二個 monitor、reload 狀態一致、focus handoff、三主題目視。
+- [ ] **Phase 2：Windows Tauri Serial Hub（部分 WIP，暫停待續）**：已建立 `resources/deploy/serial_hub.py` Hub/client、PC generator Tauri proxy 選路、Tauri upload helper lease 與 monitor fan-out 接線；自動驗證需於下一輪重跑。完整狀態／風險／續做步驟見 `log/plan/MultiWindowSerialSharing_Phase2_Handoff.md`。
+- 範圍：VSIX 無多視窗問題，不做 Hub 功能或多視窗驗收；只有變更共用 deployer/generator 才做必要回歸。POSIX 延後。
+- 決策、實作順序與測試矩陣：`log/plan/MultiWindowSerialSharing.md`；進度：`log/work/2026-10-07.md`。
+
 ### Dataset Manager 三層重構收尾（殘餘項已併入上方 DM 節）
 - [ ] 手動測試 backlog（log/plan/DatasetManagerManualTestBacklog.md：A2-1~A2-4、C1、U3-*、UI4-*）
 - [ ] Stage 7 總驗證（compile/lint/cargo check+test/tauri build ＋ E2E 矩陣 §10）

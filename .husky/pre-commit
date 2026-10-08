@@ -91,11 +91,11 @@ const STD = new Set(["json","os","sys","io","csv","re","time","tempfile","shutil
     "array","bisect","operator","reprlib","types","unicodedata","zlib","getpass",
     "webbrowser","pprint","filecmp","fileinput","linecache","tokenize","trace","gc",
     "atexit","signal","errno","locale","site","sysconfig","distutils","pkgutil",
-    "ast","io"]);
+    "ast","io","queue"]);
 const KNOWN_IGNORE = new Set(["common","camera_service","remote_tflite","local_training",
     "remote_ssh","dataset_io","media_pipe_service","training_loop","classifier_dataset",
     "detector_dataset","line_dataset","table_dataset","feature_dataset","cocoya_shared",
-    "image_formats"]);
+    "image_formats","deploy"]);
 
 const req = fs.readFileSync("requirements-dev.txt", "utf8");
 const declared = new Set();

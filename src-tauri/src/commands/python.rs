@@ -117,6 +117,10 @@ pub async fn run_python(
     // 編碼修復：Windows pipe 下 Python 預設輸出 cp950，Rust 端以 UTF-8 解讀會亂碼
     cmd.env("PYTHONIOENCODING", "utf-8")
        .env("PYTHONUTF8", "1");
+    let deployer_path = crate::utils::get_deployer_path(&handle);
+    let serial_hub_path = deployer_path.parent().unwrap_or_else(|| std::path::Path::new(".")).join("deploy").join("serial_hub.py");
+    cmd.env("COCOYA_SERIAL_HUB_ENABLED", "1")
+        .env("COCOYA_SERIAL_HUB_SCRIPT", serial_hub_path);
     // 訓練模板路徑權威注入（release 從 Resource 解析，dev 從專案根），供產生碼 train_model() 使用
     cmd.env("COCOYA_TRAIN_TEMPLATES", crate::utils::get_train_templates_path(&handle));
     cmd.arg("-u") // Unbuffered mode
@@ -202,17 +206,22 @@ pub async fn run_python(
 
 #[tauri::command]
 pub async fn stop_python(window: Window, state: State<'_, AppState>) -> Result<(), String> {
-    {
+    let mut process = {
         let mut procs = state.python_processes.lock().unwrap();
-        if let Some(mut child) = procs.remove(window.label()) {
-            let _ = child.kill();
-        }
+        procs.remove(window.label())
+    };
+    if let Some(ref mut child) = process {
+        kill_tree(child);
+        let _ = child.wait();
     }
     // 一併釋放該視窗的串列埠監看（若有），避免與執行/部署資源重疊；
     // 並清除 serial_wants：按「停止」是明確終止意圖，重新聚焦不應自動重開監看
     let own_label = window.label().to_string();
     let _ = crate::commands::mcu::stop_serial_monitor(state.clone(), own_label.clone());
     state.serial_wants.lock().unwrap().remove(&own_label);
+    if let Some(snapshot) = state.serial_monitor_registry.finish_current(&own_label) {
+        let _ = window.emit_to(&own_label, "serial-monitor-state", snapshot);
+    }
     Ok(())
 }
 

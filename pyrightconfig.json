@@ -1,6 +1,7 @@
 {
     "extraPaths": [
-        "resources/train_templates"
+        "resources/train_templates",
+        "resources"
     ],
     "include": [
         "resources/train_templates",
