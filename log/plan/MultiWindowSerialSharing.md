@@ -117,7 +117,7 @@ OS 不容兩行程同開一埠 → 一切解法收斂為「**單一埠擁有者 
 
 ### 2.5 Hub 綁定與錯誤恢復
 - TCP 僅綁定 loopback；定義每程序／每 Hub session 的認證或不可猜測 token，拒絕任意本機 client 連入。需防止誤加入同 port 的過期 Hub、程序啟動競態與 stale lock。
-- 定義 baud rate 與同一 port 多個設定不一致時的拒絕規則；記錄 DTR/RTS/reset-input 等實體序列行為由 Hub 或 deploy lease 負責。
+- **鮑率政策（決策 2026-10-08，關閉本節原決策點）**：**放行但警告，hub 實體鮑率以先啟動者為準**。理由：monitor（115200）與 PC 產生碼（9600）同埠共存是多視窗核心目標，嚴格拒絕與之互斥；支援板皆 USB CDC，鮑率為名目值不影響資料。實作：`_client_loop` 只驗 port（`serial_hub.py:544`）、hello 回應帶 `hubBaudrate`、`_connect` 不一致時 stderr 警告；舊 `test_connect_rejects_baud_mismatch` 隨政策改寫。DTR/RTS/reset-input 等實體序列行為由 Hub 或 deploy lease 負責（維持原規劃）。
 - 拔除硬體後 Hub 保留工作階段並對原 COM 名稱持續重試，不設逾時；重新插入 COM 名稱相同可自動恢復。若 COM 名稱變更，第一版提示重新選埠，不承諾自動追蹤。
 
 ### 2.6 Phase 2 驗證

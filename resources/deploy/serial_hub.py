@@ -28,6 +28,7 @@ _PROTOCOL_VERSION = 1
 _IDLE_EXIT_SECONDS = 20.0
 _CONNECT_TIMEOUT = 0.35
 _START_TIMEOUT = 8.0
+_HELLO_TIMEOUT = 2.0
 _READ_CHUNK = 4096
 _MAX_CONTROL_LINE = 2 * 1024 * 1024
 _ACTIVE_UPLOAD_LEASE = None
@@ -52,6 +53,26 @@ def _read_json_line(sock, timeout=None):
             return json.loads(data.decode("utf-8"))
         data.extend(chunk)
     raise ValueError("Hub control message exceeded maximum size")
+
+
+def _read_control_response(sock, timeout=2.0):
+    """Read the next control response, skipping any broadcast messages.
+
+    Admin (lease) connections share one socket with unsolicited ``type``-bearing
+    broadcasts such as ``{"type": "state", ...}``. A blind single-line read can
+    mistake a broadcast for the reply to ``acquire_upload``/``release_upload``,
+    which degraded the error code to SERIAL_PORT_BUSY and made release return
+    before the hub had actually released the lease. Control responses always
+    carry an ``ok`` key (protocol invariant), broadcasts never do.
+    """
+    deadline = time.monotonic() + timeout
+    while True:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError("SERIAL_HUB_CONTROL_TIMEOUT")
+        message = _read_json_line(sock, remaining)
+        if "ok" in message:
+            return message
 
 
 def _send_json(sock, lock, message):
@@ -98,6 +119,19 @@ def _connect(port, baudrate, role, timeout=_CONNECT_TIMEOUT):
         sock.close()
         raise RuntimeError(response.get("error", "SERIAL_HUB_REJECTED"))
     sock.settimeout(None)
+    # 鮑率不一致警告（決策 2026-10-08：放行但警告，hub 鮑率以先啟動者為準）。
+    # hub 在 hello 回應帶 hubBaudrate；不同則在本 client 終端（stderr）印一行提示。
+    hub_baud = response.get("hubBaudrate")
+    if hub_baud is not None and int(hub_baud) != int(baudrate):
+        print(
+            "[Cocoya Serial Hub] Baud mismatch: program requested {req}, hub uses {hub} "
+            "(first starter wins); USB CDC devices are unaffected. "
+            "/ 鮑率不一致：程式宣告 {req}，hub 實際使用 {hub}（先啟動者為準）；USB CDC 裝置不受影響。".format(
+                req=int(baudrate), hub=int(hub_baud)
+            ),
+            file=sys.stderr,
+            flush=True,
+        )
     return sock, lock, response
 
 
@@ -420,7 +454,9 @@ class _PortHub:
 
     def _broadcast(self, message):
         with self.clients_lock:
-            clients = list(self.clients)
+            # admin = lease 專用連線（acquire_upload_lease），只需要控制回應；
+            # 不接收 data/state 廣播，避免廣播插入控制對話（見 _read_control_response）。
+            clients = [client for client in self.clients if client.role != "admin"]
         for client in clients:
             self._send(client, message)
 
@@ -498,11 +534,14 @@ class _PortHub:
     def _client_loop(self, sock):
         client = None
         try:
-            hello = _read_json_line(sock, 2.0)
+            hello = _read_json_line(sock, _HELLO_TIMEOUT)
             if hello.get("op") != "hello" or hello.get("version") != _PROTOCOL_VERSION:
                 _send_json(sock, threading.Lock(), {"ok": False, "error": "SERIAL_HUB_PROTOCOL"})
                 return
-            if hello.get("port") != self.port or int(hello.get("baudrate", -1)) != self.baudrate:
+            # 只檢查 port；鮑率不一致放行（2026-10-08 決策：先啟動者為準，
+            # client 端由 _connect 印警告）。原拒絕會讓 monitor(115200) 與
+            # PC 程式(9600)無法同埠共存，與多視窗核心目標互斥。
+            if hello.get("port") != self.port:
                 _send_json(sock, threading.Lock(), {"ok": False, "error": "SERIAL_HUB_CONFIG_MISMATCH"})
                 return
             if not secrets.compare_digest(str(hello.get("token", "")), self.token):
@@ -523,7 +562,17 @@ class _PortHub:
                 _send_json(sock, client.send_lock, {"ok": False, "error": rejection})
                 return
             self.last_activity = time.monotonic()
-            _send_json(sock, client.send_lock, {"ok": True, "connected": self.serial_handle is not None})
+            _send_json(sock, client.send_lock, {
+                "ok": True,
+                "connected": self.serial_handle is not None,
+                "hubBaudrate": self.baudrate,
+            })
+            # 握手後回復阻塞讀取：控制通道沒有 idle deadline。
+            # 若保留 hello 的 _HELLO_TIMEOUT，靜默 client（monitor 從 hello 後
+            # 不再發訊息）會在 timeout 後被 socket.timeout → _drop 掉線，
+            # 導致 monitor 每 N 秒重連重印狀態、上傳 lease 被動失效（2026-10-08 實測 2.02s）。
+            # client 死亡由 TCP EOF/連線重置偵測，無需 idle timeout。
+            sock.settimeout(None)
             threading.Thread(target=self._client_sender, args=(client,), daemon=True).start()
 
             while client.alive and not self.stopping.is_set():
@@ -694,7 +743,7 @@ def acquire_upload_lease(port, baudrate=115200):
         raise RuntimeError("SERIAL_HUB_START_FAILED")
     sock, send_lock, _response = connection
     _send_json(sock, send_lock, {"op": "acquire_upload"})
-    response = _read_json_line(sock, 2.0)
+    response = _read_control_response(sock, 2.0)
     if not response.get("ok"):
         sock.close()
         raise RuntimeError(response.get("error", "SERIAL_PORT_BUSY"))
@@ -709,8 +758,9 @@ def release_upload_lease():
         sock, send_lock = lease
         try:
             _send_json(sock, send_lock, {"op": "release_upload"})
-            _read_json_line(sock, 2.0)
-        except OSError:
+            # 等到真正的 release 回應（ok 鍵）才回傳，確保 hub 端已釋放。
+            _read_control_response(sock, 2.0)
+        except (OSError, TimeoutError):
             pass
         try:
             sock.close()

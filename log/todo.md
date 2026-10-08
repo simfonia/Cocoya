@@ -64,6 +64,10 @@
 - [x] **Phase 1 拔插重連實測**：使用者確認拔除 MCU 再插回同一 COM 可自動重連 ✅（2026-10-07）。
 - [ ] **Phase 1 其餘實機 E2E（延至 Phase 2 完成後合併測）**：上傳後按鈕亮、停止不重開第二個 monitor、reload 狀態一致、focus handoff、三主題目視。
 - [ ] **Phase 2：Windows Tauri Serial Hub（部分 WIP，暫停待續）**：已建立 `resources/deploy/serial_hub.py` Hub/client、PC generator Tauri proxy 選路、Tauri upload helper lease 與 monitor fan-out 接線；自動驗證需於下一輪重跑。完整狀態／風險／續做步驟見 `log/plan/MultiWindowSerialSharing_Phase2_Handoff.md`。
+  - [x] 2026-10-08 小任務 1：重跑 Python 驗證，抓出 lease API flaky（7/20）並定位根因（admin socket 廣播插入控制對話）。
+  - [x] 2026-10-08 小任務 2：修 serial_hub.py lease race（`_broadcast` 跳過 admin＋`_read_control_response`），pytest 20/20 全綠。
+  - [x] 2026-10-08 小任務 3~7：Node 全量 459/459、Rust 8/8+9/9、UI build、補測 3→15 測、六項風險靜態審查全 PASS（細節見 `log/work/2026-10-08.md`）。
+  - [x] 2026-10-08 小任務 8a/8b 續修 ✅：實機兩 bug（Rust CRLF Bug A＋hub 2s 踢 idle Bug B／同埠鮑率拒絕）全修。鮑率政策「放行但警告、先啟動者為準」；`stream.rs` CRLF 變體＋`keep_from` 最長優先修＋回歸測試；Python idle 存活兩測；全鏈驗證＋使用者實測通過（細節見 `log/work/2026-10-08.md` §小任務 0~5）。
 - 範圍：VSIX 無多視窗問題，不做 Hub 功能或多視窗驗收；只有變更共用 deployer/generator 才做必要回歸。POSIX 延後。
 - 決策、實作順序與測試矩陣：`log/plan/MultiWindowSerialSharing.md`；進度：`log/work/2026-10-07.md`。
 
