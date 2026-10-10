@@ -27,23 +27,10 @@
 async function saveFile(command, data) {
     {
         const isSaveAs = (command === 'saveFileAs');
-        // 2026-10-10 C-3：文字模式分叉 —— data 含 {code, isTextMode} 即送碼＋檔頭平台行，
-        // 舊調用（只帶 xml）走原路（向後相容）。Rust 收 code: Option<String>。
-        const isText = !!(data && data.isTextMode) && typeof (data.code) === 'string';
+        // 2026-10-10 實驗室模型：.py 由前端 exportPy（blob 下載）匯出，非受管；
+        // 此處一律 Cocoya XML（文字模式的存檔已在 base.js 攔截，不會到這裡）。
         let xml = data.xml || this._getCurrentXml();
-        if (isText) {
-            const TM = (typeof window !== 'undefined' && window.CocoyaTextMode) ? window.CocoyaTextMode : null;
-            let code = data.code;
-            try {
-                if (TM && typeof TM.ensurePlatformLine === 'function') {
-                    const plat = (window.CocoyaApp && window.CocoyaApp.currentPlatform) || 'PC';
-                    code = TM.ensurePlatformLine(code, plat);
-                }
-            } catch (e) {}
-            xml = code;
-        }
         const saveParams = { xml, saveAs: isSaveAs };
-        if (isText) { saveParams.code = xml; saveParams.isTextMode = true; }
         // 開新專案流程（tag==='newProject'）時傳入「開新專案」語意標題，
         // 讓 Rust 另存對話框顯示正確標題，避免使用者誤解為「把 dirty 另存」。
         if (data.tag === 'newProject') {

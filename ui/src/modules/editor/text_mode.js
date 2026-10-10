@@ -1,14 +1,21 @@
 /**
- * modules/editor/text_mode.js — 純文字模式切換 SSOT（階段 C-2）
+ * modules/editor/text_mode.js — 文字模式（「程式設計實驗室」模型，2026-10-10 重構）
  *
- * 單向（不可逆）：積木 → 文字。切後 Blockly.dispose()，workspace 物件即銷毀，
- * 沒有「切回去」—— 離場只能經開新／開舊／回首頁（皆走既有 dirty 三選）。
+ * ★ 真相源永遠只有一個：block workspace 永不 dispose。
+ *   文字模式只是疊在積木之上的一層「記憶體草稿」——隱藏積木區、把唯讀預覽面板
+ *   換成可寫編輯器。退出即取消隱藏，積木與預覽原封不動還原（預覽同步自動成立，
+ *   因積木從未被動過）。cocoya 不管理 .py：實驗室中的「存檔」＝匯出下載（blob）。
  *
- * 流程（Q1 定案：三按鈕確認，不寫 temp_scripts）：
- *   dirty 才彈 showSaveConfirm（存／不存／取消）→ 存即 saveFile 落盤 →
- *   triggerCodeUpdateSync(true) 取新鮮碼 → 二次清理行尾 ID 註解 →
- *   createEditor.setValue → dispose ＋ body.cocoya-text-mode →
- *   退場（#block-type-info 隱藏、aria-label 顯式填充）。
+ *   「單向」的真正定義：語意上程式不能自動轉回積木；但 UI 導航不受限 ——
+ *   從實驗室「開一個 XML 檔」回到積木模式，那是「開啟另一個本質就是積木專案的
+ *   XML 檔」，不是「把 .py 轉成積木」。
+ *
+ * 分層（計畫 §11.2，為將來 .py 受管化升級而設計）：
+ *   Layer A「文字模式引擎」（本檔核心，永不 dispose，將來 100% 復用）：
+ *     enterLab / exitLab / enterTextModeWithCode / exportPy / cleanPreviewCode
+ *   Layer B「檔案 I/O 適配器」（現在只做匯出下載）＋純函式零件庫
+ *     （parsePlatformLine / ensurePlatformLine / guessPlatform / detectContentKind，
+ *      保留不刪，將來受管化直接復用）。
  *
  * 載入方式與 editor.js 一致：純 script，掛 globalThis.CocoyaTextMode。
  */
@@ -16,6 +23,7 @@
     'use strict';
 
     var editorHandle = null;
+    var seedCode = null;   // 進入實驗室時的種子碼（乾淨預覽碼），用於判斷草稿是否被改動
     var switching = false;
 
     function isTextMode() {
@@ -27,6 +35,9 @@
 
     function getEditor() { return editorHandle; }
 
+    /** 取得進入實驗室時的種子碼（exitLab 的 dirty 判斷用） */
+    function getSeedCode() { return seedCode; }
+
     function readMsg(key, fallback) {
         try {
             if (global.Blockly && global.Blockly.Msg && global.Blockly.Msg[key]) {
@@ -37,8 +48,8 @@
     }
 
     /**
-     * 二次清理：triggerCodeUpdateSync 只剝隱形標記與 X=None 行，
-     * 行尾「兩個空格＋# ID:」註解執行無害但進編輯器會髒 —— 與複製鈕同款清理。
+     * 行尾 ID 註解清理：triggerCodeUpdateSync 只剝隱形標記，行尾「兩空格＋# ID:」註解
+     * 執行無害但進編輯器會髒 —— 與複製鈕同款清理。
      */
     function stripIdComments(code) {
         return String(code == null ? '' : code).replace(/ {2}# ID:.*$/mg, '');
@@ -71,16 +82,16 @@
             var title = document.getElementById('code-title');
             if (title) title.textContent = readMsg('TLB_TEXT_MODE_EDITOR_LABEL', 'Python text editor');
         } catch (e) {}
-        // 防禦：進場前 codeArea 若處於收合（一般路徑按鈕不可達，僅極端競態），強制展開避免黑屏
+        // 防禦：進場前 codeArea 若處於收合（僅極端競態），強制展開避免黑屏
         try {
             var panel = document.getElementById('codeArea');
             if (panel) panel.classList.remove('collapsed');
         } catch (e) {}
     }
 
-    // --- C-3：檔頭平台行（Q3 選 A）---
-    // 格式：首行 `# cocoya-platform: PC` 或 `# cocoya-platform: MicroPython`。
-    // .py 無 platform 屬性，執行要走 run_python 還是 deploy_mcu 全靠此行。
+    // --- 純函式零件庫（Layer B；保留不刪，將來 .py 受管化直接復用）---
+
+    /** 檔頭平台行格式：`# cocoya-platform: PC` 或 `# cocoya-platform: MicroPython` */
     var PLATFORM_LINE_RE = /^#\s*cocoya-platform\s*:\s*(PC|MicroPython)\s*$/m;
 
     function parsePlatformLine(code) {
@@ -111,118 +122,83 @@
         return 'PC';
     }
 
-    // --- D-1 開檔分叉（2026-10-10）---
-
     /**
-     * 內容型別偵測（計畫 D-12：不可只看副檔名）。
-     * Blockly 匯出 XML 恆以 `<xml` 或 `<?xml` 起頭（允許前置空白／BOM）；
-     * 其餘一律視為 Python —— 含空檔（開空文字檔，勝過把 '' 塞給 textToDom 爆掉）。
-     * @param {string} content 檔案內容
+     * 內容型別偵測（不可只看副檔名）。Blockly 匯出 XML 恆以 `<xml` 或 `<?xml` 起頭
+     * （允許前置空白／BOM）；其餘一律視為 Python —— 含空檔。
+     * @param {string} content
      * @returns {'xml'|'python'}
      */
     function detectContentKind(content) {
         return /^\s*<(\?xml|xml[\s>])/.test(String(content == null ? '' : content)) ? 'xml' : 'python';
     }
+    // --- Layer A：實驗室引擎（永不 dispose）---
 
-    /** QuickPick Promise 化（cancel 或無 UI 時回 null） */
-    function quickPick(title, options) {
-        return new Promise(function (resolve) {
-            try {
-                if (global.CocoyaUI && typeof global.CocoyaUI.showQuickPick === 'function') {
-                    global.CocoyaUI.showQuickPick(title, options, function (id) { resolve(id); });
-                    return;
-                }
-            } catch (e) {}
-            resolve(null);
-        });
+    /**
+     * 取「目前乾淨預覽碼」—— SSOT，供複製鈕、進入實驗室、執行共用。
+     * 不可讀 lastCleanCode（debounce＋焦點保護可能 stale）；取後做行尾 ID 註解清理。
+     */
+    function cleanPreviewCode() {
+        var app = global.CocoyaApp || window.CocoyaApp;
+        var code = '';
+        try {
+            if (app && typeof app.triggerCodeUpdateSync === 'function') {
+                code = app.triggerCodeUpdateSync(true) || '';
+            } else if (app) {
+                code = app.lastCleanCode || '';
+            }
+        } catch (e) { code = (app && app.lastCleanCode) || ''; }
+        return stripIdComments(code);
     }
 
     /**
-     * 拆掉 Blockly 側（minimap＋workspace）—— 進文字模式的共用退場。
-     * workspace 銷毀後即為 null，下游（監聽、產碼、備份）全靠 null 護欄。
+     * 還原積木側 UI（exitLab 與檔案作業護欄共用）—— 只是 UI，不碰 workspace。
+     * workspace 從未 dispose，故無需 re-inject。
      */
-    function disposeBlocklySide(app) {
-        if (!app) return;
+    function restoreBlockUi() {
         try {
-            if (app.minimap && typeof app.minimap.dispose === 'function') {
-                try { app.minimap.dispose(); } catch (e) {}
-            }
-            app.minimap = null;
+            var info = document.getElementById('block-type-info');
+            if (info) info.style.display = '';
         } catch (e) {}
+        // codeHeader 標題還原為「程式碼預覽」（與 retireBlockOnlyUi 對稱）
         try {
-            if (app.workspace && typeof app.workspace.dispose === 'function') {
-                app.workspace.dispose();
-            }
+            var title = document.getElementById('code-title');
+            if (title) title.textContent = readMsg('TLB_PYTHON_PREVIEW', 'Code preview');
         } catch (e) {}
-        app.workspace = null;
+        // 積木還原可見後刷新 minimap（隱藏期間可能未同步）
+        try {
+            var app = global.CocoyaApp || window.CocoyaApp;
+            if (app && app.minimap && typeof app.refreshMinimap === 'function') app.refreshMinimap();
+        } catch (e) {}
     }
 
     /**
-     * 切換為文字模式（單向）。@returns {Promise<boolean>} true=已切換
+     * 切換實驗室（btn-text-mode 單一入口）。@returns {Promise<boolean>}
+     * 目前在積木模式 → 進入實驗室；目前在實驗室 → 退出（草稿有改動先確認捨棄）。
      */
-    async function switchToTextMode() {
+    async function toggleTextMode() {
+        if (switching) return false;
+        if (isTextMode()) return exitLab();
+        return enterLab();
+    }
+
+    /**
+     * 進入實驗室：以目前乾淨預覽碼為種子，顯示編輯器、隱藏積木區。
+     * ★ 不 dispose workspace（實驗室模型核心）。@returns {Promise<boolean>}
+     */
+    async function enterLab() {
         if (switching || isTextMode()) return false;
         var app = global.CocoyaApp || window.CocoyaApp;
-        if (!app || !app.workspace) return false;
+        if (!app || !app.workspace) return false;   // 必須有活著的積木工作區（實驗室基底）
         switching = true;
         try {
-            // --- Q1：dirty 才彈三按鈕（存／不存／取消），不寫 temp_scripts ---
-            var dirty = !!(app.isDirty);
-            if (dirty) {
-                var msg = readMsg('MSG_SAVE_CONFIRM', 'Do you want to save changes?');
-                var choice = 'cancel';
-                if (global.CocoyaUI && typeof global.CocoyaUI.showSaveConfirm === 'function') {
-                    choice = await global.CocoyaUI.showSaveConfirm(msg);
-                }
-                if (choice === 'cancel') return false;
-                if (choice === 'save') {
-                    var saved = true;
-                    try {
-                        if (global.CocoyaBridge && typeof global.CocoyaBridge.send === 'function') {
-                            saved = await global.CocoyaBridge.send('saveFile', {
-                                xml: (typeof app._getCurrentXmlWithPlatform === 'function')
-                                    ? app._getCurrentXmlWithPlatform() : ''
-                            });
-                        }
-                    } catch (e) { saved = false; }
-                    if (saved === false) return false;
-                    try { if (typeof app.setDirty === 'function') await app.setDirty(false); } catch (e) {}
-                }
-            }
-            // --- 二次確認：明示不可逆 ---
-            var go = true;
-            try {
-                var tip = readMsg('TLB_TEXT_MODE_CONFIRM', 'Switch to text mode? Blocks cannot be restored.');
-                if (global.CocoyaBridge && typeof global.CocoyaBridge.confirm === 'function') {
-                    go = await global.CocoyaBridge.confirm(tip);
-                } else if (typeof global.confirm === 'function') {
-                    go = global.confirm(tip);
-                }
-            } catch (e) { go = false; }
-            if (!go) return false;
-
-            // --- 取新鮮碼（不可讀 lastCleanCode：debounce＋焦點保護可能 stale）---
-            var code = '';
-            try {
-                if (typeof app.triggerCodeUpdateSync === 'function') {
-                    code = app.triggerCodeUpdateSync(true) || '';
-                } else {
-                    code = app.lastCleanCode || '';
-                }
-            } catch (e) { code = app.lastCleanCode || ''; }
-            code = stripIdComments(code);
-
-            // --- 寫入編輯器（先建 handle，dispose 後再取 DOM 仍在）---
+            var code = cleanPreviewCode();
             var ed = ensureEditor();
             if (!ed) return false;
             ed.setValue(code);
+            seedCode = code;                         // 記錄種子，exitLab 判斷草稿是否被改動
             fillAriaLabel();
-
-            // --- dispose ＋ 切 body class（CSS 接管版面）---
-            disposeBlocklySide(app);
             try { document.body.classList.add('cocoya-text-mode'); } catch (e) {}
             retireBlockOnlyUi();
-            try { if (typeof app.setDirty === 'function') await app.setDirty(true); } catch (e) {}
             return true;
         } finally {
             switching = false;
@@ -230,112 +206,118 @@
     }
 
     /**
-     * 開啟 .py 進入文字模式（D-1 controller.loadWorkspace 的 Python 內容入口）。
-     * 不經 Blockly：直接 setValue＋切 class。
+     * 退出實驗室：取消隱藏，積木與預覽原封不動還原（workspace 從未動過）。
+     * 草稿若相對種子有改動 → 先確認捨棄（cocoya 不管理 .py，離開即丟草稿）。
+     * @returns {Promise<boolean>} true=已退出
+     */
+    async function exitLab() {
+        if (!isTextMode()) return false;
+        var ed = getEditor();
+        var dirty = !!(ed && typeof ed.getValue === 'function' && ed.getValue() !== seedCode);
+        if (dirty) {
+            var go = true;
+            try {
+                var tip = readMsg('TLB_TEXT_MODE_EXIT_CONFIRM',
+                    'Leave the code lab? Your edits here are not saved to any file and will be discarded.');
+                if (global.CocoyaBridge && typeof global.CocoyaBridge.confirm === 'function') {
+                    go = await global.CocoyaBridge.confirm(tip);
+                } else if (typeof global.confirm === 'function') {
+                    go = global.confirm(tip);
+                }
+            } catch (e) { go = false; }
+            if (!go) return false;
+        }
+        try { document.body.classList.remove('cocoya-text-mode'); } catch (e) {}
+        restoreBlockUi();
+        seedCode = null;
+        return true;
+    }
+
+    /**
+     * 同步還原積木 UI（無草稿確認）—— 供檔案作業護欄（開檔/開新/範例/回首頁）呼叫。
+     * 這些是明確導航動作，dirty 由各流程既有機制處理，此處只把疊加層移除。
+     */
+    function restoreBlockUiOnly() {
+        if (!isTextMode()) return;
+        try { document.body.classList.remove('cocoya-text-mode'); } catch (e) {}
+        restoreBlockUi();
+        seedCode = null;
+    }
+
+    /**
+     * 匯出實驗室內容為 .py（blob 下載，非受管、不錨定）—— Layer B 現行實作。
+     * @returns {boolean} true=已觸發下載
+     */
+    function exportPy() {
+        var ed = getEditor();
+        var code = (ed && typeof ed.getValue === 'function') ? ed.getValue() : '';
+        try {
+            var app = global.CocoyaApp || window.CocoyaApp;
+            var plat = (app && app.currentPlatform) || 'PC';
+            code = ensurePlatformLine(code, plat);   // 檔頭平台行（零件庫純函式）
+        } catch (e) {}
+        try {
+            var filename = 'cocoya_code.py';
+            try {
+                var ui = global.CocoyaUI || window.CocoyaUI;
+                var base = (ui && ui.currentFilename) ? String(ui.currentFilename).replace(/\.[^.]+$/, '') : '';
+                if (base) filename = base + '.py';
+            } catch (e) {}
+            var blob = new Blob([code], { type: 'text/x-python;charset=utf-8' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function () { try { URL.revokeObjectURL(url); } catch (e) {} }, 0);
+            return true;
+        } catch (e) { return false; }
+    }
+
+    /**
+     * 以指定碼進入實驗室（reload 快照還原用；不再 dispose workspace）。
+     * 已在實驗室則僅更新編輯器內容。
      */
     function enterTextModeWithCode(code) {
         if (isTextMode()) {
             var ed0 = ensureEditor();
             if (ed0) ed0.setValue(code);
+            seedCode = code;
             return !!ed0;
         }
         var ed = ensureEditor();
         if (!ed) return false;
         ed.setValue(code);
+        seedCode = code;
         fillAriaLabel();
         try { document.body.classList.add('cocoya-text-mode'); } catch (e) {}
         retireBlockOnlyUi();
         return true;
     }
 
-    /**
-     * 開啟 Python 檔內容進入文字模式（2026-10-10 D-1 開檔分叉）。
-     * controller.loadWorkspace 在 detectContentKind === 'python' 時呼叫。
-     *
-     * 流程：VSIX 閘門 → 檔頭平台行（缺 → QuickPick，選定補寫）→ enterTextModeWithCode
-     *       （先 enter 成功才 dispose，與快照還原同一順序契約）→ 平台/檔名/唯讀/dirty。
-     * 取消（QuickPick null）或失敗一律回 false 且**不動現有工作區**（先確認後破壞）。
-     * @param {Object} payload { code, filename, platform, isReadOnly }
-     *   payload.platform 是後端 XML 嗅探值，Python 內容不採用（以檔頭行為準）。
-     * @returns {Promise<boolean>} true=已進入文字模式
-     */
-    async function openPyFile(payload) {
-        payload = payload || {};
-        // --- 平台閘門（D-1 VSIX fallback）：無 editor 能力 → 提示用 VS Code 開，不動工作區 ---
-        var caps = (global.CocoyaBridge && global.CocoyaBridge.capabilities) || {};
-        if (!caps.supportsTextEditor) {
-            var tip = readMsg('TLB_TEXT_MODE_OPEN_VSIX',
-                'This build does not support text editing. Open .py files with VS Code.');
-            try {
-                if (global.CocoyaBridge && typeof global.CocoyaBridge.alert === 'function') {
-                    global.CocoyaBridge.alert(tip);
-                }
-            } catch (e) {}
-            return false;
-        }
-
-        var code = String(payload.code == null ? '' : payload.code);
-        var platform = parsePlatformLine(code);
-        if (!platform) {
-            // 缺檔頭平台行（外部 .py）→ QuickPick 選平台，選定後補寫檔頭行
-            var picked = await quickPick(
-                readMsg('TLB_TEXT_MODE_PICK_PLATFORM',
-                    'This Python file has no platform header. Choose a platform:'),
-                [{ id: 'PC', label: 'PC (Python)' }, { id: 'MicroPython', label: 'MicroPython' }]
-            );
-            if (!picked) return false; // 取消 → 完全不動現有工作區
-            platform = picked;
-            code = ensurePlatformLine(code, platform);
-        }
-
-        // --- 進入文字模式（先 enter 成功、才拆 Blockly 側 —— 同快照還原順序契約）---
-        var ok = enterTextModeWithCode(code);
-        if (!ok) return false;
-        var app = global.CocoyaApp || window.CocoyaApp;
-        disposeBlocklySide(app);
-
-        if (app) {
-            app.currentPlatform = platform;
-            try { app.updatePlatformLabel(); } catch (e) {}
-            app.isReadOnly = !!payload.isReadOnly;
-            // 唯讀鈕態與提示（與 loadWorkspace 同待遇）
-            if (global.CocoyaUI && typeof global.CocoyaUI.setSaveButtonState === 'function') {
-                var hint = app.isReadOnly
-                    ? readMsg('MSG_READ_ONLY_HINT', '此檔案已被其他視窗開啟，目前為唯讀模式。')
-                    : '';
-                global.CocoyaUI.setSaveButtonState(!app.isReadOnly, hint);
-            }
-            if (app.isReadOnly) {
-                try {
-                    if (global.CocoyaBridge && typeof global.CocoyaBridge.alert === 'function') {
-                        global.CocoyaBridge.alert(readMsg('MSG_READ_ONLY_ALERT',
-                            '此檔案已被其他視窗開啟，將以唯讀模式載入。您可以使用「另存新檔」來編輯。'));
-                    }
-                } catch (e) {}
-            }
-        }
-        try {
-            if (global.CocoyaUI && typeof global.CocoyaUI.updateFileStatus === 'function') {
-                global.CocoyaUI.updateFileStatus(payload.filename || '');
-            }
-        } catch (e) {}
-        try { if (app && typeof app.setDirty === 'function') await app.setDirty(false); } catch (e) {}
-        try { if (app && typeof app.hideStartupHome === 'function') app.hideStartupHome(); } catch (e) {}
-        return true;
-    }
-
     global.CocoyaTextMode = {
         isTextMode: isTextMode,
         getEditor: getEditor,
-        switchToTextMode: switchToTextMode,
+        getSeedCode: getSeedCode,
+        // Layer A：實驗室引擎（永不 dispose）
+        toggleTextMode: toggleTextMode,
+        enterLab: enterLab,
+        exitLab: exitLab,
         enterTextModeWithCode: enterTextModeWithCode,
-        // C-3 匯出（供存檔／開檔／守門呼叫；純函式，可單元測試）
+        // 檔案作業護欄（開檔/開新/範例/回首頁前，同步還原積木 UI，無草稿確認）
+        restoreBlockUiOnly: restoreBlockUiOnly,
+        // 共用取碼（複製鈕與進入實驗室共用，兌現 SSOT）
+        cleanPreviewCode: cleanPreviewCode,
+        // Layer B：.py 匯出（現行為 blob 下載）
+        exportPy: exportPy,
+        // 純函式零件庫（保留不刪，將來 .py 受管化直接復用）
         parsePlatformLine: parsePlatformLine,
         ensurePlatformLine: ensurePlatformLine,
         guessPlatform: guessPlatform,
-        // D-1 匯出（開檔分叉與 editor_contract 守門）
         detectContentKind: detectContentKind,
-        stripIdComments: stripIdComments,
-        openPyFile: openPyFile
+        stripIdComments: stripIdComments
     };
 })(typeof globalThis !== 'undefined' ? globalThis : this);
+

@@ -104,9 +104,12 @@ body.cocoya-text-mode #codeContent {
     display: none;              /* 積木模式的唯讀預覽退場 */
 }
 
-/* 2026-10-10 C-1：切換鈕（P2 codeHeader 圖文鈕）隨預覽一起退場 —— 單向，
-   文字模式沒有「切回去」，離場只能經開新／開舊／回首頁。 */
-body.cocoya-text-mode #btn-text-mode {
+/* 2026-10-10 實驗室模型：切換鈕 #btn-text-mode 為進入/退出單一入口，
+   文字模式下「保持可見」（隱藏的是積木側 #codeContent）；退出即按它。 */
+
+/* 實驗室中「另存」隱藏 —— cocoya 不管理 .py，實驗室的「存檔」＝匯出下載（exportPy），
+   沒有「另存到專案路徑」的語意（會污染積木專案的錨定）。 */
+body.cocoya-text-mode #btn-save-as {
     display: none;
 }
 

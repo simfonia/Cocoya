@@ -305,3 +305,66 @@ C-3 寫入端已分叉（產出 `code/isTextMode`、無 `xml`），但 `consumeR
   VSIX（terminal 與 ▲ 把手隱藏、無文字模式鈕）、三主題、窄視窗 media query。
 - [ ] D-3：`.py` 專案「開新專案」語意（副檔名切換後 resetWorkspace 路徑）
 - [ ] VSIX `handleOpenFile` 保持 `['xml']` filter（**刻意不加 py** —— VSIX 無文字編輯能力，不提供打不開的路徑）
+
+
+---
+
+## 11. 架構轉向：「程式設計實驗室」模型（2026-10-10 使用者拍板，取代 dispose 單向模型）
+
+### 11.1 核心語意
+
+使用者要的**不是**「積木→文字檔的單向受管轉換」，而是一個**程式設計實驗室（Lab）**：
+
+- **真相源永遠只有一個**：block workspace **永不 dispose**。
+- 文字模式＝把唯讀預覽面板換成**可寫編輯器**＋隱藏積木區，**純記憶體草稿**。
+- **進入**：以「目前乾淨預覽碼」當種子寫入編輯器。
+- **退出**：取消隱藏，積木與預覽**原封不動還原**（「預覽同步」自動成立，因積木從未被動過）。
+- **cocoya 不管理 `.py` 檔**：實驗室中的「存檔」＝**匯出下載 `.py`**（blob，非受管、不錨定）；「另存」在實驗室中隱藏。
+- 「單向」的真正定義：**語意上程式不能自動轉回積木**；但 **UI 導航不受限** —— 從實驗室「開一個 XML 檔」回到積木模式，那不是「把 .py 轉成積木」，而是「開啟另一個本質就是積木專案的 XML 檔」。
+
+### 11.2 分層架構（為將來 `.py` 受管化升級而設計）
+
+```
+Layer A「文字模式引擎」← 現在建好，將來 100% 原封復用（不 dispose）
+  • enterTextModeWithCode / exitLab
+  • editor.js + highlight.js（編輯器本體）
+  • runCode 從編輯器讀碼執行（測試草稿要用）
+  • hide/show（body.cocoya-text-mode）
+  • ★ workspace 永不 dispose（從根消除「開新/開舊/範例卡住」整類崩潰）
+
+Layer B「檔案 I/O 適配器」← 現在只做「匯出下載」，將來換成「受管 open/save」
+  • 現在：存檔鈕 = blob 下載 .py；開啟只認 XML
+  • 保留純函式零件庫（不刪、無害）：parsePlatformLine / ensurePlatformLine /
+    guessPlatform / detectContentKind —— 將來受管化直接復用，不重寫。
+  • 將來升級只在 Layer B 補 open/save 分叉＋平台持久化，Layer A 零改動。
+```
+
+### 11.3 留 / 退 / 改 / 新增
+
+| 類 | 項目 |
+|---|---|
+| **保留** | 版面重構（方案 B）全部；`editor.js`（含 `dispose()`）；`text_mode.js` 的 `isTextMode/getEditor/ensureEditor/fillAriaLabel/retireBlockOnlyUi/stripIdComments`；runCode 從編輯器跑；`editor.css` 隱藏規則 |
+| **退回（.py I/O）** | D-1 `controller.loadWorkspace` python 分叉＋`openPyFile`＋`quickPick`；C-3 `base.js`/`fileOps.js` 的 `{code,isTextMode}` 存檔分叉；Rust `save_file` 的 `code/is_text_mode` 參數＋`.py` filter；manifest 對應註記。**純函式 `parsePlatformLine/ensurePlatformLine/guessPlatform/detectContentKind` 保留為零件庫** |
+| **修改** | `text_mode.js`：`switchToTextMode` 改 `enterLab`（不再 dispose）；新增 `exitLab`＋`exportPy`＋共用 `cleanPreviewCode` helper（給複製鈕與進入共用）；刪 `disposeBlocklySide`/`openPyFile`/`quickPick`。`persistence.js`：reload 快照改**同時存 `xml`（積木）+ `code`（草稿）+ `inLab`**；還原時先載積木、若 `inLab` 再進草稿層。`loadWorkspace/_applyInitialBlocks/resetWorkspace/backToHome` 開頭加「若在實驗室先 restoreBlockUi」護欄 |
+| **新增（實驗室語意）** | `btn-text-mode` 變**切換**（進入/退出）；退出時若草稿有改動（`editor.getValue() !== seedCode`）→ 確認捨棄；「存檔」在實驗室＝`exportPy`；「另存」以 CSS 隱藏（`body.cocoya-text-mode #btn-save-as{display:none}`） |
+
+### 11.4 為何優於 dispose 模型
+
+| 維度 | dispose 模型（舊） | 實驗室模型（新） |
+|---|---|---|
+| workspace | 進文字即 null → 全專案到處 `!workspace` 護欄 | 永遠活著 → 護欄全可移除 |
+| 開新/開舊/範例 | 需 re-inject，易崩潰 | 自動正常（workspace 活著） |
+| 語系/主題 reload | 只能還原「碼」、丟積木 | 積木＋草稿**都**還原 |
+| 將來 `.py` 受管化 | 需先還 reinject 債 | 只在 Layer B 加東西 |
+
+### 11.5 守門翻修
+
+`editor_contract.test.mjs`／`text_snapshot.test.mjs`／`persistence_snapshot.test.mjs` 現鎖的是 dispose 契約，翻修為 hide 契約：
+- **不變式 A**：`text_mode.js` 不得呼叫 `workspace.dispose`（實驗室永不銷毀積木）—— 變異測試：加回 dispose 行即報紅。
+- **不變式 B**：`enterLab` 以乾淨預覽碼為種子；`exitLab` 還原 UI 且不碰積木。
+- **不變式 C**：reload 快照含 `xml`＋`inLab`＋`code`；還原順序「先載積木、再進草稿」。
+- **不變式 D**：實驗室中「存檔」走 `exportPy`（blob 下載），不送後端 `saveFile`；「另存」隱藏。
+
+### 11.6 驗證
+
+`node --check` 改動檔 → `npm run test:fast` → `npm run test:ui`（公共 app/快照流程）→ `npx tsc --noEmit` → `npx vite build`；守門同步翻修並做變異測試驗紅；收尾 `eol:fix`。

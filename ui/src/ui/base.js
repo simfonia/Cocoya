@@ -186,8 +186,9 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                 // 2026-10-10 C-1 平台閘門（VSIX 不渲染）＋ C-2 接線（單向，無全域則 no-op）
                 textModeBtn.style.display = caps.supportsTextEditor ? 'flex' : 'none';
                 textModeBtn.onclick = () => {
-                    if (window.CocoyaTextMode && typeof window.CocoyaTextMode.switchToTextMode === 'function') {
-                        window.CocoyaTextMode.switchToTextMode();
+                    // 2026-10-10 實驗室模型：單一入口 toggle（進入/退出）
+                    if (window.CocoyaTextMode && typeof window.CocoyaTextMode.toggleTextMode === 'function') {
+                        window.CocoyaTextMode.toggleTextMode();
                     }
                 };
             }
@@ -271,20 +272,17 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                 };
 
                 // 3. 若需要 XML (檔案操作)
-                // 2026-10-10 C-3：文字模式改送 {code, isTextMode}（workspace 已 dispose，
-                // workspaceToDom 會炸；fileOps.js 依 isTextMode 分叉送碼＋平台行）。
-                const inTextModeForFile = (cmd === 'saveFile' || cmd === 'saveFileAs') &&
-                    window.CocoyaTextMode && typeof window.CocoyaTextMode.isTextMode === 'function' &&
-                    window.CocoyaTextMode.isTextMode();
-                if (inTextModeForFile) {
-                    try {
-                        const ed = window.CocoyaTextMode.getEditor ? window.CocoyaTextMode.getEditor() : null;
-                        if (ed && typeof ed.getValue === 'function') {
-                            msg.code = ed.getValue();
-                            msg.isTextMode = true;
-                        }
-                    } catch (e) {}
-                } else if (options.includeXml && typeof Blockly !== 'undefined') {
+                // 2026-10-10 實驗室模型：文字模式中「存檔」＝匯出 .py（blob 下載，非受管），
+                // 不走後端 saveFile；「另存」在實驗室中由 CSS 隱藏。積木模式維持原 XML 路。
+                const inTextMode = !!(window.CocoyaTextMode && typeof window.CocoyaTextMode.isTextMode === 'function' &&
+                    window.CocoyaTextMode.isTextMode());
+                if (inTextMode && cmd === 'saveFile') {
+                    if (window.CocoyaTextMode && typeof window.CocoyaTextMode.exportPy === 'function') {
+                        window.CocoyaTextMode.exportPy();
+                    }
+                    return;
+                }
+                if (options.includeXml && typeof Blockly !== 'undefined') {
                     const dom = Blockly.Xml.workspaceToDom(Blockly.getMainWorkspace());
                     // 注入 platform屬性標記 (PC 或 MicroPython)
                     const platform = window.CocoyaApp?.currentPlatform;
@@ -294,11 +292,8 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                 }
 
                 // 4. 若需要程式碼 (執行程式)
-                // 2026-10-10 C-3：文字模式分叉 —— workspace 已 dispose，
-                // 不可調 triggerCodeUpdateSync（!workspace 會回舊 lastCleanCode），改讀編輯器。
+                // 2026-10-10 實驗室模型：文字模式從編輯器讀草稿執行；積木模式取新鮮產碼。
                 if (cmd === 'runCode' && typeof Blockly !== 'undefined') {
-                    const inTextMode = !!(window.CocoyaTextMode && window.CocoyaTextMode.isTextMode &&
-                        typeof window.CocoyaTextMode.isTextMode === 'function' && window.CocoyaTextMode.isTextMode());
                     // --- 自動恢復自動捲動 (對齊使用者需求) ---
                     if (!self.isTerminalAutoScroll) {
                         self.isTerminalAutoScroll = true;
@@ -320,8 +315,8 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                             code = window.CocoyaApp.triggerCodeUpdateSync(true);
                         }
 
-                        // 強制刷新 Minimap 確保縮圖一致（文字模式無 workspace，跳過）
-                        if (!inTextMode && window.CocoyaApp.refreshMinimap) window.CocoyaApp.refreshMinimap();
+                        // 強制刷新 Minimap 確保縮圖一致（文字模式隱藏積木，跳過）
+                        if (window.CocoyaApp.refreshMinimap) window.CocoyaApp.refreshMinimap();
                     }
 
                     msg.code = code;

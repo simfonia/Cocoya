@@ -10,17 +10,8 @@ use crate::utils::get_examples_path;
 
 
 #[tauri::command]
-pub async fn save_file(window: Window, handle: AppHandle, state: State<'_, AppState>, xml: String, save_as: bool, force_examples: Option<bool>, dialog_title: Option<String>, code: Option<String>, is_text_mode: Option<bool>) -> Result<String, String> {
-    // 2026-10-10 C-3：文字模式存 .py —— 前端送 {code, isTextMode}，
-    // 舊調用不帶此二欄位（None）即走原 XML 路（向後相容，invoke 守門驗 camelCase 對應）。
-    let is_text = is_text_mode.unwrap_or(false);
-    // 落盤內容：文字模式用 code（fileOps.js 已補檔頭平台行），否則用 xml
-    let content = if is_text {
-        code.unwrap_or(xml.clone())
-    } else {
-        xml.clone()
-    };
-    let _ = &xml;
+pub async fn save_file(window: Window, handle: AppHandle, state: State<'_, AppState>, xml: String, save_as: bool, force_examples: Option<bool>, dialog_title: Option<String>) -> Result<String, String> {
+    let content = xml.clone();
     let allow_examples = force_examples.unwrap_or(false);
     let current_path = {
         let paths = state.current_paths.lock().unwrap();
@@ -29,18 +20,11 @@ pub async fn save_file(window: Window, handle: AppHandle, state: State<'_, AppSt
     let mut path_to_save = if save_as { None } else { current_path.clone() };
 
     if path_to_save.is_none() {
-        // C-3：文字模式預設 .py（未錨定首存／另存）；積木維持 .xml
+        // 未錨定首存／另存：一律 Cocoya XML（2026-10-10 實驗室模型：.py 由前端 blob 匯出，非受管）
         let mut builder = handle.dialog().file();
-        if is_text {
-            builder = builder
-                .add_filter("Python", &["py"])
-                .add_filter("Cocoya XML", &["xml"])
-                .set_file_name("未命名專案.py");
-        } else {
-            builder = builder
-                .add_filter("Cocoya XML", &["xml"])
-                .set_file_name("未命名專案.xml");
-        }
+        builder = builder
+            .add_filter("Cocoya XML", &["xml"])
+            .set_file_name("未命名專案.xml");
         // 開新專案流程（saveFileAs + tag=newProject）時用「開新專案」語意標題，
         // 避免與「另存專案」混淆（前端於 data.tag==='newProject' 時傳入）。
         if let Some(title) = dialog_title {

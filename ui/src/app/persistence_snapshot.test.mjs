@@ -210,42 +210,52 @@ test('clearReloadSnapshot：可主動清除殘留（discard／clean 換主題時
 });
 
 // ---------------------------------------------------------------------------
-// 文字模式快照（2026-10-10 C-3）：寫入 → consume 一次性
+// 實驗室快照（2026-10-10 實驗室模型）：workspace 永不 dispose，積木 xml 恆存
 //
 // 語系/主題切換共用同一條快照鏈（_showReloadChoice → snapshot → consume → restore）。
-// 文字快照無 xml、以 code 承載；consume 端（原只認 xml）同日補文字分支，
-// 否則切語系必丟碼 —— Q1 查證出的缺口，還原端見 text_snapshot.test.mjs。
+// 實驗室（文字模式）時快照「同時」含 xml（積木）+ inLab 旗標 + code（草稿），
+// 還原時先載積木、若 inLab 再進草稿層 —— 兩邊都不丟。還原端見 text_snapshot.test.mjs。
 // ---------------------------------------------------------------------------
 
-test('snapshotWorkspaceForReload：文字模式改存 code＋isTextMode（workspace 已 dispose 也不炸）', () => {
+test('snapshotWorkspaceForReload：實驗室（inLab）快照同時含 xml＋inLab＋code（積木不丟）', () => {
     globalThis.CocoyaTextMode = {
         isTextMode: () => true,
         getEditor: () => ({ getValue: () => 'print("hi")\n' })
     };
     try {
-        const app = makeApp({ workspace: null, isDirty: true });
+        const app = makeApp({ workspace: { clear() {} }, isDirty: true });
         app.snapshotWorkspaceForReload();
         const snap = JSON.parse(storage.get(SNAPSHOT_KEY));
-        assert.equal(snap.isTextMode, true);
-        assert.equal(snap.code, 'print("hi")\n');
+        assert.equal(snap.inLab, true, 'inLab 旗標供還原端判斷是否進草稿層');
+        assert.equal(snap.code, 'print("hi")\n', '草稿碼必須存（語系切換不丟草稿）');
         assert.equal(snap.platform, 'PC');
         assert.equal(snap.isDirty, true);
-        assert.equal(snap.xml, undefined, '文字快照不應有 xml');
+        assert.match(snap.xml, /py_variables_get/, '實驗室快照仍須含積木 xml（語系切換不丟積木）');
     } finally {
         delete globalThis.CocoyaTextMode;
     }
 });
 
-test('consumeReloadSnapshot：文字快照（含空 code）可還原；缺 code 回 null', () => {
-    const app = makeApp();
-    // 空字串是合法內容（編輯器被清空）→ 只驗型別、不可驗空白
-    storage.set(SNAPSHOT_KEY, JSON.stringify({ isTextMode: true, code: '', platform: 'PC' }));
-    const snap = app.consumeReloadSnapshot();
-    assert.ok(snap, '空 code 的文字快照應可還原');
-    assert.equal(snap.isTextMode, true);
-    assert.equal(snap.code, '');
-    assert.equal(storage.has(SNAPSHOT_KEY), false, '文字快照同樣一次性消耗');
+test('snapshotWorkspaceForReload：非實驗室快照不含 inLab／code（純積木）', () => {
+    const app = makeApp({ workspace: { clear() {} } });
+    app.snapshotWorkspaceForReload();
+    const snap = JSON.parse(storage.get(SNAPSHOT_KEY));
+    assert.equal(snap.inLab, undefined, '非實驗室不應有 inLab');
+    assert.equal(snap.code, undefined, '非實驗室不應有 code');
+    assert.match(snap.xml, /py_variables_get/);
+});
 
-    storage.set(SNAPSHOT_KEY, JSON.stringify({ isTextMode: true, platform: 'PC' }));
-    assert.equal(app.consumeReloadSnapshot(), null, '缺 code 應回 null');
+test('consumeReloadSnapshot：實驗室快照（含 xml+inLab+code）可還原；缺 xml 仍回 null', () => {
+    const app = makeApp();
+    // 空 code 是合法內容（草稿被清空）→ inLab 快照仍須含 xml 才算有效
+    storage.set(SNAPSHOT_KEY, JSON.stringify({ xml: '<xml><block type="py_main"/></xml>', inLab: true, code: '', platform: 'PC' }));
+    const snap = app.consumeReloadSnapshot();
+    assert.ok(snap, '含 xml 的實驗室快照應可還原');
+    assert.equal(snap.inLab, true);
+    assert.equal(snap.code, '');
+    assert.equal(storage.has(SNAPSHOT_KEY), false, '快照同樣一次性消耗');
+
+    // 缺 xml（即使有 inLab/code）→ 無積木可還原，回 null（不製造半還原）
+    storage.set(SNAPSHOT_KEY, JSON.stringify({ inLab: true, code: 'x', platform: 'PC' }));
+    assert.equal(app.consumeReloadSnapshot(), null, '缺 xml 應回 null');
 });

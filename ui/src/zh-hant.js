@@ -176,6 +176,7 @@
     "TLB_TEXT_MODE_TIP": "切換為文字模式（不可逆，積木將無法恢復）",
     "TLB_TEXT_MODE_CONFIRM": "切換為文字模式後，積木將無法恢復。確定要繼續嗎？",
     "TLB_TEXT_MODE_EDITOR_LABEL": "Python 文字編輯器",
+    "TLB_TEXT_MODE_EXIT_CONFIRM": "離開程式設計實驗室？這裡的編輯不會存成任何檔案，將被捨棄。",
     "TLB_TEXT_MODE_OPEN_VSIX": "此版本不支援文字編輯，請用 VS Code 開啟 .py 檔。",
     "TLB_TEXT_MODE_PICK_PLATFORM": "此 Python 檔沒有平台標頭（# cocoya-platform），請選擇平台：",
     "MSG_OPENED_AS_BLOCKS": "檔案內容為 Cocoya 專案 XML，已以積木模式開啟。",

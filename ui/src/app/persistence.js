@@ -36,27 +36,10 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
     SNAPSHOT_KEY: 'cocoya_reload_snapshot',
 
     /** 快照目前 workspace（含 dirty 內容）供 reload 後還原；失敗時清掉殘留 */
-    // 2026-10-10 C-3：文字模式分叉 —— workspace 已 dispose，改存編輯器碼＋isTextMode＋platform，
-    // 否則切語系/主題即丟碼。consume 端同日接線（consumeReloadSnapshot + lifecycle._restoreTextModeSnapshot）。
+    // 2026-10-10 實驗室模型：workspace 永不 dispose，積木 xml 恆可序列化。
+    // 文字模式（inLab）時「額外」存草稿 code，還原時先載積木、若 inLab 再進草稿層 ——
+    // 語系/主題切換兩邊都不丟（積木＋草稿都還原）。
     snapshotWorkspaceForReload: function() {
-        try {
-            const inText = !!(window.CocoyaTextMode && typeof window.CocoyaTextMode.isTextMode === 'function' &&
-                window.CocoyaTextMode.isTextMode());
-            if (inText) {
-                const ed = window.CocoyaTextMode.getEditor ? window.CocoyaTextMode.getEditor() : null;
-                const code = (ed && typeof ed.getValue === 'function') ? ed.getValue() : '';
-                const filename = (window.CocoyaUI && window.CocoyaUI.currentFilename) || '';
-                sessionStorage.setItem(this.SNAPSHOT_KEY, JSON.stringify({
-                    isTextMode: true,
-                    code,
-                    filename,
-                    platform: this.currentPlatform || 'PC',
-                    isReadOnly: this.isReadOnly,
-                    isDirty: !!this.isDirty
-                }));
-                return;
-            }
-        } catch (e) {}
         if (!this.workspace) return;
         try {
             const dom = Blockly.Xml.workspaceToDom(this.workspace);
@@ -64,14 +47,23 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             const xml = Blockly.Xml.domToPrettyText(dom);
             // 檔名取自 UI 狀態（視窗標題已改為只顯示 Cocoya，不再承載檔名）
             const filename = (window.CocoyaUI && window.CocoyaUI.currentFilename) || '';
-            sessionStorage.setItem(this.SNAPSHOT_KEY, JSON.stringify({
+            const snap = {
                 xml,
                 filename,
                 platform: this.currentPlatform || 'PC',
                 isReadOnly: this.isReadOnly,
                 // 忠實記錄切換前髒狀態：還原時照舊，避免「首頁未命名乾淨專案」被誤標髒（2026-09-16）
                 isDirty: !!this.isDirty
-            }));
+            };
+            // 實驗室（文字模式）：額外存草稿碼，reload 後先載積木、再進草稿層
+            const inLab = !!(window.CocoyaTextMode && typeof window.CocoyaTextMode.isTextMode === 'function' &&
+                window.CocoyaTextMode.isTextMode());
+            if (inLab) {
+                const ed = window.CocoyaTextMode.getEditor ? window.CocoyaTextMode.getEditor() : null;
+                snap.inLab = true;
+                snap.code = (ed && typeof ed.getValue === 'function') ? ed.getValue() : '';
+            }
+            sessionStorage.setItem(this.SNAPSHOT_KEY, JSON.stringify(snap));
         } catch (e) {
             try { sessionStorage.removeItem(this.SNAPSHOT_KEY); } catch (_) {}
         }
@@ -82,7 +74,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         try { sessionStorage.removeItem(this.SNAPSHOT_KEY); } catch (e) {}
     },
 
-    /** 取出並刪除快照（僅一次）；無快照、積木快照缺 xml、文字快照缺 code 皆回 null */
+    /** 取出並刪除快照（僅一次）；無快照或缺 xml 皆回 null。inLab 快照同樣含 xml（積木） */
     consumeReloadSnapshot: function() {
         try {
             const raw = sessionStorage.getItem(this.SNAPSHOT_KEY);
@@ -90,9 +82,7 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             sessionStorage.removeItem(this.SNAPSHOT_KEY);
             const snap = JSON.parse(raw);
             if (!snap) return null;
-            // 2026-10-10 C-3 文字模式快照：無 xml，以 code 承載。
-            // 空字串是合法內容（編輯器被清空），故只驗型別、不驗空白。
-            if (snap.isTextMode) return (typeof snap.code === 'string') ? snap : null;
+            // 實驗室快照同樣含 xml（積木永不 dispose）；inLab/code 為選擇性附加欄位。
             if (typeof snap.xml !== 'string' || !snap.xml.trim()) return null;
             return snap;
         } catch (e) {
@@ -191,6 +181,10 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
      * 載入工作區 XML 內容
      */
     loadWorkspace: async function(xml, filename, platform, isReadOnly = false) {
+        // 2026-10-10 實驗室模型：若在實驗室，先同步還原積木 UI（workspace 從未 dispose，載入照常）
+        if (window.CocoyaTextMode && typeof window.CocoyaTextMode.restoreBlockUiOnly === 'function') {
+            window.CocoyaTextMode.restoreBlockUiOnly();
+        }
         if (this.minimap) this.minimap._isPaused = true;
         if (platform && platform !== this.currentPlatform) await this.setPlatformUI(platform);
         
@@ -225,6 +219,10 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
      * 重置工作區為預設狀態
      */
     resetWorkspace: function() { 
+        // 2026-10-10 實驗室模型：若在實驗室，先同步還原積木 UI（workspace 從未 dispose，重建照常）
+        if (window.CocoyaTextMode && typeof window.CocoyaTextMode.restoreBlockUiOnly === 'function') {
+            window.CocoyaTextMode.restoreBlockUiOnly();
+        }
         if (this.workspace) {
             this.isReadOnly = false; // 重置時恢復為可寫
             
@@ -284,6 +282,10 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
      * 與 resetWorkspace 不同：不清檔名、不觸發首頁邏輯，保留剛錨定的檔名狀態
      */
     _applyInitialBlocks: function() {
+        // 2026-10-10 實驗室模型：若在實驗室，先同步還原積木 UI
+        if (window.CocoyaTextMode && typeof window.CocoyaTextMode.restoreBlockUiOnly === 'function') {
+            window.CocoyaTextMode.restoreBlockUiOnly();
+        }
         if (!this.workspace) return;
         this.isReadOnly = false;
         Blockly.Events.disable();

@@ -173,6 +173,7 @@
     "TLB_TEXT_MODE_TIP": "Switch to text mode (irreversible, blocks cannot be restored)",
     "TLB_TEXT_MODE_CONFIRM": "Switching to text mode cannot be undone. Blocks will not be restored. Continue?",
     "TLB_TEXT_MODE_EDITOR_LABEL": "Python text editor",
+    "TLB_TEXT_MODE_EXIT_CONFIRM": "Leave the code lab? Your edits here are not saved to any file and will be discarded.",
     "TLB_TEXT_MODE_OPEN_VSIX": "This build does not support text editing. Open .py files with VS Code.",
     "TLB_TEXT_MODE_PICK_PLATFORM": "This Python file has no platform header (# cocoya-platform). Choose a platform:",
     "MSG_OPENED_AS_BLOCKS": "File content is a Cocoya project XML; opened in block mode.",
