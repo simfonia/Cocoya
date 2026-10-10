@@ -15,19 +15,20 @@
 
 ---
 ## [進行中 / 待辦]
-### [2026-10-10] Editor「程式設計實驗室」模型重構（進行中）
+### [2026-10-10] Editor「程式設計實驗室」模型重構（✅ 完成，commit `86e33ef`）
 > **背景**：2026-10-10 前已實作 dispose 單向模型（A/B/C/D-1＋版面重構方案 B，commit `dedf22d`）。
 > 使用者重新定義需求為「程式設計實驗室」：block workspace 永不 dispose、文字模式只是疊在其上的記憶體草稿層，
 > 退出即還原，`.py` 非受管（匯出下載）。計畫 SSOT：`docs/plan/Editor純文字模式計畫.md` §11。
-- [ ] **Layer A（文字模式引擎，永不 dispose）**：
-  - [ ] `text_mode.js`：`switchToTextMode`→`enterLab`（移除 dispose）；新增 `exitLab`（還原 UI＋草稿 dirty 確認）＋`exportPy`（blob 下載）＋共用 `cleanPreviewCode` helper；刪 `disposeBlocklySide`/`openPyFile`/`quickPick`
-  - [ ] `persistence.js`：reload 快照改存 `xml`＋`code`＋`inLab`；還原「先載積木、再進草稿」
-  - [ ] `loadWorkspace/_applyInitialBlocks/resetWorkspace/backToHome` 開頭加「若在實驗室先 restoreBlockUi」護欄
-- [ ] **Layer B（.py I/O 退回）**：
-  - [ ] 退回 `controller.loadWorkspace` python 分叉＋`base.js`/`fileOps.js` 的 `{code,isTextMode}` 存檔分叉＋Rust `save_file` 的 `code/is_text_mode`＋`.py` filter＋manifest 註記
-  - [ ] 保留純函式零件庫：`parsePlatformLine`/`ensurePlatformLine`/`guessPlatform`/`detectContentKind`（不刪）
-- [ ] **UI**：`btn-text-mode` 變切換（進入/退出）；實驗室中「存檔」＝`exportPy`；「另存」以 CSS 隱藏
-- [ ] **守門翻修**：`editor_contract.test.mjs`/`text_snapshot.test.mjs`/`persistence_snapshot.test.mjs` 由 dispose 契約改 hide 契約（不變式 A~D）＋變異測試驗紅
+- [x] **Layer A（文字模式引擎，永不 dispose）**：
+  - [x] `text_mode.js`：`switchToTextMode`→`enterLab`（移除 dispose）；新增 `exitLab`（還原 UI＋草稿 dirty 確認）＋`exportPy`（blob 下載）＋共用 `cleanPreviewCode` helper＋`restoreBlockUiOnly`；刪 `disposeBlocklySide`/`openPyFile`/`quickPick`
+  - [x] `persistence.js`：reload 快照改存 `xml`＋`code`＋`inLab`；還原「先載積木、再進草稿」
+  - [x] `loadWorkspace/_applyInitialBlocks/resetWorkspace` 開頭加「若在實驗室先 restoreBlockUiOnly」護欄
+- [x] **Layer B（.py I/O 退回）**：
+  - [x] 退回 `controller.loadWorkspace` python 分叉＋`base.js`/`fileOps.js` 的 `{code,isTextMode}` 存檔分叉＋Rust `save_file` 的 `code/is_text_mode`＋`.py` filter＋manifest 註記
+  - [x] 保留純函式零件庫：`parsePlatformLine`/`ensurePlatformLine`/`guessPlatform`/`detectContentKind`（不刪，為將來受管化升級備用）
+- [x] **UI**：`btn-text-mode` 變切換（進入/退出）；實驗室中「存檔」＝`exportPy`；「另存」以 CSS 隱藏
+- [x] **守門翻修**：`editor_contract.test.mjs`/`text_snapshot.test.mjs`/`persistence_snapshot.test.mjs` 由 dispose 契約改 hide 契約（不變式 A~D）＋變異測試驗紅
+- [ ] **D-2 待實機驗證**（`test:ui` 478/478 已過）：切換鈕進入/退出實驗室、實驗室中存檔下載 `.py`／另存隱藏、語系主題切換兩邊都還原、實驗室中按開檔/開新/範例/回首頁正確還原積木
 
 
 
