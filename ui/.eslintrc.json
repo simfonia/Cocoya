@@ -17,6 +17,7 @@
     "CocoyaSettings": "readonly",
     "CocoyaPyHighlight": "readonly",
     "CocoyaTextEditor": "readonly",
+    "CocoyaTextMode": "readonly",
     "acquireVsCodeApi": "readonly",
     "hljs": "readonly"
   },

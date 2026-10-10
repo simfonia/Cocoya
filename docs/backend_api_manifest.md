@@ -97,9 +97,9 @@ Notation: `key?` = Optional. **Rule: changing a Rust signature -> immediately up
 | file | get_module_toolbox  | path: String | {path} | Result<String, String> |
 | file | get_project_anchor  | -- | {} | ProjectAnchor（serde camelCase：`isAnchored` / `projectRoot`；呼叫端勿以 snake_case 讀欄位） |
 | file | release_session     | -- | {} | Result<(), String>；回首頁（backToHome）：移除本視窗 `current_paths[label]`（解除錨定）、`file_locks` 中 owner=label 的鎖、`dirty_states[label]`。2026-09-18 |
-| file | open_file          | -- | {} | Result<OpenFileResult, String> |
+| file | open_file          | -- | {} | Result<OpenFileResult, String>（2026-10-10 D-1 選檔 filter 加 py；Python/XML 內容分叉在前端 controller.loadWorkspace 經 detectContentKind） |
 | file | open_examples      | -- | {} | Result<OpenFileResult, String> |
-| file | save_file          | xml, save_as: bool, force_examples: Option<bool>, dialog_title: Option<String> | {xml, saveAs, forceExamples?, dialogTitle?} | Result<String, String>（Err 碼：`Canceled` / `EXAMPLES_PATH` / `SAME_AS_CURRENT`（開新/另存命中目前專案檔位置，防呆擋下） / `檔案已被其他視窗開啟...`） |
+| file | save_file          | xml, save_as: bool, force_examples: Option<bool>, dialog_title: Option<String>, code: Option<String>, is_text_mode: Option<bool> | {xml, saveAs, forceExamples?, dialogTitle?, code?, isTextMode?} | Result<String, String>（Err 碼：`Canceled` / `EXAMPLES_PATH` / `SAME_AS_CURRENT`（開新/另存命中目前專案檔位置，防呆擋下） / `檔案已被其他視窗開啟...`。2026-10-10 C-3文字模式送{code,isTextMode}落盤code、對話框預設.py中文標體） |
 | file | auto_backup        | xml: String | {xml} | Result<(), String> |
 | file | check_startup_backup | -- | {} | Option<String> |
 | file | clear_backup       | -- | {} | Result<(), String> |

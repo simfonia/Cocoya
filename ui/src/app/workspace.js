@@ -218,6 +218,8 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
      * 設定工作區變動監聽器
      */
     setupWorkspaceListeners: function() {
+        // 2026-10-10 C-3：文字模式快照還原後 workspace 已 dispose —— 無主工作區就沒有監聽對象
+        if (!this.workspace) return;
         // --- BUG FIX: 解決積木拖拽粘性問題 (Sticky Drag) ---
         window.addEventListener('mouseenter', (e) => {
             if (e.buttons === 0 && this.workspace) {

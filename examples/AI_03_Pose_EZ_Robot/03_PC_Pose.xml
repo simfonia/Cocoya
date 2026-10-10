@@ -18,6 +18,7 @@ https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker
 記得修改 Serial port
   
   
+  
   </comment>
   <block type="py_definition_zone" id="def_root" deletable="false" x="10" y="10">
     <statement name="DEFS">
@@ -31,7 +32,7 @@ https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker
                 <field name="BAUD">9600</field>
                 <value name="PORT">
                   <shadow type="py_text" id="port_name">
-                    <field name="TEXT">COM6</field>
+                    <field name="TEXT">COM13</field>
                   </shadow>
                 </value>
               </block>

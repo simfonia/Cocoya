@@ -34,7 +34,33 @@ class AppController {
             // 專案錨定檢查：未錨定則顯示啟動首頁（開新/開啟）
             if (this.app.showStartupHomeIfNeeded) this.app.showStartupHomeIfNeeded();
         });
-        this.handlers.set('loadWorkspace', async (m) => await this.app.loadWorkspace(m.xml, m.filename, m.platform, m.is_read_only));
+        // 2026-10-10 D-1 開檔分叉：內容偵測（計畫 D-12，不可只看副檔名）——
+        // Python 內容 → 文字模式（openPyFile 內含 VSIX 閘門與缺平台行 QuickPick）；
+        // XML 內容（即使副檔名 .py，使用者改錯）→ 既有積木流程並提示回退。
+        this.handlers.set('loadWorkspace', async (m) => {
+            const TM = window.CocoyaTextMode;
+            if (TM && typeof TM.detectContentKind === 'function' && typeof TM.openPyFile === 'function' &&
+                TM.detectContentKind(m.xml) === 'python') {
+                await TM.openPyFile({
+                    code: m.xml,
+                    filename: m.filename,
+                    platform: m.platform,
+                    isReadOnly: !!m.is_read_only
+                });
+                return;
+            }
+            if (TM && typeof TM.detectContentKind === 'function' &&
+                /\.py$/i.test(String(m.filename || '')) && TM.detectContentKind(m.xml) === 'xml') {
+                try {
+                    const tip = (typeof Blockly !== 'undefined' && Blockly.Msg['MSG_OPENED_AS_BLOCKS']) ||
+                        'File content is a Cocoya project XML; opened in block mode.';
+                    if (window.CocoyaBridge && typeof window.CocoyaBridge.alert === 'function') {
+                        window.CocoyaBridge.alert(tip);
+                    }
+                } catch (e) {}
+            }
+            await this.app.loadWorkspace(m.xml, m.filename, m.platform, m.is_read_only);
+        });
         this.handlers.set('resetWorkspace', () => this.app.resetWorkspace());
         this.handlers.set('saveCompleted', (m) => this.app.onSaveCompleted(m.filename, m.tag));
         this.handlers.set('recoveryData', async (m) => await this.app.checkAutoBackup(m.xml));

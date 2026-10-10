@@ -40,6 +40,8 @@ export class BridgeTauri extends BaseBridge {
             supportsEraseFS: false,
             // 2026-10-01：Tauri 具備 restore_examples command（Resource → AppData 強制覆寫）
             supportsRestoreExamples: true,
+            // 2026-10-10（Editor C-1）：Tauri 獨有純文字模式（VSIX 直接用 VS Code 開 .py）
+            supportsTextEditor: true,
             isTauri: true,
             isRemoteAware: true, // Tauri 亦保留雲端/SSH 擴充可能性
             isRemoteConnected: false,

@@ -11,9 +11,11 @@
  *   - 主題 token 走 theme_manager cssVars（P1-3 鐵律：不得寫死 hex），
  *     var() 帶樣式表 fallback，主題未載入時也可用。
  *
- * 版面（body.cocoya-text-mode）：
- *   左欄固定寬（toolbar 換行 + 虛擬終端保留），codeArea 佔滿剩餘 —— 編輯器
- *   成為主體。panel-resizer 在文字模式隱藏（版面固定，拖曳無意義）。
+ * 版面（body.cocoya-text-mode，2026-10-10 方案 B 重構後）：
+ *   #container 為上下結構：toolbar(上) / #workbench(中：blockly|resizer|code) / terminal(下)。
+ *   文字模式只需隱藏 #blocklyArea 與 #panel-resizer，#codeArea 成為 workbench 內
+ *   唯一項目即自然展開全寬 —— 不再需要 400px 左欄的繞路版面。
+ *   panel-resizer、code-toggle 收合把手與 ✕ 在文字模式一併隱藏（編輯器是唯一面板，不可收合）。
  *
  * token 清單（8 個，三主題 cssVars 皆有定義，由 theme_contract 守門同步）：
  *   --editor-bg / --editor-fg / --tok-keyword / --tok-string /
@@ -91,32 +93,42 @@
 #codeEditor .tok-builtin  { color: var(--tok-builtin, #795e26); }
 #codeEditor .tok-operator { color: var(--tok-operator, #333333); }
 
-/* --- 文字模式版面（body.cocoya-text-mode 由 CocoyaTextMode 切換） --- */
-body.cocoya-text-mode #blocklyDiv {
-    display: none;              /* 隱藏積木區（含 toolbox；terminalArea 是 sibling，保留） */
+/* --- 文字模式版面（body.cocoya-text-mode 由 CocoyaTextMode 切換） ---
+   2026-10-10 方案 B 重構：toolbar/terminal 已搬出 #blocklyArea（見 index.html workbench），
+   文字模式只需隱藏積木側 —— #codeArea 為 workbench 內唯一項目，自然展開全寬。 */
+body.cocoya-text-mode #blocklyArea {
+    display: none;              /* 隱藏積木區（含 toolbox 與 minimap-toggle；terminalArea 是 container 直屬 sibling，保留） */
 }
 
 body.cocoya-text-mode #codeContent {
     display: none;              /* 積木模式的唯讀預覽退場 */
 }
 
+/* 2026-10-10 C-1：切換鈕（P2 codeHeader 圖文鈕）隨預覽一起退場 —— 單向，
+   文字模式沒有「切回去」，離場只能經開新／開舊／回首頁。 */
+body.cocoya-text-mode #btn-text-mode {
+    display: none;
+}
+
 body.cocoya-text-mode #codeEditor {
     display: block;
 }
 
-body.cocoya-text-mode #blocklyArea {
-    flex: 0 0 400px;            /* 左欄縮為 toolbar（會換行）＋ terminal */
-    min-width: 0;
+body.cocoya-text-mode #panel-resizer {
+    display: none;              /* 積木側已隱藏，無分欄可拖 */
 }
 
 body.cocoya-text-mode #codeArea {
     flex: 1 1 auto;
-    width: auto;                /* 佔滿剩餘寬度；收合時仍由 .collapsed width:0 !important 接管 */
+    width: auto;                /* 預設 400px → 佔滿 workbench 全寬；收合時仍由 .collapsed width:0 !important 接管 */
 }
 
-body.cocoya-text-mode #panel-resizer {
-    display: none;              /* 版面固定，拖曳無意義 */
+/* 編輯器是文字模式的唯一面板：藏收合把手與 ✕（收合後將無內容可看） */
+body.cocoya-text-mode #code-toggle,
+body.cocoya-text-mode #btn-close-code {
+    display: none;
 }
+
 
 /* codeArea 收合時編輯器一併退場（與 #codeContent 同待遇） */
 #codeArea.collapsed #codeEditor {

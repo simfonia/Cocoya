@@ -87,7 +87,9 @@ test('capabilities：未 init 前為未錨定，欄位齊全且 isTauri 為 true
             'isTauri', 'projectRoot', 'supportsAutoUpdate', 'supportsEnvironmentCheck',
             'supportsEraseFS', 'supportsFirmwareReset',
             // 2026-10-01：還原範例檔（僅 Tauri 有後端 command；VSIX 為 false 並隱藏選單項）
-            'supportsRestoreExamples'
+            'supportsRestoreExamples',
+            // 2026-10-10 C-1：純文字模式（僅 Tauri true；VSIX 為 false 並隱藏按鈕）
+            'supportsTextEditor'
         ].sort()
     );
 });
@@ -130,6 +132,15 @@ test('capabilities 契約：supportsRestoreExamples 只有 Tauri 為 true（VSIX
         'Tauri 有 restore_examples command，必須為 true');
     assert.equal(new BridgeVSIX().capabilities.supportsRestoreExamples, false,
         'VSIX 尚無後端實作，必須為 false（前端據此隱藏選單項）');
+});
+
+test('capabilities 契約：supportsTextEditor 只有 Tauri 為 true（VSIX 必須 false）', () => {
+    // 2026-10-10（Editor C-1）：與 supportsRestoreExamples 同模式 ——
+    // VSIX 直接用 VS Code 開 .py，webview 不顯示切換按鈕。
+    assert.equal(makeBridge().capabilities.supportsTextEditor, true,
+        'Tauri 獨有純文字模式，必須為 true');
+    assert.equal(new BridgeVSIX().capabilities.supportsTextEditor, false,
+        'VSIX 先不支援，必須為 false（前端據此隱藏按鈕）');
 });
 
 test('capabilities 契約：supportsStableMode 不得再回傳（Stable Mode 死鏈已移除）', () => {

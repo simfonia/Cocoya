@@ -26,6 +26,9 @@ export class BaseBridge {
             // 目前只有 Tauri 有後端 command（Tauri 才有 Resource/AppData 播種機制），
             // VSIX 尚未實作 → false，前端據此隱藏選單項。
             supportsRestoreExamples: false,
+            // 2026-10-10（Editor C-1）：是否支援純文字模式（Tauri 獨有）。
+            // VSIX 端直接用 VS Code 開 .py，webview 不重造編輯器。
+            supportsTextEditor: false,
             isTauri: false,
             isRemoteAware: false,
             isRemoteConnected: false,

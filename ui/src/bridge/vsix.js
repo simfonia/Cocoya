@@ -22,6 +22,8 @@ export class BridgeVSIX extends BaseBridge {
             // 2026-10-01：VSIX 尚未實作「還原範例檔」（extensionPath 為唯讀，
             // 無 Tauri 的 Resource→AppData 播種機制）→ false，前端據此隱藏選單項。
             supportsRestoreExamples: false,
+            // 2026-10-10（Editor C-1）：VSIX 先不支援（VS Code 本身已有文字編輯器）
+            supportsTextEditor: false,
             isTauri: false,
             isRemoteAware: true // VSIX 版具備雲端感知能力
         });

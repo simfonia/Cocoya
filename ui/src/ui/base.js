@@ -181,6 +181,21 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             if (closeBtn) closeBtn.style.display = caps.canClose ? 'flex' : 'none';
             if (terminalToggleBtn) terminalToggleBtn.style.display = caps.hasTerminal ? 'flex' : 'none';
 
+            const textModeBtn = document.getElementById('btn-text-mode');
+            if (textModeBtn) {
+                // 2026-10-10 C-1 平台閘門（VSIX 不渲染）＋ C-2 接線（單向，無全域則 no-op）
+                textModeBtn.style.display = caps.supportsTextEditor ? 'flex' : 'none';
+                textModeBtn.onclick = () => {
+                    if (window.CocoyaTextMode && typeof window.CocoyaTextMode.switchToTextMode === 'function') {
+                        window.CocoyaTextMode.switchToTextMode();
+                    }
+                };
+            }
+
+            // 2026-10-10（Editor C-1）：純文字模式只在 Tauri 開放。
+            // VSIX 直接用 VS Code 開 .py，連按鈕都不渲染（與 Plotter 共用同一條判斷）。
+            // 文字模式切換後按鈕隨 #codeContent 退場（見 editor.css），此處只處理平台閘門。
+
             // 2026-10-05：VSIX 端的 webview 虛擬終端是**空殼**，整塊隱藏以騰出版面。
             // 實查依據（src/**/*.ts）：VSIX 端完全沒有 appendTerminal 呼叫，也沒有任何
             // postMessage 把 python-log／序列埠資料轉發進 webview；訓練
@@ -191,6 +206,10 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             if (!caps.hasTerminal) {
                 const terminalArea = document.getElementById('terminalArea');
                 if (terminalArea) terminalArea.style.display = 'none';
+                // 2026-10-10 版面重構：resizer 搬至 #container 底部全寬，一併隱藏
+                //（VSIX 無終端機，#terminal-toggle 把手是死按鈕，不應懸在視窗下緣中央）
+                const terminalResizer = document.getElementById('terminal-resizer');
+                if (terminalResizer) terminalResizer.style.display = 'none';
             }
             
             // AI 下拉選單：VSIX 與 Tauri 皆顯示
@@ -252,7 +271,20 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                 };
 
                 // 3. 若需要 XML (檔案操作)
-                if (options.includeXml && typeof Blockly !== 'undefined') {
+                // 2026-10-10 C-3：文字模式改送 {code, isTextMode}（workspace 已 dispose，
+                // workspaceToDom 會炸；fileOps.js 依 isTextMode 分叉送碼＋平台行）。
+                const inTextModeForFile = (cmd === 'saveFile' || cmd === 'saveFileAs') &&
+                    window.CocoyaTextMode && typeof window.CocoyaTextMode.isTextMode === 'function' &&
+                    window.CocoyaTextMode.isTextMode();
+                if (inTextModeForFile) {
+                    try {
+                        const ed = window.CocoyaTextMode.getEditor ? window.CocoyaTextMode.getEditor() : null;
+                        if (ed && typeof ed.getValue === 'function') {
+                            msg.code = ed.getValue();
+                            msg.isTextMode = true;
+                        }
+                    } catch (e) {}
+                } else if (options.includeXml && typeof Blockly !== 'undefined') {
                     const dom = Blockly.Xml.workspaceToDom(Blockly.getMainWorkspace());
                     // 注入 platform屬性標記 (PC 或 MicroPython)
                     const platform = window.CocoyaApp?.currentPlatform;
@@ -262,7 +294,11 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                 }
 
                 // 4. 若需要程式碼 (執行程式)
+                // 2026-10-10 C-3：文字模式分叉 —— workspace 已 dispose，
+                // 不可調 triggerCodeUpdateSync（!workspace 會回舊 lastCleanCode），改讀編輯器。
                 if (cmd === 'runCode' && typeof Blockly !== 'undefined') {
+                    const inTextMode = !!(window.CocoyaTextMode && window.CocoyaTextMode.isTextMode &&
+                        typeof window.CocoyaTextMode.isTextMode === 'function' && window.CocoyaTextMode.isTextMode());
                     // --- 自動恢復自動捲動 (對齊使用者需求) ---
                     if (!self.isTerminalAutoScroll) {
                         self.isTerminalAutoScroll = true;
@@ -273,14 +309,20 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                     // [修正] 強制關閉輸入框並執行強制 UI 更新
                     if (Blockly.getMainWorkspace()) Blockly.hideChaff();
                     
-                    let code = window.CocoyaApp.lastCleanCode;
-                    if (typeof window.CocoyaApp.triggerCodeUpdateSync === 'function') {
-                        // 傳入 true 以無視 focus 保護強制渲染預覽
-                        code = window.CocoyaApp.triggerCodeUpdateSync(true);
+                    let code;
+                    if (inTextMode) {
+                        const ed = (window.CocoyaTextMode.getEditor) ? window.CocoyaTextMode.getEditor() : null;
+                        code = (ed && typeof ed.getValue === 'function') ? ed.getValue() : (window.CocoyaApp.lastCleanCode || '');
+                    } else {
+                        code = window.CocoyaApp.lastCleanCode;
+                        if (typeof window.CocoyaApp.triggerCodeUpdateSync === 'function') {
+                            // 傳入 true 以無視 focus 保護強制渲染預覽
+                            code = window.CocoyaApp.triggerCodeUpdateSync(true);
+                        }
+
+                        // 強制刷新 Minimap 確保縮圖一致（文字模式無 workspace，跳過）
+                        if (!inTextMode && window.CocoyaApp.refreshMinimap) window.CocoyaApp.refreshMinimap();
                     }
-                    
-                    // 強制刷新 Minimap 確保縮圖一致
-                    if (window.CocoyaApp.refreshMinimap) window.CocoyaApp.refreshMinimap();
 
                     msg.code = code;
                     msg.platform = window.CocoyaApp?.currentPlatform;
@@ -808,10 +850,18 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
         }
 
         // 綁定複製程式碼按鈕
+        // 2026-10-10 C-3：文字模式改拷編輯器內容（workspace 已 dispose，lastCleanCode 是舊碼）
         const copyBtn = document.getElementById('btn-copy-code');
         if (copyBtn) {
             copyBtn.onclick = () => {
-                const rawCode = window.CocoyaApp.lastCleanCode || '';
+                let rawCode = window.CocoyaApp.lastCleanCode || '';
+                try {
+                    if (window.CocoyaTextMode && typeof window.CocoyaTextMode.isTextMode === 'function' &&
+                        window.CocoyaTextMode.isTextMode()) {
+                        const ed = window.CocoyaTextMode.getEditor ? window.CocoyaTextMode.getEditor() : null;
+                        if (ed && typeof ed.getValue === 'function') rawCode = ed.getValue();
+                    }
+                } catch (e) {}
                 // 徹底清理：濾掉行尾 ID 註解與運算式隱形標記
                 const cleanCode = rawCode.replace(/ {2}# ID:.*$/mg, '').replace(/\u0001ID:.*?\u0002/g, '');
                 

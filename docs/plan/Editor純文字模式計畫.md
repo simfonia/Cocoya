@@ -1,7 +1,7 @@
 # 純文字模式 + 內建編輯器 — 設計與執行計畫
 
 **建立日期**：2026-10-05
-**狀態**：**決策已定（2026-10-06），待實作**
+**狀態**：**A/B/C/D-1 已實作完成（2026-10-10）；D-2+（實機驗證等）待辦**
 **關聯**：與「TinkerCAD 式單向轉換」需求綁定
 
 > ## ✅ 決策紀錄（2026-10-06 使用者拍板）
@@ -195,3 +195,113 @@ Cocoya 規範明定**零新增 dependency**（CodeBridge 的 plotter 亦遵循�
 - **VSIX 不支援範圍（2026-10-06）**：Editor 與 Plotter **共用同一條 `caps` 判斷** ——
   兩者都是「webview 端看不到/拿不到 VS Code 既有能力」的同類問題，
   不可各自判斷，否則會出現「plot 藏了但 editor 露出」的不一致。
+
+---
+
+## 10. 執行進度（2026-10-10 更新）
+
+### ✅ 階段 A（編輯器元件）／B（整合 #codeArea）— 已完成（2026-10-06）
+
+- `ui/src/modules/editor/editor.css`（8 個主題 token，三主題同步）、`highlight.js`（tokenizer，15 測）、`editor.js`（pre 疊層高亮＋textarea 輸入，零新增相依）
+- `index.html` 的 `#codeArea` 編輯器容器；積木模式維持既有唯讀預覽
+
+### ✅ 階段 C（模式切換＋存檔）— 已完成（2026-10-10）
+
+| 步驟 | 內容 | 檔案 |
+|---|---|---|
+| C-1 | 平台閘門：`caps.supportsTextEditor` 才渲染按鈕（VSIX 不渲染，與 Plotter 共用同一條判斷）；切後按鈕隨 `#codeContent` 退場 | `ui/index.html`、`ui/src/ui/base.js`、`editor/editor.css` |
+| C-2 | 切換 SSOT：`isTextMode / getEditor / switchToTextMode / enterTextModeWithCode`；dirty 才彈三按鈕確認 → 存檔 → 取新鮮碼 → 二次清行尾 ID 註解 → `dispose()` → `body.cocoya-text-mode` → 退場 UI（`#block-type-info` 隱藏、aria-label 填充）；雙語 i18n 鍵（`TLB_TEXT_MODE_TIP/CONFIRM/EDITOR_LABEL`） | `ui/src/modules/editor/text_mode.js`、`ui/src/ui/base.js`、`ui/src/zh-hant.js`、`ui/src/en.js` |
+| C-3 | **執行分叉**：`runCode` 文字模式改讀 `editor.getValue()`（不可調 `triggerCodeUpdateSync`，`!workspace` 會回舊碼）；**存檔分叉**：送 `{code, isTextMode}`，`fileOps.js` 經 `ensurePlatformLine` 補檔頭平台行；Rust `save_file` 加 `code/is_text_mode: Option<String/bool>`（`None` 向後相容舊 XML 路）；**preview 早退**：`renderer` 文字模式不渲染 | `ui/src/ui/base.js`、`ui/src/bridge/tauri/fileOps.js`、`src-tauri/src/commands/file/savefile.rs`、`ui/src/ui/renderer.js`、`docs/backend_api_manifest.md` |
+
+**檔頭平台行**（Q3 決策 A）：首五行內尋 `# cocoya-platform: PC|MicroPython`，執行依此行分流
+`run_python` / `deploy_mcu`；`parsePlatformLine / ensurePlatformLine / guessPlatform` 為可單元測試的純函式，掛 `CocoyaTextMode` 匯出。
+
+**驗收**（2026-10-10）：`test:ui` **465/465**、`lint:ui` 0 error、`invoke_params_contract` 6/6、`cargo check`、`npx vite build`、eol 750 檔全 CRLF。
+
+### ✅ Q1 修復：語系/主題切換的文字快照丟碼（2026-10-10 同日根治）
+
+**查證結論**：語系切換（`persistence._showReloadChoice`）與主題切換（`theme_manager`）共用同一條快照鏈
+`_showReloadChoice → snapshotWorkspaceForReload → reload → consumeReloadSnapshot → _restoreReloadSnapshot`。
+C-3 寫入端已分叉（產出 `code/isTextMode`、無 `xml`），但 `consumeReloadSnapshot` **只驗 `xml`**
+→ 文字快照必回 null → **文字模式下切語系/主題必丟碼**（原註解誤判為「暫不還原、不炸」）。
+
+**修復**（寫入、消耗、還原三端齊備）：
+
+1. `persistence.js · consumeReloadSnapshot`：`isTextMode` 快照改驗 `code`（空字串合法——編輯器可被清空，只驗型別、不驗空白）。
+2. `lifecycle.js · _restoreReloadSnapshot`：`snap.isTextMode` → 分派 `_restoreTextModeSnapshot`（不走 Blockly XML）。
+3. `lifecycle.js · _restoreTextModeSnapshot`（新）：**先 `enterTextModeWithCode` 成功，才 dispose workspace/minimap**（順序契約）；還原 `currentPlatform`（存檔 `ensurePlatformLine` 與執行 `msg.platform` 都吃它）＋ `filename` ＋ `isReadOnly`；失敗回 null 不半切（呼叫端退回預設積木路徑）。
+4. 下游 null 護欄：`workspace.js · setupWorkspaceListeners` 開頭 `!this.workspace` 早退；`persistence.js · checkAutoBackup` 文字模式早退（**不清備份**，下次積木模式仍可復原）＋對話框回呼內 `!this.workspace` 再驗（防「對話框掛著時才切文字模式」的競態）。
+5. **守門**：`persistence_snapshot.test.mjs` +2（文字寫入／消耗）、新檔 `ui/src/app/text_snapshot.test.mjs` 3 測（分派／順序契約／防半切）。**變異測試三種皆驗證會紅**（刪 consume 文字分支、刪分派行、dispose 搬到 enter 前）。
+6. 順手修正：`persistence_snapshot.test.mjs` 原第 108 測缺 `});`，導致後續 7 測被**嵌套**為其子測試（仍會執行故從未被發現）——已補閉合，層級恢復正常。
+
+### ✅ 按鈕純 icon 化（2026-10-10）
+
+- `#btn-text-mode` 移除文字節點，改純 icon ＋ `title` tooltip（`TLB_TEXT_MODE_TIP`），固定 24×24 對齊相鄰鈕。
+- 刪除 `editor.css` 窄螢幕 `.text-mode-label` 規則（連同整個 `@media` 區塊）；i18n 鍵 `TLB_TEXT_MODE` 雙語同步移除（僅該 span 引用）。
+
+### ⚠️ 已知限制
+
+1. **單向不可逆**：切文字模式後 `Blockly.dispose()`、`workspace = null`；離場只能開新／開舊／回首頁（皆走既有 dirty 三選）。
+2. **VSIX 不支援文字編輯**（決策 2）：按鈕不渲染；VSIX 開 `.py` 情境由 D-1 唯讀 fallback 處理。
+3. **XML 備份在文字模式不還原**：`checkAutoBackup` 早退且不清除備份（保守選擇，避免砸 null 或覆蓋文字）。
+4. 快照還原不呼叫 `setPlatformUI`（workspace 已 dispose，模組載入無對象），只更新 `currentPlatform` 與平台標籤——文字模式不產積木碼，足夠。
+5. 文字模式下的 `recoveryData`（後端推播的啟動備份）到達時一律略過，同第 3 點。
+
+### ✅ D-1（開檔分叉）— 已完成（2026-10-10 晚）
+
+| 項 | 內容 | 檔案 |
+|---|---|---|
+| 選檔器 | `open_file` filter 加 `py`（`Cocoya Project: [xml, py]`）；`open_examples` 維持 XML | `src-tauri/src/commands/file/openfile.rs` |
+| 內容分叉 | `detectContentKind(content)`：以內容偵測（`<xml`/`<?xml` 起頭 → xml，其餘 → python，含空檔），**不可只看副檔名** | `editor/text_mode.js` |
+| 接線 | `controller.loadWorkspace`：python 內容 → `openPyFile`；`.py` 副檔名但內容是 XML → 積木流程＋`MSG_OPENED_AS_BLOCKS` 提示 | `app/controller.js` |
+| 開檔流程 | `openPyFile`：VSIX 閘門（`caps.supportsTextEditor=false` → 提示用 VS Code 開、不動工作區）→ 缺檔頭平台行 QuickPick（PC/MicroPython，取消即中止）→ `ensurePlatformLine` 補行 → enter 成功才 dispose → 平台/檔名/唯讀/`setDirty(false)`/回首頁隱藏 | `editor/text_mode.js` |
+| i18n | `TLB_TEXT_MODE_OPEN_VSIX`、`TLB_TEXT_MODE_PICK_PLATFORM`、`MSG_OPENED_AS_BLOCKS`（雙語） | `zh-hant.js`、`en.js` |
+| 守門 | `editor_contract.test.mjs` 10 測＋**四變異測試驗紅**（恆 python／接線字串／閘門失效／strip 失效） | `editor/editor_contract.test.mjs` |
+| 重構 | `disposeBlocklySide(app)` 抽出共用（`switchToTextMode` 與 `openPyFile` 同一退場）；`stripIdComments` 匯出供守門 | `editor/text_mode.js` |
+
+**驗收**（2026-10-10）：`test:ui` **475/475**、`lint:ui` 0 error、`cargo check`（僅既有 dataset.rs 2 warnings）、`test:rust` 3/3、`vite build`、eol 751 檔全 CRLF。
+
+### ✅ 版面重構（方案 B：toolbar/終端機搬出 blocklyArea，2026-10-10）
+
+**問題**：原版面 `#container` 為左右結構，**toolbar 與 terminalArea 都關在 `#blocklyArea` 內** → 文字模式只能把左欄釘 400px（實機截圖：toolbar 擠成 4 列、下方大片空白、編輯器被限縮右側）。
+
+**決策（2026-10-10 使用者拍板：方案 B，捨「只改文字模式 CSS」的方案 A）**：回頭改基礎版面，兩模式共用一組版面 —— toolbar 上／預覽（編輯器）在 toolbar 之下／終端機下，文字模式自然展開：
+
+```
+#container (上下 flex)
+├── #toolbar            ← 搬出：全寬置頂
+├── #workbench (flex:1) ← 新增 wrapper
+│   ├── #blocklyArea → 只剩 #blocklyDiv（＋minimap-toggle）
+│   ├── #panel-resizer
+│   └── #codeArea       ← 預覽/編輯器在 toolbar 之下
+├── #terminal-resizer   ← 搬出：全寬置底
+└── #terminalArea       ← 搬出：全寬置底（未來 Plotter 併排此列）
+```
+
+| 項 | 內容 | 檔案 |
+|---|---|---|
+| DOM | 一次性腳本搬移＋重縮排（逐行標記斷言＋div 平衡必須 +1，任一不符 abort 不寫檔）；`#codeHeader` 標題加 `id="code-title"` 錨點 | `ui/index.html`（前備份 `backup/index_html_20261010_114515.html`）、`temp/scripts/restructure_layout_20261010.cjs` |
+| 基礎 CSS | `#container` 加 `flex-direction: column`；新增 `#workbench`（`flex:1` / `min-height:0` / 左右 flex） | `ui/src/style.css` |
+| minimap 錨點 | `.blockly-minimap` 與 `#minimap-toggle` `top: 60 → 20`（原 60 = toolbar 40＋20；blocklyArea 起點改為 toolbar 下緣，改 20 維持原視覺，toolbar 換行時也不再互疊） | `ui/src/style.css` |
+| 文字模式 | 簡化為隱藏 `#blocklyArea`＋`#panel-resizer`（400px 左欄規則刪除）→ `#codeArea` 自然全寬；另藏 `#code-toggle` 與 `#btn-close-code`（編輯器是唯一面板，收合後無內容） | `ui/src/modules/editor/editor.css` |
+| 標題切換 | `retireBlockOnlyUi` 把 `#code-title` 文字換成 `TLB_TEXT_MODE_EDITOR_LABEL`；防禦性移除 `codeArea.collapsed`（防極端競態黑屏） | `ui/src/modules/editor/text_mode.js` |
+| VSIX | `!caps.hasTerminal` 一併隱藏 `#terminal-resizer`（搬到底部全寬後，▲ 把手會懸在視窗下緣中央，VSIX 下是死按鈕） | `ui/src/ui/base.js` |
+| 守門 | `editor_contract.test.mjs` +2（共 12 測）：① index.html 順序 toolbar→workbench→blockly→panel-resizer→code→terminal ＋ `#code-title` ＋ style.css `flex-direction:column`/`#workbench` 規則 ② editor.css `display:none`（非 400px）＋收合鈕/✕ 隱藏 ＋ 標題切換接線。**變異測試 M1（workbench 錨點改名）/ M2（400px 復活）皆驗紅後還原** | `ui/src/modules/editor/editor_contract.test.mjs` |
+
+**改前技術查證（相依點全數無障礙）**：
+- 全專案**無 `#blocklyArea #xxx` 後代選擇器**（`style.css` 僅 1 條 `#blocklyArea` 基本規則、三主題檔零覆寫）。
+- 終端機拖曳/收合/把手、panel 拖曳全是 `getElementById` 元件基（`terminal.js`/`renderer.js`），與父層無關；`#terminal-toggle` 自 2026-09-05 起錨在 `#terminal-resizer` 內（非 blocklyArea）。
+- 下拉選單 `.toolbar-dropdown`/`.startup-new-dropdown` 皆 `position: relative` 自我錨定；起始首頁是獨立 modal overlay；測試僅 `settings.test.mjs` 掃 `index.html`（script 載入順序，未動）。
+- minimap：`.blockly-minimap` 由套件 `appendChild(getInjectionDiv().parentNode)` ＝ `#blocklyArea`，與 `#minimap-toggle` 同錨點同座標 → 兩者同步平移、相對位置不變。
+- `#blocklyDiv` 視窗座標不變（原 toolbar 在其上方、重構後 blocklyArea 整體下移同高度）；Blockly `svgResize` 走 window resize 事件（terminal 拖曳/收合本就有 dispatch）。
+
+**驗收**（2026-10-10）：`test:ui` **477/477**（+2 守門）、`lint:ui` 0 error、`node --check`、`vite build`、eol 751 檔全 CRLF。
+
+### 📝 D-2+ 待辦
+
+- [ ] D-2：實機驗證（切換/存檔/開檔三分叉 + 語系切換快照還原）＋ **版面重構回歸**：
+  積木模式（toolbar 全寬不再換行、panel 拖曳、terminal 拖曳/收合/▲ 把手、minimap 位置）、
+  文字模式（編輯器全寬、codeHeader 標題切換、收合鈕/✕ 已隱藏）、
+  VSIX（terminal 與 ▲ 把手隱藏、無文字模式鈕）、三主題、窄視窗 media query。
+- [ ] D-3：`.py` 專案「開新專案」語意（副檔名切換後 resetWorkspace 路徑）
+- [ ] VSIX `handleOpenFile` 保持 `['xml']` filter（**刻意不加 py** —— VSIX 無文字編輯能力，不提供打不開的路徑）

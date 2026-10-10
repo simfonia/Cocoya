@@ -36,7 +36,27 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
     SNAPSHOT_KEY: 'cocoya_reload_snapshot',
 
     /** 快照目前 workspace（含 dirty 內容）供 reload 後還原；失敗時清掉殘留 */
+    // 2026-10-10 C-3：文字模式分叉 —— workspace 已 dispose，改存編輯器碼＋isTextMode＋platform，
+    // 否則切語系/主題即丟碼。consume 端同日接線（consumeReloadSnapshot + lifecycle._restoreTextModeSnapshot）。
     snapshotWorkspaceForReload: function() {
+        try {
+            const inText = !!(window.CocoyaTextMode && typeof window.CocoyaTextMode.isTextMode === 'function' &&
+                window.CocoyaTextMode.isTextMode());
+            if (inText) {
+                const ed = window.CocoyaTextMode.getEditor ? window.CocoyaTextMode.getEditor() : null;
+                const code = (ed && typeof ed.getValue === 'function') ? ed.getValue() : '';
+                const filename = (window.CocoyaUI && window.CocoyaUI.currentFilename) || '';
+                sessionStorage.setItem(this.SNAPSHOT_KEY, JSON.stringify({
+                    isTextMode: true,
+                    code,
+                    filename,
+                    platform: this.currentPlatform || 'PC',
+                    isReadOnly: this.isReadOnly,
+                    isDirty: !!this.isDirty
+                }));
+                return;
+            }
+        } catch (e) {}
         if (!this.workspace) return;
         try {
             const dom = Blockly.Xml.workspaceToDom(this.workspace);
@@ -62,14 +82,18 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         try { sessionStorage.removeItem(this.SNAPSHOT_KEY); } catch (e) {}
     },
 
-    /** 取出並刪除快照（僅一次）；無快照或缺 xml 回 null */
+    /** 取出並刪除快照（僅一次）；無快照、積木快照缺 xml、文字快照缺 code 皆回 null */
     consumeReloadSnapshot: function() {
         try {
             const raw = sessionStorage.getItem(this.SNAPSHOT_KEY);
             if (!raw) return null;
             sessionStorage.removeItem(this.SNAPSHOT_KEY);
             const snap = JSON.parse(raw);
-            if (!snap || typeof snap.xml !== 'string' || !snap.xml.trim()) return null;
+            if (!snap) return null;
+            // 2026-10-10 C-3 文字模式快照：無 xml，以 code 承載。
+            // 空字串是合法內容（編輯器被清空），故只驗型別、不驗空白。
+            if (snap.isTextMode) return (typeof snap.code === 'string') ? snap : null;
+            if (typeof snap.xml !== 'string' || !snap.xml.trim()) return null;
             return snap;
         } catch (e) {
             try { sessionStorage.removeItem(this.SNAPSHOT_KEY); } catch (_) {}
@@ -123,12 +147,18 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
      */
     checkAutoBackup: async function(backupXml) {
         if (!backupXml || backupXml.trim().length === 0) return;
+        // 2026-10-10 C-3：文字模式 workspace 已 dispose，XML 備份還原會砸 null。
+        // 直接略過且不清除備份（下次以積木模式啟動仍可復原）。
+        if (window.CocoyaTextMode && typeof window.CocoyaTextMode.isTextMode === 'function' &&
+            window.CocoyaTextMode.isTextMode()) return;
         
         setTimeout(() => {
             const msg = Blockly.Msg['MSG_RECOVER_BACKUP'] || '偵測到上次未儲存的變更，是否要恢復？';
             Blockly.dialog.confirm(msg, async (ok) => {
                 if (ok) {
                     try {
+                        // 對話框期間可能已切文字模式（workspace 已 dispose）→ 放棄還原
+                        if (!this.workspace) return;
                         const dom = Blockly.utils.xml.textToDom(backupXml);
                         // ★ 先切平台再載入積木（順序不可顛倒；備份可能來自另一平台的專案）
                         await this.ensurePlatformForXml(dom);

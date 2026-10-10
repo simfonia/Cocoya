@@ -153,9 +153,10 @@ C:\Workspace\cocoya\
 │   │   │   ├── controller.js # [NEW] 中央分發與解耦控制
 │   │   │   ├── persistence.js # 檔案與備份持久化（ensurePlatformForXml：XML 還原前平台對齊守門 [2026-09-22]）
 │   │   │   ├── workspace.js # Blockly 與 Minimap 管理（_describeCodegenError 降噪；_installZombieTrap/_repairZombieBlocks：空積木取證與自癒 [2026-09-22]）
-│   │   │   ├── lifecycle.js # 初始化與通訊生命週期（_restoreReloadSnapshot：reload 快照還原，先切平台 [2026-09-22]；__bootedAt：模組載入 cache-busting 戳記）
+│   │   │   ├── lifecycle.js # 初始化與通訊生命週期（_restoreReloadSnapshot：reload 快照還原，先切平台 [2026-09-22]；_restoreTextModeSnapshot：文字快照還原，enter 成功才 dispose workspace [2026-10-10 C-3]；__bootedAt：模組載入 cache-busting 戳記）
 │   │   │   ├── platform_restore.test.mjs # [2026-09-22] 平台切換→積木還原順序契約測試（3 測；node --test "src/app/*.test.mjs"）
-│   │   │   ├── persistence_snapshot.test.mjs # [2026-10-01] 自動備份/reload 快照/髒狀態橋接契約測試（13 測；快照一次性語意、debounce 以 mock.timers 驗證、setDirty 原子化同步回傳 Promise）
+│   │   │   ├── persistence_snapshot.test.mjs # [2026-10-01] 自動備份/reload 快照/髒狀態橋接契約測試（15 測；快照一次性語意、debounce 以 mock.timers 驗證、setDirty 原子化同步回傳 Promise；[2026-10-10 C-3] 文字模式快照寫入與消耗）
+│   │   │   ├── text_snapshot.test.mjs # [2026-10-10 C-3/Q1] 文字模式 reload 快照還原契約（3 測；isTextMode 分派不走 XML、enter 先於 dispose 的順序契約、失敗不半切；lifecycle.js 以 new Function 載入）
 │   │   │   └── block_jsoninit.test.mjs # [2026-09-22] 全模組 jsonInit 佔位符契約測試（messageN %N 必須涵蓋 argsN，含 %{BKY_*} 展開；空積木事故回歸防護）
 │   │   ├── utils/         # 通用工具子模組
 │   │   │   ├── core.js      # DOM 攔截、ID 提取與縮排修復
@@ -170,6 +171,8 @@ C:\Workspace\cocoya\
 │   │   │   │   ├── highlight.js        # Python tokenizer 純函式（關鍵字/字串/註解/數字/內建；輸出必經 escape；掛 globalThis.CocoyaPyHighlight）
 │   │   │   │   ├── highlight.test.mjs  # tokenizer 契約 15 測（escape／註解／三引號／未閉合／f-string／數字／變異測試驗有效）
 │   │   │   │   ├── editor.js           # 疊層元件（捲動同步／Tab 縮排／rAF 合併；縮排讀 Blockly.Python.INDENT；掛 globalThis.CocoyaTextEditor）
+│   │   │   │   ├── text_mode.js        # [2026-10-10 C-2/C-3/D-1] 模式切換與開檔 SSOT（單向不可逆；三按鈕→新鮮碼→二次清 ID→dispose→body class；parse/ensurePlatformLine 檔頭平台行；detectContentKind 內容偵測＋openPyFile 開檔分叉含 VSIX 閘門/缺平台行 QuickPick；掛 globalThis.CocoyaTextMode）
+│   │   │   │   ├── editor_contract.test.mjs # [2026-10-10 D-13] 純文字模式契約 10 測（detectContentKind XML/python 偵測／stripIdComments／VSIX 閘門不動工作區／QuickPick 取消中止／不可逆無 remove class／base.js caps 顯隱／controller 開檔分叉接線／escape 摘要；變異測試四種皆驗紅）
 │   │   │   │   └── editor.css          # 疊層佈局＋8 token（--editor-bg/fg／--tok-*；三主題 cssVars 同步，由 theme_contract 守門）
 │   │   │   ├── theme_manager/ # [NEW] 主題管理模組（registry + 模式切換 + 系統深淺色偵測）
 │   │   │   │   ├── theme_manager.js # 核心：registerTheme/getThemes/setMode/getMode/apply/startWatching (window.CocoyaTheme)

@@ -19,229 +19,241 @@
 <body class="cocoya-editor">
     <div id="resizer-overlay"></div>
     <div id="container">
-        <div id="blocklyArea">
-            <div id="toolbar">
-                <!-- 左側群組：平台與檔案 -->
-                <div class="toolbar-group">
-                    <span id="current-platform" class="platform-badge">%{BKY_TLB_MODE_PC}</span>
-                    <div class="toolbar-separator"></div>
-                    <div id="file-breadcrumb">
-                        <img src="src/icons/module-puzzle.png" style="width: 14px; opacity: 0.5;">
-                        <span id="current-filename">%{BKY_TLB_FILE_NEW}</span>
+        <div id="toolbar">
+            <!-- 左側群組：平台與檔案 -->
+            <div class="toolbar-group">
+                <span id="current-platform" class="platform-badge">%{BKY_TLB_MODE_PC}</span>
+                <div class="toolbar-separator"></div>
+                <div id="file-breadcrumb">
+                    <img src="src/icons/module-puzzle.png" style="width: 14px; opacity: 0.5;">
+                    <span id="current-filename">%{BKY_TLB_FILE_NEW}</span>
+                </div>
+                <div class="toolbar-btn" id="btn-new-window" title="%{BKY_TLB_NEW_WINDOW}" style="display:none;">
+                    <img src="src/icons/app-window-multiple-bold.png">
+                </div>
+                <div class="toolbar-btn" id="btn-examples" title="%{BKY_TLB_EXAMPLES}">
+                    <img src="src/icons/gift.png">
+                </div>
+                <div class="startup-new-dropdown" id="toolbar-new-wrap">
+                    <div class="toolbar-btn" id="btn-new" title="%{BKY_TLB_NEW}">
+                        <img src="src/icons/doc-new.png">
                     </div>
-                    <div class="toolbar-btn" id="btn-new-window" title="%{BKY_TLB_NEW_WINDOW}" style="display:none;">
-                        <img src="src/icons/app-window-multiple-bold.png">
+                    <div class="startup-new-menu" id="toolbar-new-menu">
+                        <button type="button" class="startup-new-option" data-platform="PC"></button>
+                        <button type="button" class="startup-new-option" data-platform="MicroPython"></button>
                     </div>
-                    <div class="toolbar-btn" id="btn-examples" title="%{BKY_TLB_EXAMPLES}">
-                        <img src="src/icons/gift.png">
-                    </div>
-                    <div class="startup-new-dropdown" id="toolbar-new-wrap">
-                        <div class="toolbar-btn" id="btn-new" title="%{BKY_TLB_NEW}">
-                            <img src="src/icons/doc-new.png">
+                </div>
+                <div class="toolbar-btn" id="btn-open" title="%{BKY_TLB_OPEN}">
+                    <img src="src/icons/open-file.png">
+                </div>
+                <div class="toolbar-btn" id="btn-save" title="%{BKY_TLB_SAVE}">
+                    <img src="src/icons/save.png">
+                </div>
+                <div class="toolbar-btn" id="btn-save-as" title="%{BKY_TLB_SAVE_AS}">
+                    <img src="src/icons/save-as.png">
+                </div>
+            </div>
+            <div class="toolbar-separator"></div>
+
+            <!-- 右側群組：Serial 與 執行 -->
+            <div class="toolbar-group">
+                <!-- AI 功能下拉選單 (僅 PC 模式顯示) -->
+                    <div class="toolbar-dropdown" id="ai-dropdown" style="display: none;" title="%{BKY_TLB_AI_MENU}">
+                        <div class="toolbar-btn" id="btn-ai-menu" title="%{BKY_TLB_AI_MENU}">
+                            <img src="src/icons/owl.png" class="normal-icon">
+                            <img src="src/icons/owl-hover.png" class="hover-icon">
                         </div>
-                        <div class="startup-new-menu" id="toolbar-new-menu">
-                            <button type="button" class="startup-new-option" data-platform="PC"></button>
-                            <button type="button" class="startup-new-option" data-platform="MicroPython"></button>
+                        <div class="dropdown-content ai-dropdown-content">
+                            <div class="dropdown-item" id="btn-dataset-manager-dropdown" title="%{BKY_TLB_AI_DATASET_MANAGER}">
+                                <img src="src/icons/data-structured.png" style="width: 16px; height: 16px;">
+                                <span>%{BKY_TLB_AI_DATASET_MANAGER}</span>
+                            </div>
+                            <div class="dropdown-item" id="btn-training-result" title="%{BKY_TLB_AI_TRAINING_RESULT}">
+                                <img src="src/icons/chart-line-data-01.png" style="width: 16px; height: 16px;">
+                                <span>%{BKY_TLB_AI_TRAINING_RESULT}</span>
+                            </div>
                         </div>
                     </div>
-                    <div class="toolbar-btn" id="btn-open" title="%{BKY_TLB_OPEN}">
-                        <img src="src/icons/open-file.png">
-                    </div>
-                    <div class="toolbar-btn" id="btn-save" title="%{BKY_TLB_SAVE}">
-                        <img src="src/icons/save.png">
-                    </div>
-                    <div class="toolbar-btn" id="btn-save-as" title="%{BKY_TLB_SAVE_AS}">
-                        <img src="src/icons/save-as.png">
-                    </div>
+
+                    <div class="toolbar-separator" id="ai-dropdown-separator" style="display: none;"></div>
+                
+                <div class="toolbar-btn" id="btn-refresh-serial" title="%{BKY_TLB_SERIAL_REFRESH}">
+                    <img src="src/icons/microchip-board.png">
+                </div>
+                <div id="serial-selector" class="serial-dropdown" title="%{BKY_TLB_SERIAL_PORT}">
+                    <button type="button" class="serial-dropdown-trigger" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="serial-dropdown-label">%{BKY_TLB_NO_PORT}</span>
+                    </button>
+                    <div class="serial-dropdown-menu" role="listbox"></div>
                 </div>
                 <div class="toolbar-separator"></div>
-
-                <!-- 右側群組：Serial 與 執行 -->
-                <div class="toolbar-group">
-                    <!-- AI 功能下拉選單 (僅 PC 模式顯示) -->
-                        <div class="toolbar-dropdown" id="ai-dropdown" style="display: none;" title="%{BKY_TLB_AI_MENU}">
-                            <div class="toolbar-btn" id="btn-ai-menu" title="%{BKY_TLB_AI_MENU}">
-                                <img src="src/icons/owl.png" class="normal-icon">
-                                <img src="src/icons/owl-hover.png" class="hover-icon">
-                            </div>
-                            <div class="dropdown-content ai-dropdown-content">
-                                <div class="dropdown-item" id="btn-dataset-manager-dropdown" title="%{BKY_TLB_AI_DATASET_MANAGER}">
-                                    <img src="src/icons/data-structured.png" style="width: 16px; height: 16px;">
-                                    <span>%{BKY_TLB_AI_DATASET_MANAGER}</span>
-                                </div>
-                                <div class="dropdown-item" id="btn-training-result" title="%{BKY_TLB_AI_TRAINING_RESULT}">
-                                    <img src="src/icons/chart-line-data-01.png" style="width: 16px; height: 16px;">
-                                    <span>%{BKY_TLB_AI_TRAINING_RESULT}</span>
-                                </div>
-                            </div>
+                <div class="toolbar-btn" id="btn-run" title="%{BKY_TLB_RUN}">
+                    <img src="src/icons/run_blocks_24dp_75FB4C.png">
+                </div>
+                <div class="toolbar-btn" id="btn-stop" title="%{BKY_TLB_STOP_PROGRAM}">
+                    <img src="src/icons/stop_24dp_EA3323.png">
+                </div>
+                <div class="toolbar-btn" id="btn-serial-monitor" title="%{BKY_TLB_SERIAL_MONITOR}">
+                    <img src="src/icons/usb-bold.png">
+                </div>
+                
+                <div class="toolbar-separator"></div>
+                <div class="toolbar-dropdown" id="settings-dropdown">
+                    <div class="toolbar-btn" id="btn-settings-root" title="%{BKY_TLB_SETTINGS}">
+                        <img src="src/icons/gear-outline.png">
+                    </div>
+                    <div class="dropdown-content">
+                        <div class="dropdown-item" id="btn-python-env" title="%{BKY_TLB_SETTINGS_PYTHON_ENV}">
+                            <img src="src/icons/python.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                            <span>%{BKY_TLB_SETTINGS_PYTHON_ENV}</span>
                         </div>
-
-                        <div class="toolbar-separator" id="ai-dropdown-separator" style="display: none;"></div>
-                    
-                    <div class="toolbar-btn" id="btn-refresh-serial" title="%{BKY_TLB_SERIAL_REFRESH}">
-                        <img src="src/icons/microchip-board.png">
-                    </div>
-                    <div id="serial-selector" class="serial-dropdown" title="%{BKY_TLB_SERIAL_PORT}">
-                        <button type="button" class="serial-dropdown-trigger" aria-haspopup="listbox" aria-expanded="false">
-                            <span class="serial-dropdown-label">%{BKY_TLB_NO_PORT}</span>
-                        </button>
-                        <div class="serial-dropdown-menu" role="listbox"></div>
-                    </div>
-                    <div class="toolbar-separator"></div>
-                    <div class="toolbar-btn" id="btn-run" title="%{BKY_TLB_RUN}">
-                        <img src="src/icons/run_blocks_24dp_75FB4C.png">
-                    </div>
-                    <div class="toolbar-btn" id="btn-stop" title="%{BKY_TLB_STOP_PROGRAM}">
-                        <img src="src/icons/stop_24dp_EA3323.png">
-                    </div>
-                    <div class="toolbar-btn" id="btn-serial-monitor" title="%{BKY_TLB_SERIAL_MONITOR}">
-                        <img src="src/icons/usb-bold.png">
-                    </div>
-                    
-                    <div class="toolbar-separator"></div>
-                    <div class="toolbar-dropdown" id="settings-dropdown">
-                        <div class="toolbar-btn" id="btn-settings-root" title="%{BKY_TLB_SETTINGS}">
-                            <img src="src/icons/gear-outline.png">
+                        <!-- 2026-10-01：還原範例檔。僅 Tauri 支援（restore_examples command）；
+                             VSIX 由 capabilities.supportsRestoreExamples=false 於啟動時隱藏。
+                             位置：緊接在「Python 環境設定」之下。 -->
+                        <div class="dropdown-item" id="btn-restore-examples"
+                             title="%{BKY_TLB_SETTINGS_RESTORE_EXAMPLES_TOOLTIP}">
+                            <img src="src/icons/round-restore.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                            <span>%{BKY_TLB_SETTINGS_RESTORE_EXAMPLES}</span>
                         </div>
-                        <div class="dropdown-content">
-                            <div class="dropdown-item" id="btn-python-env" title="%{BKY_TLB_SETTINGS_PYTHON_ENV}">
-                                <img src="src/icons/python.png" style="width: 16px; height: 16px; margin-right: 8px;">
-                                <span>%{BKY_TLB_SETTINGS_PYTHON_ENV}</span>
+                        <div class="dropdown-item" id="btn-toggle-language" title="%{BKY_STARTUP_LANG}">
+                            <img src="src/icons/language.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                            <span class="lang-switch" id="language-toggle-switch" role="switch" aria-label="%{BKY_STARTUP_LANG}">
+                                <span class="lang-switch-opt" data-lang="zh-hant">中文</span>
+                                <span class="lang-switch-arrow">⇄</span>
+                                <span class="lang-switch-opt" data-lang="en">English</span>
+                            </span>
+                        </div>
+                        <div class="dropdown-submenu" id="group-theme-settings">
+                            <div class="dropdown-item submenu-title">
+                                <img src="src/icons/color-brush-1.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                <span id="theme-menu-title">%{BKY_STARTUP_THEME}</span>
+                                <span style="margin-left: auto; font-size: calc(10px * var(--fs-e));">▶</span>
                             </div>
-                            <!-- 2026-10-01：還原範例檔。僅 Tauri 支援（restore_examples command）；
-                                 VSIX 由 capabilities.supportsRestoreExamples=false 於啟動時隱藏。
-                                 位置：緊接在「Python 環境設定」之下。 -->
-                            <div class="dropdown-item" id="btn-restore-examples"
-                                 title="%{BKY_TLB_SETTINGS_RESTORE_EXAMPLES_TOOLTIP}">
-                                <img src="src/icons/round-restore.png" style="width: 16px; height: 16px; margin-right: 8px;">
-                                <span>%{BKY_TLB_SETTINGS_RESTORE_EXAMPLES}</span>
+                            <!-- 選項由 ThemeManager registry 動態生成 (base.js)，此處僅保留容器 -->
+                            <div class="submenu-content" id="theme-menu-items"></div>
+                        </div>
+                        <div class="dropdown-separator"></div>
+                        <div class="dropdown-submenu" id="group-firmware-settings">
+                            <div class="dropdown-item submenu-title">
+                                <img src="src/icons/hardware-chip-outline.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                <span>%{BKY_TLB_SETTINGS_FIRMWARE_GROUP}</span>
+                                <span style="margin-left: auto; font-size: calc(10px * var(--fs-e));">▶</span>
                             </div>
-                            <div class="dropdown-item" id="btn-toggle-language" title="%{BKY_STARTUP_LANG}">
-                                <img src="src/icons/language.png" style="width: 16px; height: 16px; margin-right: 8px;">
-                                <span class="lang-switch" id="language-toggle-switch" role="switch" aria-label="%{BKY_STARTUP_LANG}">
-                                    <span class="lang-switch-opt" data-lang="zh-hant">中文</span>
-                                    <span class="lang-switch-arrow">⇄</span>
-                                    <span class="lang-switch-opt" data-lang="en">English</span>
-                                </span>
-                            </div>
-                            <div class="dropdown-submenu" id="group-theme-settings">
-                                <div class="dropdown-item submenu-title">
-                                    <img src="src/icons/color-brush-1.png" style="width: 16px; height: 16px; margin-right: 8px;">
-                                    <span id="theme-menu-title">%{BKY_STARTUP_THEME}</span>
-                                    <span style="margin-left: auto; font-size: calc(10px * var(--fs-e));">▶</span>
+                            <div class="submenu-content">
+                                <div class="dropdown-item" id="btn-serial-raw-dump" role="switch" aria-checked="false" tabindex="0" title="%{BKY_TLB_SETTINGS_SERIAL_RAW_DUMP_TOOLTIP}" aria-label="%{BKY_TLB_SETTINGS_SERIAL_RAW_DUMP}">
+                                    <img src="src/icons/terminal.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                    <span>%{BKY_TLB_SETTINGS_SERIAL_RAW_DUMP}</span>
+                                    <span class="diagnostic-toggle" aria-hidden="true"><span></span></span>
                                 </div>
-                                <!-- 選項由 ThemeManager registry 動態生成 (base.js)，此處僅保留容器 -->
-                                <div class="submenu-content" id="theme-menu-items"></div>
-                            </div>
-                            <div class="dropdown-separator"></div>
-                            <div class="dropdown-submenu" id="group-firmware-settings">
-                                <div class="dropdown-item submenu-title">
-                                    <img src="src/icons/hardware-chip-outline.png" style="width: 16px; height: 16px; margin-right: 8px;">
-                                    <span>%{BKY_TLB_SETTINGS_FIRMWARE_GROUP}</span>
-                                    <span style="margin-left: auto; font-size: calc(10px * var(--fs-e));">▶</span>
+                                <div class="dropdown-item" id="btn-erase-filesystem" title="%{BKY_TLB_SETTINGS_ERASE_FS_TOOLTIP}">
+                                    <img src="src/icons/remove-from-trash.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                    <span>%{BKY_TLB_SETTINGS_ERASE_FS}</span>
                                 </div>
-                                <div class="submenu-content">
-                                    <div class="dropdown-item" id="btn-serial-raw-dump" role="switch" aria-checked="false" tabindex="0" title="%{BKY_TLB_SETTINGS_SERIAL_RAW_DUMP_TOOLTIP}" aria-label="%{BKY_TLB_SETTINGS_SERIAL_RAW_DUMP}">
-                                        <img src="src/icons/terminal.png" style="width: 16px; height: 16px; margin-right: 8px;">
-                                        <span>%{BKY_TLB_SETTINGS_SERIAL_RAW_DUMP}</span>
-                                        <span class="diagnostic-toggle" aria-hidden="true"><span></span></span>
-                                    </div>
-                                    <div class="dropdown-item" id="btn-erase-filesystem" title="%{BKY_TLB_SETTINGS_ERASE_FS_TOOLTIP}">
-                                        <img src="src/icons/remove-from-trash.png" style="width: 16px; height: 16px; margin-right: 8px;">
-                                        <span>%{BKY_TLB_SETTINGS_ERASE_FS}</span>
-                                    </div>
-                                    <div class="dropdown-item" id="btn-reset-firmware">
-                                        <img src="src/icons/reset.png" style="width: 16px; height: 16px; margin-right: 8px;">
-                                        <span>%{BKY_TLB_SETTINGS_RESET_FIRMWARE}</span>
-                                    </div>
+                                <div class="dropdown-item" id="btn-reset-firmware">
+                                    <img src="src/icons/reset.png" style="width: 16px; height: 16px; margin-right: 8px;">
+                                    <span>%{BKY_TLB_SETTINGS_RESET_FIRMWARE}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="toolbar-btn" id="btn-close" title="%{BKY_TLB_CLOSE_EDITOR}" style="display: none;">
-                        <img src="src/icons/close-octagon.png">
-                    </div>
                 </div>
-            </div>
-            <div id="blocklyDiv"></div>
-            <div id="terminal-resizer" title="%{BKY_TLB_DRAG_RESIZE_HEIGHT}">
-                <div id="terminal-toggle" title="%{BKY_TLB_TOGGLE_TERMINAL}">
-                    <span class="arrow">▲</span>
+                <div class="toolbar-btn" id="btn-close" title="%{BKY_TLB_CLOSE_EDITOR}" style="display: none;">
+                    <img src="src/icons/close-octagon.png">
                 </div>
-            </div>
-            <!-- 整合式終端機面板 -->
-            <div id="terminalArea" class="collapsed">
-                <div id="terminalHeader">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <img src="src/icons/terminal_24dp_FE2F89.png" style="width: 14px;">
-                        <span id="terminalTitle">%{BKY_TLB_TERMINAL_TITLE}</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <button class="terminal-tool-btn" id="btn-copy-terminal" title="%{BKY_TLB_COPY_TERMINAL}">
-                            <img src="src/icons/log-16_FE2F89.png" style="width: 16px; height: 16px; opacity: 0.8;">
-                        </button>
-                        <button class="terminal-tool-btn" id="btn-fontsize-terminal" title="%{BKY_TLB_FONT_SIZE_TERMINAL}">
-                            <img src="src/icons/font-size_FE2F89.png" style="width: 16px; height: 16px; opacity: 0.8;">
-                        </button>
-                        <button class="terminal-tool-btn" id="btn-pause-terminal" title="%{BKY_TLB_PAUSE_SCROLL}">
-                            <img src="src/icons/list_arrow_24dp_FE2F89.png" style="width: 16px; height: 16px; opacity: 0.8;">
-                        </button>
-                        <button class="terminal-tool-btn" id="btn-clear-terminal" title="%{BKY_TLB_CLEAR_CONSOLE}">
-                            <img src="src/icons/brush-3-ai-line_FE2F89.png" style="width: 16px; height: 16px;">
-                        </button>
-                        <button class="terminal-tool-btn" id="btn-close-terminal" title="%{BKY_TLB_CLOSE_PANEL}">
-                            <span style="font-size: calc(16px * var(--fs-e)); font-weight: bold;">×</span>
-                        </button>
-                    </div>
-                </div>
-                <div id="terminalContent"></div>
             </div>
         </div>
-        <div id="panel-resizer" title="%{BKY_TLB_DRAG_RESIZE}"></div>
-        <div id="codeArea">
-            <div id="code-toggle" title="%{BKY_TLB_TOGGLE_CODE}">
-                <span class="arrow">▶</span>
+        <!-- 2026-10-10 版面重構（Editor 計畫 · 方案 B）：toolbar 與終端機搬出 #blocklyArea，
+             #container 改上下結構：toolbar(上) / workbench(中：blockly|resizer|code) / terminal(下)。
+             文字模式只需隱藏 #blocklyArea + #panel-resizer，編輯器自然展開全寬。 -->
+        <div id="workbench">
+            <div id="blocklyArea">
+                <div id="blocklyDiv"></div>
             </div>
-            <div id="codeHeader">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <div class="toolbar-btn" id="btn-close-code" title="%{BKY_TLB_CLOSE_PANEL}" style="width: 20px; height: 20px; margin-right: 4px;">
-                        <span style="font-size: calc(16px * var(--fs-e)); font-weight: bold;">×</span>
-                    </div>
-                    <span>%{BKY_TLB_PYTHON_PREVIEW}</span>
+            <div id="panel-resizer" title="%{BKY_TLB_DRAG_RESIZE}"></div>
+            <div id="codeArea">
+                <div id="code-toggle" title="%{BKY_TLB_TOGGLE_CODE}">
+                    <span class="arrow">▶</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <div class="toolbar-btn" id="btn-fontsize-code" title="%{BKY_TLB_FONT_SIZE_CODE}" style="width: 24px; height: 24px;">
-                        <img src="src/icons/font-size.png" style="width: 18px; height: 18px;">
+                <div id="codeHeader">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div class="toolbar-btn" id="btn-close-code" title="%{BKY_TLB_CLOSE_PANEL}" style="width: 20px; height: 20px; margin-right: 4px;">
+                            <span style="font-size: calc(16px * var(--fs-e)); font-weight: bold;">×</span>
+                        </div>
+                        <span id="code-title">%{BKY_TLB_PYTHON_PREVIEW}</span>
                     </div>
-                    <div class="toolbar-btn" id="btn-copy-code" title="%{BKY_TLB_COPY_CODE}" style="width: 24px; height: 24px;">
-                        <img src="src/icons/python.png" style="width: 18px; height: 18px;">
-                    </div>
-                    <div class="toolbar-separator" style="height: 16px; margin: 0;"></div>
-                    <span style="font-size: calc(10px * var(--fs-e));">%{BKY_TLB_INDENT}</span>
-                    <div class="indent-dropdown" id="indent-selector">
-                        <button type="button" class="indent-dropdown-trigger" aria-haspopup="listbox" aria-expanded="false">
-                            <span class="indent-dropdown-label">4 空格</span>
-                        </button>
-                        <div class="indent-dropdown-menu" role="listbox">
-                            <div class="indent-dropdown-item" data-value="2" role="option">2 空格</div>
-                            <div class="indent-dropdown-item" data-value="4" role="option">4 空格</div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div class="toolbar-btn" id="btn-fontsize-code" title="%{BKY_TLB_FONT_SIZE_CODE}" style="width: 24px; height: 24px;">
+                            <img src="src/icons/font-size.png" style="width: 18px; height: 18px;">
+                        </div>
+                        <div class="toolbar-btn" id="btn-copy-code" title="%{BKY_TLB_COPY_CODE}" style="width: 24px; height: 24px;">
+                            <img src="src/icons/python.png" style="width: 18px; height: 18px;">
+                        </div>
+                        <!-- 2026-10-10 C-1：切換為文字模式（純 icon＋title tooltip，Tauri 獨有）。
+                             VSIX 由 base.js 依 caps.supportsTextEditor 隱藏（與 hasTerminal 同模式）。
+                             單向按鈕（非 switch）：不可逆，切後按鈕隨 #codeContent 一起退場。
+                             2026-10-10 晚：移除文字節點，與相鄰 icon 鈕同尺寸（24×24）。 -->
+                        <div class="toolbar-btn text-mode-btn" id="btn-text-mode" title="%{BKY_TLB_TEXT_MODE_TIP}" style="width: 24px; height: 24px;">
+                            <img src="src/icons/code_24dp_FE2F89.png" style="width: 18px; height: 18px;">
+                        </div>
+                        <div class="toolbar-separator" style="height: 16px; margin: 0;"></div>
+                        <span style="font-size: calc(10px * var(--fs-e));">%{BKY_TLB_INDENT}</span>
+                        <div class="indent-dropdown" id="indent-selector">
+                            <button type="button" class="indent-dropdown-trigger" aria-haspopup="listbox" aria-expanded="false">
+                                <span class="indent-dropdown-label">4 空格</span>
+                            </button>
+                            <div class="indent-dropdown-menu" role="listbox">
+                                <div class="indent-dropdown-item" data-value="2" role="option">2 空格</div>
+                                <div class="indent-dropdown-item" data-value="4" role="option">4 空格</div>
+                            </div>
                         </div>
                     </div>
                 </div>
+                <div id="block-type-info" style="display: none; padding: 4px 12px; font-size: calc(11px * var(--fs-e)); color: #FE2F89; background: #FFF0F5; border-bottom: 1px solid #FDE0E8; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
+                <div id="codeContent"></div>
+                <!-- 2026-10-06 階段 B：純文字編輯器容器（計畫 §2 pre 疊層高亮 + textarea 輸入）。
+                     預設 display:none（editor.css），積木模式仍由 #codeContent 呈現唯讀預覽；
+                     切換由 body.cocoya-text-mode 驅動（階段 C）。兩層像素對齊依賴相同字型/padding。
+                     wrap="off" 對應 white-space: pre —— 兩層皆不換行，行數 1:1 捲動同步才有意義。 -->
+                <div id="codeEditor">
+                    <pre class="editor-highlight" aria-hidden="true"><code></code></pre>
+                    <!-- aria-label 刻意用英文常值：applyI18n 只掃 title 與 textContent，
+                         不掃 aria-label（寫 %{BKY_} 會原樣殘留）。階段 C 模式切換接線時，
+                         由 CocoyaTextEditor 以 Blockly.Msg 顯式填充。 -->
+                    <textarea class="editor-input" spellcheck="false" wrap="off" aria-label="Python code editor"></textarea>
+                </div>
             </div>
-            <div id="block-type-info" style="display: none; padding: 4px 12px; font-size: calc(11px * var(--fs-e)); color: #FE2F89; background: #FFF0F5; border-bottom: 1px solid #FDE0E8; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></div>
-            <div id="codeContent"></div>
-            <!-- 2026-10-06 階段 B：純文字編輯器容器（計畫 §2 pre 疊層高亮 + textarea 輸入）。
-                 預設 display:none（editor.css），積木模式仍由 #codeContent 呈現唯讀預覽；
-                 切換由 body.cocoya-text-mode 驅動（階段 C）。兩層像素對齊依賴相同字型/padding。
-                 wrap="off" 對應 white-space: pre —— 兩層皆不換行，行數 1:1 捲動同步才有意義。 -->
-            <div id="codeEditor">
-                <pre class="editor-highlight" aria-hidden="true"><code></code></pre>
-                <!-- aria-label 刻意用英文常值：applyI18n 只掃 title 與 textContent，
-                     不掃 aria-label（寫 %{BKY_} 會原樣殘留）。階段 C 模式切換接線時，
-                     由 CocoyaTextEditor 以 Blockly.Msg 顯式填充。 -->
-                <textarea class="editor-input" spellcheck="false" wrap="off" aria-label="Python code editor"></textarea>
+        </div>
+        <div id="terminal-resizer" title="%{BKY_TLB_DRAG_RESIZE_HEIGHT}">
+            <div id="terminal-toggle" title="%{BKY_TLB_TOGGLE_TERMINAL}">
+                <span class="arrow">▲</span>
             </div>
+        </div>
+        <!-- 整合式終端機面板 -->
+        <div id="terminalArea" class="collapsed">
+            <div id="terminalHeader">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <img src="src/icons/terminal_24dp_FE2F89.png" style="width: 14px;">
+                    <span id="terminalTitle">%{BKY_TLB_TERMINAL_TITLE}</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button class="terminal-tool-btn" id="btn-copy-terminal" title="%{BKY_TLB_COPY_TERMINAL}">
+                        <img src="src/icons/log-16_FE2F89.png" style="width: 16px; height: 16px; opacity: 0.8;">
+                    </button>
+                    <button class="terminal-tool-btn" id="btn-fontsize-terminal" title="%{BKY_TLB_FONT_SIZE_TERMINAL}">
+                        <img src="src/icons/font-size_FE2F89.png" style="width: 16px; height: 16px; opacity: 0.8;">
+                    </button>
+                    <button class="terminal-tool-btn" id="btn-pause-terminal" title="%{BKY_TLB_PAUSE_SCROLL}">
+                        <img src="src/icons/list_arrow_24dp_FE2F89.png" style="width: 16px; height: 16px; opacity: 0.8;">
+                    </button>
+                    <button class="terminal-tool-btn" id="btn-clear-terminal" title="%{BKY_TLB_CLEAR_CONSOLE}">
+                        <img src="src/icons/brush-3-ai-line_FE2F89.png" style="width: 16px; height: 16px;">
+                    </button>
+                    <button class="terminal-tool-btn" id="btn-close-terminal" title="%{BKY_TLB_CLOSE_PANEL}">
+                        <span style="font-size: calc(16px * var(--fs-e)); font-weight: bold;">×</span>
+                    </button>
+                </div>
+            </div>
+            <div id="terminalContent"></div>
         </div>
     </div>
 
@@ -354,6 +366,8 @@
     <!-- 2026-10-06 階段 A：純文字編輯器（Python tokenizer + 疊層元件；純全域掛載，無積木依賴） -->
     <script src="src/modules/editor/highlight.js"></script>
     <script src="src/modules/editor/editor.js"></script>
+    <!-- 2026-10-10 C-2：文字模式切換 SSOT（單向，掛 globalThis.CocoyaTextMode） -->
+    <script src="src/modules/editor/text_mode.js"></script>
 
     <!-- 主題管理模組（registry：一主題一檔，需在 app 子模組前載入） -->
     <script src="src/modules/theme_manager/theme_manager.js"></script>

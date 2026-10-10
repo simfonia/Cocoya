@@ -17,6 +17,12 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
      * @param {string} rawCode Blockly 產出的原始碼 (包含隱藏的 ID 標記)
      */
     renderPythonPreview: function(rawCode) {
+        // 2026-10-10 C-3：文字模式早退 —— workspace 已 dispose，預覽 DOM 已隱藏，
+        // 空轉 render 只會重建隱藏節點並觸發 bindWorkspaceClickToClearHighlight（getMainWorkspace 反查）。
+        try {
+            if (window.CocoyaTextMode && typeof window.CocoyaTextMode.isTextMode === 'function' &&
+                window.CocoyaTextMode.isTextMode()) return;
+        } catch (e) {}
         const codeContent = document.getElementById('codeContent');
         const indentSize = (typeof Blockly !== 'undefined' && Blockly.Python) ? 
             Blockly.Python.INDENT.length : 4;

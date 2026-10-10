@@ -320,6 +320,8 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
         if (!window.CocoyaApp || typeof window.CocoyaApp.consumeReloadSnapshot !== 'function' || !this.workspace) return null;
         const snap = window.CocoyaApp.consumeReloadSnapshot();
         if (!snap) return null;
+        // 2026-10-10 C-3：文字模式快照（語系/主題切換 reload）不經 Blockly XML 還原
+        if (snap.isTextMode) return this._restoreTextModeSnapshot(snap);
 
         try {
             // ★ 平台必須先切換再還原積木（2026-09-22）：快照的 platform 可能與本次啟動的平台不同
@@ -356,5 +358,54 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             console.error('[App] reload snapshot restore failed:', e);
             return null;
         }
+    },
+
+    /**
+     * 文字模式快照還原（2026-10-10 C-3）：語系/主題切換 reload 後回文字編輯器。
+     * 不可經 Blockly XML —— 文字碼無積木對應；還原成功後必須拆掉啟動期注入的
+     * workspace/minimap（與 switchToTextMode 同待遇），否則 setupWorkspaceListeners、
+     * 產碼、自動備份會砸 null。
+     * ★ 順序契約：先 enterTextModeWithCode 成功，才 dispose workspace ——
+     *   反過來失敗時會半切（body 已切但無編輯器），呼叫端退回預設積木路徑即不一致。
+     * @param {Object} snap 含 code/filename/platform/isReadOnly/isDirty 的文字快照
+     * @returns {Object|null} 成功回 snap（呼叫端忠實還原 isDirty），失敗回 null
+     */
+    _restoreTextModeSnapshot: function(snap) {
+        const tm = window.CocoyaTextMode;
+        if (!tm || typeof tm.enterTextModeWithCode !== 'function') {
+            console.error('[App] text snapshot restore skipped: CocoyaTextMode unavailable');
+            return null;
+        }
+        const ok = tm.enterTextModeWithCode(typeof snap.code === 'string' ? snap.code : '');
+        if (!ok) {
+            console.error('[App] text snapshot restore failed: editor unavailable');
+            return null;
+        }
+        try {
+            if (this.minimap && typeof this.minimap.dispose === 'function') this.minimap.dispose();
+        } catch (e) {}
+        this.minimap = null;
+        try {
+            if (this.workspace && typeof this.workspace.dispose === 'function') this.workspace.dispose();
+        } catch (e) {}
+        this.workspace = null;
+        this.isReadOnly = !!snap.isReadOnly;
+        if (window.CocoyaUI && window.CocoyaUI.setSaveButtonState) {
+            const hint = this.isReadOnly
+                ? ((typeof Blockly !== 'undefined' && Blockly.Msg['MSG_READ_ONLY_HINT']) || '此檔案已被其他視窗開啟，目前為唯讀模式。')
+                : '';
+            window.CocoyaUI.setSaveButtonState(!this.isReadOnly, hint);
+        }
+        // 平台：文字模式存檔（fileOps ensurePlatformLine）與執行（runCode msg.platform）
+        // 都取 currentPlatform，快照平台必須還原，否則 reload 後會寫錯檔頭行。
+        if (snap.platform) {
+            this.currentPlatform = snap.platform;
+            try { this.updatePlatformLabel(); } catch (e) {}
+        }
+        if (window.CocoyaUI && window.CocoyaUI.updateFileStatus) {
+            window.CocoyaUI.updateFileStatus(snap.filename || '');
+        }
+        console.log('[App] text snapshot restored on platform:', this.currentPlatform);
+        return snap;
     }
 });

@@ -14,7 +14,8 @@ use super::examples::resolve_example_open_path;
 #[tauri::command]
 pub async fn open_file(window: Window, handle: AppHandle, state: State<'_, AppState>) -> Result<OpenFileResult, String> {
     let file_path = handle.dialog().file()
-        .add_filter("Cocoya XML", &["xml"])
+        // 2026-10-10 D-1：加 py —— 內容型別分叉在前端 controller.loadWorkspace（detectContentKind）
+        .add_filter("Cocoya Project", &["xml", "py"])
         .set_parent(&window)
         .blocking_pick_file();
 

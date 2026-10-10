@@ -109,6 +109,7 @@ test('snapshotWorkspaceForReload：無 workspace 時不寫入（不產生空快�
     const app = makeApp({ workspace: null });
     app.snapshotWorkspaceForReload();
     assert.equal(storage.has(SNAPSHOT_KEY), false);
+});
 
 // ---------------------------------------------------------------------------
 // 自動備份 debounce
@@ -186,8 +187,6 @@ test('setDirty：初始化期間不標髒（避免載入中誤觸發另存提示
     assert.deepEqual(events.filter((e) => e === 'send:setDirty'), []);
 });
 
-});
-
 test('snapshotWorkspaceForReload：序列化拋錯時清除殘留快照（不可留半壞資料）', () => {
     const originalToDom = globalThis.Blockly.Xml.workspaceToDom;
     globalThis.Blockly.Xml.workspaceToDom = () => { throw new Error('serialize fail'); };
@@ -208,4 +207,45 @@ test('clearReloadSnapshot：可主動清除殘留（discard／clean 換主題時
     app.clearReloadSnapshot();
     assert.equal(storage.has(SNAPSHOT_KEY), false);
     assert.equal(app.consumeReloadSnapshot(), null);
+});
+
+// ---------------------------------------------------------------------------
+// 文字模式快照（2026-10-10 C-3）：寫入 → consume 一次性
+//
+// 語系/主題切換共用同一條快照鏈（_showReloadChoice → snapshot → consume → restore）。
+// 文字快照無 xml、以 code 承載；consume 端（原只認 xml）同日補文字分支，
+// 否則切語系必丟碼 —— Q1 查證出的缺口，還原端見 text_snapshot.test.mjs。
+// ---------------------------------------------------------------------------
+
+test('snapshotWorkspaceForReload：文字模式改存 code＋isTextMode（workspace 已 dispose 也不炸）', () => {
+    globalThis.CocoyaTextMode = {
+        isTextMode: () => true,
+        getEditor: () => ({ getValue: () => 'print("hi")\n' })
+    };
+    try {
+        const app = makeApp({ workspace: null, isDirty: true });
+        app.snapshotWorkspaceForReload();
+        const snap = JSON.parse(storage.get(SNAPSHOT_KEY));
+        assert.equal(snap.isTextMode, true);
+        assert.equal(snap.code, 'print("hi")\n');
+        assert.equal(snap.platform, 'PC');
+        assert.equal(snap.isDirty, true);
+        assert.equal(snap.xml, undefined, '文字快照不應有 xml');
+    } finally {
+        delete globalThis.CocoyaTextMode;
+    }
+});
+
+test('consumeReloadSnapshot：文字快照（含空 code）可還原；缺 code 回 null', () => {
+    const app = makeApp();
+    // 空字串是合法內容（編輯器被清空）→ 只驗型別、不可驗空白
+    storage.set(SNAPSHOT_KEY, JSON.stringify({ isTextMode: true, code: '', platform: 'PC' }));
+    const snap = app.consumeReloadSnapshot();
+    assert.ok(snap, '空 code 的文字快照應可還原');
+    assert.equal(snap.isTextMode, true);
+    assert.equal(snap.code, '');
+    assert.equal(storage.has(SNAPSHOT_KEY), false, '文字快照同樣一次性消耗');
+
+    storage.set(SNAPSHOT_KEY, JSON.stringify({ isTextMode: true, platform: 'PC' }));
+    assert.equal(app.consumeReloadSnapshot(), null, '缺 code 應回 null');
 });

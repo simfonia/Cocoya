@@ -10,8 +10,18 @@ body {
 
 #container {
     display: flex;
+    flex-direction: column; /* 2026-10-10 版面重構（Editor 方案 B）：上→toolbar、中→workbench、下→terminal */
     width: 100vw;
     height: 100vh;
+}
+
+/* 2026-10-10 版面重構（Editor 方案 B）：中段左右分欄 —— blockly | resizer | code。
+   toolbar 與終端機已升為 #container 直屬（上下兩端）；文字模式僅需隱藏 blockly 側，
+   #codeArea 即自然展開全寬（見 modules/editor/editor.css）。 */
+#workbench {
+    flex: 1;
+    min-height: 0;
+    display: flex;
 }
 
 #blocklyArea {
@@ -1017,13 +1027,15 @@ body.cocoya-dark-mode #panel-resizer.is-dragging {
     filter: drop-shadow(0 0 8px rgba(255, 0, 0, 0.8));
 }
 
-/* Minimap 樣式與防護 */
+/* Minimap 樣式與防護
+   2026-10-10 版面重構：#blocklyArea 起點改為 toolbar 下緣（toolbar 已搬出），
+   top 由 60 → 20 維持原視覺（原 60 = toolbar 40 + 20；且 toolbar 換行時不再互相重疊）。 */
 .blockly-minimap {
     background-color: rgba(255, 255, 255, 0.9) !important;
     border: 1px solid #FE2F89 !important;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3) !important;
     z-index: 100 !important;
-    top: 60px !important;
+    top: 20px !important;
     right: 10px !important;
     border-radius: 4px;
     width: 200px !important;   /* 固定寬度 */
@@ -1052,7 +1064,7 @@ body.cocoya-dark-mode #panel-resizer.is-dragging {
 
 #minimap-toggle {
     position: absolute;
-    top: 60px;
+    top: 20px; /* 2026-10-10 版面重構：同 .blockly-minimap，60 → 20 維持原視覺（錨點 #blocklyArea 起點已下移 toolbar 高度） */
     right: 10px;
     width: 32px;
     height: 32px;
