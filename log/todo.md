@@ -74,6 +74,15 @@
 - [ ] **Plotter（序列繪圖）移植**：CodeBridge `ui/src/lib/plot/` 4 檔 55 KB → Cocoya `ui/src/modules/plot/`。零新增相依（自繪 Canvas，非 Chart.js）、零 Rust。唯一需改的是資料源（`CodeBridgeSerialMonitor` → Cocoya `UI.appendTerminal`）。**執行計畫見 `docs/plan/Plotter移植計畫.md`**（階段 A 純搬移／B 資料接線／C UI+主題+i18n／D 測試）。✅ **決策（2026-10-06）：VSIX 先不支援**（序列埠資料走 VS Code 原生終端、webview 無資料源），UI 依 `bridge.capabilities` 隱藏 plot 按鈕 —— **與 Editor 計畫共用同一條 caps 判斷**
 - [ ] **純文字模式 ＋ 內建編輯器（TinkerCAD 式單向轉換）**：轉換後隱藏積木區、保留程式碼區（升級為可編輯）與虛擬終端，**不可逆**。採 `<pre>` 疊層高亮 ＋ `<textarea>` 輸入，**約 500 行、零新增相依**（不引入 CodeMirror/Monaco，遵循專案規範）。**執行計畫見 `docs/plan/Editor純文字模式計畫.md`**（階段 A 編輯器元件＋Python tokenizer／B 整合 codeArea／C 模式切換＋存檔／D 邊界守門）。✅ **決策（2026-10-06）：①存檔改 `.py` ②VSIX 先不支援**（VS Code 已有文字編輯器，直接開 `.py` 即可）
   - **進度（2026-10-06）**：階段 A ✅（三檔＋highlight 15 測＋三主題 8 token＋接線；變異測試驗守門有效）、階段 B ✅（`#codeEditor` 容器入 `#codeArea`，唯讀預覽零變動，build/lint/451 測全綠）。**待辦：C（caps 閘門＋確認對話框＋Blockly.dispose＋備份＋存 .py）、D（editor_contract 守門）**。詳見 `log/work/2026-10-06.md`
+- [ ] **`.py` 匯入（實驗室新增「匯入」按鈕，不走主 toolbar）**（2026-10-11 決策，backlog）
+  - **背景**：D-3 結案時把 `openfile.rs` 的開啟 filter 由 `["xml","py"]` 收斂為 `["xml"]`（實驗室模型下前端一律當 XML 載入，允許 py 會得到空白畫布且無錯誤訊息）。但「讀入一個既有 `.py`」仍是合理需求，只是**入口要改位置**。
+  - **決策**：由**程式碼實驗室自己的 toolbar 新增「匯入」按鈕**處理，**不走主 toolbar 的工具列**。理由：`.py` 是非受管匯出物，主 toolbar 的「開檔」語意是「開啟 Cocoya 積木專案（.xml）」，兩者混在一起會讓語意混淆；匯入只在實驗室內有意義（進來就是可編輯草稿）。
+  - **實作要點（屆時須同步 4 處）**：
+    1. `open_dialog_filter.rs` 守門**必須同步放寬**（現斷言 `open_file` 不含 `"py"`）—— 或另開一支實驗室專用 command（建議後者：主 `open_file` 維持只認 xml，匯入走新路徑，兩個對話框方向相反的設計才不會互相破壞）。
+    2. 前端 `controller.loadWorkspace` 需補 py 分叉（走 `detectContentKind`，零件庫純函式已保留於 `text_mode.js` L383-386，可直接復用）。
+    3. 匯入後應進入實驗室草稿層而非積木區（`enterLab` 或等價路徑），並處理「平台標頭」：`.py` 無 `# cocoya-platform` 時需提示使用者選擇（`TLB_TEXT_MODE_PICK_PLATFORM` 文案已存在）。
+    4. 「匯入」屬**捨棄目前草稿**的破壞性操作 → 需 dirty 確認（沿用 `exitLab` 的 `TLB_TEXT_MODE_EXIT_CONFIRM` 模式）。
+  - **相關設計**：Layer B 的「`.py` 受管化」是另一個更大議題（真 open/save＋平台持久化），見 `docs/plan/Editor純文字模式計畫.md` §11.2。本項只是「唯讀匯入成草稿」，**不等於**受管化。
 - [ ] 跨平台序列埠 Friendly Name（macOS/Linux；Windows 已有 VID/PID 映射）
 - [ ] 重置韌體 esptool 整合為 Tauri Sidecar 的可行性評估
 

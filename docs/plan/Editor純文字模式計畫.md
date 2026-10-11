@@ -327,6 +327,19 @@ C-3 寫入端已分叉（產出 `code/isTextMode`、無 `xml`），但 `consumeR
 - [x] VSIX `handleOpenFile` 保持 `['xml']` filter（**刻意不加 py** —— VSIX 無文字編輯能力，
   不提供打不開的路徑）→ 已實查 `src/handlers/fileOps.ts` 三處 filter 皆為 `['xml']`，符合決策，維持不改。
 
+### 📝 Backlog：`.py` 匯入改由實驗室自己的「匯入」按鈕處理（2026-10-11 決策）
+
+「讀入一個既有 `.py`」仍是合理需求，但**入口改位置**：由**程式碼實驗室 toolbar 新增「匯入」按鈕**，
+**不走主 toolbar 的「開檔」**。理由：主 toolbar「開檔」的語意是「開啟 Cocoya 積木專案（.xml）」，
+與非受管 `.py` 混在一起會語意混淆；匯入只在實驗室內有意義（進來就是可編輯草稿）。
+
+實作時須同步 4 處（詳細見 `log/todo.md`）：`open_dialog_filter.rs` 守門放寬或另開實驗室專用 command
+（**建議後者**：主 `open_file` 維持只認 xml，兩個對話框方向相反的設計才不會互相破壞）、
+前端 `loadWorkspace` 補 py 分叉（`detectContentKind` 零件庫已保留）、匯入後進草稿層＋平台標頭處理
+（`TLB_TEXT_MODE_PICK_PLATFORM` 文案已存在）、破壞性操作需 dirty 確認。
+
+⚠️ 本項**不等於** §11.2 的「`.py` 受管化」（後者含真 open/save＋平台持久化）；本項只是唯讀匯入成草稿。
+
 
 ---
 
