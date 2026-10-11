@@ -309,7 +309,8 @@ C:\Workspace\cocoya\
 │   ├── tests/             # [2026-10-04 新增] Integration 測試（npm run test:rust，已併入 npm test）
 │   │   ├── serde_contract.rs     # Rust→JS 序列化契約守門（3 測；掃描全部 #[derive(Serialize)] struct 斷言 camelCase，含白名單同步自檢）
 │   │   ├── command_registration.rs # #[tauri::command] 註冊完整性守門（4 測；比對定義與 generate_handler! 註冊清單，P2-5「編譯通過≠搬對了」教訓的防護）
-│   │   └── multi_window_emit.rs  # 多視窗 emit_to 鐵則守門（2 測；擋全域廣播 emit/emit_all/emit_filter）
+│   │   ├── multi_window_emit.rs  # 多視窗 emit_to 鐵則守門（2 測；擋全域廣播 emit/emit_all/emit_filter）
+│   │   └── open_dialog_filter.rs # 開啟/匯出對話框副檔名白名單守門（2 測；實驗室模型下 open_file 只認 xml，save_lab_py 必須含 py —— 兩者方向相反，互相保護）
 │   ├── tauri.conf.json    # Tauri 應用配置 (含安裝與資源設定)
 │   ├── capabilities/      # 視窗權限配置 (default.json)
 │   ├── permissions/       # [P2 權限二階段] 自訂指令權限定義（commands.toml）

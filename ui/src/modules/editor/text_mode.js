@@ -48,11 +48,16 @@
     }
 
     /**
-     * 行尾 ID 註解清理：triggerCodeUpdateSync 只剝隱形標記，行尾「兩空格＋# ID:」註解
-     * 執行無害但進編輯器會髒 —— 與複製鈕同款清理。
+     * 行尾 ID 註解清理：triggerCodeUpdateSync 只剝隱形標記，行尾
+     * S_ID/E_ID/舊式 ID 註解執行無害但進編輯器會髒。
+     * （D-2：改走 CocoyaUtils.stripIdMarks SSOT，與複製鈕/匯出共用。）
      */
     function stripIdComments(code) {
-        return String(code == null ? '' : code).replace(/ {2}# ID:.*$/mg, '');
+        try {
+            var U = global.CocoyaUtils || window.CocoyaUtils;
+            if (U && typeof U.stripIdMarks === 'function') return U.stripIdMarks(code);
+        } catch (e) {}
+        return String(code == null ? '' : code).replace(/ {2}# (?:S_ID|E_ID|ID):\s*[^\s\n]+/g, '');
     }
 
     function ensureEditor() {
@@ -199,6 +204,9 @@
             fillAriaLabel();
             try { document.body.classList.add('cocoya-text-mode'); } catch (e) {}
             retireBlockOnlyUi();
+            // D-2 #1: syncLabChromeTips
+            try { var _ui = global.CocoyaUI || window.CocoyaUI;
+                if (_ui && typeof _ui.syncLabChromeTips === 'function') _ui.syncLabChromeTips(); } catch (e) {}
             return true;
         } finally {
             switching = false;
@@ -215,21 +223,33 @@
         var ed = getEditor();
         var dirty = !!(ed && typeof ed.getValue === 'function' && ed.getValue() !== seedCode);
         if (dirty) {
-            var go = true;
+            // D-2 #8：三鈕（儲存 .py／不儲存／取消）取代二選項捨棄確認。
+            // 存分支走 saveLabCode（原生 .py 對話框）；取消對話框 → 回 false 留在實驗室。
+            var tip = readMsg('TLB_TEXT_MODE_EXIT_CONFIRM',
+                'Leave the code lab? Your edits here are not saved to any file and will be discarded.');
+            var choice = 'cancel';
             try {
-                var tip = readMsg('TLB_TEXT_MODE_EXIT_CONFIRM',
-                    'Leave the code lab? Your edits here are not saved to any file and will be discarded.');
-                if (global.CocoyaBridge && typeof global.CocoyaBridge.confirm === 'function') {
-                    go = await global.CocoyaBridge.confirm(tip);
-                } else if (typeof global.confirm === 'function') {
-                    go = global.confirm(tip);
+                var _dlg = global.CocoyaUI || window.CocoyaUI;
+                if (_dlg && typeof _dlg.showSaveConfirm === 'function') {
+                    choice = await _dlg.showSaveConfirm(tip);
+                } else {
+                    // 無三鈕 UI（防禦）：退回二選項，語意對齊「不儲存／取消」
+                    var go = (typeof global.confirm === 'function') ? global.confirm(tip) : true;
+                    choice = go ? 'discard' : 'cancel';
                 }
-            } catch (e) { go = false; }
-            if (!go) return false;
+            } catch (e) { choice = 'cancel'; }
+            if (choice === 'cancel') return false;
+            if (choice === 'save') {
+                var saved = await saveLabCode();
+                if (!saved) return false;   // 原生對話框取消或失敗 → 留在實驗室
+            }
         }
         try { document.body.classList.remove('cocoya-text-mode'); } catch (e) {}
         restoreBlockUi();
         seedCode = null;
+        // D-2 #1 收尾：退場後還原積木模式 tooltip（與 enterLab 對稱）
+        try { var _ui3 = global.CocoyaUI || window.CocoyaUI;
+            if (_ui3 && typeof _ui3.syncLabChromeTips === 'function') _ui3.syncLabChromeTips(); } catch (e) {}
         return true;
     }
 
@@ -242,6 +262,9 @@
         try { document.body.classList.remove('cocoya-text-mode'); } catch (e) {}
         restoreBlockUi();
         seedCode = null;
+        // D-2 #1/#6 收尾：檔案作業護欄路徑（開檔/開新/範例/回首頁）同樣還原切換鈕圖示與 save tooltip
+        try { var _ui4 = global.CocoyaUI || window.CocoyaUI;
+            if (_ui4 && typeof _ui4.syncLabChromeTips === 'function') _ui4.syncLabChromeTips(); } catch (e) {}
     }
 
     /**
@@ -277,10 +300,49 @@
     }
 
     /**
+     * D-2 #7（Q2=原生對話框）：實驗室存 .py —— 送後端 save_file 的 .py 分叉
+     * （Tauri 原生對話框＋.py filter，非受管：不碰積木錨定/dirty/備份）。
+     * 成功回 true；取消或失敗回 false（真錯誤由 fileOps alert）。
+     * bridge 無 sendWithResult（VSIX）→ fallback exportPy blob 下載。
+     * @returns {Promise<boolean>} true=已存檔
+     */
+    async function saveLabCode() {
+        var ed = getEditor();
+        var code = (ed && typeof ed.getValue === 'function') ? ed.getValue() : '';
+        try {
+            var app = global.CocoyaApp || window.CocoyaApp;
+            var plat = (app && app.currentPlatform) || 'PC';
+            code = ensurePlatformLine(code, plat);   // 檔頭平台行（與 exportPy 同零件）
+        } catch (e) {}
+        var fileName = 'cocoya_code.py';
+        try {
+            var ui = global.CocoyaUI || window.CocoyaUI;
+            var base = (ui && ui.currentFilename) ? String(ui.currentFilename).replace(/\.[^.]+$/, '') : '';
+            if (base) fileName = base + '.py';
+        } catch (e) {}
+        var bridge = global.CocoyaBridge || window.CocoyaBridge;
+        if (bridge && typeof bridge.sendWithResult === 'function') {
+            try {
+                var filename = await bridge.sendWithResult('saveFile', {
+                    code: code,
+                    isTextMode: true,
+                    fileName: fileName
+                });
+                return !!filename;
+            } catch (e) {
+                return false;   // 'Canceled' 靜默；其餘真錯誤 fileOps 已 alert
+            }
+        }
+        return exportPy();   // VSIX／無原生能力 → blob 下載 fallback
+    }
+
+    /**
      * 以指定碼進入實驗室（reload 快照還原用；不再 dispose workspace）。
      * 已在實驗室則僅更新編輯器內容。
      */
     function enterTextModeWithCode(code) {
+        // D-2 #2：進編輯器一律剝行尾 ID 註解（快照還原路徑；enterLab 走 cleanPreviewCode 已剝）
+        code = stripIdComments(code);
         if (isTextMode()) {
             var ed0 = ensureEditor();
             if (ed0) ed0.setValue(code);
@@ -294,6 +356,9 @@
         fillAriaLabel();
         try { document.body.classList.add('cocoya-text-mode'); } catch (e) {}
         retireBlockOnlyUi();
+            // D-2 #1: syncLabChromeTips
+            try { var _ui = global.CocoyaUI || window.CocoyaUI;
+                if (_ui && typeof _ui.syncLabChromeTips === 'function') _ui.syncLabChromeTips(); } catch (e) {}
         return true;
     }
 
@@ -312,6 +377,8 @@
         cleanPreviewCode: cleanPreviewCode,
         // Layer B：.py 匯出（現行為 blob 下載）
         exportPy: exportPy,
+        // D-2 #7：實驗室存檔（原生 .py 對話框；base.js saveFile 分支與 exitLab save 分支共用）
+        saveLabCode: saveLabCode,
         // 純函式零件庫（保留不刪，將來 .py 受管化直接復用）
         parsePlatformLine: parsePlatformLine,
         ensurePlatformLine: ensurePlatformLine,

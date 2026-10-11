@@ -143,6 +143,11 @@
 
         const apply = () => {
             target.style.fontSize = `${sizes[idx]}px`;
+            // D-2 #4：程式碼字體鈕同時作用於實驗室編輯器（共用同一偏好記憶）
+            if (targetId === 'codeContent') {
+                const labEditor = document.getElementById('codeEditor');
+                if (labEditor) labEditor.style.fontSize = `${sizes[idx]}px`;
+            }
             CocoyaSettings.set(storageKey, String(sizes[idx]));
         };
         apply();

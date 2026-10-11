@@ -26,18 +26,36 @@
         var pre = root.querySelector('.editor-highlight');
         var code = root.querySelector('.editor-highlight code');
         if (!input || !pre || !code) return null;
-        var rafId = 0, disposed = false;
-        function syncScroll() { pre.scrollTop = input.scrollTop; pre.scrollLeft = input.scrollLeft; }
+        var rafId = 0, disposed = false, gutterEl = null;
+        function syncScroll() {
+            pre.scrollTop = input.scrollTop; pre.scrollLeft = input.scrollLeft;
+            // D-2 #3：行號欄跟著捲（overflow:hidden 容器不會自己動）
+            if (!gutterEl) gutterEl = root.querySelector('.editor-gutter');
+            if (gutterEl) gutterEl.scrollTop = input.scrollTop;
+        }
         function renderNow() {
             rafId = 0;
             var h = hl();
             code.innerHTML = h ? h.highlightPython(input.value) : esc(input.value);
             syncScroll();
+            renderGutter();
         }
         function scheduleRender() {
             if (disposed || rafId) return;
             var raf = (typeof requestAnimationFrame === 'function') ? requestAnimationFrame.bind(global) : function (fn) { return setTimeout(fn, 16); };
             rafId = raf(renderNow);
+        }
+        // 左側行號欄（1:1 視覺行對齊；每次重繪同步更新）
+        function renderGutter() {
+            var gutter = root.querySelector('.editor-gutter');
+            if (!gutter) return;
+            var v = input.value;
+            var n = Math.max(1, String(v).split('\n').length);
+            var html = '';
+            for (var i = 0; i < n; i++) {
+                html += '<span class="ln">' + (i + 1) + '</span>';
+            }
+            gutter.innerHTML = html;
         }
         function insertIndent(shift) {
             var pad = readIndentWidth() === 2 ? '  ' : '    ';

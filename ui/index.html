@@ -157,7 +157,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="toolbar-btn" id="btn-close" title="%{BKY_TLB_CLOSE_EDITOR}" style="display: none;">
+                <div class="toolbar-btn" id="btn-close" title="%{BKY_TLB_CLOSE_COCOYA}" style="display: none;">
                     <img src="src/icons/close-octagon.png">
                 </div>
             </div>
@@ -192,11 +192,11 @@
                              VSIX 由 base.js 依 caps.supportsTextEditor 隱藏（與 hasTerminal 同模式）。
                              單向按鈕（非 switch）：不可逆，切後按鈕隨 #codeContent 一起退場。
                              2026-10-10 晚：移除文字節點，與相鄰 icon 鈕同尺寸（24×24）。 -->
-                        <div class="toolbar-btn text-mode-btn" id="btn-text-mode" title="%{BKY_TLB_TEXT_MODE_TIP}" style="width: 24px; height: 24px;">
+                        <div class="toolbar-btn text-mode-btn" id="btn-text-mode" title="%{BKY_TLB_TEXT_MODE_ENTER_TIP}" style="width: 24px; height: 24px;">
                             <img src="src/icons/code_24dp_FE2F89.png" style="width: 18px; height: 18px;">
                         </div>
                         <div class="toolbar-separator" style="height: 16px; margin: 0;"></div>
-                        <span style="font-size: calc(10px * var(--fs-e));">%{BKY_TLB_INDENT}</span>
+                        <span id="indent-label" style="font-size: calc(10px * var(--fs-e));">%{BKY_TLB_INDENT}</span>
                         <div class="indent-dropdown" id="indent-selector">
                             <button type="button" class="indent-dropdown-trigger" aria-haspopup="listbox" aria-expanded="false">
                                 <span class="indent-dropdown-label">4 空格</span>
@@ -215,6 +215,7 @@
                      切換由 body.cocoya-text-mode 驅動（階段 C）。兩層像素對齊依賴相同字型/padding。
                      wrap="off" 對應 white-space: pre —— 兩層皆不換行，行數 1:1 捲動同步才有意義。 -->
                 <div id="codeEditor">
+    <div class="editor-gutter"></div>
                     <pre class="editor-highlight" aria-hidden="true"><code></code></pre>
                     <!-- aria-label 刻意用英文常值：applyI18n 只掃 title 與 textContent，
                          不掃 aria-label（寫 %{BKY_} 會原樣殘留）。階段 C 模式切換接線時，

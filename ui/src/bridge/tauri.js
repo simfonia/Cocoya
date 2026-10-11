@@ -95,6 +95,8 @@ export class BridgeTauri extends BaseBridge {
      *   - 例外 → 同一則 console.error ＋ resetFirmware 的 alert（兩者皆原樣保留）
      *   - **不回傳** handler 結果：原 `let result` 從未 `return`（實測 0 處 `return result`），
      *     `base.js` 呼叫端也只 await promise 等副作用完成。故本方法 resolve 值恆為 undefined。
+     *   - 例外一律吞掉（console.error）——需要「回傳值＋例外穿透」的呼叫端
+     *     （D-2 #7/#8 實驗室存 .py，須區分 Canceled 與成功檔名）改用 sendWithResult。
      */
     async send(command, data = {}) {
         await this.ready;
@@ -120,6 +122,23 @@ export class BridgeTauri extends BaseBridge {
                 this.alert((window.Blockly?.Msg['MSG_FIRMWARE_BURN_FAILED'] || 'Failed: ') + e);
             }
         }
+    }
+
+    /**
+     * [D-2 #7/#8] 與 send() 同路徑分派，但**回傳 handler 結果**且**例外穿透**。
+     * 用於實驗室存 .py（需拿到原生對話框的檔名／區分 'Canceled' 與真錯誤）。
+     * 舊呼叫端一律走 send()（契約不變）；本方法不改變 send() 的恆 undefined 語意。
+     * @param {string} command
+     * @param {object} [data]
+     * @returns {Promise<any>} handler 回傳值（如 save_file 的檔名）
+     * @throws {any} handler 拋出的例外（如 'Canceled'）原樣上拋
+     */
+    async sendWithResult(command, data = {}) {
+        await this.ready;
+        if (!this.tauriInvoke) throw new Error(`[Bridge] Tauri unavailable for "${command}"`);
+        const handler = getSendHandler(command);
+        if (!handler) throw new Error(`[Bridge] Command "${command}" not handled in Tauri mode`);
+        return await handler.call(this, command, data);
     }
 
     // --- Tauri 專屬私有方法 ---

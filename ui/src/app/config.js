@@ -68,6 +68,10 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
                 });
                 close();
                 if (Blockly.Python.init) Blockly.Python.init(this.workspace);
+                // D-2 #4（Q1=A）：實驗室中縮排選單只改未來 Tab 寬（editor 讀 INDENT），
+                // 不重排草稿、不重產隱藏預覽，直接返回。
+                if (window.CocoyaTextMode && typeof window.CocoyaTextMode.isTextMode === 'function' &&
+                    window.CocoyaTextMode.isTextMode()) return;
                 this.triggerCodeUpdate();
             };
 

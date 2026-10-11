@@ -109,30 +109,56 @@ test('不變式 B：enterLab 用 cleanPreviewCode 取種子（非 lastCleanCode�
 });
 
 // ---------------------------------------------------------------------------
-// 不變式 C：匯出走 blob 下載，不送後端 saveFile
+// 不變式 C：實驗室存檔（D-2 #7，Q2=原生對話框）—— saveLabCode 走後端 save_file
+// .py 分叉；exportPy 保留為 blob fallback（VSIX／無原生能力）
 // ---------------------------------------------------------------------------
 
-test('不變式 C：exportPy 用 Blob＋createElement(a).download（非受管匯出）', () => {
+test('不變式 C：saveLabCode 走 sendWithResult saveFile（原生 .py）；exportPy 保留 Blob fallback', () => {
     const src = fs.readFileSync(path.join(here, 'text_mode.js'), 'utf8');
+    assert.match(src, /sendWithResult\(\s*'saveFile'/,
+        'saveLabCode 必須走 sendWithResult（回傳檔名＋例外穿透，send() 會吞掉 Canceled）');
+    assert.match(src, /isTextMode:\s*true/,
+        '存檔參數必須帶 isTextMode:true 以分派 Rust .py 分叉');
     assert.match(src, /new Blob\(/,
-        'exportPy 必須以 Blob 打包下載內容');
+        'exportPy 必須保留 Blob 下載（fallback）');
     assert.match(src, /a\.download\s*=/,
-        'exportPy 必須以 <a download> 觸發瀏覽器下載');
-    assert.doesNotMatch(src, /send\('saveFile'/,
-        'exportPy 不得走後端 saveFile（.py 非受管）');
+        'exportPy 必須以 <a download> 觸發瀏覽器下載（fallback）');
 });
 
 // ---------------------------------------------------------------------------
 // 不變式 D：檔案作業護欄（開檔/開新/範例/回首頁前還原積木 UI）
 // ---------------------------------------------------------------------------
 
-test('不變式 D：controller.loadWorkspace 先 exitLab；base.js 存檔走 exportPy', () => {
+test('不變式 D：controller.loadWorkspace 先 exitLab；base.js 存檔走 saveLabCode', () => {
     const ctrl = fs.readFileSync(path.join(uiDir, 'src', 'app', 'controller.js'), 'utf8');
     assert.match(ctrl, /TM\.exitLab\(/, '開啟前必須先退出實驗室（還原積木 UI 再載入 XML）');
     assert.doesNotMatch(ctrl, /TM\.openPyFile\(/, '.py 不再受管開啟，不得殘留 openPyFile 呼叫');
 
     const base = fs.readFileSync(path.join(uiDir, 'src', 'ui', 'base.js'), 'utf8');
-    assert.match(base, /window\.CocoyaTextMode\.exportPy\(\)/, '文字模式存檔按鈕必須走 exportPy（blob 下載）');
+    assert.match(base, /window\.CocoyaTextMode\.saveLabCode\(/,
+        '文字模式存檔按鈕必須走 saveLabCode（原生 .py 對話框；fallback 在其內部）');
+});
+
+// ---------------------------------------------------------------------------
+// D-2 #8：exitLab 三鈕（存 .py／不存／取消）＋ #1 退場 tooltip 同步
+// ---------------------------------------------------------------------------
+
+test('exitLab 三鈕：showSaveConfirm 分派、cancel 留在實驗室、save 失敗也留下', () => {
+    const src = fs.readFileSync(path.join(here, 'text_mode.js'), 'utf8');
+    assert.match(src, /showSaveConfirm\(\s*tip/,
+        'dirty 退出必須走三鈕 showSaveConfirm');
+    assert.match(src, /if \(choice === 'cancel'\) return false/,
+        '取消 → 回 false 留在實驗室');
+    assert.match(src, /var saved = await saveLabCode\(\);\s*\r?\n\s*if \(!saved\) return false/,
+        '存分支取消/失敗 → 回 false 留在實驗室（不可丟草稿）');
+    assert.match(src, /restoreBlockUi\(\);\s*\r?\n\s*seedCode = null;\s*\r?\n\s*\/\/ D-2 #1 收尾[\s\S]{0,200}?syncLabChromeTips\(\)/,
+        '退場後必須重呼 syncLabChromeTips 還原積木 tooltip（#1 收尾）');
+});
+
+test('D-2 #2：enterTextModeWithCode 進編輯器前剝 ID 註解', () => {
+    const src = fs.readFileSync(path.join(here, 'text_mode.js'), 'utf8');
+    assert.match(src, /function enterTextModeWithCode\(code\) \{\s*\r?\n\s*\/\/ D-2 #2[\s\S]*?code = stripIdComments\(code\)/,
+        '快照還原路徑進編輯器前必須剝行尾 ID 註解（顯示剝除，執行 Q3 照原樣）');
 });
 
 test('不變式 D：persistence 三檔案作業方法開頭呼叫 restoreBlockUiOnly', () => {
@@ -200,4 +226,91 @@ test('文字模式版面：#blocklyArea 整段 display:none（非 400px）＋切
     assert.match(css, /body\.cocoya-text-mode #code-toggle,\s*body\.cocoya-text-mode #btn-close-code\s*\{\s*display:\s*none/, '編輯器唯一面板：收合把手與關閉鈕必須隱藏');
     const tm = fs.readFileSync(path.join(here, 'text_mode.js'), 'utf8');
     assert.match(tm, /getElementById\('code-title'\)/, '進文字模式時 retireBlockOnlyUi 應把 codeHeader 標題切為編輯器標籤');
+
+// ---------------------------------------------------------------------------
+// D-2 實機回報修正守門（2026-10-11）：#1 切換鈕圖示、#3 行號版面、#6 save tooltip
+// ---------------------------------------------------------------------------
+
+test('D-2 #3：文字模式 padding-left 加在 block 級 .editor-highlight（不得加在 inline code）', () => {
+    const css = fs.readFileSync(path.join(here, 'editor.css'), 'utf8');
+    assert.doesNotMatch(css, /body\.cocoya-text-mode #codeEditor \.editor-highlight code,/,
+        'inline code 的 left padding 僅位移首行（第 2 行起與 36px 行號欄重疊），不得復活');
+    assert.match(css, /body\.cocoya-text-mode #codeEditor \.editor-highlight,\s*\r?\n\s*body\.cocoya-text-mode #codeEditor \.editor-input\s*\{\s*\r?\n\s*padding-left:\s*36px/,
+        'block 級 pre 與 textarea 必須同為 padding-left:36px（兩層對齊鐵則）');
+    assert.match(css, /#codeEditor \.editor-gutter\s*\{[^}]*padding-top:\s*4px/,
+        'gutter 必須 padding-top:4px 與文字層 padding: 4px 8px 頂距對齊');
+});
+
+test('D-2 #1：syncLabChromeTips 依模式切換 #btn-text-mode 圖示（實驗室=X cancel，積木=code）', () => {
+    const base = fs.readFileSync(path.join(uiDir, 'src', 'ui', 'base.js'), 'utf8');
+    assert.match(base, /inLab \? 'src\/icons\/cancel_24dp_FE2F89\.png'/,
+        '實驗室中切換鈕圖示必須換成 X（cancel）');
+    assert.match(base, /: 'src\/icons\/code_24dp_FE2F89\.png'/,
+        '積木模式必須還原 code 圖示');
+    const tm = fs.readFileSync(path.join(here, 'text_mode.js'), 'utf8');
+    // 判準必須落在真不變式：不只是「出現呼叫字面」，而是「經 feature-detect 後實際呼叫」，
+    // 否則寫成 if (false) _ui4.syncLabChromeTips(); 這種死碼也能過關（mutation 實證）。
+    assert.match(tm, /function restoreBlockUiOnly\(\) \{[\s\S]*?if \(_ui4 && typeof _ui4\.syncLabChromeTips === 'function'\) _ui4\.syncLabChromeTips\(\);/,
+        '檔案作業護欄路徑（restoreBlockUiOnly）也必須重呼 syncLabChromeTips（圖示/tooltip 還原）');
+});
+
+test('D-2 #6：setSaveButtonState 空 hint 不得清空 title；syncLabChromeTips 兩模式明確寫 title', () => {
+    const base = fs.readFileSync(path.join(uiDir, 'src', 'ui', 'base.js'), 'utf8');
+    assert.doesNotMatch(base, /saveBtn\.setAttribute\('title', hint\);\r?\n        \}\r?\n    \},/,
+        '不得無條件 setAttribute(title, hint)（hint 為空會永久清空 tooltip，applyI18n 只在啟動跑一次）');
+    assert.match(base, /if \(hint\) \{\s*\r?\n\s*saveBtn\.setAttribute\('title', hint\);/,
+        '有 hint 時照舊寫入（唯讀提示流程不變）');
+    assert.match(base, /setSaveButtonState[\s\S]{0,400}?syncLabChromeTips\(\);/,
+        '空 hint 必須交還 syncLabChromeTips 依模式還原');
+    assert.match(base, /if \(inLab\) \{\s*\r?\n\s*\/\/[^\n]*\r?\n\s*const tip = Blockly\.Msg\['TLB_SAVE_PY_TIP'\][^\n]*\r?\n\s*saveBtn\.setAttribute\('data-lab-tip', tip\);\s*\r?\n\s*saveBtn\.setAttribute\('title', tip\);/,
+        '實驗室分支必須直設 .py title（進場即正確，不等 hover）');
+    assert.match(base, /saveBtn\.setAttribute\('title', Blockly\.Msg\['TLB_SAVE'\] \|\| '/,
+        '積木分支必須還原 TLB_SAVE 預設 title（退出/存檔後 tooltip 不空白）');
+});
+
+test('D-2 #9：縮排標籤依模式切換語意（實驗室=Tab：，積木=縮排：）', () => {
+    const base = fs.readFileSync(path.join(uiDir, 'src', 'ui', 'base.js'), 'utf8');
+    const html = fs.readFileSync(path.join(uiDir, 'index.html'), 'utf8');
+    const zh = fs.readFileSync(path.join(uiDir, 'src', 'zh-hant.js'), 'utf8');
+    const en = fs.readFileSync(path.join(uiDir, 'src', 'en.js'), 'utf8');
+    assert.match(html, /<span id="indent-label"[^>]*>%\{BKY_TLB_INDENT\}<\/span>/,
+        '縮排標籤 span 必須有 id="indent-label"（否則 syncLabChromeTips 無法切換語意）');
+    // 判準落在真不變式：inLab 三元直接選 TLB_INDENT_LAB／TLB_INDENT（死碼寫法無法過關）
+    assert.match(base, /const lk = inLab \? 'TLB_INDENT_LAB' : 'TLB_INDENT';/,
+        '必須依模式選 key：實驗室 TLB_INDENT_LAB（Tab：）、積木 TLB_INDENT（縮排：）');
+    assert.match(base, /const lab = Blockly\.Msg\[lk\] \|\| Blockly\.Msg\['TLB_INDENT'\] \|\| '';/,
+        'fallback 必須退回 TLB_INDENT（新 key 缺定義時不至於空白標籤）');
+    assert.match(base, /if \(lab\) indentLabel\.textContent = lab;/,
+        '有值才寫入（空字串不得清空標籤）');
+    assert.match(zh, /"TLB_INDENT_LAB":\s*"Tab："/, 'zh-hant 必須定義 TLB_INDENT_LAB');
+    assert.match(en, /"TLB_INDENT_LAB":\s*"Tab:"/, 'en 必須定義 TLB_INDENT_LAB（i18n 契約要求雙語鍵集合一致）');
+});
+
+test('D-2 #9b 行號欄：.ln 必須 box-sizing:border-box（否則行號緊貼第一個字）', () => {
+    const css = fs.readFileSync(path.join(here, 'editor.css'), 'utf8');
+    assert.match(css, /#codeEditor \.editor-gutter \.ln\s*\{[^}]*box-sizing:\s*border-box/,
+        '預設 content-box 會讓 width:100% 只涵蓋內容區、padding-right 被 overflow:hidden 裁掉，' +
+        'text-align:right 把行號右緣對到 x=36px（正是文字層 padding-left 起點）→ 零間距緊貼');
+});
+
+test('D-2 #10：舊不可逆模型的兩個 i18n 鍵不得復活（TLB_TEXT_MODE_TIP / _CONFIRM）', () => {
+    // 背景：實驗室模型（2026-10-10 重構）下積木會被保留、可退出，這兩個鍵的文案
+    // （「不可逆，積木將無法恢復」）是舊單向模型的，且 _CONFIRM 已無任何程式引用、
+    // _TIP 僅剩 fallback 與 index.html 佔位符 —— 留著只會在 ENTER/EXIT_TIP 遺失時
+    // 向使用者顯示假訊息。已全數移除，此守門防止復活。
+    const zh = fs.readFileSync(path.join(uiDir, 'src', 'zh-hant.js'), 'utf8');
+    const en = fs.readFileSync(path.join(uiDir, 'src', 'en.js'), 'utf8');
+    const base = fs.readFileSync(path.join(uiDir, 'src', 'ui', 'base.js'), 'utf8');
+    const html = fs.readFileSync(path.join(uiDir, 'index.html'), 'utf8');
+    assert.doesNotMatch(zh, /"TLB_TEXT_MODE_TIP"\s*:/, 'zh-hant 不得再有 TLB_TEXT_MODE_TIP');
+    assert.doesNotMatch(en, /"TLB_TEXT_MODE_TIP"\s*:/, 'en 不得再有 TLB_TEXT_MODE_TIP');
+    assert.doesNotMatch(zh, /"TLB_TEXT_MODE_CONFIRM"\s*:/, 'zh-hant 不得再有 TLB_TEXT_MODE_CONFIRM');
+    assert.doesNotMatch(en, /"TLB_TEXT_MODE_CONFIRM"\s*:/, 'en 不得再有 TLB_TEXT_MODE_CONFIRM');
+    assert.doesNotMatch(base, /Msg\['TLB_TEXT_MODE_TIP'\]/, 'base.js 不得再以 TIP 當 fallback（會顯示舊模型假訊息）');
+    assert.doesNotMatch(html, /BKY_TLB_TEXT_MODE_TIP/, 'index.html 佔位符改用 ENTER_TIP（積木模式的正確初始 tooltip）');
+    // 佔位符必須指向仍存在的鍵，否則 applyI18n 會留下 %{BKY_...} 原文字串當 tooltip
+    assert.match(html, /id="btn-text-mode" title="%\{BKY_TLB_TEXT_MODE_ENTER_TIP\}"/,
+        '佔位符必須是 TLB_TEXT_MODE_ENTER_TIP');
+});
+
 });

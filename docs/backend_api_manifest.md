@@ -97,9 +97,9 @@ Notation: `key?` = Optional. **Rule: changing a Rust signature -> immediately up
 | file | get_module_toolbox  | path: String | {path} | Result<String, String> |
 | file | get_project_anchor  | -- | {} | ProjectAnchor（serde camelCase：`isAnchored` / `projectRoot`；呼叫端勿以 snake_case 讀欄位） |
 | file | release_session     | -- | {} | Result<(), String>；回首頁（backToHome）：移除本視窗 `current_paths[label]`（解除錨定）、`file_locks` 中 owner=label 的鎖、`dirty_states[label]`。2026-09-18 |
-| file | open_file          | -- | {} | Result<OpenFileResult, String>（2026-10-10 D-1 選檔 filter 加 py；Python/XML 內容分叉在前端 controller.loadWorkspace 經 detectContentKind） |
+| file | open_file          | -- | {} | Result<OpenFileResult, String>（2026-10-11 實驗室模型定案：選檔 filter 收斂為 **只認 `xml`**。曾於 D-1 允許 py 並由前端 detectContentKind 分叉，但該模型已由「程式設計實驗室」取代——前端 loadWorkspace 一律當 XML 載入，允許 py 會導致空白畫布且無錯誤訊息。守門 `src-tauri/tests/open_dialog_filter.rs`） |
 | file | open_examples      | -- | {} | Result<OpenFileResult, String> |
-| file | save_file          | xml, save_as: bool, force_examples: Option<bool>, dialog_title: Option<String> | {xml, saveAs, forceExamples?, dialogTitle?} | Result<String, String>（Err 碼：`Canceled` / `EXAMPLES_PATH` / `SAME_AS_CURRENT`（開新/另存命中目前專案檔位置，防呆擋下） / `檔案已被其他視窗開啟...`。2026-10-10 實驗室模型：.py 由前端 exportPy（blob 下載）匯出、非受管，此命令一律 Cocoya XML） |
+| file | save_file          | xml, save_as: bool, force_examples: Option<bool>, dialog_title: Option<String>, code: Option<String>, is_text_mode: Option<bool>, file_name: Option<String> | {xml, saveAs, forceExamples?, dialogTitle?, code?, isTextMode?, fileName?} | Result<String, String>（Err 碼：`Canceled` / `EXAMPLES_PATH` / `SAME_AS_CURRENT`（開新/另存命中目前專案檔位置，防呆擋下） / `檔案已被其他視窗開啟...`。**D-2 #7（2026-10-11，Q2=原生）**：`code` 有值且 `isTextMode=true` → 走 `.py` 分叉（原生存檔對話框＋`.py` filter、回傳檔名、**非受管**：不碰 current_paths／file_locks／dirty／備份；取消回 `Canceled`），否則一律 Cocoya XML。前端僅 `bridge.sendWithResult('saveFile', ...)` 可取回檔名（`send()` 恆回 undefined 且吞例外） |
 | file | auto_backup        | xml: String | {xml} | Result<(), String> |
 | file | check_startup_backup | -- | {} | Option<String> |
 | file | clear_backup       | -- | {} | Result<(), String> |

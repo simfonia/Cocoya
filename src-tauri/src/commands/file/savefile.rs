@@ -9,8 +9,51 @@ use crate::state::AppState;
 use crate::utils::get_examples_path;
 
 
+/// D-2 #7（Q2=原生對話框）：實驗室 .py 存檔
+async fn save_lab_py(
+    window: &Window,
+    handle: &AppHandle,
+    _state: &State<'_, AppState>,
+    py_code: &str,
+    save_as: bool,
+    file_name: Option<String>,
+) -> Result<String, String> {
+    // 存回語意：.py 非受管、無 current_paths 可寫 → 一律彈對話框（save_as 僅保留簽名相容）
+    let _ = (window, save_as);
+    let default_name = file_name
+        .filter(|n| !n.trim().is_empty())
+        .unwrap_or_else(|| "cocoya_code.py".to_string());
+    let picked = handle
+        .dialog()
+        .file()
+        .add_filter("Python", &["py"])
+        .set_file_name(&default_name)
+        .blocking_save_file();
+    if let Some(p) = picked {
+        let path = p.into_path().map_err(|_| "Failed to parse save path".to_string())?;
+        fs::write(&path, py_code).map_err(|e| e.to_string())?;
+        let filename = path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or(&default_name)
+            .to_string();
+        Ok(filename)
+    } else {
+        Err("Canceled".into())
+    }
+}
+
 #[tauri::command]
-pub async fn save_file(window: Window, handle: AppHandle, state: State<'_, AppState>, xml: String, save_as: bool, force_examples: Option<bool>, dialog_title: Option<String>) -> Result<String, String> {
+pub async fn save_file(window: Window, handle: AppHandle, state: State<'_, AppState>, xml: String, save_as: bool, force_examples: Option<bool>, dialog_title: Option<String>, code: Option<String>, is_text_mode: Option<bool>, file_name: Option<String>) -> Result<String, String> {
+    // D-2 #7（Q2=原生對話框）：實驗室文字模式存 .py —— code 有值且 is_text_mode=true
+    // 即走 .py 分叉（原生存檔對話框＋.py filter），否則原 XML 路（向後相容）。
+    let lab_py: Option<String> = match (code, is_text_mode) {
+        (Some(c), Some(true)) => Some(c),
+        _ => None,
+    };
+    if let Some(py_code) = lab_py {
+        return save_lab_py(&window, &handle, &state, &py_code, save_as, file_name).await;
+    }
     let content = xml.clone();
     let allow_examples = force_examples.unwrap_or(false);
     let current_path = {

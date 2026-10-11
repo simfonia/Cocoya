@@ -28,7 +28,9 @@
   - [x] 保留純函式零件庫：`parsePlatformLine`/`ensurePlatformLine`/`guessPlatform`/`detectContentKind`（不刪，為將來受管化升級備用）
 - [x] **UI**：`btn-text-mode` 變切換（進入/退出）；實驗室中「存檔」＝`exportPy`；「另存」以 CSS 隱藏
 - [x] **守門翻修**：`editor_contract.test.mjs`/`text_snapshot.test.mjs`/`persistence_snapshot.test.mjs` 由 dispose 契約改 hide 契約（不變式 A~D）＋變異測試驗紅
-- [ ] **D-2 待實機驗證**（`test:ui` 478/478 已過）：切換鈕進入/退出實驗室、實驗室中存檔下載 `.py`／另存隱藏、語系主題切換兩邊都還原、實驗室中按開檔/開新/範例/回首頁正確還原積木
+- [x] **D-2 實機驗證通過**（2026-10-11 使用者實測確認）：切換鈕進入/退出實驗室、實驗室中存檔下載 `.py`／另存隱藏、語系主題切換兩邊都還原、實驗室中按開檔/開新/範例/回首頁正確還原積木
+- [x] **D-3 結案（不實作）**：實驗室模型定案「cocoya 不管理 `.py`」→ 不存在 `.py` 專案概念，前提消失。連帶把 `openfile.rs` 開啟 filter 由 `["xml","py"]` 收斂為 `["xml"]`（否則前端把 `.py` 當 XML 解析 → 空白畫布且無錯誤訊息）。守門 `src-tauri/tests/open_dialog_filter.rs`
+- [x] 收尾：`test:ui` 486/486、`lint:ui` 0 error、Rust 4 檔 11 測全綠、`cargo check` 通過、eol 全 CRLF
 
 
 

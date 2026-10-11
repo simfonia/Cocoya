@@ -14,8 +14,11 @@ use super::examples::resolve_example_open_path;
 #[tauri::command]
 pub async fn open_file(window: Window, handle: AppHandle, state: State<'_, AppState>) -> Result<OpenFileResult, String> {
     let file_path = handle.dialog().file()
-        // 2026-10-10 D-1：加 py —— 內容型別分叉在前端 controller.loadWorkspace（detectContentKind）
-        .add_filter("Cocoya Project", &["xml", "py"])
+        // 2026-10-11 實驗室模型定案：cocoya 不管理 .py —— 開啟只認積木專案 XML。
+        // 曾短暫允許 py（D-1 開檔分叉，依 detectContentKind 判斷內容型別），但該模型已由
+        // 「程式設計實驗室」取代：.py 是非受管匯出物，開啟對話框不提供它。
+        // 保留 py 會讓前端把 .py 當 XML 解析 → 空白畫布／解析失敗（計畫 §185 記載的風險）。
+        .add_filter("Cocoya Project", &["xml"])
         .set_parent(&window)
         .blocking_pick_file();
 

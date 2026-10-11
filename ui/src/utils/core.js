@@ -35,9 +35,9 @@
             }
             cleanLine = cleanLine.replace(invisibleRegex, '');
 
-            const idRegex = /  # ID:([^\s\n]+)/g;
-            const startRegex = /  # S_ID:([^\s\n]+)/g;
-            const endRegex = /  # E_ID:([^\s\n]+)/g;
+            const idRegex = /  # ID:\s*([^\s\n]+)/g;
+            const startRegex = /  # S_ID:\s*([^\s\n]+)/g;
+            const endRegex = /  # E_ID:\s*([^\s\n]+)/g;
 
             const idMatches = [...cleanLine.matchAll(idRegex)];
             for (const match of idMatches) {
@@ -58,6 +58,25 @@
             cleanLine = cleanLine.replace(endRegex, '');
 
             return { cleanLine: cleanLine.trimEnd(), ids, starts, ends };
+        },
+
+        /**
+         * ID 標記剝除 SSOT（解 D-2 #2/#5）：逐行走 extractIds，
+         * 與 renderer.js 預覽渲染同一函式，剝 S_ID/E_ID/舊式 # ID/隱形標記。
+         * 注意輸入必須是 triggerCodeUpdateSync 之後的原始碼。
+         */
+        stripIdMarks: function(code) {
+            try {
+                if (typeof this.extractIds === 'function') {
+                    return String(code == null ? '' : code).split('\n')
+                        .map((line) => this.extractIds(line).cleanLine)
+                        .join('\n');
+                }
+            } catch (e) {}
+            // 降級：extractIds 不可用時走三正則（與 extractIds 同語意）
+            return String(code == null ? '' : code)
+                .replace(/ {2}# (?:S_ID|E_ID|ID):\s*[^\s\n]+/g, '')
+                .replace(/\u0001ID:.*?\u0002/g, '');
         },
 
         /**

@@ -1,7 +1,8 @@
 # 純文字模式 + 內建編輯器 — 設計與執行計畫
 
 **建立日期**：2026-10-05
-**狀態**：**A/B/C/D-1 已實作完成（2026-10-10）；D-2+（實機驗證等）待辦**
+**狀態**：**A/B/C/D-1/D-2 已實作完成（2026-10-11 實測通過）；D-3 前提消失已結案。**
+程式設計實驗室功能收尾（後續 `.py` 受管化屬 Layer B 未來升級，見 §11.2）
 **關聯**：與「TinkerCAD 式單向轉換」需求綁定
 
 > ## ✅ 決策紀錄（2026-10-06 使用者拍板）
@@ -299,12 +300,32 @@ C-3 寫入端已分叉（產出 `code/isTextMode`、無 `xml`），但 `consumeR
 
 ### 📝 D-2+ 待辦
 
-- [ ] D-2：實機驗證（切換/存檔/開檔三分叉 + 語系切換快照還原）＋ **版面重構回歸**：
-  積木模式（toolbar 全寬不再換行、panel 拖曳、terminal 拖曳/收合/▲ 把手、minimap 位置）、
-  文字模式（編輯器全寬、codeHeader 標題切換、收合鈕/✕ 已隱藏）、
-  VSIX（terminal 與 ▲ 把手隱藏、無文字模式鈕）、三主題、窄視窗 media query。
-- [ ] D-3：`.py` 專案「開新專案」語意（副檔名切換後 resetWorkspace 路徑）
-- [ ] VSIX `handleOpenFile` 保持 `['xml']` filter（**刻意不加 py** —— VSIX 無文字編輯能力，不提供打不開的路徑）
+### ✅ D-2（實機驗證＋版面重構回歸）— 已完成（2026-10-11 實測通過）
+
+- [x] 實機驗證：切換鈕進入/退出實驗室（圖示 X ↔ code、tooltip 對稱）、實驗室中存檔匯出 `.py`、
+  另存隱藏、語系主題切換兩邊都還原、實驗室中按開檔/開新/範例/回首頁正確還原積木。
+- [x] 實機回報修正 4 項（同日收斂）：#1 切換鈕圖示依模式切換、#3 高亮層縮排改掛 block 級
+  `.editor-highlight`（inline 的 left padding 只有首行生效，第 2 行起與行號欄重疊）、
+  #6 存檔鈕 tooltip 不再被空 hint 清空、檔案作業護欄路徑補 `syncLabChromeTips` 還原。
+- [x] 版面重構回歸：行號與第一個字緊貼（根因是 `.ln` 缺 `box-sizing`，`width:100%` 在
+  content-box 下不含 padding、`padding-right` 被 `overflow:hidden` 裁掉 → 零間距）；
+  「縮排：」標籤在實驗室中改語意為「Tab：」（新增 `TLB_INDENT_LAB`，退出還原）。
+- [x] 死碼清理：舊不可逆模型的 `TLB_TEXT_MODE_TIP`／`TLB_TEXT_MODE_CONFIRM` 兩鍵刪除
+  （後者已無任何程式引用；前者文案「不可逆，積木將無法恢復」是假訊息）。
+
+### ✅ D-3（`.py` 專案「開新專案」語意）— 前提消失，整項結案（2026-10-11）
+
+實驗室模型定案「**cocoya 不管理 `.py`**」（§11.1）後，`.py` 是非受管匯出物、不存在
+「`.py` 專案」這個概念 → 副檔名切換後 `resetWorkspace` 的路徑問題不再有觸發情境，
+**D-3 隨之失效，不實作**。
+
+連帶修正：`openfile.rs` 的開啟對話框由 `["xml", "py"]` 收斂為 `["xml"]`。保留 `py` 會讓
+前端 `loadWorkspace`（實驗室模型下已無 py 分叉，一律當 XML 載入）把 `.py` 當 XML 解析
+→ **空白畫布且無任何錯誤訊息**（§185 記載的風險）。`resetWorkspace` 開頭既有的
+「若在實驗室先 `restoreBlockUiOnly`」護欄保留不動。
+
+- [x] VSIX `handleOpenFile` 保持 `['xml']` filter（**刻意不加 py** —— VSIX 無文字編輯能力，
+  不提供打不開的路徑）→ 已實查 `src/handlers/fileOps.ts` 三處 filter 皆為 `['xml']`，符合決策，維持不改。
 
 
 ---

@@ -33,6 +33,7 @@
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
     font-size: calc(13px * var(--fs-e));
     line-height: 1.5;
+    --ed-size: calc(13px * var(--fs-e));
 }
 
 /* 兩層絕對疊合、樣式必須完全一致（對齊關鍵） */
@@ -78,6 +79,47 @@
     background: transparent;
     color: transparent;          /* 文字交給下層 pre 顯示 */
     caret-color: var(--editor-fg, #333333);
+}
+
+/* 行號欄：左側固定寬度、pointer-events 拒絕、文字層僅在離它 36px 後對齊 */
+#codeEditor .editor-gutter {
+    position: absolute;
+    left: 0;
+    top: 0;
+    padding-top: 4px;           /* 與文字層 padding: 4px 8px 的頂距對齊（行號 1:1 對齊第一行文字） */
+    width: 36px;
+    height: 100%;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+#codeEditor .editor-gutter .ln {
+    display: block;
+    width: 100%;
+    text-align: right;
+    padding-right: 10px;
+    /* ⚠ box-sizing 必須是 border-box（2026-10-11 實機回報 #1）：
+       預設 content-box 會讓 width:100% 只涵蓋內容區，padding-right 被擠到 36px 欄寬之外、
+       再被父層 overflow:hidden 裁掉 → text-align:right 把行號右緣對到 x=36px，
+       正是文字層 padding-left 起點，行號與第一個字零間距緊貼。 */
+    box-sizing: border-box;
+    line-height: 1.5;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: inherit;
+    color: var(--tok-comment, #666666);
+    user-select: none;
+}
+
+/* 文字模式：行號欄存在，文字層必須向右縮排 36px，否則與行號欄重疊。
+   ⚠ padding-left 必須加在 block 級 pre（.editor-highlight）上——加在 inline code
+   只會位移第一行（inline 元素 left padding 僅首行生效），第 2 行起貼齊 8px
+   與 36px 行號欄重疊、且與 textarea 全行 36px 錯位（2026-10-11 實機回報 #3）。 */
+body.cocoya-text-mode #codeEditor .editor-highlight,
+body.cocoya-text-mode #codeEditor .editor-input {
+    padding-left: 36px;
 }
 
 /* 選取底色半透明：選中區仍看得見下層高亮字 */

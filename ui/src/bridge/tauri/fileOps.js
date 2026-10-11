@@ -27,6 +27,31 @@
 async function saveFile(command, data) {
     {
         const isSaveAs = (command === 'saveFileAs');
+        // D-2 #7（Q2=原生對話框）：實驗室文字模式存 .py —— data.code + isTextMode
+        // 即走 Rust .py 分叉（原生存檔對話框＋.py filter），否則原 XML 路。
+        if (data && data.isTextMode === true && typeof data.code === 'string') {
+            const pyParams = {
+                xml: '', saveAs: isSaveAs,
+                code: data.code, isTextMode: true,
+                fileName: data.fileName || null
+            };
+            if (data.tag === 'newProject') {
+                pyParams.dialogTitle = window.Blockly?.Msg['TITLE_NEW_PROJECT'] || '開新專案：選擇儲存位置';
+            }
+            try {
+                const filename = await this.tauriInvoke('save_file', pyParams);
+                // .py 非受管：不 dispatch saveCompleted（會污染積木錨定/dirty），
+                // 由 text_mode.saveLabCode 直接回傳檔名給呼叫端。
+                return filename;
+            } catch (e) {
+                if (e !== 'Canceled') {
+                    console.error('[Bridge] Save .py failed:', e);
+                    await this.alert((window.Blockly?.Msg['BKY_SAVE_FAILED'] || 'Save failed: ') + e);
+                }
+                // Q2 語意：取消／失敗時拋出，讓 exitLab 三鈕的 save 分支視為取消（留在實驗室）
+                throw e;
+            }
+        }
         // 2026-10-10 實驗室模型：.py 由前端 exportPy（blob 下載）匯出，非受管；
         // 此處一律 Cocoya XML（文字模式的存檔已在 base.js 攔截，不會到這裡）。
         let xml = data.xml || this._getCurrentXml();

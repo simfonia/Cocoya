@@ -71,13 +71,72 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
 
     /**
      * 設定儲存按鈕啟用狀態 (由 Persistence 呼叫)
+     * D-2 #6（2026-10-11 實機回報）：hint 為空時不再直接寫空字串清空 tooltip
+     * （舊碼 setSaveButtonState(true,'') 會讓 title 永久變空，applyI18n 只在啟動跑一次），
+     * 改交給 syncLabChromeTips 依模式還原正確文案（實驗室=.py 提示；積木=儲存專案）。
      */
     setSaveButtonState: function(enabled, hint = '') {
         const saveBtn = document.getElementById('btn-save');
         if (saveBtn) {
             saveBtn.disabled = !enabled;
             saveBtn.style.opacity = enabled ? '1' : '0.5';
-            saveBtn.setAttribute('title', hint);
+            if (hint) {
+                saveBtn.setAttribute('title', hint);
+            } else if (typeof this.syncLabChromeTips === 'function') {
+                this.syncLabChromeTips();
+            }
+        }
+    },
+
+    /**
+     * 同步實驗室 tooltip（D-2 #1/#7）：依 isTextMode 切換
+     * #btn-text-mode 與 #btn-save 的 title。
+     * 注意必須在 applyI18n 之後呼叫；applyI18n 只掃 %{BKY_} 佔位符，
+     * 執行期寫入的真值不會被覆蓋。
+     */
+    syncLabChromeTips: function() {
+        if (typeof Blockly === 'undefined') return;
+        let inLab = false;
+        try {
+            inLab = !!(window.CocoyaTextMode && typeof window.CocoyaTextMode.isTextMode === 'function' &&
+                window.CocoyaTextMode.isTextMode());
+        } catch (e) {}
+        const modeBtn = document.getElementById('btn-text-mode');
+        if (modeBtn) {
+            const key = inLab ? 'TLB_TEXT_MODE_EXIT_TIP' : 'TLB_TEXT_MODE_ENTER_TIP';
+            // 舊不可逆模型的 TLB_TEXT_MODE_TIP（「積木將無法恢復」）已刪除 —— 實驗室模型下
+            // 積木會被保留，該文案是錯的，留作 fallback 只會在 ENTER/EXIT_TIP 遺失時顯示假訊息。
+            const tip = Blockly.Msg[key] || '';
+            if (tip) modeBtn.setAttribute('title', tip);
+            // D-2 #1（2026-10-11 實機回報）：實驗室中切換鈕圖示換 X（cancel），
+            // 退出還原 code 圖示 —— 讓「已在實驗室、按此退出」一眼可辨。
+            const img = modeBtn.querySelector('img');
+            if (img) {
+                const target = inLab ? 'src/icons/cancel_24dp_FE2F89.png'
+                                     : 'src/icons/code_24dp_FE2F89.png';
+                if (img.getAttribute('src') !== target) img.setAttribute('src', target);
+            }
+        }
+        // D-2 #9（2026-10-11 實機回報）：縮排欄位標籤依模式切換語意。
+        // 實驗室中是「Tab 鍵會插入幾格」→ 標 Tab：；積木模式是「產生碼的縮排寬」→ 標 縮排：。
+        const indentLabel = document.getElementById('indent-label');
+        if (indentLabel) {
+            const lk = inLab ? 'TLB_INDENT_LAB' : 'TLB_INDENT';
+            const lab = Blockly.Msg[lk] || Blockly.Msg['TLB_INDENT'] || '';
+            if (lab) indentLabel.textContent = lab;
+        }
+        const saveBtn = document.getElementById('btn-save');
+        if (saveBtn) {
+            if (inLab) {
+                // 實驗室存檔＝存 .py（D-2 #7）；title 直設保證進場即正確（#6：不等 hover）
+                const tip = Blockly.Msg['TLB_SAVE_PY_TIP'] || '儲存 py 檔';
+                saveBtn.setAttribute('data-lab-tip', tip);
+                saveBtn.setAttribute('title', tip);
+            } else {
+                saveBtn.removeAttribute('data-lab-tip');
+                // D-2 #6：積木模式還原 i18n 預設（存檔後 setSaveButtonState(true,'') 不再清空）
+                saveBtn.setAttribute('title', Blockly.Msg['TLB_SAVE'] || '儲存專案');
+            }
         }
     },
 
@@ -192,6 +251,9 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                     }
                 };
             }
+            // D-2 #1：初始化完成後同步一次實驗室 tooltip（applyI18n 之後，
+            // 積木模式顯示進入文案；進/退場由 enterLab/exitLab 內重呼）。
+            try { if (typeof self.syncLabChromeTips === 'function') self.syncLabChromeTips(); } catch (e) {}
 
             // 2026-10-10（Editor C-1）：純文字模式只在 Tauri 開放。
             // VSIX 直接用 VS Code 開 .py，連按鈕都不渲染（與 Plotter 共用同一條判斷）。
@@ -272,12 +334,15 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                 };
 
                 // 3. 若需要 XML (檔案操作)
-                // 2026-10-10 實驗室模型：文字模式中「存檔」＝匯出 .py（blob 下載，非受管），
-                // 不走後端 saveFile；「另存」在實驗室中由 CSS 隱藏。積木模式維持原 XML 路。
+                // 2026-10-11 D-2 #7（Q2=原生對話框）：文字模式「存檔」＝saveLabCode
+                // （Tauri 原生 .py 對話框，非受管）；無 sendWithResult（VSIX）時
+                // saveLabCode 內部 fallback exportPy blob。「另存」在實驗室中由 CSS 隱藏。
                 const inTextMode = !!(window.CocoyaTextMode && typeof window.CocoyaTextMode.isTextMode === 'function' &&
                     window.CocoyaTextMode.isTextMode());
                 if (inTextMode && cmd === 'saveFile') {
-                    if (window.CocoyaTextMode && typeof window.CocoyaTextMode.exportPy === 'function') {
+                    if (window.CocoyaTextMode && typeof window.CocoyaTextMode.saveLabCode === 'function') {
+                        await window.CocoyaTextMode.saveLabCode();
+                    } else if (window.CocoyaTextMode && typeof window.CocoyaTextMode.exportPy === 'function') {
                         window.CocoyaTextMode.exportPy();
                     }
                     return;
@@ -858,7 +923,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                     }
                 } catch (e) {}
                 // 徹底清理：濾掉行尾 ID 註解與運算式隱形標記
-                const cleanCode = rawCode.replace(/ {2}# ID:.*$/mg, '').replace(/\u0001ID:.*?\u0002/g, '');
+                const cleanCode = ((window.CocoyaUtils && typeof window.CocoyaUtils.stripIdMarks === 'function') ? window.CocoyaUtils.stripIdMarks(rawCode) : rawCode);
                 
                 navigator.clipboard.writeText(cleanCode).then(() => {
                     if (self.flashButton) self.flashButton('btn-copy-code', '#c8e6c9'); // 綠色閃爍表示成功
