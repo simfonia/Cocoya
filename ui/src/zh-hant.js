@@ -170,6 +170,21 @@
     "TLB_DRAG_RESIZE_HEIGHT": "拖動以調整高度",
     "TLB_CLEAR_CONSOLE": "清除終端機",
     "TLB_CLOSE_PANEL": "關閉面板",
+
+    // 序列繪圖（Plotter，2026-10-11 移植自 CodeBridge）
+    "PLOT_OPEN": "開啟示波器",
+    "PLOT_CLOSE": "關閉示波器",
+    "PLOT_PAUSE": "暫停",
+    "PLOT_RESUME": "繼續",
+    "PLOT_CLEAR": "清除",
+    "PLOT_WINDOW": "時間窗",
+    "PLOT_WAITING": "等待資料…",
+    "PLOT_HEX_HINT": "HEX 模式下不繪圖，請關閉 HEX",
+    "PLOT_PAUSED_UPLOAD": "上傳中暫停，稍後自動續畫",
+    "PLOT_RESIZE_HINT": "拖曳可調整左右欄比例",
+    "PLOT_CANVAS_LABEL": "序列資料波形圖",
+    "PLOT_LEGEND_LABEL": "波形圖圖例（點擊可顯示或隱藏該 series）",
+
     "TLB_DRAG_RESIZE": "拖動以調整寬度",
     "TLB_COPY_CODE": "複製程式碼",
     "TLB_TEXT_MODE_ENTER_TIP": "進入程式碼實驗室\n退出後，積木保持原狀。",

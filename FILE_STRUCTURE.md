@@ -174,6 +174,13 @@ C:\Workspace\cocoya\
 │   │   │   │   ├── text_mode.js        # [2026-10-10 C-2/C-3/D-1] 模式切換與開檔 SSOT（單向不可逆；三按鈕→新鮮碼→二次清 ID→dispose→body class；parse/ensurePlatformLine 檔頭平台行；detectContentKind 內容偵測＋openPyFile 開檔分叉含 VSIX 閘門/缺平台行 QuickPick；掛 globalThis.CocoyaTextMode）
 │   │   │   │   ├── editor_contract.test.mjs # [2026-10-10 實驗室模型] 純文字模式契約 13 測（detectContentKind 純函式零件庫／stripIdComments／不變式 A 永不 dispose／B 進入以乾淨預覽碼為種子、退出以 seedCode 判 dirty／C exportPy blob 下載／D controller exitLab+base.js exportPy+persistence 三護欄／VSIX caps 顯隱／escape／版面重構；變異測試三種皆驗紅）
 │   │   │   │   └── editor.css          # 疊層佈局＋8 token（--editor-bg/fg／--tok-*；三主題 cssVars 同步，由 theme_contract 守門）
+│   │   │   ├── plot/       # [2026-10-11] 序列繪圖 Plotter（移植自 CodeBridge ui/src/lib/plot；零新增相依、自繪 Canvas；計畫 docs/plan/Plotter移植計畫.md）
+│   │   │   │   ├── plot-parse.js        # 文字行 → 資料點（純函式；垃圾行安靜忽略／混合行保留無效欄位為 null／布林 on/off；掛 globalThis.CocoyaPlotParse）
+│   │   │   │   ├── plot-store.js        # ring buffer＋時間窗切片＋min/max 對包絡下抽樣＋Y 軸範圍（純資料結構；掛 globalThis.CocoyaPlotStore）
+│   │   │   │   ├── plot-render.js       # Canvas 自繪（格線／座標軸／折線／斷線／DPR；刻意命名 readPixelRatio 避開 devicePixelRatio 提升陷阱；掛 globalThis.CocoyaPlotRender）
+│   │   │   │   ├── plot-panel.js        # 面板控制器（左右分欄開闔／rAF 合併重繪／圖例／分隔條拖曳／窄視窗上下堆疊；含 Cocoya 適配層 monitor/terminalPanel/text；掛 globalThis.CocoyaPlotPanel）
+│   │   │   │   ├── plot_parse.test.mjs  # parser 契約 16 測（格式解析／垃圾行忽略／混合行／邊界值／掃描型守門：index.html 載入順序與命名空間）
+│   │   │   │   └── plot_store.test.mjs  # store 契約 21 測（ring buffer／切片／斷線點／Y 軸下限恆含 0／下抽樣保尖峰／時間軸對齊）
 │   │   │   ├── theme_manager/ # [NEW] 主題管理模組（registry + 模式切換 + 系統深淺色偵測）
 │   │   │   │   ├── theme_manager.js # 核心：registerTheme/getThemes/setMode/getMode/apply/startWatching (window.CocoyaTheme)
 │   │   │   │   ├── theme_contract.test.mjs # [2026-10-01／2026-10-02] 主題契約守門（9 測：cssVars 鍵集合三主題一致／無重複／鍵名格式、msgColours 選配語意；[2026-10-02] 增守門 6「vscode 深色選擇器必須帶 :not(.cocoya-light-mode)」＋守門 7「全專案 CSS 結構健全性（註解不得提前閉合、大括號平衡）」——兩者皆掃描 ui/src 下所有 .css 且含自檢；守住 P2-16、VS Code 深色越權、CSS 語法壞掉三項不變式，npm run test:theme）

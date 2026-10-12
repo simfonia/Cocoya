@@ -71,7 +71,15 @@
 - [ ] **容器化訓練腳本**：基於 DGX 鏡像（NGC nvcr.io/nvidia/pytorch ARM64）的訓練容器與模板
 
 ### 長期優化（待辦）
-- [ ] **Plotter（序列繪圖）移植**：CodeBridge `ui/src/lib/plot/` 4 檔 55 KB → Cocoya `ui/src/modules/plot/`。零新增相依（自繪 Canvas，非 Chart.js）、零 Rust。唯一需改的是資料源（`CodeBridgeSerialMonitor` → Cocoya `UI.appendTerminal`）。**執行計畫見 `docs/plan/Plotter移植計畫.md`**（階段 A 純搬移／B 資料接線／C UI+主題+i18n／D 測試）。✅ **決策（2026-10-06）：VSIX 先不支援**（序列埠資料走 VS Code 原生終端、webview 無資料源），UI 依 `bridge.capabilities` 隱藏 plot 按鈕 —— **與 Editor 計畫共用同一條 caps 判斷**
+- [x] **Plotter（序列繪圖）移植**：CodeBridge `ui/src/lib/plot/` 4 檔 55 KB → Cocoya `ui/src/modules/plot/`。零新增相依（自繪 Canvas，非 Chart.js）、零 Rust。唯一需改的是資料源（`CodeBridgeSerialMonitor` → Cocoya `UI.appendTerminal`）。**執行計畫見 `docs/plan/Plotter移植計畫.md`**（階段 A 純搬移／B 資料接線／C UI+主題+i18n／D 測試）。✅ **決策（2026-10-06）：VSIX 先不支援**（序列埠資料走 VS Code 原生終端、webview 無資料源），UI 依 `bridge.capabilities` 隱藏 plot 按鈕 —— **與 Editor 計畫共用同一條 caps 判斷**
+  - **進度（2026-10-11）：階段 A~D 全數完成**，`test:ui` **525/525**（+39：`plot_parse` 18＋`plot_store` 21）、`lint:ui` 0 error、`vite build` PASS、`eol:check` 全 CRLF。詳見 `log/work/2026-10-11.md`（Plotter 段落）。
+  - **開關按鈕為 icon-only（`wave-sine.png`）**，狀態由三處冗餘編碼：`.is-active` 粉 ring（背景透明、`inset 0 0 0 1px`）；img `opacity` 0.8↔1（未啟用值由 index.html inline 給）；`title`（PLOT_OPEN↔CLOSE）＋`aria-pressed`。
+  - **使用者 2026-10-11 把 png 改粉（`#FE2F89`，RGB 254,47,137）後**：刪掉 `filter: brightness(0) invert(1)`（會把粉 icon 轉青、品牌識別消失；且粉落粉底對比不足）；改為「透明底 + 粉 ring + img opacity 1」—— 未啟用 `opacity 0.8` 壓在最深 header `#252526` 上（**4.36:1**）；啟用**不加深底色**（粉 on `#3e3e42` 僅 **3.03:1**，不及 AA 4.5:1）—— 用 ring + opacity 三處編碼表達狀態。已補 `log/work/2026-10-11.md`（Plotter 段落）說明。
+  - **⚠️ 計畫 §3 的假設經查證不成立**：原計畫寫「在 `bridge/tauri/serial.js` 的序列埠資料路徑加 hook」，但 Cocoya 的 `python-log` 是**單一事件通道**（序列埠／deploy／run_python／訓練／燒錄全走它，payload 不帶來源），而 `serial.js` 只有 invoke 端、資料根本不過那裡。**實際判據改用 `serial-monitor-state` 的 `active`** 閘門。
+  - **⚠️ 計畫 §5「配色必須 token 化」的前提不成立**：Cocoya 終端機面板是三主題共用一組寫死深色（`#terminalArea{background:#1e1e1e}`），照計畫 token 化會造成「淺色主題下終端機深、繪圖淺」。故 CSS 沿用終端機深色系，已在 `style.css` 與工作日誌記錄此偏離理由。
+  - **兩個搬運陷阱（重跑時會遇到）**：① Rust `stream.rs` 以 **30ms 聚合**發 payload → 餵給 `parseLine` 前必須 `split('\n')`，否則高頻輸出時整批資料靜默消失；② vm 載入 IIFE 必須用 `runInThisContext`（`runInNewContext` 的跨 realm 會讓 `deepStrictEqual` 全數假失敗）。
+  - **已知範圍限制**：PC 端 Python 以 `serial.Serial()` 直開 OS 埠印的感測值走 `run_python` stdout，在 `active` 閘門下**不會**被繪圖（僅 MCU 經 monitor 的資料會）。
+  - **實機待驗**：序列埠印 `23.5` 出折線、混流文字行不毀圖、自動撐高/還原、分隔條拖曳、窄視窗上下堆疊、數百 Hz 下 Blockly 不卡頓、VSIX 隱藏按鈕。
 - [ ] **純文字模式 ＋ 內建編輯器（TinkerCAD 式單向轉換）**：轉換後隱藏積木區、保留程式碼區（升級為可編輯）與虛擬終端，**不可逆**。採 `<pre>` 疊層高亮 ＋ `<textarea>` 輸入，**約 500 行、零新增相依**（不引入 CodeMirror/Monaco，遵循專案規範）。**執行計畫見 `docs/plan/Editor純文字模式計畫.md`**（階段 A 編輯器元件＋Python tokenizer／B 整合 codeArea／C 模式切換＋存檔／D 邊界守門）。✅ **決策（2026-10-06）：①存檔改 `.py` ②VSIX 先不支援**（VS Code 已有文字編輯器，直接開 `.py` 即可）
   - **進度（2026-10-06）**：階段 A ✅（三檔＋highlight 15 測＋三主題 8 token＋接線；變異測試驗守門有效）、階段 B ✅（`#codeEditor` 容器入 `#codeArea`，唯讀預覽零變動，build/lint/451 測全綠）。**待辦：C（caps 閘門＋確認對話框＋Blockly.dispose＋備份＋存 .py）、D（editor_contract 守門）**。詳見 `log/work/2026-10-06.md`
 - [ ] **`.py` 匯入（實驗室新增「匯入」按鈕，不走主 toolbar）**（2026-10-11 決策，backlog）

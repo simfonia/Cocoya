@@ -1723,6 +1723,215 @@ body.cocoya-dark-mode .btn-close {
     background: #555;
 }
 
+/* ===== 序列繪圖（Plotter，2026-10-11 移植自 CodeBridge） =====
+ * `#terminalBody` 是分欄容器：左＝Monitor 文字、右＝Plotter 波形。
+ *
+ * 顏色沿用終端機既有的深色系（#1e1e1e 家族），**不引入新色碼也不走主題 token**：
+ * Cocoya 的終端機面板本身就是三主題共用一組固定深色（`#terminalArea` 寫死
+ * `background:#1e1e1e`，見上方區塊），繪圖面板跟著走才不會出現
+ * 「淺色主題下終端機深、繪圖淺」的打架。計畫 §5「必須 token 化」的前提
+ * （終端機已 token 化）在本專案不成立，故記錄此偏離。
+ *
+ * 唯一例外是 series 折線色：由 plot-render.js 的 SERIES_COLORS 於執行期指派
+ * （自繪 Canvas，CSS 管不到），挑選原則是在深色底上有足夠對比且明度交錯
+ * （色覺異常下仍可區分）。 */
+#terminalBody {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    min-height: 0;
+    /* 左欄寬度：預設 50/50，分隔條拖曳時由 plot-panel.js 改寫成 px。
+       用百分比當預設值，開啟繪圖時不需要額外寫任何 style。 */
+    --plot-left-width: 50%;
+}
+
+#terminalTextPane {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#plotDivider {
+    width: 5px;
+    flex: 0 0 5px;
+    cursor: col-resize;
+    background: #3c3c3c;
+    /* 命中區域要夠大：5px 對滑鼠來說偏細，但拉太寬會吃掉左欄空間。 */
+    user-select: none;
+}
+
+#plotDivider:hover,
+#plotDivider[data-dragging="true"] {
+    background: #35c7d4;
+}
+
+#plotPane {
+    /* 預設關閉。開啟時由 plot-panel.js 設為 flex 並加上 .is-split。 */
+    display: none;
+    flex: 1 1 0;
+    min-width: 0;
+    flex-direction: column;
+    min-height: 0;
+    border-left: 1px solid #3c3c3c;
+}
+
+#terminalBody.is-split #terminalTextPane {
+    /* 固定 basis 讓 CSS 變數（預設 50%，拖曳後為 px）成為唯一真相來源；
+       `flex-shrink: 0` 保證拖曳值不會被瀏覽器壓回去。 */
+    flex: 0 0 var(--plot-left-width);
+    width: var(--plot-left-width);
+}
+
+#terminalBody.is-stacked {
+    /* 視窗太窄時兩欄各剩一點都不可用 → 改上下堆疊（繪圖在上）。 */
+    flex-direction: column-reverse;
+}
+
+#terminalBody.is-stacked #plotDivider {
+    display: none;
+}
+
+#terminalBody.is-stacked #plotPane {
+    flex: 0 0 50%;
+    width: 100%;
+    border-left: none;
+    border-bottom: 1px solid #3c3c3c;
+}
+
+#terminalBody.is-stacked #terminalTextPane {
+    flex: 1 1 auto;
+    width: 100%;
+}
+
+#plotToolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 11px;
+}
+
+#plotWindowSelect {
+    background: #2a2a2a;
+    color: #e0e0e0;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+    font-size: 11px;
+    padding: 1px 4px;
+}
+
+#plotCanvasWrap {
+    flex: 1;
+    min-height: 0;
+    /* 繪圖區背景刻意比面板深一階，讓格線與曲線有對比。 */
+    background: #181818;
+}
+
+#plotCanvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+#plotLegend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 4px 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 11px;
+    max-height: 44px;
+    overflow: auto;
+}
+
+.plot-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 3px;
+    padding: 1px 6px;
+    color: #e0e0e0;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+.plot-legend-swatch {
+    width: 9px;
+    height: 9px;
+    border-radius: 2px;
+    /* 顏色由 plot-render.js 於執行期指派（依 series 登錄順序）。 */
+    background: #888;
+}
+
+/* 隱藏的 series：色塊與文字都要變淡，不能只靠顏色消失表示。 */
+.plot-legend-item.is-off {
+    opacity: 0.4;
+    text-decoration: line-through;
+}
+
+#plot-status {
+    font-size: 11px;
+    color: #8a8a8a;
+    margin-left: auto;
+}
+
+#plot-status[data-tone="warn"] {
+    color: #f0d98c;
+}
+
+/* 繪圖開關（#btn-plotter）與暫停鈕（#btn-plot-pause）的啟用樣式。
+ * 特異性與 .terminal-tool-btn:hover 相同，故必須排在該規則之後；
+ * 顏色走品牌色（與 #terminal-resizer:hover、#btn-close-terminal span 同一支），
+ * 三主題下都看得到對比。 */
+.serial-toggle-btn.is-active {
+    background: color-mix(in srgb, #FE2F89 22%, transparent);
+    border-color: #FE2F89;
+    box-shadow: inset 0 0 0 1px #FE2F89;
+    color: #FE2F89;
+}
+
+.serial-toggle-btn.is-paused {
+    background: color-mix(in srgb, #d98324 24%, transparent);
+    border-color: #d98324;
+    box-shadow: inset 0 0 0 1px #d98324;
+    color: #f0a35e;
+}
+
+/* 繪圖開關（icon-only）：啟用時加品牌粉 ring，圖示全亮。
+ *
+ * **為何啟用態不再用品牌粉底＋反白**：wave-sine.png 本身已是品牌粉 `#FE2F89`
+ * （2026-10-11 使用者改圖；解析畫素確認 RGB = 254,47,137，與專案主色同值）。
+ * 若沿用「粉底 + `filter: brightness(0) invert(1)`」：
+ *   ① `invert(1)` 會把粉 icon 轉成**青色**，品牌識別整個消失；
+ *   ② 粉 icon 落在粉底上對比不足，圖示會「融進」底色。
+ *
+ * **為何底色保持透明而不是加深**（`#3e3e42` 曾經試過，已改掉）：
+ * 實測 WCAG 對比度（icon 對底色）：
+ *   未啟用  粉 on header `#252526` = 4.36:1
+ *   active  粉 on `#3e3e42`      = 3.03:1  ← **低於 AA 的 4.5:1**
+ * 加深底色反而**降低**對比（底色越亮越吃對比）。故 active 態底色留透明，
+ * 讓 icon 繼續壓在最深的 header 上，只靠「ring + opacity」表達狀態。
+ *
+ * 三處編碼（不單靠顏色）：
+ *   ① 品牌粉 `inset` ring（啟用時出現）
+ *   ② img `opacity` 0.8 → 1（未啟用值由 index.html inline style 給）
+ *   ③ `title` 文案（PLOT_OPEN ↔ PLOT_CLOSE）與 `aria-pressed`
+ *
+ * `inset 0 0 0 1px` 而非 `border`：border 會改變按鈕尺寸（4 → 5px），
+ * 讓它在 flex 排列的相鄰 icon 鈕中撐開一個像素，視覺上「抖」一下。 */
+.terminal-tool-btn.is-active {
+    box-shadow: inset 0 0 0 1px #FE2F89;
+}
+
+.terminal-tool-btn.is-active img {
+    opacity: 1;
+}
+
 /* --- 終端機高度調整棒 (對齊 #panel-resizer 風格) --- */
 #terminal-resizer {
     position: relative; /* 作為 #terminal-toggle 的定位基準 */

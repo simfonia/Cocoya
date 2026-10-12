@@ -251,6 +251,41 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                     }
                 };
             }
+
+            // 2026-10-11（Plotter C-3）：序列繪圖開關的平台閘門。
+            // 與 Editor 共用 `caps.hasTerminal`（不是另立 supportsPlot）：
+            // Plotter 的資料源就是序列埠行，而 VSIX 的序列埠輸出走 VS Code 原生終端機、
+            // webview 完全拿不到資料行 —— 沒有資料源就無從繪圖。
+            // 用同一條判斷可避免「plot 藏了但 editor 還在」的不一致。
+            // 決策依據：docs/plan/Plotter移植計畫.md §7。
+            const plotterBtn = document.getElementById('btn-plotter');
+            if (plotterBtn) {
+                plotterBtn.style.display = caps.hasTerminal ? 'flex' : 'none';
+                plotterBtn.onclick = () => {
+                    const panel = window.CocoyaPlotPanel;
+                    if (panel && typeof panel.toggle === 'function') panel.toggle();
+                };
+            }
+
+            // 2026-10-11（Plotter C-3）：繪圖面板自身的控制項（暫停／清除／時間窗）。
+            // 獨立於開關按鈕的閘門：這兩個鈕位於 #plotPane 內，而 #plotPane 預設
+            // `display:none`（只有開啟繪圖才顯示），VSIX 下永遠看不到 ——
+            // 不額外隱藏也不會露出半套 UI。
+            if (caps.hasTerminal && window.CocoyaPlotPanel) {
+                const plotPanel = window.CocoyaPlotPanel;
+                // init 會渲染時間窗選項、綁定分隔條拖曳與 ResizeObserver，
+                // 並把按鈕的啟用 class／文案同步到實際狀態。
+                if (typeof plotPanel.init === 'function') plotPanel.init();
+
+                const plotPauseBtn = document.getElementById('btn-plot-pause');
+                if (plotPauseBtn && typeof plotPanel.togglePause === 'function') {
+                    plotPauseBtn.onclick = () => plotPanel.togglePause();
+                }
+                const plotClearBtn = document.getElementById('btn-plot-clear');
+                if (plotClearBtn && typeof plotPanel.clear === 'function') {
+                    plotClearBtn.onclick = () => plotPanel.clear();
+                }
+            }
             // D-2 #1：初始化完成後同步一次實驗室 tooltip（applyI18n 之後，
             // 積木模式顯示進入文案；進/退場由 enterLab/exitLab 內重呼）。
             try { if (typeof self.syncLabChromeTips === 'function') self.syncLabChromeTips(); } catch (e) {}

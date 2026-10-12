@@ -204,6 +204,36 @@ export class BridgeTauri extends BaseBridge {
                     }
                 }
 
+                // 2026-10-11（Plotter 階段 B）：序列資料餵給繪圖面板。
+                //
+                // **為何閘門在 monitor active**：`python-log` 是**單一事件通道**，
+                // 序列埠資料（monitor.rs）、deploy 輸出（deploy.rs）、
+                // PC Python stdout（python.rs run_python）、訓練日誌、
+                // 韌體燒錄（firmware.rs）**全部走這一個事件名**。
+                // 若在此無條件餵給 plot，訓練日誌的數字行會被當成感測值畫進圖表 ——
+                // 這正是移植計畫 §5 列的「誤食訓練日誌」風險，對策是
+                // 「只在序列埠路徑加 hook，不要全域攔截」。
+                //
+                // `active` 來自 Rust 的 `serial-monitor-state` snapshot
+                // （generation/revision 權威，見下方 _applySerialMonitorSnapshot），
+                // 因此這個旗標**只在真的持有序列埠連線時為真**：
+                // 訓練／燒錄／PC 程式執行期間 monitor 已由 stop_python 釋放 → 不會誤食。
+                //
+                // 已知範圍限制（記錄為 follow-up，非本次範圍）：PC 端 Python 若以
+                // `serial.Serial()` 直開 OS 埠印感測值，其數字走 run_python 的 stdout，
+                // 在此旗標下**不會**被繪圖（見 docs/plan/Plotter移植計畫.md §3）。
+                if (this._serialMonitorActive && window.CocoyaPlotPanel
+                    && typeof window.CocoyaPlotPanel.handleDataLine === 'function') {
+                    // **必須逐行拆解**：Rust 的 `forward_stream_with_controls`
+                    // （src-tauri/src/commands/mcu/stream.rs）以 30ms 時間窗聚合，
+                    // 一個 payload 可能含多行 MCU 輸出。而 plot-parse 的 parseLine
+                    // 只處理單行（它會把 `\n` 留在欄位裡 → 整行判為垃圾行，
+                    // 高頻輸出時整批資料會**靜默消失**）。
+                    String(payload).split('\n').forEach(function(line) {
+                        window.CocoyaPlotPanel.handleDataLine(line);
+                    });
+                }
+
                 // 解析訓練結果 RESULT: {...} 格式（由 classifier_train.py 輸出）
                 // 注意：輸出可能以 \n 開頭，需用 includes + indexOf 定位
                 const text = payload || '';
@@ -299,6 +329,11 @@ export class BridgeTauri extends BaseBridge {
         if (generation < current.generation
             || (generation === current.generation && revision < current.revision)) return;
         this._serialMonitorSnapshot = { generation, revision };
+        // 2026-10-11（Plotter 階段 B）：序列埠是否真的持有連線。
+        // 這是 `python-log` 唯一可用的「這行是不是序列埠資料」判據 ——
+        // 該事件名同時承載 deploy／run_python／訓練／燒錄輸出，事件本身不帶來源。
+        // 只有舊 snapshot 會被上方拒絕，故旗標與 snapshot 同步更新，不會殘留舊值。
+        this._serialMonitorActive = !!snapshot.active;
         if (window.CocoyaUI && window.CocoyaUI.setSerialMonitorState) {
             window.CocoyaUI.setSerialMonitorState(snapshot);
         }

@@ -249,12 +249,55 @@
                     <button class="terminal-tool-btn" id="btn-clear-terminal" title="%{BKY_TLB_CLEAR_CONSOLE}">
                         <img src="src/icons/brush-3-ai-line_FE2F89.png" style="width: 16px; height: 16px;">
                     </button>
+                    <!-- 2026-10-11：序列繪圖開關（Plotter）。與序列監看共用同一條連線，
+                         開啟時下方面板垂直分成左右兩欄（左＝Monitor 文字、右＝波形）。
+                         僅 Tauri 支援：VSIX 的序列埠資料走 VS Code 原生終端機，
+                         webview 拿不到資料行，由 base.js 依 caps.hasTerminal 隱藏
+                         （與 Editor 的 supportsTextEditor 同一套機制）。
+                         **刻意 icon-only 且不含文字節點**（與相鄰 terminal icon 鈕同尺寸）：
+                         syncControls 只寫 title 與 class，不碰 textContent ——
+                         寫 textContent 會摧毀這個 img 節點（下次 init 按鈕就空了，
+                         且沒有任何錯誤訊息）。狀態由 .is-active 表達（見 style.css）。 -->
+                    <button class="terminal-tool-btn" id="btn-plotter"
+                            data-action="toggle-plotter" title="%{BKY_PLOT_OPEN}"
+                            aria-pressed="false">
+                        <img src="src/icons/wave-sine.png" style="width: 16px; height: 16px; opacity: 0.8;">
+                    </button>
                     <button class="terminal-tool-btn" id="btn-close-terminal" title="%{BKY_TLB_CLOSE_PANEL}">
                         <span style="font-size: calc(16px * var(--fs-e)); font-weight: bold;">×</span>
                     </button>
                 </div>
             </div>
-            <div id="terminalContent"></div>
+            <!-- ★ 分欄容器：左＝Monitor 文字，右＝Plotter 波形。
+                 刻意多包這一層：#terminalArea 已是 flex column，若直接把 #plotPane
+                 放進去會變成「標題 + 橫向雙欄 + 輸入行」錯位。這層把文字區綁成左欄。 -->
+            <div id="terminalBody">
+                <div id="terminalTextPane">
+                    <div id="terminalContent"></div>
+                </div>
+                <div id="plotDivider" role="separator" aria-orientation="vertical"
+                     title="%{BKY_PLOT_RESIZE_HINT}"></div>
+                <div id="plotPane">
+                    <div id="plotToolbar">
+                        <label class="serial-field" for="plotWindowSelect">
+                            <span>%{BKY_PLOT_WINDOW}</span>
+                            <select id="plotWindowSelect" title="%{BKY_PLOT_WINDOW}"></select>
+                        </label>
+                        <button class="terminal-tool-btn serial-toggle-btn" id="btn-plot-pause"
+                                data-action="plot-pause" title="%{BKY_PLOT_PAUSE}"
+                                aria-pressed="false">%{BKY_PLOT_PAUSE}</button>
+                        <button class="terminal-tool-btn serial-toggle-btn" id="btn-plot-clear"
+                                data-action="plot-clear" title="%{BKY_PLOT_CLEAR}">%{BKY_PLOT_CLEAR}</button>
+                        <span id="plot-status" data-tone="idle"></span>
+                    </div>
+                    <div id="plotCanvasWrap">
+                        <!-- aria-label 刻意用英文常值（同 #codeEditor）：applyI18n 只掃
+                             title 與 textContent，寫 %{BKY_} 會原樣殘留。 -->
+                        <canvas id="plotCanvas" aria-label="Serial data waveform chart"></canvas>
+                    </div>
+                    <div id="plotLegend" aria-label="Chart legend (click to show or hide a series)"></div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -357,6 +400,14 @@
     <script src="src/core/settings.js"></script>
 
     <script src="src/ui/terminal.js"></script>
+
+    <!-- 2026-10-11：序列繪圖（Plotter）。載入順序是契約 —— plot-panel 透過 window
+         讀取前三者，順序反了會取不到（ensureCore 回 false，繪圖按鈕按了沒反應）。
+         來源：CodeBridge ui/src/lib/plot（計畫見 docs/plan/Plotter移植計畫.md）。 -->
+    <script src="src/modules/plot/plot-parse.js"></script>
+    <script src="src/modules/plot/plot-store.js"></script>
+    <script src="src/modules/plot/plot-render.js"></script>
+    <script src="src/modules/plot/plot-panel.js"></script>
     <script src="src/ui/renderer.js"></script>
     <script src="src/ui/hardware.js"></script>
     <script src="src/ui/dialogs.js"></script>
