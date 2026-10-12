@@ -12,13 +12,11 @@
     <variable id="v_theta">theta_L</variable>
     <variable id="!Y4CW5i:vz`5,yqN=?MD">theta_R</variable>
   </variables>
-  <comment id="HAV33Wy@#]X8#+Us,njR" x="10" y="-150" w="590" h="143">使用MediaPipe偵測兩手肘彎曲角度，並傳給序列埠。
+  <comment id="HAV33Wy@#]X8#+Us,njR" x="10" y="-170" w="590" h="143">使用MediaPipe偵測兩手肘彎曲角度，並傳給序列埠。
 https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker
-12 14 16 影像右手肘角度; 11 13 15 影像左手肘角度
-記得修改 Serial port
-  
-  
-  
+12 14 16 影像右手肘角度; 11 13 15 影像左手肘角度。
+記得修改 COM port
+ 
   </comment>
   <block type="py_definition_zone" id="def_root" deletable="false" x="10" y="10">
     <statement name="DEFS">
@@ -32,7 +30,7 @@ https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker
                 <field name="BAUD">9600</field>
                 <value name="PORT">
                   <shadow type="py_text" id="port_name">
-                    <field name="TEXT">COM13</field>
+                    <field name="TEXT">COM3</field>
                   </shadow>
                 </value>
               </block>

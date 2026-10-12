@@ -245,7 +245,7 @@ test('D-2 #1：syncLabChromeTips 依模式切換 #btn-text-mode 圖示（實驗�
     const base = fs.readFileSync(path.join(uiDir, 'src', 'ui', 'base.js'), 'utf8');
     assert.match(base, /inLab \? 'src\/icons\/cancel_24dp_FE2F89\.png'/,
         '實驗室中切換鈕圖示必須換成 X（cancel）');
-    assert.match(base, /: 'src\/icons\/code_24dp_FE2F89\.png'/,
+    assert.match(base, /: 'src\/icons\/python_lab\.png'/,
         '積木模式必須還原 code 圖示');
     const tm = fs.readFileSync(path.join(here, 'text_mode.js'), 'utf8');
     // 判準必須落在真不變式：不只是「出現呼叫字面」，而是「經 feature-detect 後實際呼叫」，

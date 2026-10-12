@@ -113,7 +113,7 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             const img = modeBtn.querySelector('img');
             if (img) {
                 const target = inLab ? 'src/icons/cancel_24dp_FE2F89.png'
-                                     : 'src/icons/code_24dp_FE2F89.png';
+                                     : 'src/icons/python_lab.png';
                 if (img.getAttribute('src') !== target) img.setAttribute('src', target);
             }
         }

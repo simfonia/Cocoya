@@ -204,6 +204,23 @@ body.cocoya-dark-mode .blocklyTreeLabel {
     font-weight: 500 !important;
 }
 
+/* 修正深色主題下註解積木的顏色（原亮黃底白字不可讀） */
+body.cocoya-dark-mode .blocklyComment .blocklyTextarea {
+    background-color: #0a3b01 !important;
+    color: #d4d4d4 !important;
+    border-color: #028224 !important;
+}
+body.cocoya-dark-mode .blocklyCommentHighlight {
+    fill: #2d2d2d !important;
+    stroke: #444444 !important;
+}
+body.cocoya-dark-mode .blocklyCommentTopbarBackground {
+    fill: #028224 !important;
+}
+body.cocoya-dark-mode .blocklyComment .blocklyCommentPreview {
+    fill: #d4d4d4 !important;
+}
+
 /* 修正 Flyout (積木抽屜) 中的標籤文字與分隔線 */
 body.cocoya-dark-mode .blocklyFlyoutLabelText,
 body.cocoya-dark-mode .blocklyFlyoutLabelText {
@@ -291,7 +308,7 @@ body.cocoya-dark-mode .normal-icon:not([src*="python"]):not([src*="stop_24dp_EA3
     filter: invert(1) brightness(0.65);
 }
   /* toolbar 按鈕與首頁版本檢查的黑色圖示：深色下反白（排除 Python Logo、停止、執行按鈕與版本檢查的彩色狀態圖示、AI owl 彩色圖示） */
-  body.cocoya-dark-mode .toolbar-btn img:not([src*="python"]):not([src*="stop_24dp_EA3323"]):not([src*="run_blocks"]):not([src*="published_with_changes"]):not([src*="cloud_download"]):not([src*="owl"]),
+  body.cocoya-dark-mode .toolbar-btn img:not([src$="python.png"]):not([src$="python-black.png"]):not([src*="FE2F89"]):not([src*="stop_24dp_EA3323"]):not([src*="run_blocks"]):not([src*="published_with_changes"]):not([src*="cloud_download"]):not([src*="owl"]),
   body.cocoya-dark-mode #startup-home .startup-update-btn img:not([src*="75FB4C"]):not([src*="FE2F89"]),
   body.cocoya-dark-mode #startup-home .startup-update-btn img:not([src*="75FB4C"]):not([src*="FE2F89"]) {
       filter: invert(1) brightness(0.65);

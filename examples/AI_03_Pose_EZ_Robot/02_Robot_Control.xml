@@ -9,10 +9,10 @@
     <variable id="A~Py:;dx0|BWFf{WjO+?">theta_L</variable>
     <variable id="}?$T|{~YyGC8vkcfY?}D">theta_R</variable>
   </variables>
-  <comment id="K$_1J9]o9c,2E0dpZp8p" x="10" y="-170" w="553" h="141">使用Cytron maker pi RP2040 ，接收 Serial 傳來的數據控制 Geekservo 270
+  <comment id="K$_1J9]o9c,2E0dpZp8p" x="10" y="-250" w="553" h="141">使用Cytron maker pi RP2040 ，接收 Serial 傳來的數據控制 Geekservo 270
 先組裝一個小機器人，面對自己，
 以自己的方向來看，左手 servo 接GP12，右手 servo 接GP13。
-  
+記得修改 COM port
   </comment>
   <block type="mcu_board_init" id="board_init_55df8e0b63" x="10" y="-70">
     <field name="BOARD">maker-pi</field>
@@ -23,7 +23,7 @@
         <field name="BAUD">115200</field>
         <value name="PORT">
           <shadow type="py_text" id="aek*_$%/38[+bzFQH0I?">
-            <field name="TEXT">COM13</field>
+            <field name="TEXT">COM3</field>
           </shadow>
         </value>
       </block>
