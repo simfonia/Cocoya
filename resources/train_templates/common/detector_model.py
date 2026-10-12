@@ -4,7 +4,7 @@
 """
 
 import tensorflow as tf
-from common.classifier_model import get_backbone
+from common.classifier_model import get_backbone, freeze_batchnorm_layers
 
 
 def build_detector_model(backbone_name='mobilenetv2',
@@ -29,6 +29,10 @@ def build_detector_model(backbone_name='mobilenetv2',
     """
     base_model = get_backbone(backbone_name, input_shape)
     base_model.trainable = fine_tune
+    if fine_tune:
+        # 解凍 backbone 時凍結 BN 層（見 classifier_model.freeze_batchnorm_layers）：
+        # 避免小資料集下 BN moving 統計追不上微調漂移，造成部署/推論輸出塌陷。
+        freeze_batchnorm_layers(base_model)
 
     layers = [base_model, tf.keras.layers.GlobalAveragePooling2D()]
 

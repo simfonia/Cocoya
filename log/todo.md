@@ -722,3 +722,22 @@ VS Code 報「L44 必須是 {」「L52 預期為 at-rule 或選取器」，整�
 
 > **用戶決策**：不加守門測試，直接改。（本欄位無其他呼叫端依賴其精確值，
 > 且 Blockly 本身即為 SSOT；`ai_inference_blocks.js` 已加註說明。）
+
+### [2026-10-12] 物件偵測升級評估（one-shot → 多尺度）— 討論中
+
+- [x] IoU 偏低根因診斷：one-shot 全域回歸 + GAP 抹除空間資訊 + 無 anchor（見 log/work/2026-10-12.md）
+- [x] 修 fine_tune BN 統計脫節（classifier_model/detector_model 加 freeze_batchnorm_layers）
+- [x] 工程量盤點與候選方向整理（見 log/plan/ObjectDetectionUpgrade_MultiScale.md）
+- [ ] **待決策**：採用方向 A（PC-only）/ B（COCO lite0）/ C（自訓多尺度）
+- [ ] 若堅持 MCU 端跑模型：先做 MCU 可行性探針（FPS/記憶體）
+- [ ] 循跡（line_following）已評估：架構同源但無小物件瓶頸，暫不需升級
+- [x] 03_PC_inference.xml 改純積木畫框（前一階段完成）
+
+### [2026-10-12] bbox 標註支援「點兩下」畫框
+
+- **需求**：目前 bbox 只能拖曳拉框，費力；要比照循線支援「點兩下左鍵」畫框（拖曳仍保留）
+- **做法**：在 ui_canvas.js 的 bbox 分支複製 line 模式的 drawingState 狀態機（0→1→完成），5px 閾值區分拖曳/點擊
+- **注意**：現行 bbox mousemove 有 `if (!isDrawing) return` 回歸鎖（2026-10-01 踩坑），預覽框必須只活在 drawingState===1 保護內；ui_canvas.test.mjs 的重置區塊要一併涵蓋 drawingState
+- **前置**：已確認 log/plan/BboxAnnotationUIImprovement.md 僅涵蓋 3 欄布局，無點兩下設計，不衝突
+- 狀態：待實作
+

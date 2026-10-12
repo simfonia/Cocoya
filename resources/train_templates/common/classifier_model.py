@@ -51,6 +51,33 @@ def get_backbone(name, input_shape=(224, 224, 3)):
     return builder(input_shape)
 
 
+def freeze_batchnorm_layers(model):
+    """
+    將模型內所有 BatchNormalization 層設為不可訓練（fine-tune 標準做法）。
+
+    背景：fine_tune=True 解凍 backbone 後，BN 的 gamma/beta 權重與 moving 統計會
+    一起被更新。但 BN 在 training=True 用「當前 batch 統計」、training=False（推論
+    與 TFLite 部署）用「moving 統計」；小資料集（樣本少、每 epoch step 數低）下
+    momentum 預設 0.99 的 moving 統計遠追不上微調造成的分佈漂移，導致：
+      - training=True：輸出正常（loss 下降、IoU 上升）
+      - training=False（部署）：用滯後統計，輸出塌陷（IoU→0，框縮成一點）
+    凍結 BN 層後兩模式特徵一致（實測 mean|training-inference| 由 1.21 歸零），
+    可消除「訓練曲線正常但部署失效」。卷積權重仍可正常微調。
+
+    Args:
+        model: tf.keras.Model（通常為 backbone / base_model）
+
+    Returns:
+        int: 被凍結的 BatchNormalization 層數量
+    """
+    frozen = 0
+    for layer in model.layers:
+        if isinstance(layer, tf.keras.layers.BatchNormalization):
+            layer.trainable = False
+            frozen += 1
+    return frozen
+
+
 def create_fc_layers(dnn_layers_config, num_classes, dropout_rate=0.2):
     """
     根據設定建立全連接層（分類頭）。
@@ -116,6 +143,10 @@ def build_image_model(num_classes, backbone_name='mobilenetv2',
     """
     base_model = get_backbone(backbone_name, input_shape)
     base_model.trainable = fine_tune
+    if fine_tune:
+        # 解凍 backbone 時凍結 BN 層（見 freeze_batchnorm_layers 說明）：
+        # 避免小資料集下 BN moving 統計追不上微調漂移，造成部署/推論輸出塌陷。
+        freeze_batchnorm_layers(base_model)
 
     fc_layers = create_fc_layers(dnn_layers, num_classes, dropout_rate)
 

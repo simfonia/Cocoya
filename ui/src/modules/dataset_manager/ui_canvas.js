@@ -224,10 +224,38 @@ export const UICanvas = {
                     this.render();
                 }
             } else {
-                // 原有的物件偵測拉框模式 (bbox)
-                this.state.isDrawing = true;
-                this.state.startX = px;
-                this.state.startY = py;
+                // 物件偵測 bbox 模式：支援「點兩下」與「拖曳」兩種畫框
+                if (this.state.drawingState === 0) {
+                    // 第一下：可能是拖曳起點，也可能是點選第一角
+                    this.state.isDrawing = true;
+                    this.state.startX = px;
+                    this.state.startY = py;
+                    this.state.clickTime = Date.now();
+                } else if (this.state.drawingState === 1) {
+                    // 第二下：以第一角 + 本點為對角，鎖定框並提交
+                    const x = Math.min(this.state.startX, px);
+                    const y = Math.min(this.state.startY, py);
+                    const w = Math.abs(px - this.state.startX);
+                    const h = Math.abs(py - this.state.startY);
+                    if (w > 0.01 && h > 0.01) {
+                        this.state.annotations.push({
+                            class_id: this.state.currentClassId,
+                            bbox: [
+                                x / canvas.width,
+                                y / canvas.height,
+                                w / canvas.width,
+                                h / canvas.height
+                            ]
+                        });
+                        if (this.state.onUpdate) this.state.onUpdate(this.state.annotations);
+                    }
+                    this.state.drawingState = 0;
+                    this.state.isDrawing = false;
+                    this.state.currentBbox = null;
+                    this.state.pointerX = null;
+                    this.state.pointerY = null;
+                    this.render();
+                }
             }
         };
 
@@ -267,7 +295,10 @@ export const UICanvas = {
                     && rawX <= canvas.width && rawY <= canvas.height;
                 this.state.pointerX = inside ? currX : null;
                 this.state.pointerY = inside ? currY : null;
-                if (this.state.isDrawing) {
+                // 拖曳中（isDrawing）或已點第一角等待第二角（drawingState===1）都即時預覽框。
+                // 兩者都必須守住保護條件：否則未動作時會用殘留 startX/startY(=0)
+                // 從左上角憑空拉出藍框（2026-10-01 回歸鎖踩坑）。
+                if (this.state.isDrawing || this.state.drawingState === 1) {
                     const x = Math.min(this.state.startX, currX);
                     const y = Math.min(this.state.startY, currY);
                     const w = Math.abs(currX - this.state.startX);
@@ -329,16 +360,25 @@ export const UICanvas = {
                     this.render();
                 }
             } else {
-                // 畫矩形框結束
-                if (this.state.currentBbox && this.state.currentBbox[2] > 0.01) {
-                    this.state.annotations.push({
-                        class_id: this.state.currentClassId,
-                        bbox: this.state.currentBbox.slice() // 拷貝陣列避免參考問題
-                    });
-                    if (this.state.onUpdate) this.state.onUpdate(this.state.annotations);
+                // 畫矩形框結束（bbox）：依拖曳距離區分「拖曳」與「點兩下」
+                const dist = Math.sqrt(Math.pow(currX - this.state.startX, 2) + Math.pow(currY - this.state.startY, 2));
+                this.state.isDrawing = false;
+                if (dist > 5) {
+                    // 距離大於 5 像素：拖曳拉框模式，直接完成並提交
+                    if (this.state.currentBbox && this.state.currentBbox[2] > 0.01) {
+                        this.state.annotations.push({
+                            class_id: this.state.currentClassId,
+                            bbox: this.state.currentBbox.slice() // 拷貝陣列避免參考問題
+                        });
+                        if (this.state.onUpdate) this.state.onUpdate(this.state.annotations);
+                    }
+                    this.state.currentBbox = null;
+                    this.render();
+                } else {
+                    // 距離極小：視為點選第一角，進入點兩下狀態機等待第二次點擊
+                    this.state.drawingState = 1;
+                    this.render();
                 }
-                this.state.currentBbox = null;
-                this.render();
             }
         };
 

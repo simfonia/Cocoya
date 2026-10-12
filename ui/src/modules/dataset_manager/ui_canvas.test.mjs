@@ -637,3 +637,102 @@ test('掃描守門：列表必須綁 mouseenter/mouseleave（否則 hover 高亮
     assert.ok(/setHoveredAnnotation\s*\(/.test(body), 'hover 事件未呼叫 setHoveredAnnotation');
 });
 
+// ---------------------------------------------------------------------------
+// 4. bbox 畫框：拖曳 + 點兩下雙模式（2026-10-12 使用者需求）
+//    過去 bbox 只能拖曳，費力；比照循線（line）補上「點兩下」狀態機。
+//    測真實互動序列（mousedown/mousemove/mouseup），而非餵 state 自問自答。
+// ---------------------------------------------------------------------------
+
+/** 取得綁定後的 mousedown（canvas）/ mouseup（window）handler */
+function getBBoxHandlers(ctx) {
+    const listeners = {};
+    UICanvas.state.canvas = {
+        width: ctx.canvas.width,
+        height: ctx.canvas.height,
+        addEventListener: (type, fn) => { listeners[type] = fn; },
+        removeEventListener: () => {},
+        getBoundingClientRect: () => ({ left: 0, top: 0 }),
+        getContext: () => ctx,
+        focus: () => {}
+    };
+    globalThis.window = {
+        addEventListener: (type, fn) => { listeners[type] = fn; },
+        removeEventListener: () => {}
+    };
+    UICanvas.bindEvents();
+    return { down: listeners.mousedown, up: listeners.mouseup, move: listeners.mousemove };
+}
+
+test('bbox 拖曳：mousedown→mousemove→mouseup 距離>5px 直接提交一個框', () => {
+    const ctx = setupCanvas('bbox');
+    const h = getBBoxHandlers(ctx);
+    UICanvas.state.currentClassId = 3;
+
+    h.down({ clientX: 100, clientY: 100 });
+    h.move({ clientX: 300, clientY: 250 });   // 拖曳中 → 預覽框
+    h.up({ clientX: 300, clientY: 250 });     // 放開（距離>5px）→ 提交
+
+    assert.equal(UICanvas.state.annotations.length, 1, '拖曳應提交一個 bbox');
+    assert.equal(UICanvas.state.annotations[0].class_id, 3, '應帶入目前類別');
+    const [x, y, w, hh] = UICanvas.state.annotations[0].bbox;
+    assert.equal(x, 100 / 800);
+    assert.equal(y, 100 / 600);
+    assert.equal(w, 200 / 800);
+    assert.equal(hh, 150 / 600);
+    assert.equal(UICanvas.state.currentBbox, null, '提交後預覽框應清空');
+    assert.equal(UICanvas.state.drawingState, 0, '拖曳完成不得殘留點兩下狀態');
+});
+
+test('bbox 點兩下：第一下不提交，第二下才以兩角對角提交', () => {
+    const ctx = setupCanvas('bbox');
+    const h = getBBoxHandlers(ctx);
+    UICanvas.state.currentClassId = 1;
+
+    // 第一下：在 (100,100) 輕點（down 與 up 幾乎同位 → 距離≤5px → 進入等待第二角）
+    h.down({ clientX: 100, clientY: 100 });
+    h.up({ clientX: 100, clientY: 100 });
+    assert.equal(UICanvas.state.annotations.length, 0, '第一下不得提交');
+    assert.equal(UICanvas.state.drawingState, 1, '第一下後應進入等待第二角狀態');
+
+    // 移動到對角：應即時預覽框（不提交）
+    h.move({ clientX: 300, clientY: 250 });
+    assert.equal(UICanvas.state.annotations.length, 0, '移動預覽中不得提交');
+    assert.notEqual(UICanvas.state.currentBbox, null, '等待第二角時應有預覽框');
+
+    // 第二下：鎖定對角並提交
+    h.down({ clientX: 300, clientY: 250 });
+    assert.equal(UICanvas.state.annotations.length, 1, '第二下應提交一個 bbox');
+    const [x, y, w, hh] = UICanvas.state.annotations[0].bbox;
+    assert.equal(x, 100 / 800, 'x 取兩角較小者');
+    assert.equal(y, 100 / 600, 'y 取兩角較小者');
+    assert.equal(w, 200 / 800);
+    assert.equal(hh, 150 / 600);
+    assert.equal(UICanvas.state.drawingState, 0, '完成後狀態應歸零');
+    assert.equal(UICanvas.state.currentBbox, null, '完成後預覽框應清空');
+});
+
+test('bbox 點兩下：第二下與第一角重合（退化框）不得提交', () => {
+    const ctx = setupCanvas('bbox');
+    const h = getBBoxHandlers(ctx);
+
+    h.down({ clientX: 200, clientY: 200 });
+    h.up({ clientX: 200, clientY: 200 });     // 進入等待第二角
+    assert.equal(UICanvas.state.drawingState, 1);
+
+    h.down({ clientX: 200, clientY: 200 });   // 第二下同一點 → 零面積框
+    assert.equal(UICanvas.state.annotations.length, 0, '零面積框不應提交');
+    assert.equal(UICanvas.state.drawingState, 0, '即使退化也應結束狀態機');
+});
+
+test('bbox 回歸鎖：未動作時 mousemove 不得憑空寫入 currentBbox（點兩下改動後仍須守住）', () => {
+    const ctx = setupCanvas('bbox');
+    const h = getBBoxHandlers(ctx);
+
+    // 兩者皆為初始值（未 down 過）
+    UICanvas.state.isDrawing = false;
+    UICanvas.state.drawingState = 0;
+    h.move({ clientX: 300, clientY: 200 });
+    assert.equal(UICanvas.state.currentBbox, null,
+        '未 down 過時不得用殘留 startX/startY(=0) 憑空長出預覽框');
+});
+

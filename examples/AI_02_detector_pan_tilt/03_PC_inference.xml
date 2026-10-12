@@ -2,6 +2,7 @@
   <variables>
     <variable id="var_frame">frame</variable>
     <variable id="var_result">result</variable>
+    <variable id="var_bbox">bbox</variable>
     <variable id="var_center">center</variable>
   </variables>
   <block type="py_definition_zone" id="cfg_root" x="10" y="10">
@@ -10,11 +11,11 @@
         <field name="LIB">cv2</field>
         <next>
           <block type="py_ai_model_init" id="det_init">
-            <field name="MODEL_PATH">model/detector_dataset</field>
+            <field name="MODEL_PATH">model/ping_pong</field>
             <field name="TASK_TYPE">object_detection</field>
-            <field name="MODEL_TYPE">int8</field>
+            <field name="MODEL_TYPE">f32</field>
             <next>
-              <block type="py_io_serial_init" id="det_ser_init">
+              <block type="py_io_serial_init" id="det_ser_init" disabled-reasons="MANUALLY_DISABLED">
                 <field name="BAUD">115200</field>
                 <value name="PORT">
                   <shadow type="py_text" id="det_ser_port">
@@ -58,51 +59,191 @@
                       </block>
                     </value>
                     <next>
-                      <block type="py_variables_set" id="det_set_center">
-                        <field name="VAR" id="var_center">center</field>
+                      <block type="py_variables_set" id="det_set_bbox">
+                        <field name="VAR" id="var_bbox">bbox</field>
                         <value name="VALUE">
-                          <shadow type="py_math_number" id="det_center_default">
+                          <shadow type="py_math_number" id="det_bbox_default">
                             <field name="NUM">0</field>
                           </shadow>
-                          <block type="py_ai_get_bbox_center" id="det_get_center">
+                          <block type="py_ai_get_bbox" id="det_get_bbox">
                             <value name="RESULT">
-                              <block type="py_variables_get" id="det_get_result_center">
+                              <block type="py_variables_get" id="det_get_result_bbox">
                                 <field name="VAR" id="var_result">result</field>
                               </block>
                             </value>
                           </block>
                         </value>
+                        <next>
+                          <block type="py_variables_set" id="det_set_center">
+                            <field name="VAR" id="var_center">center</field>
+                            <value name="VALUE">
+                              <shadow type="py_math_number" id="det_center_default">
+                                <field name="NUM">0</field>
+                              </shadow>
+                              <block type="py_ai_get_bbox_center" id="det_get_center">
+                                <value name="RESULT">
+                                  <block type="py_variables_get" id="det_get_result_center">
+                                    <field name="VAR" id="var_result">result</field>
+                                  </block>
+                                </value>
+                              </block>
+                            </value>
                             <next>
-                              <block type="py_io_serial_write" id="det_serial_send">
+                              <block type="py_io_serial_write" id="det_serial_send" disabled-reasons="MANUALLY_DISABLED">
                                 <value name="DATA">
                                   <block type="py_variables_get" id="det_get_center_serial">
                                     <field name="VAR" id="var_center">center</field>
                                   </block>
                                 </value>
                                 <next>
-                              <block type="py_ai_flip_image" id="det_flip">
-                                <field name="VAR" id="var_frame">frame</field>
-                                <field name="CODE">1</field>
-                                <next>
-                                  <block type="py_ai_show_image" id="det_show">
-                                    <value name="IMAGE">
-                                      <block type="py_variables_get" id="det_get_show_frame">
-                                        <field name="VAR" id="var_frame">frame</field>
-                                      </block>
-                                    </value>
-                                    <next>
-                                      <block type="py_io_print" id="det_print_center">
-                                        <value name="TEXT">
-                                          <shadow type="py_text" id="det_center_text">
-                                            <field name="TEXT">Center:</field>
-                                          </shadow>
-                                          <block type="py_variables_get" id="det_get_print_center">
-                                            <field name="VAR" id="var_center">center</field>
+                                  <block type="py_ai_draw_rect" id="det_draw_rect">
+                                    <field name="VAR" id="var_frame">frame</field>
+                                    <value name="START">
+                                      <block type="py_type_tuple" id="det_start_tuple">
+                                        <mutation items="2"></mutation>
+                                        <value name="ADD0">
+                                          <block type="py_math_arithmetic" id="det_start_x">
+                                            <field name="OP">*</field>
+                                            <value name="A">
+                                              <block type="py_types_get_item" id="det_bbox_x1">
+                                                <value name="OBJ">
+                                                  <block type="py_variables_get" id="det_bbox_x1_g">
+                                                    <field name="VAR" id="var_bbox">bbox</field>
+                                                  </block>
+                                                </value>
+                                                <value name="INDEX">
+                                                  <shadow type="py_math_number" id="det_bbox_x1_i">
+                                                    <field name="NUM">0</field>
+                                                  </shadow>
+                                                </value>
+                                              </block>
+                                            </value>
+                                            <value name="B">
+                                              <shadow type="py_math_number" id="det_start_x_n">
+                                                <field name="NUM">640</field>
+                                              </shadow>
+                                            </value>
                                           </block>
                                         </value>
+                                        <value name="ADD1">
+                                          <block type="py_math_arithmetic" id="det_start_y">
+                                            <field name="OP">*</field>
+                                            <value name="A">
+                                              <block type="py_types_get_item" id="det_bbox_y1">
+                                                <value name="OBJ">
+                                                  <block type="py_variables_get" id="det_bbox_y1_g">
+                                                    <field name="VAR" id="var_bbox">bbox</field>
+                                                  </block>
+                                                </value>
+                                                <value name="INDEX">
+                                                  <shadow type="py_math_number" id="det_bbox_y1_i">
+                                                    <field name="NUM">1</field>
+                                                  </shadow>
+                                                </value>
+                                              </block>
+                                            </value>
+                                            <value name="B">
+                                              <shadow type="py_math_number" id="det_start_y_n">
+                                                <field name="NUM">480</field>
+                                              </shadow>
+                                            </value>
+                                          </block>
+                                        </value>
+                                      </block>
+                                    </value>
+                                    <value name="END">
+                                      <block type="py_type_tuple" id="det_end_tuple">
+                                        <mutation items="2"></mutation>
+                                        <value name="ADD0">
+                                          <block type="py_math_arithmetic" id="det_end_x">
+                                            <field name="OP">*</field>
+                                            <value name="A">
+                                              <block type="py_types_get_item" id="det_bbox_x2">
+                                                <value name="OBJ">
+                                                  <block type="py_variables_get" id="det_bbox_x2_g">
+                                                    <field name="VAR" id="var_bbox">bbox</field>
+                                                  </block>
+                                                </value>
+                                                <value name="INDEX">
+                                                  <shadow type="py_math_number" id="det_bbox_x2_i">
+                                                    <field name="NUM">2</field>
+                                                  </shadow>
+                                                </value>
+                                              </block>
+                                            </value>
+                                            <value name="B">
+                                              <shadow type="py_math_number" id="det_end_x_n">
+                                                <field name="NUM">640</field>
+                                              </shadow>
+                                            </value>
+                                          </block>
+                                        </value>
+                                        <value name="ADD1">
+                                          <block type="py_math_arithmetic" id="det_end_y">
+                                            <field name="OP">*</field>
+                                            <value name="A">
+                                              <block type="py_types_get_item" id="det_bbox_y2">
+                                                <value name="OBJ">
+                                                  <block type="py_variables_get" id="det_bbox_y2_g">
+                                                    <field name="VAR" id="var_bbox">bbox</field>
+                                                  </block>
+                                                </value>
+                                                <value name="INDEX">
+                                                  <shadow type="py_math_number" id="det_bbox_y2_i">
+                                                    <field name="NUM">3</field>
+                                                  </shadow>
+                                                </value>
+                                              </block>
+                                            </value>
+                                            <value name="B">
+                                              <shadow type="py_math_number" id="det_end_y_n">
+                                                <field name="NUM">480</field>
+                                              </shadow>
+                                            </value>
+                                          </block>
+                                        </value>
+                                      </block>
+                                    </value>
+                                    <value name="COLOR">
+                                      <shadow type="py_ai_color" id="det_rect_color">
+                                        <field name="B">0</field>
+                                        <field name="G">255</field>
+                                        <field name="R">0</field>
+                                      </shadow>
+                                    </value>
+                                    <value name="THICKNESS">
+                                      <shadow type="py_math_number" id="det_rect_thickness">
+                                        <field name="NUM">2</field>
+                                      </shadow>
+                                    </value>
+                                    <next>
+                                      <block type="py_ai_flip_image" id="det_flip">
+                                        <field name="VAR" id="var_frame">frame</field>
+                                        <field name="CODE">1</field>
                                         <next>
-                                          <block type="py_ai_wait_key_break" id="det_break">
-                                            <field name="KEY">q</field>
+                                          <block type="py_ai_show_image" id="det_show">
+                                            <value name="IMAGE">
+                                              <block type="py_variables_get" id="det_get_show_frame">
+                                                <field name="VAR" id="var_frame">frame</field>
+                                              </block>
+                                            </value>
+                                            <next>
+                                              <block type="py_io_print" id="det_print_center">
+                                                <value name="TEXT">
+                                                  <shadow type="py_text" id="det_center_text">
+                                                    <field name="TEXT">Center:</field>
+                                                  </shadow>
+                                                  <block type="py_variables_get" id="det_get_print_center">
+                                                    <field name="VAR" id="var_center">center</field>
+                                                  </block>
+                                                </value>
+                                                <next>
+                                                  <block type="py_ai_wait_key_break" id="det_break">
+                                                    <field name="KEY">q</field>
+                                                  </block>
+                                                </next>
+                                              </block>
+                                            </next>
                                           </block>
                                         </next>
                                       </block>
