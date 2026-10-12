@@ -38,3 +38,4 @@ opencv-python>=4.8
 paramiko>=3.3
 cryptography>=41.0
 matplotlib>=3.7
+pyserial>=3.5
