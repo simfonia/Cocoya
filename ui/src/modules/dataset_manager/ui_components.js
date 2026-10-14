@@ -6,9 +6,18 @@ import { Sampler } from './sampler.js';
 import { t } from './i18n.js';
 import { escapeHtml as escapeHTML } from './core/html.js';
 // 2026-10-01（P1-1/P1-2）：類型判斷改走 core/typePolicy.js（SSOT），不再在本檔自持硬編碼類型清單。
-import { isImageType, needsUnclassifiedCheck } from './core/typePolicy.js';
+import { isImageType, needsUnclassifiedCheck, isClassificationType } from './core/typePolicy.js';
 
 export const UIComponents = {
+    /**
+     * 2026-10-13：「未標註」chip 的特殊 data-label 哨兵值。
+     * 為何要哨兵而非文字：它不是任何真實類別名稱，故 label_counts 查不到 ——
+     * 因此所有「檢查篩選目標是否仍存在」的程式碼都必須顯式豁免它，
+     * 否則會被誤判成「篩選目標已被刪除」而自動解除（見 renderStatsPanels）。
+     * 選用前後綴避免與使用者自訂類別名稱撞名。
+     */
+    UNANNOTATED_FILTER: '__cocoya_unannotated__',
+
     /**
      * 渲染影像縮圖牆
      * @param {Array} images 影像資料 [{path, label, blobUrl}]
@@ -184,8 +193,134 @@ export const UIComponents = {
     },
 
     /**
-     * 渲染即時採集視圖 (Sampler)
+     * 2026-10-13：渲染視窗最上方的「常駐統計列」（P2/P3 皆可見）。
+     *
+     * 【為何不放在中欄】中欄 `#view-label-stats` 位於 `.dataset-manager-body`
+     * （overflow:auto 的捲動容器）之內，縮圖牆一多就要捲動才看得到 → 使用者
+     * 捲下管理/刪除縮圖時統計已離開視野（本次要解決的缺點 2）。
+     * 本函式的目標容器 `#dataset-global-stats` 在 body **之外**，由 dialog 的
+     * flex column 保持常駐，不隨縮圖牆捲動。
+     *
+     * 【與 renderLabelStats 的關係】兩者是不同容器、不同職責，非重複實作：
+     *   · renderLabelStats → 中欄「標籤與樣本統計」表格（色塊圖例＋逐類計數）
+     *   · renderGlobalStats  → 頂部精簡列（總數＋分類 chips，可篩選縮圖）
+     * 計數語意（框數/線段/樣本數）沿用同一組 typePolicy 判定，確保兩處單位一致。
+     *
+     * @param {HTMLElement} container #dataset-global-stats
+     * @param {Object} stats spec.stats（sample_count / label_counts）
+     * @param {Object} [options]
+     * @param {string} [options.projectType] 專案類型（決定計數單位與可否篩選）
+     * @param {number} [options.imageCount] 影像張數（未傳時退回 stats.sample_count）
+     * @param {number|null} [options.annotatedCount] 已標註張數（null＝不顯示）
+     * @param {string|null} [options.activeLabel] 目前生效的篩選標籤（null＝全部）
+     * @param {boolean} [options.filterable] 是否可點擊篩選（僅影像系＋有回呼時為真）
+     * @param {(label: string|null) => void} [options.onChipClick] 點擊 chip 回呼（label＝null 表全部）
      */
+    renderGlobalStats(container, stats, options = {}) {
+        if (!container) return;
+        const counts = (stats && stats.label_counts) || {};
+        const labels = Object.keys(counts).sort((a, b) => a.localeCompare(b));
+        const projectType = options.projectType || '';
+        const isImageTask = isImageType(projectType);
+        const isClassify = isClassificationType(projectType);
+        const imageCount = Number.isInteger(options.imageCount)
+            ? options.imageCount
+            : (Number.isInteger(stats && stats.sample_count) ? stats.sample_count : 0);
+        const annotatedCount = Number.isInteger(options.annotatedCount) ? options.annotatedCount : null;
+        // 計數單位沿用中欄統計同一組判定（SSOT：typePolicy），避免兩處單位不一致
+        const countUnit = needsUnclassifiedCheck(projectType)
+            ? t('BOX_COUNT', '標註框數')
+            : (projectType === 'line_following' ? t('LINE_COUNT', '標註線段') : t('SAMPLE_COUNT', '樣本數'));
+        const activeLabel = typeof options.activeLabel === 'string' ? options.activeLabel : null;
+        const filterable = !!options.filterable && typeof options.onChipClick === 'function';
+
+        // 摘要（總數）
+        // 2026-10-13 去重：原為「135 張 / 已標註 135/135 / Σ 標註框數 135」，使用者回報
+        // 最前面的張數與分母重複。各型別的真正資訊量不同，故分別決定顯示項：
+        //   · 分類：每張必有一類 ⇒ annotated 恆等於張數，只顯示張數（chips 已提供分類別）
+        //   · 偵測/循跡：一張可有多框 ⇒ 張數與框/線段數語意不同，兩者都留；
+        //     但張數已含在「已標註 X/N」的分母裡，不再單獨一項（這正是重複的來源）
+        //   · 表格系：無「張」的概念，只有樣本數總和
+        const totalCounted = labels.reduce((sum, label) => sum + (Number(counts[label]) || 0), 0);
+        const summaryItems = [];
+        if (isClassificationType(projectType)) {
+            summaryItems.push(`<span title="${escapeHTML(t('IMAGE_COUNT', '影像張數'))}">${imageCount} 張</span>`);
+        } else if (isImageTask) {
+            if (annotatedCount !== null) {
+                summaryItems.push(`<span title="${escapeHTML(t('ANNOTATED_COUNT', '已標註'))}">已標註 <b>${annotatedCount}</b>/${imageCount} 張</span>`);
+            } else {
+                summaryItems.push(`<span title="${escapeHTML(t('IMAGE_COUNT', '影像張數'))}">${imageCount} 張</span>`);
+            }
+            summaryItems.push(`<span title="${escapeHTML(countUnit)}">${countUnit} <b>${totalCounted}</b></span>`);
+        } else {
+            summaryItems.push(`<span title="${escapeHTML(countUnit)}">${countUnit} <b>${totalCounted}</b></span>`);
+        }
+
+        const chip = (label, count, isActive) => {
+            const color = this.getLabelColor(label);
+            const tag = filterable ? 'button' : 'span';
+            const attrs = filterable
+                ? ` type="button" data-label="${escapeHTML(label)}"`
+                : '';
+            const activeCls = isActive ? ' is-active' : '';
+            // 偵測/循跡的 chips 數字是「框/線段數」，篩選結果是「含該類別的影像」，
+            // 兩者語意不同（一張圖可有多框）。tooltip 明講，避免使用者誤以為數字＝結果筆數。
+            const isPerImage = isClassificationType(projectType);
+            const tip = isPerImage
+                ? `${label}: ${count}`
+                : `${label}: ${count}（${countUnit}；點擊篩選含此類別的影像）`;
+            return `<${tag}${attrs} class="dataset-global-stats-chip${activeCls}"`
+                + ` title="${escapeHTML(tip)}">`
+                + `<span class="dataset-global-stats-dot" style="background-color: ${color} !important;"></span>`
+                + `<span class="dataset-global-stats-name">${escapeHTML(label)}</span>`
+                + `<b>${count}</b>`
+                + `</${tag}>`;
+        };
+
+        const allActive = activeLabel === null;
+        const allChip = `<${filterable ? 'button type="button" data-label=""' : 'span'}`
+            + ` class="dataset-global-stats-chip dataset-global-stats-chip-all${allActive ? ' is-active' : ''}"`
+            + ` title="${escapeHTML(t('STATS_ALL_TIP', '顯示全部'))}">`
+            + `${t('STATS_ALL', '全部')}<b>${imageCount}</b>`
+            + `</${filterable ? 'button' : 'span'}>`;
+
+        // 2026-10-13：偵測/循跡的「未標註」chip（使用者需求）。
+        // 為何不適用於分類：分類每張必有一類，label_counts 已有 'unlabeled' 一條，再加會重複。
+        // 為何只給偵測/循跡：一張圖可多框，框數總和與張數無關 —— 「有幾張完全沒標」在
+        // 這兩個型別是獨立且實用的資訊（標到一半想知道還剩幾張沒動）。
+        const unannotatedCount = (isImageTask && !isClassify && annotatedCount !== null)
+            ? Math.max(0, imageCount - annotatedCount)
+            : null;
+        const unannotatedChip = (unannotatedCount === null) ? '' : (() => {
+            const tag = filterable ? 'button' : 'span';
+            const attrs = filterable ? ` type="button" data-label="${escapeHTML(UIComponents.UNANNOTATED_FILTER)}"` : '';
+            const isActive = activeLabel === UIComponents.UNANNOTATED_FILTER;
+            const tip = t('STATS_UNANNOTATED_TIP', '完全沒有任何標註框/線段的影像；點擊只看這些');
+            return `<${tag}${attrs} class="dataset-global-stats-chip dataset-global-stats-chip-unannotated${isActive ? ' is-active' : ''}"`
+                + ` title="${escapeHTML(tip)}">`
+                + `${t('STATS_UNANNOTATED', '未標註')}<b>${unannotatedCount}</b>`
+                + `</${tag}>`;
+        })();
+
+        container.innerHTML = `
+            <div class="dataset-global-stats-summary">${summaryItems.join('')}</div>
+            <div class="dataset-global-stats-chips">
+                ${allChip}
+                ${unannotatedChip}
+                ${labels.map((label) => chip(label, counts[label], label === activeLabel)).join('')}
+            </div>
+        `;
+
+        if (filterable) {
+            container.querySelectorAll('.dataset-global-stats-chip').forEach((el) => {
+                el.onclick = () => {
+                    const raw = el.getAttribute('data-label');
+                    options.onChipClick(raw ? raw : null);
+                };
+            });
+        }
+    },
+
     renderSamplerView(container, options = {}) {
         if (!container) return;
 

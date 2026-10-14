@@ -69,7 +69,7 @@ import { createLabelManager } from './ui/labelManager.js';
 import { createSamplerPanel } from './ui/samplerPanel.js';
 import { createFeaturePanel } from './ui/featurePanel.js';
 import { buildEntryTemplate } from './ui/entryCards.js';
-import { allowedModes, isDevType, isImageType, isFeatureType } from './core/typePolicy.js';
+import { allowedModes, isDevType, isImageType, isFeatureType, isClassificationType } from './core/typePolicy.js';
 import { createSessionManager } from './application/sessionManager.js';
 import { buildFeatureSchema, landmarksToRow, FEATURE_MEDIAPIPE_MISSING } from './core/featureSchema.js';
 
@@ -120,12 +120,16 @@ const classificationController = createClassificationController({
     saveGridScroll: () => saveGridScroll(),
     exitAnnotationMode: () => exitAnnotationMode(),
     navigateToImage: (index) => navigateToImage(index),
+    // 2026-10-13：↑/↓ 必須在分類篩選集合內移動（否則會跳到別的分類的照片）
+    navigateFiltered: (delta) => navigateFiltered(delta),
     setAnnotationHeaderActions: (hide) => setAnnotationHeaderActions(hide),
     updateStatsFromImages: () => updateStatsFromImages(),
     updateThumbnailHighlight: () => updateThumbnailHighlight(),
     refreshPreview: () => refreshPreview(),
     createLabelMapManager: (container, statsContainer) => createLabelMapManager(container, statsContainer),
-    onDeleteImage: (index) => handleDeleteImage(index)
+    onDeleteImage: (index) => handleDeleteImage(index),
+    // 2026-10-13：P3 縮圖條也套用頂部統計列的分類篩選（回傳 state.images 原始索引）
+    visibleImageEntries: () => statsFilteredEntries()
 });
 
 // Stage 4 切片 6：bbox/line 標註模式編排移至 ui/annotation.js（依賴注入；下方函式宣告已提升，可安全參照）
@@ -138,12 +142,16 @@ const annotationController = createAnnotationController({
     saveGridScroll: () => saveGridScroll(),
     exitAnnotationMode: () => exitAnnotationMode(),
     navigateToImage: (index) => navigateToImage(index),
+    // 2026-10-13：↑/↓ 必須在分類篩選集合內移動（否則會跳到別的分類的照片）
+    navigateFiltered: (delta) => navigateFiltered(delta),
     setAnnotationHeaderActions: (hide) => setAnnotationHeaderActions(hide),
     updateStatsFromImages: () => updateStatsFromImages(),
     updateThumbnailHighlight: () => updateThumbnailHighlight(),
     refreshPreview: () => refreshPreview(),
     createLabelMapManager: (container, statsContainer) => createLabelMapManager(container, statsContainer),
-    onDeleteImage: (index) => handleDeleteImage(index)
+    onDeleteImage: (index) => handleDeleteImage(index),
+    // 2026-10-13：P3 縮圖條也套用頂部統計列的分類篩選（回傳 state.images 原始索引）
+    visibleImageEntries: () => statsFilteredEntries()
 });
 
 // M2 R6：live 採集面板編排抽至 ui/samplerPanel.js（下方函式宣告已提升，可安全參照）
@@ -355,13 +363,25 @@ function applyLoadedProgress(spec) {
     const loadedSamples = (spec.data_source && spec.data_source.samples) || [];
     const savedSchema = spec.schema || {};
 
-    // 1. project.type / sourceMode 對齊（若與 UI 目前不同，更新下拉與 mode 選項）
+    // 1. project.type / sourceMode 對齊
+    // ⚠ 2026-10-13 修：原本無條件以 dataset.json 的 project.type 覆蓋 UI 下拉，
+    //   造成「P1 選影像分類 → 匯入資料夾 → 中欄卻以 table 模式開啟」。
+    //   M1 類型鎖定鐵律：類型一經選定即鎖定，dataset.json 不得推翻
+    //   （否則「類型已鎖定」的 tooltip 與實際行為互相矛盾）。
+    //   進度檔的 type 僅在「目前沒有鎖定類型」時才作為權威來源
+    //   （例：未來若加入「依進度檔回復類型」的入口）。
     const savedType = spec.project && spec.project.type;
-    if (savedType) {
+    const lockedType = sessionManager.snapshot().lockedType;
+    const effectiveType = lockedType || savedType;
+    if (savedType && lockedType && savedType !== lockedType) {
+        // 不同就忽略檔案值，不提示（避免每次匯入都跳訊息干擾）；型別以鎖定值為準
+        console.log('[DatasetManager] dataset.json type "%s" ignored (locked type "%s")', savedType, lockedType);
+    }
+    if (effectiveType) {
         const typeSelect = getModal()?.querySelector('[name="projectType"]');
-        if (typeSelect && typeSelect.value !== savedType) {
-            typeSelect.value = savedType;
-            rebuildSourceModeOptions(savedType);
+        if (typeSelect && typeSelect.value !== effectiveType) {
+            typeSelect.value = effectiveType;
+            rebuildSourceModeOptions(effectiveType);
         }
     }
     if (spec.data_source && spec.data_source.mode) {
@@ -388,11 +408,15 @@ function applyLoadedProgress(spec) {
     const newLabelMap = (savedSchema.label_map && Object.keys(savedSchema.label_map).length) ? savedSchema.label_map : currentJson.schema.label_map;
 
     // 3. 重建 spec（以「檔案為準」，保留目前 UI 的專案名稱與描述）
+    // ⚠ type 必須用 effectiveType（＝鎖定類型優先），不可用 savedType：
+    //   兩者不同時若寫 savedType，state.spec 會被改回 dataset.json 的類型，
+    //   即使下拉已修回 lockedType，統計/篩選/匯出仍依錯的類型運作
+    //   （2026-10-13 實測：匯入影像分類資料夾卻以 table 模式開啟）。
     const projectName = getFormValue('projectName') || (spec.project && spec.project.name) || 'dataset';
     state.spec = new DatasetSpec({
         project: {
             name: projectName,
-            type: savedType || currentJson.project.type,
+            type: effectiveType || currentJson.project.type,
             description: getFormValue('description')
         },
         data_source: {
@@ -754,11 +778,34 @@ function loadAnnotationImage(index) {
 }
 
 /**
+ * P3 鍵盤焦點歸位（2026-10-14）：縮圖 div 非可聚焦元素，點它會讓 document.activeElement
+ * 脫離 canvas／classify-container → 之後 ↑/↓ 不再進 keydown handler 而是捲動縮圖欄。
+ * 切換到別張圖時 loadAnnotationImage／loadClassificationImage 會順手 focus；
+ * 唯獨「同張二次點擊」走下方的早退分支、焦點永遠回不來 —— 故由該分支明確呼叫本函式。
+ */
+function refocusAnnotationKeyboard() {
+    const modal = getModal();
+    if (!modal) return;
+    if (state.annotationMode.mode === 'classification') {
+        const container = modal.querySelector('#annotation-classify-container');
+        if (container && typeof container.focus === 'function') container.focus();
+        return;
+    }
+    const canvas = modal.querySelector('canvas.dataset-annotation-canvas');
+    if (canvas && typeof canvas.focus === 'function') canvas.focus();
+}
+
+/**
  * 切換到指定索引的圖片（先自動儲存目前圖片）
  */
 function navigateToImage(newIndex) {
     if (newIndex < 0 || newIndex >= state.images.length) return;
-    if (newIndex === state.annotationMode.currentIndex) return;
+    if (newIndex === state.annotationMode.currentIndex) {
+        // 同張二次點擊：載圖路徑（含 focus）不會執行，必須在此把鍵盤焦點還給畫布，
+        // 否則 ↑/↓ 只會捲動縮圖欄、直到點別張圖才恢復（2026-10-14 實機回報）。
+        refocusAnnotationKeyboard();
+        return;
+    }
 
     // 自動儲存前一張圖的標註（classification 下 annotations 為空陣列，安全）
     saveCurrentAnnotations();
@@ -788,18 +835,28 @@ function updateThumbnailHighlight() {
     const thumbnails = document.getElementById('annotation-thumbnails');
     if (!thumbnails) return;
 
+    // 2026-10-13：縮圖條在分類篩選下只含 state.images 的子集，DOM 序號已與
+    // currentIndex（絕對索引）脫勾。必須先換算成「篩選後陣列內的位置」再比對，
+    // 否則焦點框／勾號會落在別張圖上，或（常見）完全不顯示
+    // —— 實機回報：按第二個分類 chip 後綠色焦點框消失，篩全部或第一分類卻正常，
+    // 正是因為那兩種情況下位置恰好等於絕對索引。
+    const entries = statsFilteredEntries();
+    const pos = statsVisiblePositionOf(state.annotationMode.currentIndex);
+
     const items = thumbnails.querySelectorAll('.dataset-annotation-thumb-item');
     const isClassification = state.annotationMode.mode === 'classification';
     items.forEach((item, idx) => {
-        item.classList.toggle('current', idx === state.annotationMode.currentIndex);
+        item.classList.toggle('current', idx === pos);
         if (!isClassification) {
-            const isAnnotated = state.images[idx].annotations && state.images[idx].annotations.length > 0;
+            // 勾號必須讀「這張 DOM 縮圖對應的那張圖」，不可用 state.images[idx]
+            const entry = entries[idx];
+            const isAnnotated = !!(entry && Array.isArray(entry.img.annotations) && entry.img.annotations.length > 0);
             item.classList.toggle('annotated', isAnnotated);
         }
     });
 
     // 自動捲動到當前縮圖
-    const currentItem = items[state.annotationMode.currentIndex];
+    const currentItem = items[pos];
     if (currentItem) {
         currentItem.scrollIntoView({ block: 'center', inlineSize: 'nearest', behavior: 'smooth' });
     }
@@ -975,11 +1032,8 @@ function refreshDynamicPanels() {
     // 顯示影像或表格預覽（feature 一律顯示表格預覽：live 累計的是表格樣本）
     if (isImage) {
         const imagePreview = modal.querySelector('#dataset-image-preview');
-        imagePreview.style.display = state.images.length ? 'block' : 'none';
-        UIComponents.renderImageGrid(imagePreview, state.images, {
-            onImageClick: (img, idx) => enterAnnotationMode(img, idx),
-            onDeleteImage: (idx) => handleDeleteImage(idx)
-        });
+        // 2026-10-13：改走篩選版（索引映射＋分類篩選），不可直接餵 state.images
+        renderImageGridFiltered(imagePreview);
         // 恢復捲動位置（統一由 restoreGridScroll 處理）
         restoreGridScroll();
     } else {
@@ -987,6 +1041,16 @@ function refreshDynamicPanels() {
         tablePreview.style.display = state.tableRows.length ? 'block' : 'none';
         renderPreviewTable(tablePreview, state.tableRows);
     }
+
+    // 2026-10-13：頂部統計列必須在這裡一併重繪。
+    // ⚠ 它不在 #dataset-structure-content 之內，故上面的 renderStructurePanel() 不會碰到它；
+    //   而 renderGlobalStatsBar() 原本只由 renderStatsPanels() 呼叫，於是
+    //   「清除資料／進出 P3」這類只走 refreshDynamicPanels 的路徑會變成：
+    //   中欄統計清了、頂部統計列卻留著舊數字（且未歸零）——這是使用者實機回報的問題 2，
+    //   同時也是問題 3「進 P3 後回 P2 chips 全部失效」的根因
+    //   （P3 版的 chips 是 span、未綁 click，DOM 沒被重繪就一直留在那裡）。
+    renderGlobalStatsBar();
+
     refreshPreview();
 }
 
@@ -1091,24 +1155,17 @@ function refreshThumbnailBadges() {
     const modal = getModal();
     if (!modal) return;
     if (state.annotationMode && state.annotationMode.isActive) {
-        const am = state.annotationMode;
         const strip = modal.querySelector('#annotation-thumbnails');
         if (strip) {
-            UIComponents.renderAnnotationThumbnails(strip, state.images, am.currentIndex, {
-                mode: am.mode === 'classification' ? 'classification' : undefined,
-                onThumbnailClick: (newIndex) => navigateToImage(newIndex),
-                onDeleteImage: (delIndex) => handleDeleteImage(delIndex)
-            });
-            updateThumbnailHighlight();
+            // 2026-10-13：改走 SSOT（含分類篩選＋索引映射；currentIndex 由它自行讀取）
+            renderAnnotationStrip(strip);
         }
         return;
     }
     const imagePreview = modal.querySelector('#dataset-image-preview');
     if (imagePreview && state.images.length) {
-        UIComponents.renderImageGrid(imagePreview, state.images, {
-            onImageClick: (img, idx) => enterAnnotationMode(img, idx),
-            onDeleteImage: (idx) => handleDeleteImage(idx)
-        });
+        // 2026-10-13：改名/增刪類別後重繪縮圖徽章，改走篩選版以保留目前分類篩選
+        renderImageGridFiltered(imagePreview);
         restoreGridScroll();
     }
 }
@@ -1239,10 +1296,9 @@ async function handleDeleteImage(index) {
             if (state.images.length === 0) {
                 imagePreview.style.display = 'none';
             }
-            UIComponents.renderImageGrid(imagePreview, state.images, {
-                onImageClick: (img, idx) => enterAnnotationMode(img, idx),
-                onDeleteImage: (idx) => handleDeleteImage(idx)
-            });
+            // 2026-10-13：改走篩選版——刪除後的 grid 序號已與 state.images 錯位，
+            // 未映射會讓後續點擊/刪除打到別的圖（索引對齊是篩選功能的必要條件）
+            renderImageGridFiltered(imagePreview);
 
             // 恢復捲動位置（統一由 restoreGridScroll 處理）
             restoreGridScroll();
@@ -1260,11 +1316,8 @@ async function handleDeleteImage(index) {
             if (am.currentIndex >= state.images.length) am.currentIndex = state.images.length - 1;
             const strip = modal?.querySelector('#annotation-thumbnails');
             if (strip) {
-                UIComponents.renderAnnotationThumbnails(strip, state.images, am.currentIndex, {
-                    mode: am.mode === 'classification' ? 'classification' : undefined,
-                    onThumbnailClick: (newIndex) => navigateToImage(newIndex),
-                    onDeleteImage: (delIndex) => handleDeleteImage(delIndex)
-                });
+                // 2026-10-13：改走 SSOT（含分類篩選＋索引映射）
+                renderAnnotationStrip(strip);
             }
             if (wasCurrent) {
                 // currentIndex 已調整為倖存鄰圖；navigateToImage 會因 newIndex===currentIndex 早退，
@@ -1319,6 +1372,11 @@ function addSampleFromSampler(blob, savePath = null) {
         path: `${label}/${filename}`, 
         label: label,
         blobUrl: blobUrl,
+        // 2026-10-13：標記此 blobUrl 由前端 createObjectURL 建立（＝我們持有、必須 revoke）。
+        // 匯入資料夾而來的 blobUrl 是後端 asWebviewUri／convertFileSrc 產生的平台檔案 URI，
+        // 不是我們建的，無從也不該 revoke（呼叫亦是 no-op）。兩者混在同一个 img.blobUrl
+        // 欄位，只能靠這個旗標區分，否則「關閉 DM 釋放記憶體」會誤 revoke 平台 URI。
+        _blobOwned: true,
         // 真磁碟路徑（VSIX 由 host 端產生；Tauri 若提供即帶入），供「儲存進度」還原與下次載入掃描
         diskPath: savePath || null,
         annotations: []
@@ -1340,11 +1398,17 @@ function addSampleFromSampler(blob, savePath = null) {
         // 更新右側的影像網格
         const imagePreview = modal.querySelector('#dataset-image-preview');
         if (imagePreview) {
-            imagePreview.style.display = 'block'; // 確保網格容器是顯示的
-            UIComponents.renderImageGrid(imagePreview, state.images, {
-                onImageClick: (img, idx) => enterAnnotationMode(img, idx),
-                onDeleteImage: (idx) => handleDeleteImage(idx)
-            });
+            // 2026-10-13：拍攝到「非目前篩選分類」的圖時必須解除篩選，
+            // 否則新拍的圖不在篩選結果內，使用者會以為沒拍進去。
+            // 「未標註」哨兵例外：剛拍下的圖本來就沒有任何框/線段，
+            // 它在該篩選下是可見的，解除反而會打斷使用者正在做的流程。
+            if (statsFilterLabel !== null
+                && statsFilterLabel !== UIComponents.UNANNOTATED_FILTER
+                && statsFilterLabel !== newImage.label) {
+                statsFilterLabel = null;
+                renderGlobalStatsBar();
+            }
+            renderImageGridFiltered(imagePreview);
             // 排序統一為「舊→新」：拍攝後自動捲到最下方（最新一張），方便檢視
             const grid = imagePreview.querySelector('.dataset-image-grid');
             if (grid) grid.scrollTop = grid.scrollHeight;
@@ -1456,10 +1520,152 @@ function buildStatsViewOptions() {
 /** 重繪統計容器：優先 #view-label-stats（影像系/live 與 label manager 並存，P2 已全 live 涵蓋），
  *  其次：統一管理器存在但統計容器缺失 → 重建整個結構面板（嚴禁覆寫 innerHTML 沖掉管理器）；
  *  最後才退回 #dataset-structure-content（表格 file 模式，該模式無統一管理器） */
+/**
+ * 2026-10-13：頂部統計列（#dataset-global-stats）的「分類篩選」狀態。
+ * null＝顯示全部。僅分類（image_classification）型別可篩選——
+ * 偵測/循跡的 label_counts 是「框數/線段數」而非每張圖的類別，
+ * 用同一組 chips 去篩選影像在語意上是錯的，故那些類型 chips 不可點。
+ * 沿用 nameDriftWarnKey 的模組級慣例；新會話（enterWorkspace）與清除資料時重設。
+ */
+let statsFilterLabel = null;
+
+/** 統計列是否可篩選：所有影像型別皆可（分類比 label、偵測/循跡比「含該類別的框/線段」）。
+ *
+ *  2026-10-13：原本限制為「僅 image_classification 且非標註模式」，造成兩個實機問題：
+ *   ① 物件偵測模式的 chips 完全沒有反應（label_counts 是框數，被誤判成不可篩選）
+ *   ② P3 的 chips 點了沒效果，且因為 P3 版渲染成 span，回 P2 後仍沿用那份 DOM → 全部失效
+ *  現在三種影像型別在 P2／P3 都可篩選（P2 篩縮圖牆、P3 篩左側縮圖條），
+ *  行為一致，也不會再出現「看起來能點卻沒反應」。 */
+function isStatsFilterable() {
+    const projectType = state.spec.toJSON().project.type || getFormValue('projectType') || 'table';
+    return isImageType(projectType);
+}
+
+/**
+ * 依目前篩選條件展開 state.images → [{ img, index }]。
+ * 回傳 index 是**state.images 內的原始索引**，供刪除/進入標註時對齊
+ * （篩選後 grid 的序號與 state.images 已不同，直接用會刪錯圖）。
+ *
+ * 比對語意依型別而異（兩者都對應 stats.label_counts 的計數口徑）：
+ *   · 分類：img.label === 篩選類別
+ *   · 偵測/循跡：該圖「至少有一個」class_id 等於該類別 id 的標註
+ *     （chips 上顯示的是框/線段數，篩選出來的是「含該類別的影像」，語意不同但一致可用；
+ *      tooltip 會標明兩者，避免誤解）
+ */
+function statsFilteredEntries() {
+    const images = Array.isArray(state.images) ? state.images : [];
+    const entries = images.map((img, index) => ({ img, index }));
+    if (!statsFilterLabel) return entries;
+
+    // 「未標註」哨兵（2026-10-13）：不是真實類別，故必須在 label_map 查表之前先處理。
+    // 判準＝該圖完全沒有任何標註（與 annotatedCount 的口徑互補，兩者相加＝張數）。
+    if (statsFilterLabel === UIComponents.UNANNOTATED_FILTER) {
+        return entries.filter((entry) => {
+            const anns = (entry.img && Array.isArray(entry.img.annotations)) ? entry.img.annotations : [];
+            return anns.length === 0;
+        });
+    }
+
+    const projectType = state.spec.toJSON().project.type || getFormValue('projectType') || 'table';
+    if (isClassificationType(projectType)) {
+        return entries.filter((entry) => String(entry.img && entry.img.label || 'unlabeled') === statsFilterLabel);
+    }
+    // 偵測/循跡：以 label_map 反查 class_id，再比對該圖的 annotations
+    const labelMap = state.spec.toJSON().schema.label_map || {};
+    const classId = labelMap[statsFilterLabel];
+    if (classId === undefined) return [];
+    return entries.filter((entry) => {
+        const anns = (entry.img && Array.isArray(entry.img.annotations)) ? entry.img.annotations : [];
+        return anns.some((a) => a && a.class_id === classId);
+    });
+}
+
+/** 目前縮圖列／縮圖牆顯示的第幾張＝原始索引 absIndex（找不到回 -1） */
+function statsVisiblePositionOf(absIndex) {
+    return statsFilteredEntries().findIndex((entry) => entry.index === absIndex);
+}
+
+/**
+ * 篩選條件的「顯示名稱」：一般情況就是類別名；「未標註」哨兵則翻成使用者看得懂的字。
+ * 所有要把它印進訊息的地方都必須走這裡 —— 直接印哨兵值會出現 `__cocoya_unannotated__`。
+ */
+function statsFilterDisplayLabel() {
+    return (statsFilterLabel === UIComponents.UNANNOTATED_FILTER)
+        ? t('STATS_UNANNOTATED', '未標註')
+        : statsFilterLabel;
+}
+
+/**
+ * 2026-10-13：在「目前篩選集合內」前後移動（↑/↓ 鍵用）。
+ *
+ * 為何需要它：原本按鍵直接 `navigateToImage(currentIndex ± 1)`，走的是絕對索引，
+ * 於是分類篩選後按 ↑/↓ 會跳到別的分類的照片 —— 與「畫面只看得到這個分類」矛盾
+ * （實機回報：篩分類後仍可用上下鍵移到其它分類相片）。
+ * 本函式在篩選後的序列裡算下一格，再映射回絕對索引。
+ *
+ * @param {number} delta -1＝上一張、+1＝下一張
+ */
+function navigateFiltered(delta) {
+    const entries = statsFilteredEntries();
+    if (entries.length === 0) return;
+    const pos = statsVisiblePositionOf(state.annotationMode.currentIndex);
+    // 當前照片不在篩選結果內（例如剛切到別的分類）→ 從頭/尾開始，而非整個失效
+    const from = (pos < 0) ? (delta > 0 ? -1 : entries.length) : pos;
+    const nextPos = from + delta;
+    if (nextPos < 0 || nextPos >= entries.length) return; // 邊界：不做循環
+    navigateToImage(entries[nextPos].index);
+}
+
+/**
+ * 重繪右欄縮圖牆（含分類篩選）＋正確的索引映射。
+ * 所有原本直接呼叫 renderImageGrid(..., state.images, ...) 的列表模式呼叫點
+ * 一律改走本函式，確保篩選狀態不會在某條路徑上被繞過。
+ */
+function renderImageGridFiltered(imagePreview) {
+    if (!imagePreview) return;
+    if (state.annotationMode && state.annotationMode.isActive) return; // P3 有自己的縮圖條
+    const entries = statsFilteredEntries();
+    if (state.images.length > 0 && entries.length === 0) {
+        // 篩選後無結果：不可回退成「尚無影像資料」（會讓人以為圖全掉了）
+        imagePreview.style.display = 'block';
+        imagePreview.innerHTML = '<div class="dataset-empty-state">'
+            + escapeHtml(t('STATS_FILTER_EMPTY', '此分類目前沒有影像')
+                .replace('%1', statsFilterDisplayLabel()))
+            + '</div>';
+        return;
+    }
+    imagePreview.style.display = entries.length ? 'block' : 'none';
+    UIComponents.renderImageGrid(imagePreview, entries.map((entry) => entry.img), {
+        onImageClick: (img, idx) => enterAnnotationMode(img, entries[idx].index),
+        onDeleteImage: (idx) => handleDeleteImage(entries[idx].index)
+    });
+}
+
+/** 重繪統計容器：優先 #view-label-stats（影像系/live 與 label manager 並存，P2 已全 live 涵蓋），
+ *  其次：統一管理器存在但統計容器缺失 → 重建整個結構面板（嚴禁覆寫 innerHTML 沖掉管理器）；
+ *  最後才退回 #dataset-structure-content（表格 file 模式，該模式無統一管理器）
+ *
+ *  2026-10-13：頂部統計列 #dataset-global-stats **在函式最前面無條件先寫**，
+ *  再走下列既有分支。順序是契約不是風格——
+ *  P3 標註模式時 `#view-label-stats` 的 DOM 仍存在（只是面板 display:none），
+ *  第一個分支會 return；若把頂部列寫在後面，P3 就永遠不會更新。 */
 function renderStatsPanels() {
     const modal = getModal();
     if (!modal) return;
     const stats = state.spec.toJSON().stats;
+
+    // 篩選目標已被刪除/改名 → 自動解除，避免 chips 指著不存在的類別
+    // 2026-10-13：「未標註」是哨兵不是真實類別，label_counts 永遠查不到它 ——
+    // 若不豁免，一選中就立刻被本段誤判成「類別已刪除」而自動解除（chip 會閃一下就消失）。
+    const counts = (stats && stats.label_counts) || {};
+    if (statsFilterLabel !== null
+        && statsFilterLabel !== UIComponents.UNANNOTATED_FILTER
+        && !Object.prototype.hasOwnProperty.call(counts, statsFilterLabel)) {
+        statsFilterLabel = null;
+    }
+
+    renderGlobalStatsBar();
+
     const viewStats = document.getElementById('view-label-stats');
     if (viewStats) {
         UIComponents.renderLabelStats(viewStats, stats, buildStatsViewOptions());
@@ -1474,6 +1680,70 @@ function renderStatsPanels() {
     if (structureContent && state.images.length > 0) {
         UIComponents.renderLabelStats(structureContent, stats, buildStatsViewOptions());
     }
+}
+
+/**
+ * 2026-10-13：繪出視窗最上方常駐統計列（總數＋分類別 chips）。
+ * 由 renderStatsPanels() 統一呼叫，故 updateStatsFromImages／addFeatureRow／
+ * labelManager 增改刪／saveCurrentAnnotations 等 20+ 處呼叫點全部自動同步，
+ * 不另立第二條更新路徑（避免兩處數字不一致的難查 bug）。
+ */
+function renderGlobalStatsBar() {
+    const bar = document.getElementById('dataset-global-stats');
+    if (!bar) return;
+    const stats = state.spec.toJSON().stats;
+    const options = buildStatsViewOptions();
+    UIComponents.renderGlobalStats(bar, stats, Object.assign({}, options, {
+        activeLabel: statsFilterLabel,
+        filterable: isStatsFilterable(),
+        onChipClick: (label) => setStatsFilter(label)
+    }));
+}
+
+/**
+ * 2026-10-13：點擊統計列 chip 切換分類篩選。同一顆再點＝取消（回到全部）。
+ * 篩選只影響縮圖牆／縮圖條的顯示，不動 state.images 與 spec（統計數字恆為全量）。
+ * P2 篩 #dataset-image-preview；P3 篩 #annotation-thumbnails（兩者都走索引映射）。
+ */
+function setStatsFilter(label) {
+    const next = (typeof label === 'string' && label) ? label : null;
+    statsFilterLabel = (next !== null && next === statsFilterLabel) ? null : next;
+    renderGlobalStatsBar();
+    renderVisibleThumbnails();
+}
+
+/** 依目前篩選重繪「當前模式可見的縮圖集合」（P2 縮圖牆／P3 縮圖條），並保留捲動位置 */
+function renderVisibleThumbnails() {
+    const modal = getModal();
+    if (!modal) return;
+    if (state.annotationMode && state.annotationMode.isActive) {
+        const strip = modal.querySelector('#annotation-thumbnails');
+        if (strip) renderAnnotationStrip(strip);
+        return;
+    }
+    const imagePreview = modal.querySelector('#dataset-image-preview');
+    if (imagePreview) {
+        saveGridScroll();
+        renderImageGridFiltered(imagePreview);
+        restoreGridScroll();
+    }
+}
+
+/**
+ * P3 左側縮圖條（含分類篩選＋索引映射）。
+ * currentIndex 必須傳「篩選後陣列內的位置」而非原始索引 —— renderAnnotationThumbnails
+ * 是用它來決定哪一張高亮；而點擊／刪除回呼要映射回原始索引，否則會跳到或刪掉別張圖。
+ */
+function renderAnnotationStrip(strip) {
+    const am = state.annotationMode;
+    const entries = statsFilteredEntries();
+    const pos = statsVisiblePositionOf(am.currentIndex);
+    UIComponents.renderAnnotationThumbnails(strip, entries.map((entry) => entry.img), pos, {
+        mode: am.mode === 'classification' ? 'classification' : undefined,
+        onThumbnailClick: (i) => navigateToImage(entries[i].index),
+        onDeleteImage: (i) => handleDeleteImage(entries[i].index)
+    });
+    updateThumbnailHighlight();
 }
 
 function bindModalEvents(modal) {
@@ -1506,49 +1776,11 @@ function bindModalEvents(modal) {
             //    （清除資料是銷毀一切的確認操作，跳過未標註二次警告，避免無關阻斷）
             exitAnnotationMode(true);
 
-            // 1. 停止攝影機與連拍動作
-            Sampler.stopCamera(true);
-            Sampler.stopBurst();
-
-            // 2. 還原暫存變數
-            state.images = [];
-            state.tableRows = [];
-            state.sourceFolderPath = null;
-
-            // 3. 還原 UI 欄位值
-            const nameInput = modal.querySelector('[name="projectName"]');
-            if (nameInput) nameInput.value = 'dataset';
-            setNameWarning(false);
-
-            const descInput = modal.querySelector('[name="description"]');
-            if (descInput) descInput.value = '';
-
-            const typeSelect = modal.querySelector('[name="projectType"]');
-            // M1 類型鎖定：清除資料僅清空內容，不變更鎖定類型（修正前誤寫死 'table'）
-            const lockedType = sessionManager.snapshot().lockedType || getFormValue('projectType') || 'table';
-            if (typeSelect) typeSelect.value = lockedType;
-
-            // 4. 動態關聯 Mode 選項（保留鎖定類型的允許 modes）
-            updateSourceModeOptions(lockedType);
-
-            // 5. 重設 Spec 為預設（保留鎖定類型）
-            state.spec = DatasetSpec.createDefault({
-                name: 'dataset',
-                type: lockedType,
-                mode: allowedModes(lockedType)[0]
-            });
-
-            // 6. 清理檔案選擇值（集中式狀態訊息由面板自動清除）
-            
-            const fi = modal.querySelector('#dataset-file-input');
-            if (fi) fi.value = '';
-
-            // 7. 清理 Sampler 模組內部的預覽快取
-            if (Sampler.state.lastPreviewUrl) {
-                URL.revokeObjectURL(Sampler.state.lastPreviewUrl);
-                Sampler.state.lastPreviewUrl = null;
-            }
-            Sampler.state.targetLabel = '';
+            // 1~7 全部收斂至 SSOT（2026-10-13）。
+            // 原本這裡自己寫一份重置（8 個步驟），與 enterWorkspace 各持一份 →
+            // 新增會話級暫存時只會補到其中一處（本次 statsFilterLabel 就漏了清除路徑）。
+            // keepLockedType：清除資料只清內容，不變更已鎖定的類型（M1 契約）。
+            resetSessionData({ keepLockedType: true });
 
             // 8. 重新整理 UI 與 預覽
             refreshDynamicPanels();
@@ -1586,21 +1818,11 @@ function bindModalEvents(modal) {
     // 遠端環境診斷面板已移除（遠端訓練收斂至積木執行時的 SSH 精靈，見 log/plan/DatasetManagerDarkThemeFinish.md 四；
     // 後端 checkRemoteEnvironment / trainRemote command 保留，訓練端 sidecar 仍在使用）
 
-    // 輔助函式：根據選取的專案類型動態更新來源模式 (Mode) 的選項
-    function updateSourceModeOptions(projectType) {
-        const sourceSelect = modal.querySelector('[name="sourceMode"]');
-        if (!sourceSelect) return;
-
-        const allowedModesList = allowedModes(projectType);
-
-        // 重新渲染選項，若原本選取的模式依舊在允許列表中，則保留它；否則使用預設第一個模式
-        const currentMode = sourceSelect.value;
-        const nextMode = allowedModesList.includes(currentMode) ? currentMode : allowedModesList[0];
-        sourceSelect.innerHTML = optionList(allowedModesList, nextMode);
-        
-        // 確保 DOM 上的選定值也被同步更新
-        sourceSelect.value = nextMode;
-    }
+    // 註：原本此處有一個區域函式 updateSourceModeOptions(projectType)，功能與頂層
+    // rebuildSourceModeOptions(projectType) 完全相同。2026-10-13 死碼清理：
+    // 「清除資料」改走 resetSessionData SSOT 後它已無呼叫端（0 處），
+    // 且 2026-09-10 曾因 enterWorkspace 誤 call 這個未定義的區域版而報錯
+    // （見 log/work/2026-09-10.md 熱修1）——同名兩份是歷史事故源，故直接移除。
 
     const typeSelect = modal.querySelector('[name="projectType"]');
     if (typeSelect) {
@@ -1742,6 +1964,12 @@ export async function openDatasetManager() {
     state.isOpen = true;
     modal.style.display = 'flex';
 
+    // 2026-10-13（方案 A）：關閉時已歸零（見 closeDatasetManager），這裡是保險網 ——
+    // 只為「未經 closeDatasetManager 就被再次開啟」的異常路徑保留（例如 host 端直接
+    // dispatch openDatasetManager）。正常路徑下 state 已是空的，此行等於 no-op。
+    // 已 autosave 落盤的資料不受影響，仍可用「選擇影像資料夾」匯入繼續。
+    resetSessionData();
+
     // M1 卡片入口：每次開啟先停在 entry；選卡後才進 workspace
     showEntryPhase(modal);
 
@@ -1761,6 +1989,9 @@ function showEntryPhase(modal) {
         modal.querySelector('.dataset-manager-dialog')?.appendChild(entry);
     }
     if (body) body.style.display = 'none';
+    // 2026-10-13：統計列在 body 之外，body 隱藏不會連帶隱藏它 → 必須顯式隱藏
+    const statsBar = modal.querySelector('#dataset-global-stats');
+    if (statsBar) statsBar.style.display = 'none';
     modal.classList.add('dataset-entry-phase'); // P1 字級上游（font_scale.css --fs-p1）
     entry.style.display = 'block';
     entry.innerHTML = buildEntryTemplate({ t });
@@ -1797,18 +2028,118 @@ function setPageSubtitle(text) {
     if (subtitle) subtitle.textContent = text;
 }
 
-function enterWorkspace(type) {
+/**
+ * 2026-10-13：釋放「前端自建」的縮圖 blob URL。
+ *
+ * 【為何需要它】live 拍照用 `URL.createObjectURL(blob)` 建立縮圖，該 URL 持有的 blob
+ * 在 revoke 之前不會被回收。舊碼只在「刪單張圖」與「清除資料」時 revoke，
+ * 關閉 DM 完全沒做 → VS Code webview 跟隨整個 session 存活，
+ * 反覆開關就會不斷累積 blob（135 張圖就是一整批未釋放的解碼圖）。
+ *
+ * 【為何不能無腦 revoke 全部】`img.blobUrl` 有兩種來源：
+ *   · live 拍照 → `URL.createObjectURL`（blob:，前端持有 → 必須 revoke）
+ *   · 匯入資料夾 → VSIX `asWebviewUri`／Tauri `convertFileSrc`（平台檔案 URI → 不是我們建的）
+ * 故只 revoke 帶 `_blobOwned` 旗標的那些。
+ */
+function releaseOwnedBlobUrls() {
+    const images = Array.isArray(state.images) ? state.images : [];
+    images.forEach((img) => {
+        if (img && img._blobOwned && img.blobUrl) {
+            try {
+                URL.revokeObjectURL(img.blobUrl);
+            } catch (e) {
+                // revoke 失敗不阻斷關閉流程（重複 revoke 在某些 webview 會丟錯）
+            }
+        }
+    });
+}
+
+/**
+ * 2026-10-13：會話資料的完整重置（SSOT）。
+ *
+ * 【為何需要它】`closeDatasetManager()` 只把 modal 設成 display:none，從未重置
+ * `state.images`／`state.spec`／表單欄位。重新開啟只做 `showEntryPhase()`（顯示卡片），
+ * 於是一進 P2 就看到上一次的 135 張圖 —— 使用者回報「關閉 DM 重新進入，舊數據還在」。
+ * 「清除資料」按鈕也做同一組重置，兩邊原本各寫一份，字段必然會漂移
+ * （例如本次新增的 statsFilterLabel 就只在 enterWorkspace 補了，清除路徑漏掉）。
+ *
+ * 三條路徑（開啟 DM／進入 workspace／清除資料）一律經本函式，
+ * 新增「會話級暫存」時只需在此補一行。
+ *
+ * @param {Object} [options]
+ * @param {boolean} [options.keepLockedType=false] true＝保留目前鎖定的類型
+ *   （「清除資料」按鈕的語意：只清空內容、不變更已鎖定類型；
+ *     「開啟 DM」與「進入 workspace」都要回入口重新選類型，故傳 false）
+ */
+function resetSessionData(options = {}) {
+    const keepLockedType = !!options.keepLockedType;
     const modal = getModal();
-    if (!modal || !type) return;
-    sessionManager.openSession(type);
-    // 停止舊會話殘留
+    const lockedType = keepLockedType
+        ? (sessionManager.snapshot().lockedType || getFormValue('projectType') || 'table')
+        : 'table';
+
+    // 釋放縮圖記憶體（必須在清空 state.images 之前做，否則就遍歷不到 URL 了）。
+    // 只 revoke 前端自建（_blobOwned）的 blob URL；匯入資料夾而來的是後端
+    // asWebviewUri／convertFileSrc 平台 URI，不是我們建的，不能動（見 addSampleFromSampler）。
+    releaseOwnedBlobUrls();
+
+    // 停止舊會話的相機／連拍殘留（不停止會讓上一支串流在背景續跑）
     Sampler.stopCamera(true);
     Sampler.stopBurst();
+
     state.images = [];
     state.tableRows = [];
     state.sourceFolderPath = null;
+    statsFilterLabel = null;      // 不繼承上一次的分類篩選
+    nameDriftWarnKey = null;      // 無既有落盤證據，重設漂移提示去重鍵
     setNameWarning(false);
-    nameDriftWarnKey = null; // 方案 A：新會話無既有落盤證據，重設提示去重鍵
+
+    // 解除類型鎖定（回入口＝可重新選類型）；keepLockedType 時維持鎖定
+    if (!keepLockedType) sessionManager.backToEntry();
+    if (modal) {
+        const typeSelect = modal.querySelector('[name="projectType"]');
+        if (typeSelect) {
+            typeSelect.value = lockedType;
+            typeSelect.disabled = keepLockedType;
+            typeSelect.title = keepLockedType ? t('TYPE_LOCKED_TIP', '類型已鎖定') : '';
+        }
+        const nameInput = modal.querySelector('[name="projectName"]');
+        if (nameInput) nameInput.value = 'dataset';
+        const descInput = modal.querySelector('[name="description"]');
+        if (descInput) descInput.value = '';
+        const fi = modal.querySelector('#dataset-file-input');
+        if (fi) fi.value = '';
+        // Mode 選項需與（可能保留的）鎖定類型一致
+        rebuildSourceModeOptions(lockedType);
+    }
+
+    state.spec = DatasetSpec.createDefault({ name: 'dataset', type: lockedType, mode: allowedModes(lockedType)[0] });
+
+    // 釋放上一會話的相機預覽 blob，避免記憶體洩漏
+    if (Sampler.state.lastPreviewUrl) {
+        URL.revokeObjectURL(Sampler.state.lastPreviewUrl);
+        Sampler.state.lastPreviewUrl = null;
+    }
+    Sampler.state.targetLabel = '';
+
+    // 取消排程中的 autosave timer（舊資料不得在新會話被寫回磁碟）
+    getProgressUC().cancelAutoSave();
+    if (state.annotationMode && state.annotationMode.saveTimer) {
+        clearTimeout(state.annotationMode.saveTimer);
+        state.annotationMode.saveTimer = null;
+    }
+}
+
+function enterWorkspace(type) {
+    const modal = getModal();
+    if (!modal || !type) return;
+    // 每次進入 workspace 都是全新會話：先把上一回合的資料清乾淨（SSOT）
+    resetSessionData();
+    sessionManager.openSession(type);
+    // 停止舊會話殘留（resetSessionData 已停，此處保留雙保險語意）
+    Sampler.stopCamera(true);
+    Sampler.stopBurst();
+    setNameWarning(false);
     // 鎖定下拉顯示＋連動 modes
     const typeSelect = modal.querySelector('[name="projectType"]');
     if (typeSelect) {
@@ -1825,6 +2156,9 @@ function enterWorkspace(type) {
     modal.classList.remove('dataset-entry-phase'); // 進 P2 工作區，字級上游改回 --fs-p2
     const body = modal.querySelector('.dataset-manager-body');
     if (body) body.style.display = '';
+    // 2026-10-13：離開 P1 入口頁，恢復統計列（進 P2 即由 renderStatsPanels 填入數字）
+    const statsBar = modal.querySelector('#dataset-global-stats');
+    if (statsBar) statsBar.style.display = '';
     setHeaderButtons(true, true);
     setPageSubtitle(t('PAGE_MANAGE', '資料集管理') + ' — ' + t('ENTRY_TYPE_' + type.toUpperCase(), type));
     refreshDynamicPanels();
@@ -1888,6 +2222,13 @@ export async function closeDatasetManager() {
 
     // 關閉前立即落盤，避免最後異動遺失
     scheduleAutoSave(true);
+
+    // 2026-10-13（方案 A）：關閉即歸零並釋放記憶體，不等下次開啟。
+    // 原本只在 openDatasetManager 重置 —— 那會讓「從關閉到下次開啟」之間
+    // state.images 與其 blob URL 全程存活，而 VS Code webview 跟隨整個 session，
+    // 反覆開關就持續累積（使用者回報「關閉 DM 重新進入舊數據還在」也是這個根因）。
+    // 已落盤的資料不受影響，下次可用「選擇影像資料夾」匯入繼續。
+    resetSessionData();
 
     const modal = getModal();
     state.isOpen = false;

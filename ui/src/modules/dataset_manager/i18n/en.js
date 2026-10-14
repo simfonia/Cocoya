@@ -99,6 +99,13 @@
     "DSM_SAMPLE_COUNT": "Count",
     "DSM_IMAGE_COUNT": "Images",
     "DSM_ANNOTATED_COUNT": "Annotated",
+    // 2026-10-13：頂部常駐統計列（#dataset-global-stats）
+    "DSM_STATS_ALL": "All",
+    "DSM_STATS_ALL_TIP": "Show all (clear label filter)",
+    "DSM_STATS_FILTER_EMPTY": "No images in label \"%1\" yet",
+    // 2026-10-13：detection/line "unannotated" chip
+    "DSM_STATS_UNANNOTATED": "Unannotated",
+    "DSM_STATS_UNANNOTATED_TIP": "Images with no box/line at all; click to show only these",
     "DSM_BOX_COUNT": "Boxes",
     "DSM_LINE_COUNT": "Lines",
     "DSM_COLOR": "Color",

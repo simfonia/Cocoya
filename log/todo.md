@@ -15,6 +15,17 @@
 
 ---
 ## [進行中 / 待辦]
+### [2026-10-13] DM P3 縮圖列分類篩選三項回報（✅ 完成，待實機驗收）
+- [x] **焦點框消失**（P3 按第二個分類 chip 後綠框消失）：根因是 DOM 序號與絕對索引脫勾的「巧合式正確」；
+  改走 `statsVisiblePositionOf()` 換算，勾號改讀 `entries[idx].img` ✅ （`log/work/2026-10-13.md` 第 6 節）
+- [x] **↑/↓ 跳出篩選**：新增 `ui_layout.navigateFiltered(delta)` 在篩選後序列內移動（邊界不循環、
+  不在篩選內時從頭尾起算），兩個 controller 改注入；共用夾具補忠實預設而非 no-op ✅ （同上第 7 節）
+- [x] **補「未標註」chip**（偵測/循跡）：`UIComponents.UNANNOTATED_FILTER` 哨兵，數量＝張數 − 已標註；
+  含三處豁免（自動解除／拍到新圖／label_map 查表先後）與顯示名 helper ✅ （同上第 8 節）
+- [ ] **待辦（後續）**：`statsFilteredEntries` 的哨兵分支若日後要擴及影像分類，
+  必須先移除 `label_counts` 的 `unlabeled` 條目或改用另一哨兵，**不可直接加條件**（會重複）
+- [ ] **backlog**：P3 縮圖列大量影像（>200）下 `navigateFiltered` 未捲動到可見區
+
 ### [2026-10-12] 三主題 icon 風格與行為統一重構
 - [ ] **以統一做法重構三主題 icon 風格與行為**（2026-10-12 立項，起因：dark 下 `python_lab.png` 被 `[src*="python"]` 排除而全黑，見 `log/work/2026-10-12.md`）
   - 現況是逐檔 `[src*=...]` 黑/白名單（`cocoya_dark.js` toolbar/normal-icon/dropdown 三處各寫一套），新圖示極易踩同一個坑

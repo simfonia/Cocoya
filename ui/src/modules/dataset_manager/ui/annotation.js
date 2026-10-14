@@ -45,7 +45,10 @@ export function createAnnotationController({
     saveGridScroll, exitAnnotationMode, navigateToImage,
     setAnnotationHeaderActions,
     updateStatsFromImages, updateThumbnailHighlight, refreshPreview,
-    createLabelMapManager, onDeleteImage, getDocument = () => globalThis.document
+    createLabelMapManager, onDeleteImage,
+    navigateFiltered = (delta) => navigateToImage((state.annotationMode.currentIndex || 0) + delta),
+    visibleImageEntries = () => [],
+    getDocument = () => globalThis.document
 }) {
     function doc() {
         return getDocument();
@@ -113,10 +116,14 @@ export function createAnnotationController({
                              僅 bbox 模式顯示；line 模式本來就沒有尺規。
                              註：原本這裡另有一顆「匯出資料集」按鈕，已依使用者指示移除 ——
                              匯出僅存在於 P2 資料集管理頁（視窗標頭），P3 標註頁不提供匯出。 -->
+                        <!-- [P2-15 2026-10-04] 下面的 i18n key 不可加 DSM_ 前綴：
+                             t() 會自動補前綴（'DSM_' + key）→ 寫成 DSM_ANNOTATION_CROSSHAIR*
+                             實際查 DSM_DSM_* 永遠查不到；這兩顆鍵在 i18n/en.js 有翻譯卻讀不到，
+                             導致英文語系下永遠顯示中文。
+                             ⚠ 註解必須留在標籤「之外」——放進 <label> 的屬性列會被瀏覽器
+                             當成屬性內容解析，使 title="..."> 整段洩漏成可見文字
+                             （2026-10-13 實機回報：P3 上方出現 title="十字尺規顏色">尺規）。 -->
                         <label class="dataset-annotation-crosshair-picker" id="annotation-crosshair-picker"
-                               <!-- ⚠ [P2-15 2026-10-04] 下面單元树原本寫成 t('DSM_ANNOTATION_CROSSHAIR*', ...)，
-     但 t() 會自動補前綴（'DSM_' + key）→ 實際查 DSM_DSM_* 永道查不到。
-     這兩個鍵在 i18n/en.js 都有翻譯卻讀不到 —— 英文語系下永道顯示中文。 -->
                             title="${t('ANNOTATION_CROSSHAIR_COLOR', '十字尺規顏色')}">
                             <span class="dataset-annotation-crosshair-label">${t('ANNOTATION_CROSSHAIR', '尺規')}</span>
                             <input type="color" id="annotation-crosshair-color" value="#00ff88"
@@ -135,9 +142,14 @@ export function createAnnotationController({
 
         // 渲染縮圖欄
         const thumbnails = doc().getElementById('annotation-thumbnails');
-        UIComponents.renderAnnotationThumbnails(thumbnails, state.images, index, {
-            onThumbnailClick: (newIndex) => navigateToImage(newIndex),
-            onDeleteImage: (delIndex) => onDeleteImage(delIndex)
+        // 2026-10-13：縮圖條也套用頂部統計列的分類篩選（含索引映射）。
+        // currentIndex 傳「篩選後陣列內的位置」（renderAnnotationThumbnails 用它決定高亮），
+        // 點擊／刪除回呼映射回 state.images 的原始索引，否則會跳到或刪到別張圖。
+        const entries = visibleImageEntries();
+        const pos = entries.findIndex((entry) => entry.index === index);
+        UIComponents.renderAnnotationThumbnails(thumbnails, entries.map((entry) => entry.img), pos, {
+            onThumbnailClick: (i) => navigateToImage(entries[i].index),
+            onDeleteImage: (i) => onDeleteImage(entries[i].index)
         });
 
         // 渲染右側控制欄
@@ -270,10 +282,12 @@ export function createAnnotationController({
         UICanvas.state.handlers.keydown = (e) => {
             if (e.key === 'ArrowUp') {
                 e.preventDefault();
-                navigateToImage(state.annotationMode.currentIndex - 1);
+                // 2026-10-13：改走 navigateFiltered —— 分類篩選後必須只在自己的分類內移動，
+                // 原本用絕對索引 currentIndex - 1 會跳到別的分類的照片。
+                navigateFiltered(-1);
             } else if (e.key === 'ArrowDown') {
                 e.preventDefault();
-                navigateToImage(state.annotationMode.currentIndex + 1);
+                navigateFiltered(1);
             } else if (e.key === 'Delete' || e.key === 'Backspace') {
                 e.preventDefault();
                 deleteSelectedAnnotation();
@@ -289,6 +303,11 @@ export function createAnnotationController({
 
     /**
      * 刪除目前高亮的標註（若無高亮則刪除最後一個）
+     *
+     * 2026-10-13：刪除後必須**立即**重算統計，不可只靠 onUpdate 的 300ms debounce。
+     * 實機回報：P3 按 Delete 刪框，頂部統計列的「已標註／標註框數」沒有即時更新。
+     * 原因：onUpdate 的 debounce 是為「拉框／拖曳」這類連續操作設計的（避免每毫秒重算），
+     * 但 Delete 是**離散動作**，使用者預期當下就看到數字變化。
      */
     function deleteSelectedAnnotation() {
         const anns = UICanvas.state.annotations || [];
@@ -300,6 +319,13 @@ export function createAnnotationController({
         if (UICanvas.state.onUpdate) UICanvas.state.onUpdate(anns);
         UICanvas.render();
         renderAnnotationListUI(anns);
+
+        // 立即結清 debounce 並重算統計（框數／已標註即時反映）
+        if (state.annotationMode.saveTimer) {
+            clearTimeout(state.annotationMode.saveTimer);
+            state.annotationMode.saveTimer = null;
+        }
+        updateStatsFromImages();
     }
 
     /**

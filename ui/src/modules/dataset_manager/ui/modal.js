@@ -40,6 +40,12 @@ export function buildModalTemplate({ t, optionList, projectTypes, sourceModes })
 
             <div id="dataset-manager-message" class="dataset-manager-message"></div>
 
+            <!-- 2026-10-13：頂部常駐統計列（P2/P3 皆可見）。
+                 刻意放在 .dataset-manager-body「之外」——body 是 overflow:auto 的捲動容器，
+                 放在裡面會隨縮圖牆捲出視野（正是本次要解決的缺點 2）。
+                 dialog 為 flex-direction:column，故本列自然常駐不捲動，不需 position:sticky。 -->
+            <div id="dataset-global-stats" class="dataset-global-stats"></div>
+
             <div class="dataset-manager-body">
                 <section class="dataset-panel dataset-source-panel">
                     <h3>${t('SOURCE', '資料來源')}</h3>

@@ -18,7 +18,10 @@ function makeDeps(docOverrides = {}) {
         state,
         modal: docOverrides.modal || null,
         document: docOverrides.document,
-        record: true
+        record: true,
+        // 2026-10-13：原本本 wrapper 未透傳 overrides —— 傳進去的依賴覆寫會被靜默丟棄，
+        // 測試看起來通過、實際驗的是預設實作（假安全感）。改成透傳後才能對單一依賴下 spy。
+        overrides: docOverrides.overrides || {}
     });
     return { deps, events };
 }
@@ -124,10 +127,16 @@ describe('ui/annotation.js (Stage 4 切片 6)', () => {
         const handler = canvas.listeners.keydown[0];
         assert.equal(deps.UICanvas.state.handlers.keydown, handler);
 
-        // 設定 currentIndex 後 ArrowUp 應導航至前一張
+        // 設定 currentIndex 後 ArrowUp 應導航至前一張。
+        // 2026-10-13：必須提供 images —— ↑/↓ 現在走 navigateFiltered（在「篩選後序列」內
+        // 前後移動並映射回原始索引），空陣列下無可移動的對象，測不到任何行為。
+        deps.state.images = [{ index: 0 }, { index: 1 }, { index: 2 }];
         deps.state.annotationMode.currentIndex = 1;
         handler({ key: 'ArrowUp', preventDefault() {} });
         assert.deepEqual(events.find(e => e[0] === 'nav')?.[1], 0);
+
+        handler({ key: 'ArrowDown', preventDefault() {} });
+        assert.equal(events.filter(e => e[0] === 'nav').pop()?.[1], 2, 'ArrowDown 應導航至下一張');
 
         handler({ key: 'Escape', preventDefault() {}, stopPropagation() {} });
         assert.ok(events.some(e => e[0] === 'exit'));
@@ -137,6 +146,57 @@ describe('ui/annotation.js (Stage 4 切片 6)', () => {
         handler({ key: 'Delete', preventDefault() {} });
         assert.equal(deps.UICanvas.state.annotations.length, 1);
         assert.equal(deps.UICanvas.state.selectedAnnotationIndex, -1);
+    });
+
+    // 2026-10-13 守門（P3 分類篩選）：↑/↓ 必須委派 navigateFiltered，
+    // 不得再用「絕對索引 currentIndex ± 1」直接導航 —— 那會跳到篩選外的照片。
+    // 判準：注入 spy 後，導航一律經 spy（delta = -1 / +1），且 nav 只能由 spy 呼叫。
+    test('bindCanvasKeyboardEvents：↑/↓ 走 navigateFiltered（不直接 navigateToImage±1）', () => {
+        const doc = makeFakeDocument(['annotation-container', 'annotation-controls', 'annotation-list-ui']);
+        const deltas = [];
+        const { deps } = makeDeps({
+            document: doc,
+            overrides: {
+                navigateFiltered: (d) => deltas.push(d)
+            }
+        });
+        const container = doc.getElementById('annotation-container');
+        const canvas = makeEl('canvas');
+        canvas.tagName = 'CANVAS';
+        container.querySelector = (sel) => (sel === 'canvas.dataset-annotation-canvas' ? canvas : null);
+
+        createAnnotationController(deps).bindCanvasKeyboardEvents();
+        const handler = canvas.listeners.keydown[0];
+
+        deps.state.images = [{ index: 0 }, { index: 1 }, { index: 2 }];
+        // 故意讓 currentIndex 落在「絕對索引會算出別張圖」的位置，以區分兩種實作
+        deps.state.annotationMode.currentIndex = 1;
+        handler({ key: 'ArrowUp', preventDefault() {} });
+        handler({ key: 'ArrowDown', preventDefault() {} });
+
+        assert.deepEqual(deltas, [-1, 1], '↑/↓ 應把位移量交給 navigateFiltered');
+    });
+
+    test('bindCanvasKeyboardEvents：navigateFiltered 邊界（第一張再↑／最後一張再↓不呼叫導航）', () => {
+        const doc = makeFakeDocument(['annotation-container', 'annotation-controls', 'annotation-list-ui']);
+        const deltas = [];
+        const { deps } = makeDeps({
+            document: doc,
+            overrides: { navigateFiltered: (d) => deltas.push(d) }
+        });
+        const container = doc.getElementById('annotation-container');
+        const canvas = makeEl('canvas');
+        canvas.tagName = 'CANVAS';
+        container.querySelector = (sel) => (sel === 'canvas.dataset-annotation-canvas' ? canvas : null);
+
+        createAnnotationController(deps).bindCanvasKeyboardEvents();
+        const handler = canvas.listeners.keydown[0];
+
+        // 邊界邏輯在 ui_layout.navigateFiltered（非本 controller）；此處僅確認
+        // controller 一律照轉位移量，把「是否越界」的責任留在單一處。
+        deps.state.annotationMode.currentIndex = 0;
+        handler({ key: 'ArrowUp', preventDefault() {} });
+        assert.deepEqual(deltas, [-1], '邊界處理不應在 controller 層發生');
     });
 
     test('renderAnnotationControls：object_detection 顯示類別管理；無 controls 早退', () => {

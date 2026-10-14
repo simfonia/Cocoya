@@ -77,12 +77,34 @@ export function makeDeps({
         saveGridScroll: record ? rec('saveGridScroll') : () => {},
         exitAnnotationMode: record ? rec('exit') : () => {},
         navigateToImage: record ? rec('nav') : () => {},
+        // 2026-10-13：↑/↓ 鍵的預設實作必須「忠實反映 ui_layout.navigateFiltered 的行為」——
+        // 在篩選後序列內前後移動、再把位置映射回原始索引呼叫 navigateToImage。
+        // 注意：這裡刻意寫成真行為而非 no-op stub，否則既有斷言
+        // 「currentIndex=1 按 ArrowUp → nav 0」會變成驗證替身自己，而非被測程式。
+        navigateFiltered: (delta) => {
+            const images = deps.state.images || [];
+            const cur = deps.state.annotationMode.currentIndex;
+            // identity 篩選下 entries.index ＝ 陣列位置（與 statsFilteredEntries 一致）
+            const pos = images.findIndex((im) => im.index === cur);
+            const from = (pos < 0) ? cur : pos;
+            const next = from + delta;
+            if (next < 0 || next >= images.length) return;
+            deps.navigateToImage(images[next].index);
+        },
         setAnnotationHeaderActions: record ? rec('headerActions') : () => {},
         handleExportDataset: record ? rec('export') : () => {},
         updateStatsFromImages: record ? rec('stats') : () => {},
         updateThumbnailHighlight: record ? rec('highlight') : () => {},
         refreshPreview: record ? rec('refresh') : () => {},
         createLabelMapManager: record ? rec('labelManager') : () => {},
+        // 2026-10-13：P3 縮圖條的分類篩選來源。預設為「恆等映射」（不篩選），
+        // 與加入此依賴之前的行為完全相同 —— 這樣既有測試的語意不必改動；
+        // ui_layout.js 注入的才是真正會依 statsFilterLabel 過濾的版本。
+        // 讀取時走 deps.state（而非閉包外捕獲的 state），以免測試用 overrides 換掉 state 後讀到舊值。
+        visibleImageEntries: () => {
+            const imgs = (deps.state && Array.isArray(deps.state.images)) ? deps.state.images : [];
+            return imgs.map((img, index) => ({ img, index }));
+        },
         getDocument: () => (document || makeFakeDocument(elementsById)),
         ...overrides
     };

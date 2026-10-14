@@ -24,6 +24,8 @@ const REQUIRED_IDS = [
     'dataset-manager-close',
     'dataset-export-progress',
     'dataset-manager-message',
+    // 2026-10-13：頂部常駐統計列（P2/P3 分類別＋總數）
+    'dataset-global-stats',
     'dataset-import-btn',
     'dataset-file-input',
     'dataset-dir-import-btn',
@@ -78,4 +80,35 @@ test('純函式：重複呼叫結果一致（無副作用）', () => {
     const a = buildModalTemplate(deps);
     const b = buildModalTemplate(deps);
     assert.equal(a, b);
+});
+
+// ---------------------------------------------------------------------------
+// 2026-10-13：統計列必須在「捲動容器之外」
+// ---------------------------------------------------------------------------
+// 判據落在真不變式上，不是「有沒有這個 id」：.dataset-manager-body 是 overflow:auto
+// 的捲動容器，統計列若被放進它的子樹，縮圖牆一多就會把統計捲出視野
+// —— 那正是本次要解決的缺點 2（使用者回報：捲下管理縮圖時看不到數據）。
+// 掃字串「id 存在」無法區分這兩種寫法，故斷言「body 起始之前出現」。
+test('統計列 #dataset-global-stats 必須位於 .dataset-manager-body 之外（不得隨縮圖牆捲動）', () => {
+    const html = buildModalTemplate(deps);
+    const statsIdx = html.indexOf('id="dataset-global-stats"');
+    const bodyIdx = html.indexOf('class="dataset-manager-body"');
+    assert.ok(statsIdx > 0, '統計列應存在');
+    assert.ok(bodyIdx > 0, 'body 應存在');
+    assert.ok(statsIdx < bodyIdx,
+        '#dataset-global-stats 必須在 .dataset-manager-body 之前（之外），否則會隨縮圖牆捲出視野');
+});
+
+test('守門自檢：把統計列移進 body 內必須報紅', () => {
+    // 變異＝真實退化形狀：統計列成為 body 的子節點（縮圖牆會把它捲走）。
+    const html = buildModalTemplate(deps);
+    const block = html.match(/\s*<!-- 2026-10-13：頂部常駐統計列[\s\S]*?<\/div>\s*/);
+    assert.ok(block, '應能定位統計列區塊');
+    const regressed = html
+        .replace(block[0], '\n')
+        .replace('<div class="dataset-manager-body">',
+            '<div class="dataset-manager-body">' + block[0]);
+    const statsIdx = regressed.indexOf('id="dataset-global-stats"');
+    const bodyIdx = regressed.indexOf('class="dataset-manager-body"');
+    assert.ok(statsIdx > bodyIdx, '變異必須生效（統計列已落入 body 內）');
 });

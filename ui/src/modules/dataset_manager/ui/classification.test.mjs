@@ -98,6 +98,9 @@ test('鍵盤事件：↑/↓/Esc 導航、重複 bind 不累積、unbind/dispose
     let exited = false;
     deps.navigateToImage = (i) => nav.push(i);
     deps.exitAnnotationMode = () => { exited = true; };
+    // 2026-10-13：↑/↓ 改走 navigateFiltered（在篩選後序列內前後移動），
+    // 因此必須提供 images —— 空陣列下無可移動對象，導航不會發生。
+    deps.state.images = [{ index: 0 }, { index: 1 }, { index: 2 }];
     deps.state.annotationMode.currentIndex = 1;
     const controller = createClassificationController(deps);
 

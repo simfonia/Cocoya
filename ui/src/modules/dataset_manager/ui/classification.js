@@ -30,7 +30,10 @@ export function createClassificationController({
     saveGridScroll, exitAnnotationMode, navigateToImage,
     setAnnotationHeaderActions,
     updateStatsFromImages, updateThumbnailHighlight, refreshPreview,
-    createLabelMapManager, onDeleteImage, getDocument = () => globalThis.document
+    createLabelMapManager, onDeleteImage,
+    navigateFiltered = (delta) => navigateToImage((state.annotationMode.currentIndex || 0) + delta),
+    visibleImageEntries = () => [],
+    getDocument = () => globalThis.document
 }) {
     let classificationKeyHandler = null; // 分類模式的鍵盤事件 handler（用於清理）
 
@@ -107,10 +110,13 @@ export function createClassificationController({
 
         // 渲染縮圖欄（分類模式顯示標籤徽章）
         const thumbnails = doc().getElementById('annotation-thumbnails');
-        UIComponents.renderAnnotationThumbnails(thumbnails, state.images, index, {
+        // 2026-10-13：縮圖條也套用頂部統計列的分類篩選（含索引映射），同 annotation.js
+        const entries = visibleImageEntries();
+        const pos = entries.findIndex((entry) => entry.index === index);
+        UIComponents.renderAnnotationThumbnails(thumbnails, entries.map((entry) => entry.img), pos, {
             mode: 'classification',
-            onThumbnailClick: (newIndex) => navigateToImage(newIndex),
-            onDeleteImage: (delIndex) => onDeleteImage(delIndex)
+            onThumbnailClick: (i) => navigateToImage(entries[i].index),
+            onDeleteImage: (i) => onDeleteImage(entries[i].index)
         });
 
         // 載入目前圖片
@@ -213,10 +219,11 @@ export function createClassificationController({
         classificationKeyHandler = (e) => {
             if (e.key === 'ArrowUp') {
                 e.preventDefault();
-                navigateToImage(state.annotationMode.currentIndex - 1);
+                // 2026-10-13：改走 navigateFiltered —— 分類篩選後只在自己的分類內移動
+                navigateFiltered(-1);
             } else if (e.key === 'ArrowDown') {
                 e.preventDefault();
-                navigateToImage(state.annotationMode.currentIndex + 1);
+                navigateFiltered(1);
             } else if (e.key === 'Escape') {
                 e.preventDefault();
                 e.stopPropagation(); // 阻止冒泡到 modal 的全域 Esc 關閉

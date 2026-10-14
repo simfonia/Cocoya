@@ -99,6 +99,13 @@
     "DSM_SAMPLE_COUNT": "樣本數",
     "DSM_IMAGE_COUNT": "影像張數",
     "DSM_ANNOTATED_COUNT": "已標註",
+    // 2026-10-13：頂部常駐統計列（#dataset-global-stats）
+    "DSM_STATS_ALL": "全部",
+    "DSM_STATS_ALL_TIP": "顯示全部（取消分類篩選）",
+    "DSM_STATS_FILTER_EMPTY": "分類「%1」目前沒有影像",
+    // 2026-10-13：偵測/循跡的「未標註」chip
+    "DSM_STATS_UNANNOTATED": "未標註",
+    "DSM_STATS_UNANNOTATED_TIP": "完全沒有任何標註框/線段的影像；點擊只看這些",
     "DSM_BOX_COUNT": "標註框數",
     "DSM_LINE_COUNT": "標註線段",
     "DSM_COLOR": "顏色",

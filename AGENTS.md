@@ -332,6 +332,43 @@ Python 套件檢查清單統一由 `config/python_modules.json` 定義，VSIX �
 - **Sidecar（`resources/dataset_manager/dataset_sidecar.py`）**：影像掃描、相機、匯出打包；stdout JSON 單一回應；永不直接與 UI 對話（經 Host/Rust 轉發）。
 - **鐵律**：錯誤「碼」在後端定義（如 `PROGRESS_NOT_FOUND`、`PROJECT_NAME_INVALID`），人類可讀文案由前端 i18n（`DSM_*`）負責；後端禁止輸出展示用文案。
 
+### 頂部常駐統計列與分類篩選 (Global Stats Bar, 2026-10-13)
+
+DM P2/P3 的分類別統計與總數顯示在視窗最上方（`#dataset-global-stats`），解決兩個缺點：
+① 只有總數沒有分類別統計 ② P2 統計在中欄上方、縮圖在右欄下方，捲下管理縮圖時看不到數據。
+
+- **容器位置是契約**：`#dataset-global-stats` 由 `ui/modal.js` 建於 `.dataset-manager-body`
+  **之外**（dialog 是 `flex-direction:column`，故本列自然常駐、不隨縮圖牆捲動，
+  **不需要** `position:sticky`，也就不會踩到 grid/flex 高度鏈無法解析的坑）。
+  把它移進 body 就是本次要修的 bug 本身——守門 `modal.test.mjs` 斷言
+  「statsIdx < bodyIdx」並附變異自檢。
+- **單一更新入口**：統計一律經 `ui_layout.js::renderStatsPanels()` → `renderGlobalStatsBar()`。
+  該呼叫**必須寫在 `#view-label-stats` 早退分支之前**——P3 時 `#view-label-stats` 的 DOM
+  仍存在（只是面板 `display:none`），第一個分支會 return，寫在後面 P3 就永遠靜止。
+  兩條掃描型守門 + 變異測試已釘死（`ui_components.test.mjs`）。
+  好處：`updateStatsFromImages` / `addFeatureRow` / labelManager 增改刪 /
+  `saveCurrentAnnotations` 等 20+ 處呼叫點全部自動同步，不另立第二條更新路徑。
+- **與中欄統計的關係（選案 A）**：兩者不同容器、不同職責，非重複實作。
+  中欄 `#view-label-stats` 保留完整表格（色塊圖例＋逐類計數，仍是管理類別的主場）；
+  頂部為精簡列（總數＋分類 chips）。**計數單位沿用同一組 `typePolicy` 判定**
+  （偵測＝框數／循跡＝線段／其餘＝樣本數），`ui_components.test.mjs` 以同一真值表對帳兩處。
+- **分類篩選 chips**：僅分類型別（`isClassificationType`）**且非標註模式**可點
+  （偵測/循跡的 `label_counts` 是框/線段數，用同一組 chips 篩選影像是語意錯誤；
+  P3 時 `#dataset-image-preview` 已被 annotation layout 取代，點了沒有可見效果）。
+  - 縮圖牆繪製**一律改走 `renderImageGridFiltered()`**（4 處呼叫點），它回傳
+    `state.images` 內的**原始索引**給 click/delete —— 篩選後 grid 序號已與
+    `state.images` 錯位，直接餵 `idx` 會**刪錯圖**。
+  - 篩選只影響縮圖牆，不動 `state.images` 與 spec（統計數字恆為全量）。
+  - 篩選目標被刪除/改名 → `renderStatsPanels` 自動解除；拍到非篩選分類的圖 → 自動解除
+    （否則新圖不可見，使用者會以為沒拍進去）；新會話／清除資料時重設。
+  - 篩選後無結果 → 顯示 `STATS_FILTER_EMPTY`，**不可回退成「尚無影像資料」**
+    （會讓人以為圖全掉了）。
+  - 不可篩選時 chips 渲染成 `span` 而非 `button`（不可點卻有按鈕外觀＝誤導）。
+- **樣式**：全部走 `--dsm-*` token，**不新增 dark 覆寫**（P1-3 決策：主題感知值收斂為 token）；
+  字級一律 `calc(Npx * var(--dsm-font-scale))`；chips 自身 `overflow-x:auto` 不撐高本列。
+- **P1 入口頁需顯式隱藏**：`showEntryPhase()` 原本只隱藏 body，但統計列在 body 之外，
+  不會被連帶隱藏 → 已補顯式 `display:none`（`enterWorkspace` 相對回復）。
+
 ### Dataset Manager 結構面板與縮圖同步契約 (Structure Panel & Thumbnail Sync, 2026-09-17)
 兩條新契約（bug 修復蒸餾；違反會直接重現「拍照後標籤管理 UI 消失」與「改名後 hover tip／spec 檔名不同步」）：
 - **`#dataset-structure-content` 是複合容器 → 嚴禁覆寫其 innerHTML**：P2（2026-09-16）起，影像系與所有 live 類型的結構面板內容為 `#view-label-class-manager`（統一標籤管理器）＋ `#view-label-stats`（統計），由 `ui_layout.js` 的 `renderStructurePanel()` 建立。

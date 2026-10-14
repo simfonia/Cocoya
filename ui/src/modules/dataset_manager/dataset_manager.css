@@ -821,6 +821,108 @@ body.cocoya-dark-mode .dataset-label-summary  {
     color: var(--dsm-brand);
 }
 
+/* ===== 頂部常駐統計列（2026-10-13）=====
+   位於 .dataset-manager-body 之外（dialog 的 flex column 直接子項），
+   故縮圖牆捲動時本列不動 —— 這是本次要解決的缺點 2 的根治方式。
+   全部色彩走 --dsm-* token，不新增 dark 覆寫（主題感知值收斂為 token，見 P1-3 決策）。 */
+.dataset-global-stats {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    margin: 0 14px;
+    padding: 6px 12px;
+    border: 1px solid var(--dsm-border-light);
+    border-radius: 6px;
+    background: var(--dsm-surface-alt);
+    color: var(--dsm-text);
+    font-size: calc(12px * var(--dsm-font-scale));
+    /* 不得被 body 壓縮；dialog 是 flex column，本列是固定高度的常駐橫條 */
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+/* 總數摘要（📷 影像張數 / ✅ 已標註 / Σ 計數單位總和） */
+.dataset-global-stats-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    white-space: nowrap;
+}
+
+.dataset-global-stats-summary b {
+    font-weight: 600;
+    color: var(--dsm-brand);
+}
+
+/* 分類 chips 橫向排列；類別多時自身橫向捲動，不撐高本列（避免吃掉縮圖牆高度） */
+.dataset-global-stats-chips {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow-x: auto;
+    flex: 1;
+    min-width: 0;
+    padding-bottom: 2px;
+}
+
+.dataset-global-stats-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px;
+    border: 1px solid var(--dsm-border-light);
+    border-radius: 999px;
+    background: var(--dsm-surface);
+    color: var(--dsm-text);
+    font-size: calc(11px * var(--dsm-font-scale));
+    /* 類別名很長時以省略號收斂，不可把整列撐寬 */
+    max-width: 180px;
+    font-family: inherit;
+    line-height: 1.5;
+}
+
+/* 可篩選（分類型別）時才是 button，才有 pointer 手勢 */
+button.dataset-global-stats-chip {
+    cursor: pointer;
+}
+
+button.dataset-global-stats-chip:hover {
+    border-color: var(--dsm-brand);
+}
+
+.dataset-global-stats-chip.is-active {
+    border-color: var(--dsm-brand);
+    background: var(--dsm-brand-soft);
+    color: var(--dsm-text);
+}
+
+.dataset-global-stats-chip b {
+    font-weight: 600;
+    color: var(--dsm-brand);
+}
+
+/* 「未標註」chip 是虛擬分類（不是 label_map 的真實類別），以虛線邊框與實體類別做視覺區隔。
+   全走 --dsm-* token，不新增 dark 覆寫。 */
+.dataset-global-stats-chip-unannotated {
+    border-style: dashed;
+}
+
+.dataset-global-stats-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid var(--dsm-border-subtle);
+    flex-shrink: 0;
+}
+
+.dataset-global-stats-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .dataset-empty-state {
     padding: 40px 20px;
     text-align: center;

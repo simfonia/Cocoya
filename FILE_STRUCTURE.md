@@ -258,7 +258,7 @@ C:\Workspace\cocoya\
 │   │   │       │   ├── annotation.test.mjs # annotation controller Node 測試（node --test 執行）
 │   │   │       │   ├── panels.js # [Stage 4 切片 7] 面板呈現 Presenter（createPanelsPresenter；renderColumnRow/renderValidation/renderPreviewTable/addColumn/renderAllColumns/dispose；唯呈現層、refreshDynamicPanels 留協調層）
 │   │   │       │   ├── panels.test.mjs # panels presenter Node 測試（node --test 執行）
-│   │   │       │   ├── modal.js # [Stage 4 切片 2] Modal 模板純函式 buildModalTemplate（注入 t/optionList/projectTypes/sourceModes；無 DOM 副作用）
+│   │   │       │   ├── modal.js # [Stage 4 切片 2] Modal 模板純函式 buildModalTemplate（注入 t/optionList/projectTypes/sourceModes；無 DOM 副作用）；[2026-10-13] 新增頂部常駐統計列容器 #dataset-global-stats（刻意置於 .dataset-manager-body 之外，位置為契約）
 │   │   │       │   ├── modal.test.mjs # buildModalTemplate Node 測試（node --test 執行）
 │   │   │       │   ├── statusMessage.js # [Stage 4 切片 1] 集中式狀態訊息 Presenter（createStatusMessageUI→{showStatusMessage,dispose}；計時器重置/dispose 語意自 ui_layout 抽出，契約不變）
 │   │   │       │   └── statusMessage.test.mjs # statusMessage 行為契約 Node 測試（node --test 執行）
@@ -268,8 +268,8 @@ C:\Workspace\cocoya\
 │   │   │       ├── spec.js  # DatasetSpec 類別、Schema 偵測、強健型 CSV 解析與驗證邏輯 (i18n 化)（R7：buildTableSamples 表格落盤組裝＋TABLE_SAMPLES_PERSIST_LIMIT＋stats.samples_truncated 契約）
 │   │   │       ├── spec.test.mjs # [R7] spec 契約測試（buildTableSamples 截斷/total、samples_truncated round-trip；6 測試）
 │   │   │       ├── sampler.js # [Stage 2 重構] 攝影機採集核心、連拍邏輯（通訊改經 io/bridge.js：request correlation + timeout + dispose）
-│   │   │       ├── ui_layout.js # 協調層（Stage 4＋M1 類型鎖定 entry/session/typePolicy＋P1/P2/P3 導航；轉義/路徑改吃 core/html.js 與 pathPolicy SSOT；[2026-09-17] 拍照/刪圖不再覆寫結構面板 innerHTML、renderStatsPanels 加管理器保護、改名對帳走 labelRenameReconcile＋重繪縮圖、資料集名稱漂移提示 applyDatasetNameDriftHint）
-│   │   │       ├── ui_components.js # 動態視圖組件 (影像網格、字典序標籤統計、標註縮圖欄、getLabelColor FNV-1a+黃金角色相；轉義經 core/html.js，前損壞實作已刪)
+│   │   │       ├── ui_layout.js # 協調層（Stage 4＋M1 類型鎖定 entry/session/typePolicy＋P1/P2/P3 導航；轉義/路徑改吃 core/html.js 與 pathPolicy SSOT；[2026-09-17] 拍照/刪圖不再覆寫結構面板 innerHTML、renderStatsPanels 加管理器保護、改名對帳走 labelRenameReconcile＋重繪縮圖、資料集名稱漂移提示 applyDatasetNameDriftHint；[2026-10-13] renderStatsPanels 前置 renderGlobalStatsBar（頂部統計列 SSOT 入口，須早於 view-label-stats 早退）、statsFilterLabel 分類篩選狀態＋renderImageGridFiltered（4 處縮圖牆呼叫點，回傳 state.images 原始索引避免刪錯圖））
+│   │   │       ├── ui_components.js # 動態視圖組件 (影像網格、字典序標籤統計、標註縮圖欄、getLabelColor FNV-1a+黃金角色相；轉義經 core/html.js，前損壞實作已刪)；[2026-10-13] renderGlobalStats 頂部常駐統計列（總數＋分類別 chips＋分類篩選，計數單位沿用 typePolicy SSOT，不可篩選時 chips 渲染 span）
 │   │   │       ├── ui_canvas.js # 標註互動畫布 (物件偵測拉框與自駕循線畫線，座標限幅防護、bbox 高亮與雙模互動；[2026-10-01] 跨畫面十字尺規可調色、框線雙色描邊（白外框＋標籤色內框）且不依主題變明度（框線畫在照片上）、標註列表 hover 時的 2Hz 閃爍虛線高亮)
 │   │   │       ├── ui_canvas.test.mjs # [2026-10-01] 標註畫布呈現守門（24 測：尺規、標註文字、labelMap 即時重繪、resolveBoxColor、掃描型自檢）
 │   │   │       ├── dataset_theme_contract.test.mjs # [2026-10-01／2026-10-02] DM 樣式表契約守門（8 測：暗色 class 對齊、縮圖 contain、縮圖底色走 token、狀態變體**有效值**；[2026-10-02] P1-3 增守門 5「dark 不得重複宣告 light 已有 var」；守門 4 判準升級為「dark 主題有效值不得沿用淺色值」（解析 var→主題 cssVars 真值）；守門 7「註解提前閉合」已移交 theme_contract.test.mjs 全專案版）
