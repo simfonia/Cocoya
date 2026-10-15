@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>For each target - py_ai_coco_for_each_target Block Help</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 20px; max-width: 800px; margin: 0 auto; }
+  h1 { color: #E65100; border-bottom: 2px solid #E65100; padding-bottom: 8px; }
+  h2 { color: #BF360C; margin-top: 24px; }
+  .section { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .param-table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  .param-table th, .param-table td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+  .param-table th { background: #fbe9e7; color: #BF360C; }
+  .code { background: #f8f8f8; padding: 12px; border-radius: 4px; font-family: Consolas, monospace; font-size: 13px; overflow-x: auto; }
+  .note { background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px 14px; margin: 12px 0; border-radius: 0 4px 4px 0; }
+  .tip { background: #e8f5e9; border-left: 4px solid #4caf50; padding: 10px 14px; margin: 12px 0; border-radius: 0 4px 4px 0; }
+</style>
+</head>
+<body>
+  <h1>🔍 For each target (py_ai_coco_for_each_target)</h1><p>See <a href="py_ai_coco_init_en.html">COCO main page</a>.</p>
+
+  <div class="section">
+    <h2>What it does</h2>
+    <p>Uses the MediaPipe Tasks EfficientDet-Lite0 pretrained model to recognize 80 COCO objects (person, cell phone, cup, book, ...) with no training required.</p>
+    <p>The blocks hide <code>mp.Image</code> wrapping, VIDEO-mode timestamp increments and the <code>categories</code> / <code>bounding_box</code> object graph. Students only do three steps: init → detect → for-each-target.</p>
+  </div>
+
+  <div class="section">
+    <h2>Blocks</h2>
+    <table class="param-table">
+      <tr><th>Block</th><th>Description</th></tr>
+      <tr><td>Init COCO detector (py_ai_coco_init)</td><td>Loads the .tflite model. Keep the global threshold low (e.g. 0.2); per-object thresholds come from the for-each target dict. Place in the Global Definition Zone.</td></tr>
+      <tr><td>Run COCO detection (py_ai_coco_detect)</td><td>Takes a frame; handles BGR→RGB, mp.Image wrapping, timestamp increment and detect_for_video automatically.</td></tr>
+      <tr><td>For each target (py_ai_coco_for_each_target)</td><td>Takes the detection result plus a target dict (e.g. {"person": 0.5}). Skips empty categories, null labels, non-targets and low-confidence results.</td></tr>
+      <tr><td>Target field (py_ai_coco_target_field)</td><td>Only valid inside the for-each loop. Reads label, score, x, y, w, h.</td></tr>
+      <tr><td>Release detector (py_ai_coco_close)</td><td>Releases resources before the program ends (detector.close()).</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>Typical flow</h2>
+    <div class="code">
+<span style="color:#888;"># Global Definition Zone</span><br>
+init COCO model "model/efficientdet_lite0.tflite"<br><br>
+<span style="color:#888;"># main loop</span><br>
+while True:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;ret, frame = cap.read()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;coco_result = detect(frame)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;for each target in coco_result matching TARGET_OBJECTS:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;draw rect (x, y) to (x+w, y+h)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;draw text "label: score"</div>
+  </div>
+
+  <div class="section">
+    <h2>Notes</h2>
+    <div class="tip">✅ Labels are English (e.g. "cell phone"); dict keys must be English. Map to Chinese with a separate EN→ZH dict for display.</div>
+    <div class="note">⚠️ Loop variables (_coco_label, ...) have fixed names; do not nest two for-each blocks.</div>
+    <div class="note">⚠️ The VIDEO-mode timestamp is auto-incremented by the detect block; never modify _coco_timestamp_ms manually.</div>
+  </div>
+</body>
+</html>

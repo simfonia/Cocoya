@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>COCO 偵測積木 - py_ai_coco 說明</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; padding: 20px; max-width: 800px; margin: 0 auto; }
+  h1 { color: #E65100; border-bottom: 2px solid #E65100; padding-bottom: 8px; }
+  h2 { color: #BF360C; margin-top: 24px; }
+  .section { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .param-table { width: 100%; border-collapse: collapse; margin: 12px 0; }
+  .param-table th, .param-table td { border: 1px solid #ddd; padding: 8px 12px; text-align: left; }
+  .param-table th { background: #fbe9e7; color: #BF360C; }
+  .code { background: #f8f8f8; padding: 12px; border-radius: 4px; font-family: Consolas, monospace; font-size: 13px; overflow-x: auto; }
+  .note { background: #fff3e0; border-left: 4px solid #ff9800; padding: 10px 14px; margin: 12px 0; border-radius: 0 4px 4px 0; }
+  .tip { background: #e8f5e9; border-left: 4px solid #4caf50; padding: 10px 14px; margin: 12px 0; border-radius: 0 4px 4px 0; }
+</style>
+</head>
+<body>
+  <h1>🔍 COCO 物件偵測積木 (ai_coco)</h1>
+
+  <div class="section">
+    <h2>功能說明</h2>
+    <p>使用 MediaPipe Tasks 的 EfficientDet-Lite0 預訓練模型，直接辨識 COCO 資料集的 80 種物件（人、手機、杯子、書本等），不需自己訓練。</p>
+    <p>高階封裝隱藏了 <code>mp.Image</code> 包裝、VIDEO 模式 timestamp 遞增、<code>categories</code>／<code>bounding_box</code> 物件圖操作；學生只需三步：初始化 → 偵測 → 走訪目標。</p>
+  </div>
+
+  <div class="section">
+    <h2>積木一覽</h2>
+    <table class="param-table">
+      <tr><th>積木</th><th>說明</th></tr>
+      <tr><td>初始化 COCO 偵測器 (py_ai_coco_init)</td><td>載入 .tflite 模型；全域信心度建議設低（如 0.2），各物件精確門檻由走訪積木的字典決定。放全域定義區。</td></tr>
+      <tr><td>執行 COCO 偵測 (py_ai_coco_detect)</td><td>輸入 frame，自動做 BGR→RGB、mp.Image 包裝、timestamp 遞增、detect_for_video，存入結果變數。</td></tr>
+      <tr><td>走訪目標物件 (py_ai_coco_for_each_target)</td><td>輸入偵測結果＋目標字典（如 {"person": 0.5}）。自動跳過：空分類、標籤為空、非目標、信心不足。通過者進迴圈本體。</td></tr>
+      <tr><td>目標欄位 (py_ai_coco_target_field)</td><td>只能用在走訪迴圈內。讀取 label、score、x、y、w、h。</td></tr>
+      <tr><td>釋放偵測器 (py_ai_coco_close)</td><td>程式結束前釋放資源（detector.close()）。</td></tr>
+    </table>
+  </div>
+
+  <div class="section">
+    <h2>使用流程</h2>
+    <div class="code">
+<span style="color:#888;"># 全域定義區</span><br>
+init COCO 模型 "model/efficientdet_lite0.tflite"<br><br>
+<span style="color:#888;"># 主迴圈</span><br>
+while True:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;ret, frame = cap.read()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;coco_result = detect(frame)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;for each target in coco_result matching TARGET_OBJECTS:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;draw rect (x, y) → (x+w, y+h)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;draw text "label: score"</div>
+  </div>
+
+  <div class="section">
+    <h2>注意事項</h2>
+    <div class="tip">✅ 標籤是英文（如 "cell phone"），字典的鍵必須用英文；中文顯示可用另一個英文→中文對照字典。</div>
+    <div class="note">⚠️ 迴圈變數（_coco_label 等）為固定命名，不可巢狀兩層走訪積木。</div>
+    <div class="note">⚠️ VIDEO 模式的 timestamp 由 detect 積木自動遞增，不可手動改 _coco_timestamp_ms。</div>
+  </div>
+</body>
+</html>

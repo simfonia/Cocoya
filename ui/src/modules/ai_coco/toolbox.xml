@@ -1,0 +1,27 @@
+<category name="%{BKY_CAT_AI_COCO}" colour="%{BKY_COLOUR_AI_COCO}">
+    <block type="py_ai_coco_init">
+        <field name="MODEL_PATH">model/efficientdet_lite0.tflite</field>
+        <field name="SCORE_THRESHOLD">0.2</field>
+        <field name="MAX_RESULTS">10</field>
+    </block>
+    <block type="py_ai_coco_detect">
+        <value name="FRAME">
+            <block type="py_variables_get">
+                <field name="VAR">frame</field>
+            </block>
+        </value>
+        <field name="VAR">coco_result</field>
+    </block>
+    <block type="py_ai_coco_for_each_target">
+        <field name="RESULT">coco_result</field>
+        <value name="TARGETS">
+            <shadow type="py_type_dict">
+                <mutation items="1"></mutation>
+            </shadow>
+        </value>
+    </block>
+    <block type="py_ai_coco_target_field">
+        <field name="FIELD">label</field>
+    </block>
+    <block type="py_ai_coco_close"></block>
+</category>

@@ -752,3 +752,11 @@ VS Code 報「L44 必須是 {」「L52 預期為 at-rule 或選取器」，整�
 - **前置**：已確認 log/plan/BboxAnnotationUIImprovement.md 僅涵蓋 3 欄布局，無點兩下設計，不衝突
 - 狀態：待實作
 
+
+## [2026-10-15] ai_coco COCO 偵測積木模組
+- [x] 新增 ai_coco 模組（5 積木高階封裝 MediaPipe Tasks EfficientDet-Lite0）＋core_manifest／顏色／i18n／help 8 檔／FILE_STRUCTURE 註冊 ✅
+- [x] coco_detector.xml 由 raw code 改寫為 62 個真正積木（ET VALID、類型全合法、CRLF）✅
+- [x] 驗證：生成器 8/8、契約對帳全綠、E2E py_compile PASS、變異 3/3 變紅 ✅
+- [ ] **實機待測**：VSIX + Tauri 開啟範例，確認 toolbox 分類／拖曳／產碼對等
+- [ ] **已知限制**：迴圈變數固定命名不可巢狀；標籤英文名，中文顯示需另備對照字典
+

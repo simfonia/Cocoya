@@ -194,6 +194,12 @@ C:\Workspace\cocoya\
 │   │   │   │   ├── toolbox.xml                 # 工具箱（訓練／推論／結果解析）
 │   │   │   │   ├── i18n/                       # zh-hant.js / en.js 文案（key 需對等）
 │   │   │   │   └── line_inference.test.mjs     # [2026-09-19] 循線推論契約測試（stub interpreter 實跑 _follow_line/_detect 含 int8 還原）
+│   │   │   ├── ai_coco/              # [NEW 2026-10-14] COCO 物件偵測積木模組 (MediaPipe Tasks EfficientDet-Lite0，高階教學封裝)
+│   │   │   │   ├── ai_coco_blocks.js       # 積木定義 5 塊（init/detect/for_each_target/target_field/close）
+│   │   │   │   ├── ai_coco_generators.js   # Python 產生器（VIDEO 模式＋timestamp 遞增＋雙層 threshold 過濾＋bbox 拆解）
+│   │   │   │   ├── ai_coco_generators.test.mjs # 產生器契約 8 測（含 python 實跑 for_each 過濾語意）
+│   │   │   │   ├── toolbox.xml             # 工具箱（5 塊全公開）
+│   │   │   │   └── i18n/                   # zh-hant.js / en.js 文案（17 key 對等）
 │   │   │   ├── ai_pose/            # AI 姿勢偵測積木模組 (MediaPipe Pose)
 │   │   │   │   ├── ai_pose_blocks.js      # 積木定義 (含 py_ai_pose_calc_angle [NEW])
 │   │   │   │   ├── ai_pose_generators.js  # Python 產生器 (含 cocoya_calc_angle_3pts [NEW])
