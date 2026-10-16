@@ -21,7 +21,22 @@ import cp from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const PY = 'C:\\WPy64-31160\\python-3.11.6.amd64\\python.exe';
+
+// Python 探測（CI runner 無本機慣用路徑）：COCOYA_PYTHON → 本機慣用 → PATH；
+// 皆無則略過實跑測試（比照 line_inference / huskylens_protocol 慣例，不誤報失敗）。
+const findPython = () => {
+  const cands = [process.env.COCOYA_PYTHON, 'C:\\WPy64-31160\\python-3.11.6.amd64\\python.exe', 'python', 'python3'];
+  for (const exe of cands) {
+    if (!exe) continue;
+    const probe = cp.spawnSync(exe, ['-c', 'import sys;print(sys.version_info[0])'], {
+      encoding: 'utf8',
+      env: { ...process.env, PYTHONIOENCODING: 'utf-8', PYTHONUTF8: '1' }
+    });
+    if (probe.status === 0 && String(probe.stdout).trim() === '3') return exe;
+  }
+  return null;
+};
+const PY = findPython();
 
 globalThis.window = globalThis;
 globalThis.Blockly = {
@@ -179,9 +194,10 @@ test('target_field 產生器：六欄位映射正確＋close 釋放', () => {
   assert.equal(Py['py_ai_coco_close'](), 'coco_detector.close()\n');
 });
 
-test('行為：for_each_target 迴圈本體過濾語意正確（python 實跑 stub）', () => {
+test('行為：for_each_target 迴圈本體過濾語意正確（python 實跑 stub）', (t) => {
   // 產出迴圈本體 → 以 stub detection 實跑，驗證四種跳過＋一種通過。
   // 四種跳過：空 categories／null label／非目標／低信心；通過：person/0.9。
+  if (!PY) { t.skip('找不到 Python 3 直譯器，略過實跑測試'); return; }
   const block = { getFieldValue: () => 'coco_result', values: { TARGETS: 'TARGET_OBJECTS' } };
   const gen = {
     valueToCode: (b, n) => b.values[n] || '{}',

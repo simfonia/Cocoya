@@ -45,7 +45,8 @@
             'SPIKE': '#D28303', 'SPIKE_MOTOR': '#FFB26B', 'SPIKE_MUSIC': '#F49AC2',
             'SPIKE_LED': '#89CFF0', 'SPIKE_SENSOR': '#B5E48C', 'SPIKE_SENSOR_COLOR': '#8aaf6b',
             'SPIKE_SENSOR_DISTANCE': '#5BC8AF', 'SPIKE_SENSOR_FORCE': '#A86A4A',
-            'SPIKE_SENSOR_IMU': '#C77DFF', 'SPIKE_BUTTON': '#76C893'
+            'SPIKE_SENSOR_IMU': '#C77DFF', 'SPIKE_BUTTON': '#76C893',
+            'AI_COCO': '#E65100'
         },
         cssVars: {
             '--cocoya-overlay': '#FFF8F0',
