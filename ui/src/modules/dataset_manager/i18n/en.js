@@ -161,6 +161,7 @@
     "DSM_CLASSIFY_CURRENT_LABEL": "Current Label",
     "DSM_CLASSIFY_IMAGE_INFO": "File: %1",
     "DSM_CLASSIFY_PROGRESS": "Sample: %1 / %2",
+    "DSM_CLASSIFY_PROGRESS_FILTERED": "(filter %1: %2 / %3)",
     "DSM_CLASSIFY_SHORTCUTS_HINT": "↑/↓ switch image · Esc back to Dataset Management",
 
     // Save / Load progress

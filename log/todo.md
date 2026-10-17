@@ -24,7 +24,18 @@
   含三處豁免（自動解除／拍到新圖／label_map 查表先後）與顯示名 helper ✅ （同上第 8 節）
 - [ ] **待辦（後續）**：`statsFilteredEntries` 的哨兵分支若日後要擴及影像分類，
   必須先移除 `label_counts` 的 `unlabeled` 條目或改用另一哨兵，**不可直接加條件**（會重複）
-- [ ] **backlog**：P3 縮圖列大量影像（>200）下 `navigateFiltered` 未捲動到可見區
+- [x] **backlog 結案（2026-10-16，查證已修而 todo 未更新，非新 bug）**：P3 縮圖列大量影像（>200）下 `navigateFiltered` 未捲動到可見區
+  - 查證鏈：`navigateFiltered` → `navigateToImage` → `loadAnnotationImage`／`loadClassificationImage`
+    兩條路徑結尾皆呼叫 `updateThumbnailHighlight()`，該函式尾端含 `scrollIntoView({block:'center'})`
+    —— 自 bbox 面板重構（`79a2d9c`）起即存在，比 P3 篩選（10-13）還早，缺口從未存在
+  - 守門：`ui_components.test.mjs` 新增「兩條切圖路徑必須經 updateThumbnailHighlight 捲動縮圖條」
+    （掃描型，變異測試刪捲動即報紅 ✅）
+
+### [2026-10-16] Dataset Manager P3 三項回報（✅ 完成，待實機驗收）
+
+- [x] 分類進度統計忽略 chip 篩選：`updateClassifyProgress()` 採「全量＋篩選註記」（`樣本: index/N 張(篩選 <label>: pos / total)`），切篩選即時刷新；目前圖在篩選外不加註記（保留篩選） ✅ （`log/work/2026-10-16.md`）
+- [x] 右側邊欄改標籤後縮圖徽章未即時刷新：右欄改標籤呼叫 `onImageRelabeled()` 即時重繪縮圖條徽章＋`updateClassifyProgress()`，不再只調 `updateThumbnailHighlight()` ✅ （同上）
+- [x] 偵測模式改標籤導致 `dataset.json` `image_path` 脫離：後端對無前綴檔發目錄-only rename entry；前端僅在 `label === newLabel` 時同步 `img.path` 目錄區段、不動檔名，空 renames 保持 no-op ✅ （同上）
 
 ### [2026-10-12] 三主題 icon 風格與行為統一重構
 - [ ] **以統一做法重構三主題 icon 風格與行為**（2026-10-12 立項，起因：dark 下 `python_lab.png` 被 `[src*="python"]` 排除而全黑，見 `log/work/2026-10-12.md`）

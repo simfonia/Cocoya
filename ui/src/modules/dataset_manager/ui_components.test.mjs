@@ -818,3 +818,27 @@ test('契約：印出篩選名稱必須走 statsFilterDisplayLabel，不得直�
         '不得直接印哨兵值');
 });
 
+// ---------------------------------------------------------------------------
+// 2026-10-16：P3 切圖必須自動捲動縮圖條到可見區（backlog 結案：查證已修而 todo 未更新）
+// ---------------------------------------------------------------------------
+// backlog 原文：「P3 縮圖列大量影像（>200）下 navigateFiltered 未捲動到可見區」。
+// 查證：navigateFiltered → navigateToImage → loadAnnotationImage／loadClassificationImage
+// 兩條路徑結尾皆呼叫 updateThumbnailHighlight()，該函式尾端含
+// scrollIntoView({block:'center', ...}) —— 自 bbox 面板重構（79a2d9c）起即存在，
+// 比 P3 篩選（10-13）還早。故缺口從未存在，屬 todo 過時，非新 bug。
+// 本守門釘住該鏈不斷：任一 load 路徑漏調 highlight、或 highlight 刪掉捲動，即報紅。
+test('契約：兩條切圖路徑必須經 updateThumbnailHighlight 捲動縮圖條', () => {
+    const layoutSrc = readSource('ui_layout.js');
+    const hlBody = stripLineComments(extractFunction(layoutSrc, 'function updateThumbnailHighlight()'));
+    assert.ok(hlBody, '應能擷取 updateThumbnailHighlight 本體');
+    assert.ok(/scrollIntoView\(\{[^}]*block:\s*'center'/.test(hlBody),
+        'highlight 尾端必須把當前縮圖捲到可見區，否則 >200 張時 ↑/↓ 切圖會迷路');
+    for (const f of ['ui/annotation.js', 'ui/classification.js']) {
+        const loader = f === 'ui/annotation.js' ? 'loadAnnotationImage' : 'loadClassificationImage';
+        const body = stripLineComments(extractFunction(readSource(f), 'function ' + loader + '(index)'));
+        assert.ok(body, `應能擷取 ${f} 的 ${loader} 本體`);
+        assert.ok(/updateThumbnailHighlight\(\)/.test(body),
+            `${loader} 切圖後必須呼叫 updateThumbnailHighlight（高亮＋捲動），否則縮圖條停在原地`);
+    }
+});
+

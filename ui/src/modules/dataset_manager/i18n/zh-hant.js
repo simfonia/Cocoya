@@ -161,6 +161,7 @@
     "DSM_CLASSIFY_CURRENT_LABEL": "目前分類",
     "DSM_CLASSIFY_IMAGE_INFO": "檔案: %1",
     "DSM_CLASSIFY_PROGRESS": "樣本: %1 / %2 張",
+    "DSM_CLASSIFY_PROGRESS_FILTERED": "(篩選 %1: %2 / %3)",
     "DSM_CLASSIFY_SHORTCUTS_HINT": "↑/↓ 切換圖片 · Esc 回資料集管理",
 
     // 儲存/載入進度 (Save / Load progress)

@@ -31,6 +31,9 @@ fn validate_label_segment(label: &str) -> Result<(), String> {
 /// 1. `<dataset_dir>/<old_label>` 目錄存在 → 整個目錄改名為 `<new_label>`（目標已存在 → LABEL_DIR_CONFLICT）
 /// 2. 目錄內前綴 `<old_label>_` 的檔案 → 檔名前綴改為 `<new_label>_`
 /// 回傳逐一改名的 (oldPath, newPath) 清單（serde camelCase），供前端對帳 img.path / img.diskPath。
+/// 2026-10-16 契約：目錄有改名即保證回傳非空 —— 無前綴檔（匯入圖、檔名不變）
+/// 亦回報 old/new 相同的「目錄改名條目」，前端對帳以此觸發 path 目錄段同步；
+/// 唯有「目錄根本不存在（未落盤）」才回空陣列（no-op，前端可安全跳過）。
 #[tauri::command]
 pub fn dataset_rename_label(dataset_dir: String, old_label: String, new_label: String) -> Result<Vec<RenamedPath>, String> {
     validate_label_segment(&old_label)?;
@@ -66,9 +69,20 @@ pub fn dataset_rename_label(dataset_dir: String, old_label: String, new_label: S
                         p.display(), new_p.display(), e);
                     continue;
                 }
+                let old_p = std::path::Path::new(&dataset_dir).join(&old_label).join(name);
                 renamed.push(RenamedPath {
-                    old_path: p.to_string_lossy().replace('\\', "/"),
+                    old_path: old_p.to_string_lossy().replace('\\', "/"),
                     new_path: new_p.to_string_lossy().replace('\\', "/"),
+                });
+            } else {
+                // 2026-10-16：無前綴檔（匯入圖、檔名不變）亦回報目錄改名條目
+                // （old/new 相同，僅目錄段不同），前端對帳以此觸發 path 目錄段同步。
+                // ⚠ old_path 必須用舊目錄拼接（不可用 read_dir 回傳的 p，
+                // 它已指向改名後的新目錄，會讓前端全路徑比對 miss）。
+                let old_p = std::path::Path::new(&dataset_dir).join(&old_label).join(name);
+                renamed.push(RenamedPath {
+                    old_path: old_p.to_string_lossy().replace('\\', "/"),
+                    new_path: p.to_string_lossy().replace('\\', "/"),
                 });
             }
         }

@@ -109,7 +109,9 @@ export function createLabelManager({
                 updateStatsFromImages();
                 reRender();
                 // Part B（2026-09-16）：磁碟同步——live 落盤區資料夾/檔名隨標籤改名（非阻塞；來源資料夾不碰）
-                if (typeof onLabelRenamed === 'function') onLabelRenamed(entry[0], trimmed);
+                // 2026-10-16 ③：傳入改名前同步後的 label 供 ui_layout 對帳目錄段
+                // （reconcile 的「目錄段同步」分支以 img.label === newLabel 為觸發條件）。
+                if (typeof onLabelRenamed === 'function') onLabelRenamed(entry[0], trimmed, projectType);
             }
         };
 

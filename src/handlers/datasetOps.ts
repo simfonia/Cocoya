@@ -483,6 +483,8 @@ export class DatasetOpsHandler {
      * 1. <oldLabel> 目錄存在 → 改名 <newLabel>（目標已存在 → LABEL_DIR_CONFLICT）
      * 2. 目錄內前綴 <oldLabel>_ 的檔案 → 前綴改 <newLabel>_
      * 回傳 renames: [{oldPath, newPath}] 供前端對帳 img.path / img.diskPath。
+     * 2026-10-16 契約（對齊 Rust）：目錄有改名即保證非空 —— 無前綴檔亦回報
+     * old/new 相同的目錄改名條目；唯有目錄不存在（未落盤）才回空（no-op）。
      */
     public handleDatasetRenameLabel(message: any) {
         const { projectName, oldLabel, newLabel } = message;
@@ -538,6 +540,13 @@ export class DatasetOpsHandler {
                     } catch (e: any) {
                         console.error(`[Host] label file rename failed: ${filePath} -> ${newPath}`, e);
                     }
+                } else {
+                    // 2026-10-16（對齊 Rust）：無前綴檔亦回報目錄改名條目，
+                    // old 必須用舊目錄拼接（filePath 已指向新目錄，會讓前端比對 miss）
+                    renames.push({
+                        oldPath: path.join(srcDir, name).replace(/\\/g, '/'),
+                        newPath: filePath.replace(/\\/g, '/')
+                    });
                 }
             }
             console.log(`[Host] Label disk rename: ${oldLabel} -> ${newLabel} (${renames.length} files)`);

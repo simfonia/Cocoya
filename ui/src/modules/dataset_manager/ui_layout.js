@@ -106,7 +106,17 @@ const labelManager = createLabelManager({
     // P2：中欄管理器增/改/刪標籤後，同步右欄 live 採集面板的標籤下拉＋縮圖徽章
     onLabelMapChanged: () => { refreshLiveLabelOptions(); refreshThumbnailBadges(); },
     // Part B：改名後同步磁碟資料夾/檔名（live 落盤區；非阻塞）
-    onLabelRenamed: (oldName, newName) => handleLabelRenamedOnDisk(oldName, newName),
+    // 2026-10-16 ③：偵測模式的 img.label 在此同步為新名 —— reconcile 的
+    // 「目錄段同步」分支以 img.label === newLabel 為觸發條件（分類模式已由
+    // labelManager 先行同步，偵測模式 label 不以資料夾為準、此處補齊）。
+    onLabelRenamed: (oldName, newName, projectType) => {
+        if (!isClassificationType(projectType)) {
+            state.images.forEach((img) => {
+                if (img && img.label === oldName) img.label = newName;
+            });
+        }
+        handleLabelRenamedOnDisk(oldName, newName);
+    },
     // 2026-09-22：統計摘要（影像張數/已標註）SSOT——管理器重繪統計時同步帶入
     buildStatsViewOptions: () => buildStatsViewOptions(),
     bridge: datasetBridge
@@ -129,7 +139,12 @@ const classificationController = createClassificationController({
     createLabelMapManager: (container, statsContainer) => createLabelMapManager(container, statsContainer),
     onDeleteImage: (index) => handleDeleteImage(index),
     // 2026-10-13：P3 縮圖條也套用頂部統計列的分類篩選（回傳 state.images 原始索引）
-    visibleImageEntries: () => statsFilteredEntries()
+    visibleImageEntries: () => statsFilteredEntries(),
+    // 2026-10-16 ①：進度的「全量＋篩選註記」顯示名；哨兵翻成使用者看得懂的字
+    getStatsFilterInfo: () => (statsFilterLabel ? statsFilterDisplayLabel() : null),
+    // 2026-10-16 ②：右欄改標籤後左側縮圖條即時重繪（徽章文字吃重繪，不是 highlight）
+    // 目前圖改到篩選外時保留篩選（使用者選案：圖暫時看不到、進度註記消失）
+    onImageRelabeled: () => renderVisibleThumbnails()
 });
 
 // Stage 4 切片 6：bbox/line 標註模式編排移至 ui/annotation.js（依賴注入；下方函式宣告已提升，可安全參照）
@@ -829,6 +844,15 @@ function updateAnnotationProgress() {
 }
 
 /**
+ * 更新分類校正模式頂部進度 — 委派至 ui/classification.js。
+ * 2026-10-16 ①：篩選 chip 切換時需即時刷新「全量＋篩選註記」，故 renderVisibleThumbnails
+ * 內對 classification 模式補呼叫（bbox 模式的進度是已標註/總數，與篩選無關，不動）。
+ */
+function updateClassifyProgress() {
+    return classificationController.updateClassifyProgress();
+}
+
+/**
  * 更新縮圖欄的高亮與勾號狀態
  */
 function updateThumbnailHighlight() {
@@ -1111,6 +1135,8 @@ function renderStructurePanel(structureTitle, structureActions, structureContent
  * 對 canonical dataset/<專案>/ 落盤區發 datasetRenameLabel（資料夾整體改名＋<old>_ 檔名前綴改 <new>_），
  * 成功後以回傳 renames 對帳 img.diskPath/img.name/img.path，再經 refreshPreview 重同步 spec samples。
  * 來源資料夾（使用者 import 的 sourceFolderPath）不碰；失敗僅提示，不回滾 label_map 改名。
+ * 2026-10-16 ③：renames 為空＝磁碟無改動（目錄不存在）才跳過；後端契約保證
+ * 目錄有改名即非空（含目錄改名條目），故此處不再以「空」為由跳過目錄段對帳。
  */
 async function handleLabelRenamedOnDisk(oldName, newName) {
     if (!state.images.length) return;
@@ -1129,15 +1155,18 @@ async function handleLabelRenamedOnDisk(oldName, newName) {
             return;
         }
         const renames = (result && result.renames) || [];
-        if (!renames.length) return;
         // [2026-09-17 修] 對帳抽為 application/labelRenameReconcile.js 純函式（Node 可測）：
         // 路徑一律經 core/pathPolicy.normalizePath 比對——後端回傳已正規化（反斜線→正斜線），
         // 但 img.diskPath 是 capture 的 savePath（VSIX path.join＝反斜線；Tauri 專案根亦帶反斜線），
         // 不正規化會 miss，落到「只改 path 目錄段」分支，造成 spec image_path 資料夾新／檔名舊。
-        reconcileRenamedPaths(state.images, renames, { oldLabel: oldName, newLabel: newName });
-        // [2026-09-17 修] 對帳後必須重繪縮圖（hover tooltip 的 title 吃 img.path），否則顯示舊檔名
-        refreshThumbnailBadges();
-        refreshPreview(); // 重同步 spec samples/image_path（防抖後自動落盤 dataset.json）
+        // 2026-10-16 ③：renames 為空＝後端 no-op（目錄不存在），直接跳過；
+        // 非空才對帳（含目錄改名條目 → 匯入圖的 path 目錄段同步，json 檔名不再脫鏈）。
+        if (renames.length) {
+            reconcileRenamedPaths(state.images, renames, { oldLabel: oldName, newLabel: newName });
+            // [2026-09-17 修] 對帳後必須重繪縮圖（hover tooltip 的 title 吃 img.path），否則顯示舊檔名
+            refreshThumbnailBadges();
+            refreshPreview(); // 重同步 spec samples/image_path（防抖後自動落盤 dataset.json）
+        }
         showStatusMessage(t('LABEL_DISK_RENAMED', '✅ 標籤改名完成，磁碟資料夾/檔名已同步（%1 個檔案）')
             .replace('%1', renames.length));
     } catch (e) {
@@ -1719,6 +1748,9 @@ function renderVisibleThumbnails() {
     if (state.annotationMode && state.annotationMode.isActive) {
         const strip = modal.querySelector('#annotation-thumbnails');
         if (strip) renderAnnotationStrip(strip);
+        // 2026-10-16 ①：切篩選時分類進度的註記（篩選 X: a/b）也要即時刷新；
+        // bbox 進度是已標註/總數、與篩選無關，不刷新。
+        if (state.annotationMode.mode === 'classification') updateClassifyProgress();
         return;
     }
     const imagePreview = modal.querySelector('#dataset-image-preview');

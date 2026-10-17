@@ -46,7 +46,7 @@
             'SPIKE_LED': '#89CFF0', 'SPIKE_SENSOR': '#B5E48C', 'SPIKE_SENSOR_COLOR': '#8aaf6b',
             'SPIKE_SENSOR_DISTANCE': '#5BC8AF', 'SPIKE_SENSOR_FORCE': '#A86A4A',
             'SPIKE_SENSOR_IMU': '#C77DFF', 'SPIKE_BUTTON': '#76C893',
-            'AI_COCO': '#E65100'
+            'AI_COCO': '#f37c3d'
         },
         cssVars: {
             '--cocoya-overlay': '#FFF8F0',

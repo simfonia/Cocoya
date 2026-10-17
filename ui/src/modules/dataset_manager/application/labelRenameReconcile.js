@@ -32,6 +32,16 @@ export function reconcileRenamedPaths(images, renames, { oldLabel, newLabel }) {
     const byPath = new Map(renamed.map((r) => [normalizePath(r.oldPath), normalizePath(r.newPath)]));
     // 兜底：檔名唯一時以 basename 比對（專案根變更/大小寫差異造成絕對路徑前綴不一致）
     const byName = new Map(renamed.map((r) => [baseNameOf(r.oldPath), normalizePath(r.newPath)]));
+    // 2026-10-16 ③：相對路徑尾段比對（label/filename），供 diskPath 為 null 的影像（偵測模式）
+    // 使用；old_path 已是「舊目錄/舊檔名」，尾段等於 img.path（'none/none_1782.jpg'），
+    // 對應 new_path 即為「新目錄/新檔名」。
+    const byRelPath = new Map();
+    for (const r of renamed) {
+        const parts = normalizePath(r.oldPath).split('/');
+        if (parts.length >= 2) {
+            byRelPath.set(parts.slice(-2).join('/'), normalizePath(r.newPath));
+        }
+    }
 
     const oldPrefix = oldLabel + '/';
     let changed = 0;
@@ -47,15 +57,35 @@ export function reconcileRenamedPaths(images, renames, { oldLabel, newLabel }) {
             if (file && sameName === 1) newPath = byName.get(file);
         }
 
+        // 2026-10-16 ③：diskPath 為 null（偵測模式）或全路徑比對 miss 時，以 img.path 的
+        // 「label/filename」尾段與 rename entry 做相對路徑比對，取得包含新檔名的 newPath，
+        // 避免只同步目錄段而檔名停留舊值。
+        // ⚠ 只有檔名在清單中唯一時才兜底（與 byName fallback 同樣保護），避免重複檔名
+        // 被錯誤套用完整的新檔名。
+        if (!newPath && typeof img.path === 'string') {
+            const file = baseNameOf(img.path);
+            const sameName = file ? list.filter((i) => i && baseNameOf(i.path) === file).length : 0;
+            if (file && sameName === 1) {
+                const candidate = byRelPath.get(img.path);
+                if (candidate) newPath = candidate;
+            }
+        }
+
         if (newPath) {
             const file = baseNameOf(newPath);
             if (!file) return;
-            img.diskPath = newPath;
             img.name = file;
             img.path = newLabel + '/' + file;
+            // diskPath 原本為 null（偵測模式）時不憑空產生，僅更新 path/name
+            if (disk) img.diskPath = newPath;
             changed++;
         } else if (img.label === newLabel && typeof img.path === 'string' && img.path.startsWith(oldPrefix)) {
-            // 目錄已整體改名，但逐一檔名未回報（非 <label>_ 前綴檔）——僅同步 path 的目錄段
+            // 2026-10-16 ③：目錄已整體改名，但該檔未逐一回報（匯入圖 diskPath 為 null、
+            // 或檔名無 <label>_ 前綴）→ 僅同步 path 的目錄段。
+            // ⚠ 契約：呼叫端（labelManager 改名）必須先把 img.label 同步為新名，
+            // 否則此分支無法區分「已改名目錄下的圖」與無關圖片；
+            // 後端契約：目錄有改名即保證 renames 非空（含目錄改名、檔名不變的條目），
+            // 故此處 renames 為空＝磁碟無改動，可安全 no-op。
             img.path = newLabel + '/' + img.path.slice(oldPrefix.length);
             changed++;
         }

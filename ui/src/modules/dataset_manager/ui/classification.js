@@ -21,6 +21,8 @@
  * @param {() => void} options.refreshPreview debounce 落盤（寫回 samples）
  * @param {(container: Element, statsContainer?: Element|null) => void} options.createLabelMapManager 標籤管理器
  * @param {() => Document} [options.getDocument] 取得 document（預設 globalThis.document）
+ * @param {() => string|null} [options.getStatsFilterInfo] 目前篩選的顯示名（無篩選回 null；2026-10-16 實機回報①）
+ * @param {() => void} [options.onImageRelabeled] 改標籤後的縮圖條重繪（2026-10-16 實機回報②）
  *
  * 2026-10-01：不再注入 handleExportDataset —— 匯出按鈕已從 P3 工具列移除
  *   （匯出僅存在於 P2 資料集管理頁）。ui_layout.js 仍會傳入該鍵，JS 會忽略未解構的參數。
@@ -33,6 +35,8 @@ export function createClassificationController({
     createLabelMapManager, onDeleteImage,
     navigateFiltered = (delta) => navigateToImage((state.annotationMode.currentIndex || 0) + delta),
     visibleImageEntries = () => [],
+    getStatsFilterInfo = () => null,
+    onImageRelabeled = () => {},
     getDocument = () => globalThis.document
 }) {
     let classificationKeyHandler = null; // 分類模式的鍵盤事件 handler（用於清理）
@@ -186,7 +190,8 @@ export function createClassificationController({
                     // label_counts / label_map 一致化（依 state.images 重算統計）
                     updateStatsFromImages();
                     renderClassificationControls();
-                    updateThumbnailHighlight();
+                    onImageRelabeled(); // 2026-10-16 ②：左側縮圖條即時重繪（徽章文字），不可只調 highlight
+                    updateClassifyProgress(); // 目前圖在篩選外時 onImageRelabeled 會解除篩選，進度一併重算
                     refreshPreview(); // debounce 內含 syncSpecFromUI(true)，把 label 寫回 samples
                 }
             };
@@ -197,14 +202,29 @@ export function createClassificationController({
     }
 
     /**
-     * 更新分類校正模式頂部進度（image 類型顯示樣本位置）
+     * 更新分類校正模式頂部進度（image 類型顯示樣本位置）。
+     * 2026-10-16 ①：篩選 chip 啟用時採「全量＋篩選註記」（使用者選案 B）：
+     * 全量序號恆以 state.images 計（與 navigateFiltered 的絕對索引語意一致），
+     * 另以篩選集合算出「篩選內第幾張／共幾張」附註；無篩選時維持舊行為。
      */
     function updateClassifyProgress() {
         const progressEl = doc().getElementById('annotation-progress');
         if (!progressEl) return;
-        progressEl.textContent = t('CLASSIFY_PROGRESS', '樣本: %1 / %2 張')
+        let text = t('CLASSIFY_PROGRESS', '樣本: %1 / %2 張')
             .replace('%1', state.annotationMode.currentIndex + 1)
             .replace('%2', state.images.length);
+        const filterLabel = getStatsFilterInfo();
+        if (filterLabel) {
+            const entries = visibleImageEntries();
+            const pos = entries.findIndex((entry) => entry.index === state.annotationMode.currentIndex);
+            if (pos >= 0) {
+                text += '  ' + t('CLASSIFY_PROGRESS_FILTERED', '(篩選 %1: %2 / %3)')
+                    .replace('%1', filterLabel)
+                    .replace('%2', pos + 1)
+                    .replace('%3', entries.length);
+            }
+        }
+        progressEl.textContent = text;
     }
 
     /**

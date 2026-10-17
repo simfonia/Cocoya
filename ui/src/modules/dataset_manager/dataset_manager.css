@@ -1567,6 +1567,12 @@ body.cocoya-dark-mode .dataset-annotation-toolbar  {
     font-size: calc(10px * var(--dsm-font-scale));
 }
 
+/* 2026-10-16：在快捷鍵提示前插入4個半形空白*/
+.dataset-annotation-shortcuts-hint::before {
+    content: "    ";
+    white-space: pre;
+}
+
 .dataset-annotation-image-container {
     flex: 1;
     background: #222;

@@ -179,3 +179,61 @@ test('updateClassifyProgress：顯示 目前/總數；元素缺失 no-op', () =>
     const c2 = createClassificationController(empty);
     assert.doesNotThrow(() => c2.updateClassifyProgress());
 });
+
+test('updateClassifyProgress：篩選啟用時採全量＋篩選註記（2026-10-16 ①）', () => {
+    const progressEl = makeFakeElement('annotation-progress');
+    const deps = baseDeps({ 'annotation-progress': progressEl });
+    deps.state.images = [{ label: 'cat' }, { label: 'dog' }, { label: 'cat' }];
+    deps.state.annotationMode.currentIndex = 2;
+    // 篩選 cat：entries = [index 0, index 2]，目前圖是篩選內第 2 張
+    deps.visibleImageEntries = () => [
+        { img: deps.state.images[0], index: 0 },
+        { img: deps.state.images[2], index: 2 }
+    ];
+    deps.getStatsFilterInfo = () => 'cat';
+    const controller = createClassificationController(deps);
+    controller.updateClassifyProgress();
+    assert.equal(progressEl.textContent, '樣本: 3 / 3 張 (篩選 cat: 2 / 2)');
+});
+
+test('updateClassifyProgress：目前圖在篩選外時不加註記（2026-10-16 ①，使用者選保留篩選）', () => {
+    const progressEl = makeFakeElement('annotation-progress');
+    const deps = baseDeps({ 'annotation-progress': progressEl });
+    deps.state.images = [{ label: 'cat' }, { label: 'dog' }];
+    deps.state.annotationMode.currentIndex = 1; // 已改成 dog，不在 cat 篩選內
+    deps.visibleImageEntries = () => [{ img: deps.state.images[0], index: 0 }];
+    deps.getStatsFilterInfo = () => 'cat';
+    const controller = createClassificationController(deps);
+    controller.updateClassifyProgress();
+    assert.equal(progressEl.textContent, '樣本: 2 / 2 張');
+});
+
+test('renderClassificationControls：右欄改標籤後經 onImageRelabeled 重繪縮圖條（2026-10-16 ②）', () => {
+    const controls = makeFakeElement('annotation-controls');
+    const manager = makeFakeElement('annotation-classify-manager');
+    const elements = { 'annotation-controls': controls, 'annotation-classify-manager': manager };
+    const deps = baseDeps(elements);
+    deps.state.images = [{ label: 'cat', path: 'a.png' }];
+    deps.state.annotationMode.currentIndex = 0;
+    deps.state.spec = { toJSON: () => ({ schema: { label_map: { cat: 0, dog: 1 } } }) };
+    let relabeled = 0;
+    let progressed = 0;
+    deps.onImageRelabeled = () => { relabeled++; };
+    const controller = createClassificationController(deps);
+    // updateClassifyProgress 由 controller 內部呼叫 refresh 計數：以 progress 元素有無寫入驗證
+    const progressEl = makeFakeElement('annotation-progress');
+    elements['annotation-progress'] = progressEl;
+    // 重建 controller 使 getDocument 能取到 progress（共用夾具 makeFakeDocument 讀 elementsById）
+    controller.renderClassificationControls();
+
+    const select = makeFakeElement('annotation-classify-select');
+    elements['annotation-classify-select'] = select;
+    controller.renderClassificationControls();
+    select.value = '1';
+    select.onchange();
+    assert.equal(deps.state.images[0].label, 'dog');
+    assert.equal(relabeled, 1);
+    assert.ok(progressEl.textContent.includes('樣本: 1 / 1 張'));
+    progressed = progressEl.textContent ? 1 : 0;
+    assert.equal(progressed, 1);
+});

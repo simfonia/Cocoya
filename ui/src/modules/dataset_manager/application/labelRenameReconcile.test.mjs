@@ -74,3 +74,37 @@ test('label 尚未同步為新名（label === oldLabel）時不做目錄段改�
     assert.equal(reconcileRenamedPaths(images, [{ oldPath: POSIX_OLD, newPath: POSIX_NEW }], { oldLabel: 'cat', newLabel: 'cat2' }), 0);
     assert.equal(images[0].path, 'cat/cat_9.jpg');
 });
+
+test('2026-10-16 ③：無前綴檔的目錄改名條目（old/new 檔名相同）觸發 path 目錄段同步', () => {
+    // 偵測模式匯入圖：diskPath 為 null、檔名無 <label>_ 前綴；
+    // 呼叫端已先把 img.label 同步為新名（ui_layout onLabelRenamed 契約）
+    const images = [{ name: 'a.jpg', path: 'cat/a.jpg', label: 'cat2', diskPath: null }];
+    const dirEntry = {
+        oldPath: 'C:/Workspace/proj/dataset/ds/cat/a.jpg',
+        newPath: 'C:/Workspace/proj/dataset/ds/cat2/a.jpg'
+    };
+    const changed = reconcileRenamedPaths(images, [dirEntry], { oldLabel: 'cat', newLabel: 'cat2' });
+    assert.equal(changed, 1);
+    assert.equal(images[0].path, 'cat2/a.jpg');
+    assert.equal(images[0].name, 'a.jpg'); // 檔名不變
+    assert.equal(images[0].diskPath, null); // 無 diskPath 不憑空產生
+});
+
+test('2026-10-16 ③補強：diskPath 為 null 的偵測模式圖片，改標籤後 path 同時更新目錄與檔名', () => {
+    // 後端回報完整 rename（舊目錄/舊檔名 → 新目錄/新檔名），前端 diskPath 為 null 時
+    // 應以 img.path 做相對路徑尾段比對，取得含新檔名的 newPath，而非僅改目錄段。
+    const images = [{
+        name: 'none_1782184881900.jpg',
+        path: 'none/none_1782184881900.jpg',
+        label: 'test', // 呼叫端已先同步為新名
+        diskPath: null
+    }];
+    const changed = reconcileRenamedPaths(images, [{
+        oldPath: 'C:/Workspace/proj/dataset/ds/none/none_1782184881900.jpg',
+        newPath: 'C:/Workspace/proj/dataset/ds/test/test_1782184881900.jpg'
+    }], { oldLabel: 'none', newLabel: 'test' });
+    assert.equal(changed, 1);
+    assert.equal(images[0].path, 'test/test_1782184881900.jpg'); // 目錄＋檔名皆更新
+    assert.equal(images[0].name, 'test_1782184881900.jpg');
+    assert.equal(images[0].diskPath, null); // 無 diskPath 不憑空產生
+});
