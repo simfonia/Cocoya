@@ -45,7 +45,7 @@
       }
     },
     {
-      "files": ["ui/**/*.js"],
+      "files": ["ui/**/*.js", "docs/teaching/py_ai_train_run/simulator/*.js"],
       "env": {
         "browser": true
       },

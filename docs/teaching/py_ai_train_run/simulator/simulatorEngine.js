@@ -87,7 +87,7 @@ function normalizeParams(raw) {
         return Math.min(hi, Math.max(lo, x));
     }
     var opt = String(p.optimizer || DEFAULTS.optimizer).toLowerCase();
-    if (!OPTIMIZER_SPEED.hasOwnProperty(opt)) opt = 'adam';
+    if (!Object.prototype.hasOwnProperty.call(OPTIMIZER_SPEED, opt)) opt = 'adam';
     return {
         learningRate: num(p.learningRate, DEFAULTS.learningRate, 0.00001, 1),
         epochs: Math.round(num(p.epochs, DEFAULTS.epochs, 1, 1000)),
@@ -303,7 +303,9 @@ function tailRange(arr) {
 }
 
 function classifyCurveFeatures(history, params) {
-    var p = params ? normalizeParams(params) : null;
+    /* 注意：params 僅供 diagnose 層的混合判讀（S6/S9 參數輔助門）使用，
+     * 純曲線特徵層刻意不吃參數（守門 2b 鎖定）。此處不展開，避免未用變數。 */
+    void params;
     var loss = history.loss || [], valLoss = history.val_loss || [];
     var acc = history.accuracy || [], valAcc = history.val_accuracy || [];
     var fLoss = finiteOnly(loss), fVal = finiteOnly(valLoss);
