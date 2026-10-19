@@ -15,6 +15,17 @@
 
 ---
 ## [進行中 / 待辦]
+### [2026-10-17] 訓練模擬器 V1（自由模式 + 診斷提示）🟢 進行中
+> 計畫 SSOT：`log/plan/TrainingSimulator.md`（獨立網頁、無 i18n、與「訓練結果」並存新增、
+> 方案 A 純前端參數化曲線引擎；V1 僅 Tauri，VSIX 凍結；V2 挑戰關卡 / V3 問答另立）
+- [x] **步驟 0**：審核＋計畫修訂（並存／Tauri-only／camelCase 檔名／參數對照表／`open_simulator` 定案）✅
+- [x] **步驟 1**：引擎 + 診斷器 + vm 測試（9 症狀 10/10、7 測全綠、變異自證）＋ `test:simulator` 接入 ✅（細節見 `log/work/2026-10-18.md` §2）
+- [x] **步驟 2**：renderer（對齊 `training_report.py` 報告視覺契約）＋純函式測試 4/4 ✅
+- [x] **步驟 3**：`simulator.html` UI 整合（參數面板 + 診斷提示 + 術語中英並呈）✅（id 零缺失、無 fetch/module）
+- [x] **步驟 4**：Tauri 入口新增（`btn-training-simulator`＋`open_simulator`＋resources 映射＋capabilities＋i18n＋manifest）✅（附帶修 DM 雙空白舊 bug 1 字元）
+- [x] **步驟 5**：全套驗證（simulator 11/11 / rust ok / fast 101/101 / ui 594/594 / build / lint / eol）+ 文件更新 ✅（細節見 `log/work/2026-10-18.md` §4–5）
+- [x] **待使用者**：實機驗收（Tauri dev 按鈕開模擬器＋`file://` 雙擊＋9 症狀各驗一次）✅（2026-10-19 使用者驗收通過，本任務結案）
+
 ### [2026-10-13] DM P3 縮圖列分類篩選三項回報（✅ 完成，待實機驗收）
 - [x] **焦點框消失**（P3 按第二個分類 chip 後綠框消失）：根因是 DOM 序號與絕對索引脫勾的「巧合式正確」；
   改走 `statsVisiblePositionOf()` 換算，勾號改讀 `entries[idx].img` ✅ （`log/work/2026-10-13.md` 第 6 節）

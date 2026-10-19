@@ -871,6 +871,19 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             });
         }
 
+        // --- 訓練模擬器按鈕（AI 下拉選單，V1 僅 Tauri；VSIX 由 capabilities 隱藏）---
+        // 與「訓練結果」並存（原 openLatestTrainingReport 鏈路保留，不刪除）
+        const trainingSimulatorBtn = document.getElementById('btn-training-simulator');
+        if (trainingSimulatorBtn) {
+            if (!window.CocoyaBridge || !window.CocoyaBridge.capabilities?.supportsTrainingSimulator) {
+                trainingSimulatorBtn.style.display = 'none';
+            } else {
+                trainingSimulatorBtn.addEventListener('click', () => {
+                    window.CocoyaBridge.send('openTrainingSimulator');
+                });
+            }
+        }
+
         // --- 訓練結果按鈕（AI 下拉選單）---
         // 改為開啟目前專案 model 目錄下的 _training_report.html
         const trainingResultBtn = document.getElementById('btn-training-result');

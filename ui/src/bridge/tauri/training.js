@@ -1,8 +1,9 @@
 /**
  * ui/src/bridge/tauri/training.js — 遠端訓練與訓練報告指令群（P2-1 拆檔）
  *
- * 對應原 `BridgeTauri.send()` switch 內 4 個 case：
- *   startRemoteTraining / stopRemoteTraining / openTrainingReport / openLatestTrainingReport
+ * 對應原 `BridgeTauri.send()` switch 內 5 個 case：
+ *   startRemoteTraining / stopRemoteTraining / openTrainingReport / openLatestTrainingReport /
+ *   openTrainingSimulator（2026-10-18 訓練模擬器 V1，Tauri-only）
  *
  * 【注意】`startRemoteTraining` 原為區塊式 case（`case 'x': {`，因宣告 let/const 需要作用域）。
  * 搬成函式後作用域由函式本身提供，區塊式語法已移除。
@@ -100,6 +101,20 @@ export async function openTrainingReport(_command, data) {
     } catch (e) {
         console.error('[Bridge] open_report failed:', e);
         this.alert(`開啟失敗，請手動開啟檔案：\n${data.path}\n\n錯誤：${e}`);
+    }
+    return;
+}
+
+/**
+ * @this {import('../tauri.js').BridgeTauri}
+ */
+export async function openTrainingSimulator(_command, _data) {
+    // 訓練模擬器 V1（2026-10-18）：Tauri-only；VSIX 由 capabilities 隱藏入口，不會送到這裡
+    try {
+        await this.tauriInvoke('open_simulator');
+    } catch (e) {
+        console.error('[Bridge] open_simulator failed:', e);
+        this.alert(`開啟訓練模擬器失敗：${e}`);
     }
     return;
 }

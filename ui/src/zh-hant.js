@@ -162,6 +162,7 @@
     "TLB_AI_MENU": "AI 功能",
     "TLB_AI_DATASET_MANAGER": "資料集管理",
     "TLB_AI_TRAINING_RESULT": "訓練結果",
+    "TLB_AI_TRAINING_SIMULATOR": "訓練模擬器",
     "TLB_NO_PORT": "(無序列埠)",
     "TLB_SERIAL_PLACEHOLDER": "(無序列埠)",
     "TLB_TERMINAL_TITLE": "終端機",

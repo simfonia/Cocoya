@@ -89,7 +89,9 @@ test('capabilities：未 init 前為未錨定，欄位齊全且 isTauri 為 true
             // 2026-10-01：還原範例檔（僅 Tauri 有後端 command；VSIX 為 false 並隱藏選單項）
             'supportsRestoreExamples',
             // 2026-10-10 C-1：純文字模式（僅 Tauri true；VSIX 為 false 並隱藏按鈕）
-            'supportsTextEditor'
+            'supportsTextEditor',
+            // 2026-10-18 訓練模擬器 V1（僅 Tauri 有 open_simulator；VSIX 為 false 並隱藏下拉項）
+            'supportsTrainingSimulator'
         ].sort()
     );
 });
@@ -141,6 +143,15 @@ test('capabilities 契約：supportsTextEditor 只有 Tauri 為 true（VSIX 必�
         'Tauri 獨有純文字模式，必須為 true');
     assert.equal(new BridgeVSIX().capabilities.supportsTextEditor, false,
         'VSIX 先不支援，必須為 false（前端據此隱藏按鈕）');
+});
+
+test('capabilities 契約：supportsTrainingSimulator 只有 Tauri 為 true（VSIX 必須 false）', () => {
+    // 2026-10-18（訓練模擬器 V1，VSIX 凍結）：與 supportsRestoreExamples 同模式 ——
+    // VSIX 無 open_simulator 後端（docs/ 被 .vscodeignore 排除），webview 不顯示下拉項。
+    assert.equal(makeBridge().capabilities.supportsTrainingSimulator, true,
+        'Tauri 有 open_simulator command，必須為 true');
+    assert.equal(new BridgeVSIX().capabilities.supportsTrainingSimulator, false,
+        'VSIX 凍結無後端實作，必須為 false（前端據此隱藏下拉項）');
 });
 
 test('capabilities 契約：supportsStableMode 不得再回傳（Stable Mode 死鏈已移除）', () => {

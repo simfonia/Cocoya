@@ -55,6 +55,7 @@
       "../resources/dataset_manager": "resources/dataset_manager",
       "../ui/src/modules": "resources/modules",
       "../docs/help": "docs/help",
+      "../docs/teaching/py_ai_train_run/simulator": "docs/teaching/py_ai_train_run/simulator",
       "../examples": "examples"
     }
   }

@@ -24,6 +24,9 @@ export class BridgeVSIX extends BaseBridge {
             supportsRestoreExamples: false,
             // 2026-10-10（Editor C-1）：VSIX 先不支援（VS Code 本身已有文字編輯器）
             supportsTextEditor: false,
+            // 2026-10-18（訓練模擬器 V1，VSIX 凍結）：不新增 host handler，
+            // 前端以本旗標隱藏入口（handler 延期至解凍）。
+            supportsTrainingSimulator: false,
             isTauri: false,
             isRemoteAware: true // VSIX 版具備雲端感知能力
         });

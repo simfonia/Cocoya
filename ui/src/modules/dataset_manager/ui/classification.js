@@ -218,7 +218,7 @@ export function createClassificationController({
             const entries = visibleImageEntries();
             const pos = entries.findIndex((entry) => entry.index === state.annotationMode.currentIndex);
             if (pos >= 0) {
-                text += '  ' + t('CLASSIFY_PROGRESS_FILTERED', '(篩選 %1: %2 / %3)')
+                text += ' ' + t('CLASSIFY_PROGRESS_FILTERED', '(篩選 %1: %2 / %3)')
                     .replace('%1', filterLabel)
                     .replace('%2', pos + 1)
                     .replace('%3', entries.length);

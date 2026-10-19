@@ -41,6 +41,7 @@ commands.allow = [
   "export_dataset",
   "open_report",
   "find_latest_training_report",
+  "open_simulator",
   "get_project_anchor",
   "dataset_save_progress",
   "dataset_load_progress",

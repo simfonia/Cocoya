@@ -87,6 +87,8 @@ const MIGRATED_COMMANDS = [
     'pickFolder', 'pickDataFile', 'newFile', 'createWindow',
     // training
     'startRemoteTraining', 'stopRemoteTraining', 'openTrainingReport', 'openLatestTrainingReport',
+    // 2026-10-18 訓練模擬器 V1（Tauri-only；經 ...training 自動收錄）
+    'openTrainingSimulator',
     // camera（全部經 _handleDatasetCommand 派給 sidecar）
     'datasetListCameras', 'datasetStartCamera', 'datasetGetCameraStatus',
     'datasetStopCamera', 'datasetCaptureImage', 'datasetCollectFeature',

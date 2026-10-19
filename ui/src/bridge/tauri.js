@@ -42,6 +42,8 @@ export class BridgeTauri extends BaseBridge {
             supportsRestoreExamples: true,
             // 2026-10-10（Editor C-1）：Tauri 獨有純文字模式（VSIX 直接用 VS Code 開 .py）
             supportsTextEditor: true,
+            // 2026-10-18（訓練模擬器 V1）：Tauri 有 open_simulator command
+            supportsTrainingSimulator: true,
             isTauri: true,
             isRemoteAware: true, // Tauri 亦保留雲端/SSH 擴充可能性
             isRemoteConnected: false,

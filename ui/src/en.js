@@ -159,6 +159,7 @@
     "TLB_AI_MENU": "AI Features",
     "TLB_AI_DATASET_MANAGER": "Dataset Manager",
     "TLB_AI_TRAINING_RESULT": "Training Results",
+    "TLB_AI_TRAINING_SIMULATOR": "Training Simulator",
     "TLB_NO_PORT": "(No Port)",
     "TLB_SERIAL_PLACEHOLDER": "(No Port)",
     "TLB_TERMINAL_TITLE": "TERMINAL",

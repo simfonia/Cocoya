@@ -50,6 +50,12 @@ C:\Workspace\cocoya\
 │   │   │       │   ├── AI訓練積木參數教學.pdf          # A4 直向講義 PDF（42 頁）
 │   │   │       │   └── .buildstamp.json                # 增量建置雜湊戳記（勿手改）
 │   │       └── lib/reveal/  # [NEW] 離線 Reveal.js 資源 (reveal.css/js + beige 主題)
+│   │       └── simulator/   # [NEW 2026-10-18] 訓練模擬器 V1（獨立單頁，file:// 可開；傳統 script 無 ESM/fetch）
+│   │           ├── simulator.html          # 主頁（參數面板＋canvas 曲線＋診斷提示；線上版置灰）
+│   │           ├── simulatorEngine.js      # 純函式引擎（generateCurves＋classifyCurveFeatures＋diagnose；seeded；掛 globalThis.CocoyaSimEngine）
+│   │           ├── simulatorEngine.test.mjs # vm harness 7 測（確定性／同構／九症狀／純曲線可判／零誤報／seed 穩健／正規化；npm run test:simulator）
+│   │           ├── simulatorRenderer.js    # canvas 雙面板（對齊 training_report.py 視覺；掛 globalThis.CocoyaSimRenderer）
+│   │           └── simulatorRenderer.test.mjs # 純函式 4 測（顏色／極值／刻度／版面）
 │   ├── api_manifest.md    # 前端 API SSOT (Source of Truth)
 │   ├── backend_api_manifest.md # [NEW] 後端 Rust API SSOT
 │   ├── dataset_types_matrix.md # [2026-10-02][P2-10] Dataset Manager 四類型能力矩陣 SSOT（命名對照/總覽矩陣/逐類型細節/已知殘餘 G1~G6/sidecar 雙處映射/雙佈局；改類型能力先改本檔）

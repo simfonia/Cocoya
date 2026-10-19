@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>訓練模擬器 - Cocoya AI 訓練參數練習</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #f5f5f5; color: #333; padding: 16px; }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+  header h1 { font-size: 22px; }
+  .badge { font-size: 12px; background: #fff3cd; border: 1px solid #e0c36a; color: #7a5b00;
+    border-radius: 6px; padding: 4px 10px; }
+  .online-link { margin-left: auto; font-size: 12px; color: #999; }
+  .main { display: grid; grid-template-columns: 300px 1fr; gap: 12px; }
+  @media (max-width: 860px) { .main { grid-template-columns: 1fr; } }
+  .card { background: #fff; border-radius: 8px; padding: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+  .card h2 { font-size: 15px; margin-bottom: 10px; color: #1a1a1a; }
+  .field { margin-bottom: 10px; }
+  .field label { display: block; font-size: 13px; margin-bottom: 4px; }
+  .field label .en { color: #888; font-size: 12px; }
+  .field input[type="number"], .field input[type="text"], .field select {
+    width: 100%; font-size: 14px; padding: 6px 8px;
+    border: 1px solid #ccc; border-radius: 4px; }
+  .field input[type="checkbox"] { transform: scale(1.2); margin-right: 6px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .btns { display: flex; gap: 8px; margin-top: 12px; }
+  button { font-size: 14px; padding: 8px 14px; border-radius: 6px;
+    border: 1px solid #ccc; background: #fff; cursor: pointer; }
+  button.primary { background: #2e7d32; border-color: #2e7d32; color: #fff; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  #curves { width: 100%; height: 480px; display: block; }
+  .diag-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .diag-head h2 { margin: 0; }
+  .diag-item { border-left: 4px solid #e0a100; background: #fffdf5;
+    padding: 8px 12px; margin-bottom: 8px; border-radius: 0 6px 6px 0; font-size: 14px; }
+  .diag-item.good { border-color: #2e7d32; background: #f4faf4; }
+  .diag-item .code { font-weight: 700; margin-right: 6px; }
+  .diag-item .cause { color: #666; }
+  .diag-item .advice { margin-top: 4px; }
+  .diag-empty { color: #2e7d32; font-size: 14px; }
+  .note { font-size: 12px; color: #888; margin-top: 10px; line-height: 1.6; }
+  footer { text-align: center; font-size: 12px; color: #aaa; margin-top: 16px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>訓練模擬器</h1>
+    <span class="badge">模擬模式：曲線為教學用近似，非真實訓練</span>
+    <span class="online-link">線上最新版：<button id="onlineBtn" disabled title="V1 尚未發佈">即將推出</button></span>
+  </header>
+  <div class="main">
+    <div class="card">
+      <h2>參數 <span style="color:#888;font-size:12px;">（與訓練積木同名）</span></h2>
+      <div class="field">
+        <label>學習率 <span class="en">Learning Rate</span></label>
+        <input type="number" id="pLr" value="0.001" min="0.00001" max="1" step="0.00001">
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>訓練輪數 <span class="en">Epochs</span></label>
+          <input type="number" id="pEpochs" value="20" min="1" max="1000" step="1">
+        </div>
+        <div class="field">
+          <label>批次大小 <span class="en">Batch Size</span></label>
+          <input type="number" id="pBatch" value="32" min="1" max="512" step="1">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Dropout</label>
+          <input type="number" id="pDropout" value="0.2" min="0" max="0.9" step="0.01">
+        </div>
+        <div class="field">
+          <label>驗證集比例 <span class="en">Validation Split</span></label>
+          <input type="number" id="pValSplit" value="0.2" min="0.1" max="0.5" step="0.01">
+        </div>
+      </div>
+      <div class="field">
+        <label><input type="checkbox" id="pAug" checked>資料增強 <span class="en">Augmentation</span></label>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>優化器 <span class="en">Optimizer</span></label>
+          <select id="pOpt">
+            <option value="adam" selected>Adam</option>
+            <option value="sgd">SGD</option>
+            <option value="rmsprop">RMSprop</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>DNN 層 <span class="en">DNN Layers</span></label>
+          <input type="text" id="pDnn" value="128,64">
+        </div>
+      </div>
+      <div class="btns">
+        <button class="primary" id="runBtn">產生曲線</button>
+        <button id="resetBtn">↺ 回到預設值</button>
+      </div>
+      <p class="note">backbone／fine-tune 不參與模擬（V2）。V1 一律 image_classification 曲線語意。</p>
+    </div>
+    <div class="card">
+      <canvas id="curves" role="img" aria-label="訓練曲線圖：上方 Loss、下方 Accuracy，藍線訓練、紅線驗證"></canvas>
+      <p class="note" id="curveSummary">尚未產生曲線。</p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:12px;">
+    <div class="diag-head">
+      <h2>診斷提示</h2>
+      <label style="font-size:13px;"><input type="checkbox" id="diagToggle" checked> 顯示</label>
+    </div>
+    <div id="diagList"></div>
+  </div>
+  <footer>Generated by Cocoya AI 訓練模擬器 V1（教學用近似）</footer>
+</div>
+<script src="simulatorEngine.js"></script>
+<script src="simulatorRenderer.js"></script>
+<script>
+(function () {
+  var E = window.CocoyaSimEngine;
+  var R = window.CocoyaSimRenderer;
+  function $(id) { return document.getElementById(id); }
+  function readParams() {
+    return {
+      learningRate: parseFloat($('pLr').value),
+      epochs: parseInt($('pEpochs').value, 10),
+      batchSize: parseInt($('pBatch').value, 10),
+      dropout: parseFloat($('pDropout').value),
+      validationSplit: parseFloat($('pValSplit').value),
+      augmentation: $('pAug').checked,
+      optimizer: $('pOpt').value,
+      dnnLayers: $('pDnn').value
+    };
+  }
+  function redraw() {
+    var params = E.normalizeParams(readParams());
+    $('pLr').value = params.learningRate;
+    $('pEpochs').value = params.epochs;
+    var h = E.generateCurves(params, 7);
+    R.render($('curves'), h, 'Training');
+    renderDiag(h, params);
+    var tail = h.loss.slice(-3).map(function (v) {
+      return isFinite(v) ? v.toFixed(2) : 'NaN';
+    }).join(' / ');
+    $('curveSummary').textContent =
+      'Epochs ' + params.epochs + '・訓練 Loss 尾段：' + tail + '。';
+  }
+  function renderDiag(h, params) {
+    var show = $('diagToggle').checked;
+    var box = $('diagList');
+    box.innerHTML = '';
+    if (!show) return;
+    var list = E.diagnose(h, params);
+    if (list.length === 0) {
+      var p = document.createElement('p');
+      p.className = 'diag-empty';
+      p.textContent = '✅ 曲線健康：正常收斂、兩線貼近。試著調大學習率或關掉資料增強，觀察曲線如何變壞。';
+      box.appendChild(p);
+      return;
+    }
+    list.forEach(function (d) {
+      var div = document.createElement('div');
+      div.className = 'diag-item' + (d.code === 'S8' ? ' good' : '');
+      var head = document.createElement('div');
+      var code = document.createElement('span');
+      code.className = 'code';
+      code.textContent = (d.code === 'S8' ? '💡 ' : '⚠ ') + d.code;
+      head.appendChild(code);
+      head.appendChild(document.createTextNode(d.symptom));
+      var cause = document.createElement('div');
+      cause.className = 'cause';
+      cause.textContent = '成因：' + d.cause;
+      var adv = document.createElement('div');
+      adv.className = 'advice';
+      adv.textContent = '建議：' + d.advice;
+      div.appendChild(head);
+      div.appendChild(cause);
+      div.appendChild(adv);
+      box.appendChild(div);
+    });
+  }
+  $('runBtn').onclick = redraw;
+  $('resetBtn').onclick = function () {
+    var d = E.DEFAULTS;
+    $('pLr').value = d.learningRate;
+    $('pEpochs').value = d.epochs;
+    $('pBatch').value = d.batchSize;
+    $('pDropout').value = d.dropout;
+    $('pValSplit').value = d.validationSplit;
+    $('pAug').checked = d.augmentation;
+    $('pOpt').value = d.optimizer;
+    $('pDnn').value = d.dnnLayers;
+    redraw();
+  };
+  $('diagToggle').onchange = redraw;
+  $('pOpt').onchange = redraw;
+  $('pAug').onchange = redraw;
+  window.addEventListener('resize', function () { redraw(); });
+  redraw();
+})();
+</script>
+</body>
+</html>

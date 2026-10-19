@@ -115,3 +115,4 @@ Notation: `key?` = Optional. **Rule: changing a Rust signature -> immediately up
 | dataset | dataset_upload_chunk | file_id, chunk_index, total_chunks, zip_data_chunk, project_name, is_last | {fileId, chunkIndex, totalChunks, zipDataChunk, projectName, isLast} | Result<Option<String>, String> |
 | training | open_report  | report_path: String | {reportPath} | Result<(), String> |
 | training | find_latest_training_report | -- | {} | Result<Vec<ReportInfo>, String> |
+| training | open_simulator | -- | {} | Result<(), String>（2026-10-18 訓練模擬器 V1，Tauri-only；路徑由後端 `get_simulator_path` 解析：dev 走專案根 `docs/teaching/...`，prod 走 Resource 打包） |

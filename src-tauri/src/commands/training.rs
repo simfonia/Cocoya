@@ -1,8 +1,9 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use serde::Serialize;
-use tauri::{State, Window};
+use tauri::{AppHandle, Manager, State, Window};
 use crate::state::AppState;
+use crate::utils::strip_extended_prefix_public;
 
 /// 訓練報告資訊（回傳給前端）
 // P2-5 修：原缺 #[serde(rename_all = "camelCase")]，序列化後欄位為 project_name /
@@ -135,5 +136,44 @@ fn walk_reports(dir: &Path, reports: &mut Vec<ReportInfo>) -> Result<(), String>
         }
     }
 
+    Ok(())
+}
+
+/// 訓練模擬器頁路徑解析（dev：專案根 docs/teaching/...；prod：Resource 打包）。
+/// 不復用 open_report：模擬器是固定資源路徑，open_report 的相對路徑解析依賴專案錨定。
+pub fn get_simulator_path(handle: &AppHandle) -> PathBuf {
+    // 開發模式：專案根 docs/teaching/py_ai_train_run/simulator/simulator.html
+    let mut dev_path = std::env::current_dir().unwrap();
+    if dev_path.ends_with("src-tauri") {
+        dev_path.pop();
+    }
+    dev_path.push("docs");
+    dev_path.push("teaching");
+    dev_path.push("py_ai_train_run");
+    dev_path.push("simulator");
+    dev_path.push("simulator.html");
+    if dev_path.exists() {
+        return strip_extended_prefix_public(dev_path);
+    }
+
+    // 生產模式：Resource/docs/teaching/...（tauri.conf.json bundle.resources 映射）
+    let resource_path = handle.path().resolve(
+        "docs/teaching/py_ai_train_run/simulator/simulator.html",
+        tauri::path::BaseDirectory::Resource,
+    );
+    match resource_path {
+        Ok(p) if p.exists() => strip_extended_prefix_public(p),
+        _ => strip_extended_prefix_public(dev_path), // 最後 fallback（報錯時帶路徑）
+    }
+}
+
+/// 用系統預設瀏覽器開啟訓練模擬器（V1，Tauri-only；VSIX 凍結不實作）
+#[tauri::command]
+pub async fn open_simulator(handle: AppHandle) -> Result<(), String> {
+    let page = get_simulator_path(&handle);
+    if !page.exists() {
+        return Err(format!("找不到訓練模擬器頁面: {}", page.display()));
+    }
+    open::that(&page).map_err(|e| format!("開啟失敗: {}", e))?;
     Ok(())
 }

@@ -4,11 +4,17 @@
 Cocoya 是一個針對 Python AI 視覺的教學工具。它透過 Blockly 產生 PC 端的 Python (AI) 與 MCU 端的 MicroPython (Hardware) 代碼。
 
 ## 技術規範
-- **核心架構**：混合架構 (Hybrid)，支援 VSIX 與 Tauri 雙模共用前端 SSOT。
+- **核心架構**：混合架構 (Hybrid)，支援 VSIX(已凍結開發) 與 Tauri 雙模共用前端 SSOT。
 - **目標語言**：
     - PC: Python 3 (MediaPipe, OpenCV)。
     - MCU: MicroPython (XIAO S3 Sense, Maker Pi RP2040)。
 - **通訊方式**：Serial (USB)。
+
+### VSIX 端開發凍結（2026-10-18 使用者決策）
+- **凍結範圍**：`src/`（Extension Host）不再新增功能，僅修舊 bug。
+- **理由**：同時維護兩套平台太耗時，將來考慮清除VSIX相關程式碼。
+- **新功能一律先做 Tauri 端**；前端共用碼（`ui/src/`）為支援 Tauri 功能所需的最小改動（如 capabilities 旗標、按鈕顯示控制）允許，但不得新增 `src/` handler。
+- VSIX 缺席的功能，前端以 `bridge.capabilities` 旗標隱藏入口（不直接檢查 `isTauri`，沿用既有能力分發慣例）。
 
 ### Tauri 2.0 安全與指令規範
 - **指令權限二階段定義 (Permission Workflow)**：

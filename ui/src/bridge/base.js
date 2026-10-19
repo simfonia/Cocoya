@@ -29,6 +29,10 @@ export class BaseBridge {
             // 2026-10-10（Editor C-1）：是否支援純文字模式（Tauri 獨有）。
             // VSIX 端直接用 VS Code 開 .py，webview 不重造編輯器。
             supportsTextEditor: false,
+            // 2026-10-18（訓練模擬器 V1）：是否支援訓練模擬器（open_simulator）。
+            // 僅 Tauri 有後端 command（docs/teaching 打包進 Resource）；VSIX 凍結＋
+            // .vscodeignore 排除 docs/ → false，前端據此隱藏下拉項。
+            supportsTrainingSimulator: false,
             isTauri: false,
             isRemoteAware: false,
             isRemoteConnected: false,

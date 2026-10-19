@@ -65,6 +65,7 @@ pub fn run() {
             commands::export_dataset,
             commands::open_report,
             commands::find_latest_training_report,
+            commands::open_simulator,
             commands::file::anchor::get_project_anchor,
             commands::file::dataset::dataset_save_progress,
             commands::file::dataset::dataset_load_progress,
