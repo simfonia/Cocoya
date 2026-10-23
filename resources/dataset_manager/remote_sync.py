@@ -11,6 +11,8 @@
 """
 
 import os
+import tempfile
+import zipfile
 
 from remote_ssh import (
     _changed_files,

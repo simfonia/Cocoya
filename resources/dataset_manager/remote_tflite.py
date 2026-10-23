@@ -11,7 +11,7 @@
 - 轉換失敗不中斷整條訓練（回報失敗原因後續流程照常收尾），故函式**不拋例外**。
 """
 
-import importlib
+import importlib.util
 import os
 import subprocess
 import sys
@@ -87,7 +87,9 @@ def convert_keras_to_tflite(keras_path, dataset_dir, output_dir, project_name,
                     pass
 
         threading.Thread(target=_watchdog, daemon=True).start()
-        for cline in p_conv.stdout:
+        conv_stdout = p_conv.stdout
+        assert conv_stdout is not None
+        for cline in conv_stdout:
             got_output[0] = True
             cline = cline.strip()
             if cline:

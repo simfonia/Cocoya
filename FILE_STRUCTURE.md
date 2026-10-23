@@ -49,7 +49,7 @@ C:\Workspace\cocoya\
 │   │   │       │   ├── AI訓練積木參數教學_單檔版.html  # 單檔離線版（含互動小測驗）
 │   │   │       │   ├── AI訓練積木參數教學.pdf          # A4 直向講義 PDF（42 頁）
 │   │   │       │   └── .buildstamp.json                # 增量建置雜湊戳記（勿手改）
-│   │       └── lib/reveal/  # [NEW] 離線 Reveal.js 資源 (reveal.css/js + beige 主題)
+│   │       ├── lib/reveal/  # [NEW] 離線 Reveal.js 資源 (reveal.css/js + beige 主題)
 │   │       └── simulator/   # [NEW 2026-10-18] 訓練模擬器 V1（獨立單頁，file:// 可開；傳統 script 無 ESM/fetch）
 │   │           ├── simulator.html          # 主頁（參數面板＋canvas 曲線＋診斷提示；線上版置灰）
 │   │           ├── simulatorEngine.js      # 純函式引擎（generateCurves＋classifyCurveFeatures＋diagnose；seeded；掛 globalThis.CocoyaSimEngine）
@@ -280,6 +280,7 @@ C:\Workspace\cocoya\
 │   │   │       ├── spec.js  # DatasetSpec 類別、Schema 偵測、強健型 CSV 解析與驗證邏輯 (i18n 化)（R7：buildTableSamples 表格落盤組裝＋TABLE_SAMPLES_PERSIST_LIMIT＋stats.samples_truncated 契約）
 │   │   │       ├── spec.test.mjs # [R7] spec 契約測試（buildTableSamples 截斷/total、samples_truncated round-trip；6 測試）
 │   │   │       ├── sampler.js # [Stage 2 重構] 攝影機採集核心、連拍邏輯（通訊改經 io/bridge.js：request correlation + timeout + dispose）
+│   │   │       ├── sampler.test.mjs # [2026-10-21] Sampler 資源釋放守門（6 測：dispose 解除訂閱並 revoke 預覽 URL、init 冪等、連拍熔斷、stopCamera 早退清理、takeSnapshot 失敗撤銷 object URL）
 │   │   │       ├── ui_layout.js # 協調層（Stage 4＋M1 類型鎖定 entry/session/typePolicy＋P1/P2/P3 導航；轉義/路徑改吃 core/html.js 與 pathPolicy SSOT；[2026-09-17] 拍照/刪圖不再覆寫結構面板 innerHTML、renderStatsPanels 加管理器保護、改名對帳走 labelRenameReconcile＋重繪縮圖、資料集名稱漂移提示 applyDatasetNameDriftHint；[2026-10-13] renderStatsPanels 前置 renderGlobalStatsBar（頂部統計列 SSOT 入口，須早於 view-label-stats 早退）、statsFilterLabel 分類篩選狀態＋renderImageGridFiltered（4 處縮圖牆呼叫點，回傳 state.images 原始索引避免刪錯圖））
 │   │   │       ├── ui_components.js # 動態視圖組件 (影像網格、字典序標籤統計、標註縮圖欄、getLabelColor FNV-1a+黃金角色相；轉義經 core/html.js，前損壞實作已刪)；[2026-10-13] renderGlobalStats 頂部常駐統計列（總數＋分類別 chips＋分類篩選，計數單位沿用 typePolicy SSOT，不可篩選時 chips 渲染 span）
 │   │   │       ├── ui_canvas.js # 標註互動畫布 (物件偵測拉框與自駕循線畫線，座標限幅防護、bbox 高亮與雙模互動；[2026-10-01] 跨畫面十字尺規可調色、框線雙色描邊（白外框＋標籤色內框）且不依主題變明度（框線畫在照片上）、標註列表 hover 時的 2Hz 閃爍虛線高亮)
@@ -423,7 +424,8 @@ C:\Workspace\cocoya\
 │   ├── extension_icon.png   # 插件圖示
     ├── tests/                 # [2026-10-03 T4-2] Python 測試（pytest，進版控；npm run test:python）
     │   ├── conftest.py        # pytest 全域設定與共用夾具（write_image / repo_root / slow 標記）
-    │   └── e2e/               # 由 temp_scripts/e2e_*.py 轉入的 11 個測試（自足，無外部資料集依賴）
+    │   └── e2e/               # 由 temp_scripts/e2e_*.py 轉入的 12 個測試（自足，無外部資料集依賴）
+    │       ├── test_camera_resource_release.py # [2026-10-21] 相機、MediaPipe、sidecar 釋放冪等性回歸測試（9 測）
     │       ├── test_c2_layout.py            # 訓練資料集雙佈局契約
     │       ├── test_classifier_dataloader.py # 分類 loader：bmp/gif 可解碼、webp 排除
     │       ├── test_detector_curves.py      # 偵測訓練曲線三面板
@@ -434,7 +436,7 @@ C:\Workspace\cocoya\
     │       ├── test_line_following_rename.py # line_following 改名一致性
     │       └── test_task_type_rename.py     # 四類型 task type 改名 + 實際訓練（slow）
     ├── pytest.ini             # pytest 設定（testpaths=tests、-q --strict-markers）
-    ├── pyrightconfig.json      # [2026-10-03] Pylance/Pyright 設定（extraPaths 指向 resources/train_templates 以解析 common 包裝）
+    ├── pyrightconfig.json      # [2026-10-03] Pylance/Pyright 設定（extraPaths 指向 resources/train_templates 以解析 common 包裝）；[2026-10-21] extraPaths/include 加入 resources/dataset_manager（dataset_manager 內部為平鋪 import，非套件）
     ├── temp/                  # [2026-10-04] 唯一的**開發暫存區**（gitignored）
     │   ├── scripts/           #   當前使用的一次性分析與驗證腳本
     │   └── archive/           #   已歸檔的歷史腳本（YYYYMMDD/ 分層）

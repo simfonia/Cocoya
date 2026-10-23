@@ -1,6 +1,7 @@
 {
     "extraPaths": [
         "resources/train_templates",
+        "resources/dataset_manager",
         "resources"
     ],
     "include": [

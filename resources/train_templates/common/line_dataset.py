@@ -169,8 +169,15 @@ def load_line_dataset(dataset_dir, img_size=224, batch_size=32, validation_split
         print("隨機切分 (random split，線段回歸任務無類別欄位):")
         print(f"  train {len(train_idx)} / val {len(val_idx)}")
 
-        rng.shuffle(train_idx)
-        rng.shuffle(val_idx)
+        # 型別面：random.shuffle 的簽章要求「可變序列」，ndarray 不符合；
+        # 執行面：ndarray 雖可 item assignment，但以 list 洗牌再轉回 ndarray
+        # 可同時滿足靜態檢查與執行期語意（不依賴 ndarray 的 item assignment 行為）。
+        train_shuffled = list(train_idx)
+        rng.shuffle(train_shuffled)
+        val_shuffled = list(val_idx)
+        rng.shuffle(val_shuffled)
+        train_idx = np.array(train_shuffled)
+        val_idx = np.array(val_shuffled)
 
         train_paths = [image_paths[i] for i in train_idx]
         train_lines = lines[train_idx]

@@ -1996,6 +1996,12 @@ export async function openDatasetManager() {
     state.isOpen = true;
     modal.style.display = 'flex';
 
+    // [2026-10-21 資源釋放] 重新訂閱相機狀態事件：
+    // closeDatasetManager() 會呼叫 Sampler.dispose() 解除訂閱，而 Sampler 是
+    // 跨 DM 開關存活的單例 —— 若不重新 init，關閉一次後就再也收不到
+    // datasetCameraStatus（相機狀態燈號不會更新）。init() 本身冪等。
+    Sampler.init();
+
     // 2026-10-13（方案 A）：關閉時已歸零（見 closeDatasetManager），這裡是保險網 ——
     // 只為「未經 closeDatasetManager 就被再次開啟」的異常路徑保留（例如 host 端直接
     // dispatch openDatasetManager）。正常路徑下 state 已是空的，此行等於 no-op。

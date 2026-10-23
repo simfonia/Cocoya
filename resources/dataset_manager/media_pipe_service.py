@@ -8,6 +8,8 @@ media_pipe_service.py — MediaPipe 特徵提取服務（M4 重寫）
   - MediaPipe 未安裝/初始化失敗→ available=False（缺裝降級，由呼叫端判 FEATURE_MEDIAPIPE_MISSING）。
 """
 
+from typing import Any, cast
+
 try:
     import mediapipe as mp
     import cv2
@@ -27,12 +29,13 @@ class MediaPipeService:
         self._pose = None
         if self.enabled:
             try:
-                self._hands = mp.solutions.hands.Hands(
+                _solutions = cast(Any, mp).solutions
+                self._hands = _solutions.hands.Hands(
                     static_image_mode=False,
                     max_num_hands=1,
                     min_detection_confidence=0.5
                 )
-                self._pose = mp.solutions.pose.Pose(
+                self._pose = _solutions.pose.Pose(
                     static_image_mode=False,
                     min_detection_confidence=0.5,
                     min_tracking_confidence=0.5
@@ -41,13 +44,22 @@ class MediaPipeService:
                 self.enabled = False
 
     def close(self):
-        """釋放 MediaPipe 資源（可選）。"""
-        for sol in (self._hands, self._pose):
-            if sol is not None:
-                try:
-                    sol.close()
-                except Exception:
-                    pass
+        """釋放 MediaPipe 資源（可選）。冪等：可重複呼叫，且釋放後清空句柄。
+
+        [2026-10-21 資源釋放] 原 close() 重複呼叫會對同一個 solution 再 close()，
+        且句柄未清空 → sidecar 結束時可能重複釋放／句柄殘留。
+        """
+        for attr in ("_hands", "_pose"):
+            sol = getattr(self, attr, None)
+            if sol is None:
+                continue
+            try:
+                sol.close()
+            except Exception:
+                pass
+            finally:
+                setattr(self, attr, None)
+        self.enabled = False
 
     def _serialize(self, landmark_list, points, use_z):
         """把 MediaPipe landmark list 轉成 [[x,y(,z)]*points]；未偵測回 None。"""

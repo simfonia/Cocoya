@@ -15,6 +15,30 @@
 
 ---
 ## [進行中 / 待辦]
+### [2026-10-21] DM live 採集資源釋放（P1 階段）🟢 已完成，待實機驗收
+> 計畫 SSOT：`log/plan/DatasetManagerLiveCollectionResourceLeak.md`；日誌：`log/work/2026-10-21.md`
+- [x] **P1-1**：`Sampler.dispose()` 保底 revoke 預覽 object URL（新增冪等的 `releasePreviewUrl()`）✅
+- [x] **P1-2**：X 關 OpenCV 視窗 → 連拍一併停止；連拍加熔斷（連續失敗門檻）✅
+- [x] **P1-3**：`camera_service.py` 的 `list_cameras()`、`_run()` 釋放區改 `try/finally`；新增 session 序號避免舊執行緒誤殺新活動；MediaPipe 與 sidecar 停止路徑改冪等（+ `shutdown()`）✅
+- [x] **修正**：`takeSnapshot()` 的 `newUrl` 遮蔽式變數修正（失敗路徑撤銷 object URL）；開啟 DM 重新 `Sampler.init()`（否則關一次後不再收到相機狀態事件）✅
+- [x] **守門**：新增 `sampler.test.mjs`（6 測，變異測試三項均報紅）與 `tests/e2e/test_camera_resource_release.py`（9 測）✅
+- [x] **附帶修**：`FILE_STRUCTURE.md` 樹狀縮排錯位（自 2026-10-18 訓練模擬器 commit 帶入，阻擋 `npm test`）✅
+- [ ] **P2-1**：`CameraService.stop()` 可觀測性（回報 `thread.is_alive()`、log 三元組）— 先觀測再定保底策略
+- [ ] **P2-2**：常駐 sidecar vs 真孤兒的實機鑑別（taskmgr 判讀須附 host 存活狀態）
+- [ ] **P3**：多視窗同時開 live 的互斥提示／狀態欄標示（選項）
+- [ ] **實機驗收**：開關 DM 3 次、連拍 60 秒後 X 關窗、強制關閉觀察殭屍 python、開 2 視窗同時開 live
+### [2026-10-21] Pyright 診斷清零（dataset_manager / train_templates / e2e）🟢 已完成
+> 日誌：`log/work/2026-10-21.md` §1.9
+- [x] `pyrightconfig.json` 的 `extraPaths` 與 `include` 加入 `resources/dataset_manager`（該目錄為平鋪 import，非套件）✅
+- [x] 修正 `camera_service.py`（base64 走 `buffer.tobytes()`）、`media_pipe_service.py`（`cast(Any, mp).solutions`）✅
+- [x] 修正 `local_training.py` / `remote_tflite.py`（stdout 型別收斂、`import importlib.util`）✅
+- [x] 修正 `remote_ssh.py`（docstring 改 raw string，消除逸出序列警告）✅
+- [x] 修正 `line_dataset.py`（`random.shuffle` 以 list 洗牌）、`test_detector_curves.py`（assert + `Dict[str, Any]`）✅
+- [x] **不保留** `pyrightconfig.test.json`（venvPath 為機器特定路徑，改以 `--pythonpath` 帶入）✅
+- [x] 驗證：Pyright 39 檔 **0 error / 0 warning**；`pytest -q` 全量 43 passed；`npm test` 全綠 ✅
+
+
+
 ### [2026-10-17] 訓練模擬器 V1（自由模式 + 診斷提示）🟢 進行中
 > 計畫 SSOT：`log/plan/TrainingSimulator.md`（獨立網頁、無 i18n、與「訓練結果」並存新增、
 > 方案 A 純前端參數化曲線引擎；V1 僅 Tauri，VSIX 凍結；V2 挑戰關卡 / V3 問答另立）

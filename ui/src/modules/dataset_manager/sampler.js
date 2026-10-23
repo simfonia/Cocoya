@@ -7,6 +7,9 @@
 import { datasetBridge } from './io/bridge.js';
 
 export const Sampler = {
+    /** [2026-10-21] 連拍熔斷門檻：連續失敗達此數即停止連拍（避免無意義輪詢） */
+    BURST_MAX_FAILURES: 3,
+
     state: {
         isCapturing: false,
         isCamRunning: false, 
@@ -22,6 +25,11 @@ export const Sampler = {
 
     /**
      * 初始化監聽器 (應由外部呼叫一次)；回傳的 dispose 可解除訂閱
+     *
+     * [2026-10-21 資源釋放] 冪等：重複呼叫不會產生第二組訂閱
+     * （先解除既有訂閱再重新訂閱）。另注意 dispose() 會解除訂閱，
+     * 而 Sampler 是跨 DM 開關存活的單例 —— 因此每次開啟 DM 都必須再呼叫
+     * init()，否則關閉一次後相機狀態事件就再也收不到（見 ui_layout.openDatasetManager）。
      */
     init() {
         if (this._offStatus) { this._offStatus(); this._offStatus = null; }
@@ -34,6 +42,8 @@ export const Sampler = {
             if (oldStatus !== this.state.isCamRunning && this.state.onStatusChanged) {
                 this.state.onStatusChanged(this.state.isCamRunning);
             }
+            // [2026-10-21 資源釋放] 相機被外部關閉 → 連拍一併停止
+            if (!this.state.isCamRunning) this.stopBurst();
         });
         // 同步通道（getCameraStatus 輪詢/對帳用，與啟動回覆共用的 datasetCameraStatus
         // 不同 command，避免 FIFO 誤吃；狀態語意相同）
@@ -53,6 +63,22 @@ export const Sampler = {
         if (this._offStatusSync) { this._offStatusSync(); this._offStatusSync = null; }
         this.stopStatusPoll();
         this.stopBurst();
+        // [2026-10-21 資源釋放] 釋放預覽用 object URL：
+        // 原先只會被「下一次 takeSnapshot 覆蓋」或「永遠不釋放」，
+        // 連拍中關閉 DM 會留下一個 blob: URL 與其 blob。
+        this.releasePreviewUrl();
+    },
+
+    /** 釋放最近預覽圖的 object URL（冪等）。 */
+    releasePreviewUrl() {
+        if (this.state.lastPreviewUrl) {
+            try {
+                URL.revokeObjectURL(this.state.lastPreviewUrl);
+            } catch (e) {
+                console.warn('[Sampler] revokeObjectURL failed:', e);
+            }
+            this.state.lastPreviewUrl = null;
+        }
     },
 
     /**
@@ -191,6 +217,9 @@ export const Sampler = {
      */
     stopCamera(force = false) {
         if (!force && !this.state.isCamRunning) {
+            // [2026-10-21 資源釋放] 即使守衛早退，也必須清掉連拍計時器：
+            // 原先守衛早退會讓 setInterval 殘留（相機已關但 burst 仍在送快照）。
+            this.stopBurst();
             return; // 防止重複停止
         }
         datasetBridge.send('datasetStopCamera', {});
@@ -230,6 +259,7 @@ export const Sampler = {
             throw new Error(message.error || '擷取失敗 (Sidecar 無回傳資料)');
         }
 
+        let newUrl = null;
         try {
             const byteCharacters = atob(message.base64);
             const byteNumbers = new Array(byteCharacters.length);
@@ -241,13 +271,14 @@ export const Sampler = {
 
             // 更新最近預覽圖 URL
             if (this.state.lastPreviewUrl) URL.revokeObjectURL(this.state.lastPreviewUrl);
-            this.state.lastPreviewUrl = URL.createObjectURL(blob);
+            newUrl = URL.createObjectURL(blob);
+            this.state.lastPreviewUrl = newUrl;
 
             // 嘗試更新 DOM
             const previewImg = document.getElementById('dataset-sampler-last-preview');
             const placeholder = document.getElementById('dataset-sampler-placeholder');
             if (previewImg) {
-                previewImg.src = this.state.lastPreviewUrl;
+                previewImg.src = newUrl;
                 previewImg.style.display = 'block';
                 if (placeholder) placeholder.style.display = 'none';
                 console.log('[Sampler] DOM preview updated');
@@ -261,23 +292,53 @@ export const Sampler = {
             return blob;
         } catch (err) {
             console.error('[Sampler] Base64 conversion failed:', err);
+            // [2026-10-21 資源釋放] 失敗路徑也要釋放剛建立的 object URL，
+            // 否則 onSampleCaptured / DOM 拋錯時 blob 會殘留到下一次快照才被覆蓋。
+            if (newUrl && this.state.lastPreviewUrl === newUrl) {
+                try {
+                    URL.revokeObjectURL(newUrl);
+                } catch (e) {
+                    console.warn('[Sampler] revokeObjectURL failed:', e);
+                }
+                this.state.lastPreviewUrl = null;
+            }
             throw err;
         }
     },
 
     /**
      * 開始連拍
+     *
+     * [2026-10-21 資源釋放] 加入熔斷（circuit breaker）：
+     * 連拍期間相機被關閉或 Sidecar 連續回應失敗時，setInterval 若不停止
+     * 會一直送快照（每次都失敗），留下無意義的輪詢與錯誤噪音。
      */
     startBurst(interval = 500, projectName = 'dataset') {
         if (this.state.burstTimer) this.stopBurst();
         this.state.burstInterval = interval;
         this.state.isCapturing = true;
+        // 熔斷狀態：連續失敗次數 + 是否已因相機關閉而中止
+        this.state.burstFailCount = 0;
+        this.state.burstAborted = false;
+        this.state.burstProjectName = projectName;
 
         this.state.burstTimer = setInterval(async () => {
+            // 熔斷：相機已關閉 → 停止連拍，不再送任何請求
+            if (this.state.burstAborted || !this.state.isCamRunning) {
+                console.warn('[Sampler] Burst aborted (camera not running).');
+                this.stopBurst();
+                return;
+            }
             try {
                 await this.takeSnapshot(projectName);
+                this.state.burstFailCount = 0;
             } catch (e) {
+                this.state.burstFailCount = (this.state.burstFailCount || 0) + 1;
                 console.error('[Sampler] Burst capture failed:', e);
+                if (this.state.burstFailCount >= Sampler.BURST_MAX_FAILURES) {
+                    console.error('[Sampler] Burst circuit breaker triggered.');
+                    this.stopBurst();
+                }
             }
         }, this.state.burstInterval);
     },
@@ -291,6 +352,8 @@ export const Sampler = {
             this.state.burstTimer = null;
         }
         this.state.isCapturing = false;
+        this.state.burstFailCount = 0;
+        this.state.burstAborted = false;
     },
 
     /**

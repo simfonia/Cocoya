@@ -14,6 +14,7 @@ import os
 import struct
 import sys
 import tempfile
+from typing import Any, Dict
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 TARGET = os.path.join(REPO, 'resources', 'train_templates', 'object_detection', 'object_detection_train.py')
@@ -27,6 +28,8 @@ def check(name, ok, detail=''):
 
 def load_target():
     spec = importlib.util.spec_from_file_location('object_detection_train_under_test', TARGET)
+    assert spec is not None
+    assert spec.loader is not None
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
@@ -61,7 +64,9 @@ def make_history(kind):
 
 
 def run_case(mod, plt, kind, expect_rows, expect_labels, out_dir):
-    captured = {'rows': None, 'fig': None}
+    # captured 以 Dict[str, Any] 標註：rows/fig 皆在執行期才賦值，
+    # 以 None 起始的窄型別會讓靜態檢查誤判後續存取。
+    captured: Dict[str, Any] = {'rows': None, 'fig': None}
     orig = plt.subplots
 
     def spy(nrows=1, ncols=1, **kwargs):

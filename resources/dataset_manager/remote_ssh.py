@@ -20,6 +20,7 @@ import sys
 import tempfile
 import threading
 import zipfile
+from typing import Any, Optional, Tuple
 
 # 缺 paramiko 時的錯誤碼（與 dataset_sidecar.PARAMIKO_MISSING 一致）
 PARAMIKO_MISSING = "SSH_PARAMIKO_MISSING"
@@ -42,8 +43,13 @@ MTIME_TOLERANCE_SECONDS = 2
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
 
-def _require_paramiko():
-    """匯入 paramiko；缺裝時回傳 (None, errorCode)。不自動 pip 安裝（P1-5）。"""
+def _require_paramiko() -> Tuple[Any, Optional[str]]:
+    """匯入 paramiko；缺裝時回傳 (None, errorCode)。不自動 pip 安裝（P1-5）。
+
+    回傳型別為 `tuple[Any, Optional[str]]`：paramiko 為選用依賴（缺裝時為 None），
+    但呼叫端在 `_pk_err` 為 None 時必然已有可用的 module —— 以 `Any` 收斂，
+    避免把「可選依賴」誤標成「永遠是 None」。
+    """
     try:
         import paramiko as _paramiko
         return _paramiko, None
@@ -167,7 +173,7 @@ def _docker_command(docker_image, container, remote_dataset_dir, remote_keras_ca
 
 
 def _strip_longpath_prefix(path):
-    """Rust canonicalize 啟動 sidecar 時 __file__ 可能帶 \\?\ 前綴，
+    r"""Rust canonicalize 啟動 sidecar 時 __file__ 可能帶 \\?\ 前綴，
     該模式下 Windows 不正規化分隔符，混合斜線路徑會炸 WinError 123 → 剝掉前綴。"""
     if path.startswith("\\\\?\\"):
         return path[4:]

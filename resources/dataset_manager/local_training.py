@@ -90,8 +90,14 @@ def handle_train_local(msg, request_id, send_response, send_event, popen_kwargs=
 
         training_result = {"success": False, "modelDir": output_dir, "projectName": project_name}
 
+        # stdout/stderr 皆以 PIPE 建立 → 必定非 None（型別收斂用）
+        proc_stdout = process.stdout
+        proc_stderr = process.stderr
+        assert proc_stdout is not None
+        assert proc_stderr is not None
+
         # 即時傳送輸出到前端
-        for line in process.stdout:
+        for line in proc_stdout:
             line = line.strip()
             send_event("trainingLog", {"message": line})
 
@@ -116,7 +122,7 @@ def handle_train_local(msg, request_id, send_response, send_event, popen_kwargs=
                 "reportPath": training_result.get("reportPath"),
             })
         else:
-            stderr_output = process.stderr.read()
+            stderr_output = proc_stderr.read()
             send_response(request_id, {
                 "success": False,
                 "error": f"訓練失敗 (exit code {process.returncode}): {stderr_output}",

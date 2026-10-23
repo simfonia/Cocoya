@@ -13,6 +13,7 @@
 先組裝一個小機器人，面對自己，
 以自己的方向來看，左手 servo 接GP12，右手 servo 接GP13。
 記得修改 COM port
+  
   </comment>
   <block type="mcu_board_init" id="board_init_55df8e0b63" x="10" y="-70">
     <field name="BOARD">maker-pi</field>
@@ -62,7 +63,7 @@
                         <field name="VAR" id="QD[{0.M6-Ca7]o|27Fjz">thetaR0</field>
                         <value name="VALUE">
                           <shadow type="py_math_number" id="6]$jovUMSG$A_Oa2A5u4">
-                            <field name="NUM">90</field>
+                            <field name="NUM">270</field>
                           </shadow>
                         </value>
                         <next>
@@ -70,7 +71,7 @@
                             <field name="VAR" id="3ohu5DnI_wu}T_eSX7(`">rotate</field>
                             <value name="VALUE">
                               <shadow type="py_math_number" id="cX4kWlW1:l/SeW1pBzMK">
-                                <field name="NUM">30</field>
+                                <field name="NUM">90</field>
                               </shadow>
                             </value>
                             <next>

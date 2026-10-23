@@ -7,6 +7,7 @@ import shutil
 import threading
 import tempfile
 import warnings
+from typing import Any, Optional
 
 # 抑制 CryptographyDeprecationWarning 與一般 DeprecationWarning 雜訊
 # 這些警告來自 paramiko 相依函式庫，但不影響功能，且會導致 VSCode Console 出現 [Sidecar Error]
@@ -77,10 +78,12 @@ def _require_paramiko():
 
 class DatasetSidecar:
     def __init__(self):
-        self.camera = CameraService()
+        self.camera: CameraService = CameraService()
         self.running = True
         self.last_camera_running = False
-        self.feature = None  # MediaPipeService lazy 實例（collectFeature 首次使用才初始化）
+        # MediaPipeService lazy 實例（collectFeature 首次使用才初始化）
+        # 型別標為 Optional[Any]：MediaPipe 為選用依賴，且測試會注入替身。
+        self.feature: Optional[Any] = None
 
     # --- 遠端訓練狀態存取（P2-3：供 remote_ssh 模組以回呼注入使用，避免循環 import）---
     def _get_remote_state(self):
@@ -148,6 +151,27 @@ class DatasetSidecar:
 
 
 
+    def shutdown(self):
+        """釋放所有 sidecar 持有的資源（冪等，可重複呼叫）。
+
+        [2026-10-21 資源釋放] 原先只有 `exit` 指令會呼叫 camera.stop()，
+        MediaPipe 服務從未釋放；且 stdin 關閉（宿主視窗被強制關）時相機與
+        MediaPipe 會跟著行程一起殘留（孤兒 sidecar）。
+        """
+        self.running = False
+        try:
+            self.camera.stop()
+        except Exception:
+            pass
+        feature = getattr(self, "feature", None)
+        if feature is not None:
+            try:
+                feature.close()
+            except Exception:
+                pass
+            finally:
+                self.feature = None
+
     def _monitor_camera(self):
         """背景監控攝影機狀態，若手動關閉則主動回報"""
         while self.running:
@@ -159,11 +183,21 @@ class DatasetSidecar:
             time.sleep(0.5)
 
     def run(self):
-        """主迴圈：從 stdin 讀取 JSON 指令，並透過 stdout 回傳結果"""
+        """主迴圈：從 stdin 讀取 JSON 指令，並透過 stdout 回傳結果。
+
+        [2026-10-21 資源釋放] 以 try/finally 保證任何結束路徑（stdin 關閉、
+        未捕捉例外、`exit` 指令）都會釋放相機與 MediaPipe 資源，
+        避免宿主視窗被強制關閉時留下孤兒 sidecar。
+        """
         # 啟動監控執行緒
         monitor_thread = threading.Thread(target=self._monitor_camera, daemon=True)
         monitor_thread.start()
+        try:
+            self._command_loop()
+        finally:
+            self.shutdown()
 
+    def _command_loop(self):
         # 使用串流模式讀取 stdin
         while self.running:
             try:
@@ -478,9 +512,10 @@ class DatasetSidecar:
                     )
 
                 elif command == "exit":
-                    self.camera.stop()
-                    self.running = False
+                    # [2026-10-21 資源釋放] 統一走 shutdown()：相機 + MediaPipe 一起釋放。
                     self.send_response(request_id, {"success": True})
+                    self.shutdown()
+                    break
                 
             except Exception as e:
                 self.send_error(None, str(e))
