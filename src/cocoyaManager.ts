@@ -288,6 +288,9 @@ export class CocoyaManager {
                 case 'datasetCollectFeature':
                     this.datasetOps.handleDatasetCollectFeature(message);
                     break;
+                case 'datasetGetPreviewFrame':
+                    this.datasetOps.handleDatasetGetPreviewFrame(message);
+                    break;
                 case 'datasetExport':
                     await this.datasetOps.handleDatasetExport(message);
                     break;

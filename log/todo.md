@@ -15,6 +15,16 @@
 
 ---
 ## [進行中 / 待辦]
+### [2026-10-23] DM 內嵌相機預覽（路徑 A：polling，取代 OpenCV 視窗）🟢 進行中
+> 計畫 SSOT：`log/plan/DatasetManagerEmbeddedCameraPreview.md`；前置：`log/plan/DatasetManagerLiveCollectionResourceLeak.md`
+- [x] **A-0**：備份原檔 + 跑基線（321/321 全綠；py_compile ×2、node --check ×3 均 OK）✅ （細節見 log/work/2026-10-23.md）
+- [x] **A-1**：sidecar 新增 `getPreviewFrame` command；VSIX/Tauri dispatch + 守門 STILL_LOCAL/camera 清單同步（Tauri 已加；VSIX 端 handler 已補）✅
+- [x] **A-2**：`camera_service.py` 移除 HighGUI（imshow/waitKey/getWindowProperty/namedWindow/destroyAllWindows），保留 frame 採集 + `get_preview_frame()`（lock）✅
+- [x] **A-3**：`sampler.js` polling loop（startPreviewPolling/stopPreviewPolling）+ dispose revoke ✅
+- [x] **A-4**：UI placeholder 文案更新 + 複用同一 img 顯示 live/photo；i18n 兩語系 ✅
+- [x] **A-5**：路徑 A 優化完成（get_preview_frame 降解析度 320×240 + JPEG quality 70；previewInterval 100→66ms；加入 previewPending/lastPreviewFrameId 節流；加入預覽水平翻转；停止攝影機恢復 placeholder 文案畫面）；eol:fix 通過；實測幀率可接受，路徑 B 改為 backlog ✅
+- [x] **偵測**：發現並修復 `dataset_sidecar.py` `getPreviewFrame` 缺 `continue`（根本原因）✅；偵測 console.log 已清理；VSIX 端 `handleDatasetGetPreviewFrame` 已補齊 ✅
+
 ### [2026-10-21] DM live 採集資源釋放（P1 階段）🟢 已完成，待實機驗收
 > 計畫 SSOT：`log/plan/DatasetManagerLiveCollectionResourceLeak.md`；日誌：`log/work/2026-10-21.md`
 - [x] **P1-1**：`Sampler.dispose()` 保底 revoke 預覽 object URL（新增冪等的 `releasePreviewUrl()`）✅

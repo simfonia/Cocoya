@@ -72,8 +72,8 @@
     "DSM_ANNOTATION_MODE_TITLE": "Annotation — Object Detection",
 
     // Sampler view
-    "DSM_SAMPLER_PLACEHOLDER": "Last capture",
-    "DSM_SAMPLER_PLACEHOLDER_SUB": "Live preview shows in the preview window\nOnly the last captured image is shown here",
+    "DSM_SAMPLER_PLACEHOLDER": "📷 Live preview",
+    "DSM_SAMPLER_PLACEHOLDER_SUB": " Please run the 'Start Preview' button below to start.",
     "DSM_SAMPLER_SCANNING": "Scanning cameras...",
     "DSM_SAMPLER_CAMERA": "📷 Camera:",
     "DSM_SAMPLER_CAMERA_READY": "Ready · Click to capture",

@@ -9,6 +9,7 @@ class CameraService:
         self.cap = None
         self.running = False
         self.frame = None
+        self.frame_id = 0
         self.lock = threading.Lock()
         self.thread = None
         self.window_name = "Cocoya Dataset Preview"
@@ -137,6 +138,39 @@ class CameraService:
     def is_running(self):
         return self.running
 
+    def get_preview_frame(self):
+        """回傳目前最新幀的 base64 JPEG（供 live 預覽用，不存檔）。未啟動/尚無幀回 None。
+
+        預覽幀會降解析度至 320x240 並以 JPEG quality 70 編碼，以降低 IPC 傳輸負載；
+        capture() 仍保持全解析度，不受影響。
+        """
+        PREVIEW_WIDTH = 320
+        PREVIEW_HEIGHT = 240
+        JPEG_QUALITY = 70
+        with self.lock:
+            if self.frame is None:
+                return None
+            frame = self.frame.copy()
+            fid = self.frame_id
+        try:
+            # [2026-10-23 優化 A] 預覽幀降解析度 + 降 JPEG quality，減少 base64 IPC 負載
+            if frame.shape[1] > PREVIEW_WIDTH or frame.shape[0] > PREVIEW_HEIGHT:
+                frame = cv2.resize(frame, (PREVIEW_WIDTH, PREVIEW_HEIGHT), interpolation=cv2.INTER_AREA)
+            # [2026-10-23 小修] 預覽水平翻转（鏡像效果，符合自拍直覺；拍照 capture() 不受影響）
+            frame = cv2.flip(frame, 1)
+            t0 = time.time()
+            _, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, JPEG_QUALITY])
+            base64_str = base64.b64encode(buffer.tobytes()).decode('utf-8')
+            encode_ms = int((time.time() - t0) * 1000)
+            return {
+                "base64": base64_str,
+                "width": frame.shape[1],
+                "height": frame.shape[0],
+                "frame_id": fid,
+                "encode_ms": encode_ms
+            }
+        except Exception:
+            return None
     def get_current_frame(self):
         """回傳目前最新幀的副本；未啟動/尚無幀回 None（供特徵提取用，不存取不複製）。"""
         with self.lock:
@@ -144,61 +178,41 @@ class CameraService:
                 return None
             return self.frame.copy()
 
+
     def _run(self, session=None):
+        # [2026-10-23 內嵌預覽] 不再開啟 OpenCV 視窗；_run 只負責採集幀寫入 self.frame，
+        # 供 get_preview_frame() / capture() 編碼為 base64 給前端預覽。
         # [2026-10-21 資源釋放] session 為啟動當下的序號；若期間有新的 start()，
-        # 舊執行緒必須立刻退出，且不得釋放新 session 的 cap / 關閉新視窗。
+        # 舊執行緒必須立刻退出，且不得釋放新 session 的 cap。
         if session is None:
             session = self._session
         cap = self.cap
         try:
-            cv2.namedWindow(self.window_name, cv2.WINDOW_AUTOSIZE)
-            try:
-                cv2.setWindowProperty(self.window_name, cv2.WND_PROP_TOPMOST, 1)
-            except Exception:
-                pass
-
             while self.running and session == self._session:
                 # 每幀取本地參照：避免 stop() 逾時後 _run 與釋放路徑競爭 self.cap
                 if cap is None:
                     break
                 try:
                     ret, frame = cap.read()
-                except Exception:
+                except Exception as e:
+                    import sys as _sys
+                    print(f"[Camera] read exception: {e}", file=_sys.stderr, flush=True)
                     self.running = False
                     break
                 if ret:
-                    display_frame = cv2.flip(frame, 1)
                     with self.lock:
-                        self.frame = frame.copy()
-
-                    cv2.imshow(self.window_name, display_frame)
-
-                    # waitKey 是必須的，否則視窗不會渲染
-                    key = cv2.waitKey(1) & 0xFF
-                    if key == ord('q'):
-                        self.running = False
-                        break
-
-                    # 偵測視窗關閉 (X 按鈕)
-                    try:
-                        # 在某些系統上，關閉視窗會讓這個屬性變為 -1 或 0
-                        if cv2.getWindowProperty(self.window_name, cv2.WND_PROP_VISIBLE) < 1:
-                            self.running = False
-                            break
-                    except Exception:
-                        self.running = False
-                        break
+                        self.frame = frame
+                        self.frame_id += 1
                 else:
                     time.sleep(0.01)
         finally:
-            # [2026-10-21 資源釋放] 釋放必須在 finally：read()/imshow 拋錯時
-            # 原本會跳過釋放，累積 camera handle 與 GDI 資源。
+            # [2026-10-21 資源釋放] 釋放必須在 finally：read() 拋錯時原本會跳過釋放。
             try:
                 if cap is not None:
                     cap.release()
             except Exception:
                 pass
-            # 只有仍為當前 session 的執行緒才可以清掉 self.cap 與關閉視窗，
+            # 只有仍為當前 session 的執行緒才可以清掉 self.cap，
             # 避免舊執行緒誤殺新 session（stop() 逾時後立刻 restart 的情境）。
             if session == self._session:
                 if self.cap is not None and self.cap is not cap:
@@ -207,10 +221,6 @@ class CameraService:
                     except Exception:
                         pass
                 self.cap = None
-                try:
-                    cv2.destroyAllWindows()
-                except Exception:
-                    pass
 
     def capture(self, save_path=None):
         with self.lock:

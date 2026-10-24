@@ -15,7 +15,11 @@ export const Sampler = {
         isCamRunning: false, 
         lastPreviewUrl: null, 
         burstTimer: null,
-        burstInterval: 500, 
+        burstInterval: 500,
+        previewTimer: null,
+        previewInterval: 66,
+        previewPending: false,
+        lastPreviewFrameId: null,
         targetLabel: '',
         onSampleCaptured: null,
         onStatusChanged: null,
@@ -63,6 +67,7 @@ export const Sampler = {
         if (this._offStatusSync) { this._offStatusSync(); this._offStatusSync = null; }
         this.stopStatusPoll();
         this.stopBurst();
+        this.stopPreviewPolling();
         // [2026-10-21 資源釋放] 釋放預覽用 object URL：
         // 原先只會被「下一次 takeSnapshot 覆蓋」或「永遠不釋放」，
         // 連拍中關閉 DM 會留下一個 blob: URL 與其 blob。
@@ -226,6 +231,7 @@ export const Sampler = {
         this.state.isCamRunning = false; // 更新狀態
         this.stopStatusPoll();
         this.stopBurst();
+        this.stopPreviewPolling();
     },
 
     /**
@@ -274,18 +280,7 @@ export const Sampler = {
             newUrl = URL.createObjectURL(blob);
             this.state.lastPreviewUrl = newUrl;
 
-            // 嘗試更新 DOM
-            const previewImg = document.getElementById('dataset-sampler-last-preview');
-            const placeholder = document.getElementById('dataset-sampler-placeholder');
-            if (previewImg) {
-                previewImg.src = newUrl;
-                previewImg.style.display = 'block';
-                if (placeholder) placeholder.style.display = 'none';
-                console.log('[Sampler] DOM preview updated');
-            } else {
-                console.warn('[Sampler] Preview element not found in DOM');
-            }
-
+            // 直接送出 sample 資料（縮圖新增至影像網格），預覽窗格不再顯示拍攝畫面，避免閃爍
             if (this.state.onSampleCaptured) {
                 this.state.onSampleCaptured(blob, this.state.targetLabel, message.savePath || null);
             }
@@ -354,6 +349,73 @@ export const Sampler = {
         this.state.isCapturing = false;
         this.state.burstFailCount = 0;
         this.state.burstAborted = false;
+    },
+
+    /** 啟動嵌入式預覽輪詢 (~15fps) */
+    startPreviewPolling() {
+        if (this.state.previewTimer) this.stopPreviewPolling();
+        this.state.previewPending = false;
+        this.state.lastPreviewFrameId = null;
+        this.state.previewTimer = setInterval(async () => {
+            if (!this.state.isCamRunning) return;
+            // 幀率節流：前一個請求尚未完成時跳過，避免 pending 堆積
+            if (this.state.previewPending) return;
+            this.state.previewPending = true;
+            try {
+                const { promise } = datasetBridge.request({
+                    command: 'datasetGetPreviewFrame',
+                    payload: {},
+                    resultCommand: 'datasetPreviewFrameResult',
+                    timeoutMs: 2000
+                });
+                const message = await promise;
+                // [2026-10-24] 相機在請求中途被停止時，提前結束不render最後一幀
+                if (!this.state.isCamRunning) return;
+                this.state.previewPending = false;
+                if (message && message.success && message.image) {
+                    // 只渲染最新幀，避免重複渲染同一幀
+                    if (message.frame_id != null && message.frame_id === this.state.lastPreviewFrameId) return;
+                    this.state.lastPreviewFrameId = message.frame_id;
+                    const img = document.getElementById('dataset-sampler-last-preview');
+                    const ph = document.getElementById('dataset-sampler-placeholder');
+                    if (img) {
+                    const byteCharacters = atob(message.image);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    const blob = new Blob([new Uint8Array(byteNumbers)], { type: 'image/jpeg' });
+                    const url = URL.createObjectURL(blob);
+                    if (this.state.lastPreviewUrl) URL.revokeObjectURL(this.state.lastPreviewUrl);
+                    this.state.lastPreviewUrl = url;
+                    img.src = url;
+                        img.style.display = 'block';
+                        if (ph) ph.style.display = 'none';
+                    }
+                }
+            } catch (e) {
+                this.state.previewPending = false;
+                // preview poll 失敗不中斷輪詢，靜默略過
+            }
+        }, this.state.previewInterval);
+    },
+
+    stopPreviewPolling() {
+        if (this.state.previewTimer) {
+            clearInterval(this.state.previewTimer);
+            this.state.previewTimer = null;
+        }
+        // [2026-10-23 小修] 停止預覽時釋放 object URL、清除 img.src、恢復 placeholder 文案畫面，
+        // 避免停留在最後一張影像；重置節流狀態以供下次啟動使用。
+        this.releasePreviewUrl();
+        if (typeof document !== 'undefined') {
+            const img = document.getElementById('dataset-sampler-last-preview');
+            const ph = document.getElementById('dataset-sampler-placeholder');
+            const flash = document.getElementById('dataset-sampler-flash');
+            if (img) { img.src = ''; img.style.display = 'none'; }
+            if (ph) ph.style.display = 'block';
+            if (flash) flash.style.display = 'none';
+        }
+        this.state.lastPreviewFrameId = null;
+        this.state.previewPending = false;
     },
 
     /**

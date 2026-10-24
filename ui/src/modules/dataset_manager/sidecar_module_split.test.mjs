@@ -103,7 +103,7 @@ test('P2-3 守門 3：主檔不得長回巨型 if/elif 鏈，且指令分派須�
         'ping', 'listCameras', 'getCameraStatus', 'startCamera', 'stopCamera',
         'captureImage', 'collectFeature', 'exportDataset',
         'checkRemoteEnvironment', 'uploadDataset', 'trainRemote', 'stopTraining',
-        'trainLocal', 'exit',
+        'trainLocal', 'exit', 'getPreviewFrame',
     ];
     assert.deepEqual(dispatch.slice().sort(), EXPECTED.slice().sort(),
         '指令分派集合與預期不符（新增/遺失/更名皆須同步本清單與對應模組 handler）');
@@ -113,7 +113,7 @@ test('P2-3 守門 3：主檔不得長回巨型 if/elif 鏈，且指令分派須�
     // ping：輕量健康檢查（單行回覆），抽成模組只會增加一次 import 成本
     // 拍到/特徵等相機指令：走 CameraService（已於 Stage 4 抽出），本檔只做分派
     const STILL_LOCAL = new Set(['exportDataset', 'ping', 'listCameras', 'getCameraStatus',
-        'startCamera', 'stopCamera', 'captureImage', 'collectFeature', 'exit']);
+        'startCamera', 'stopCamera', 'captureImage', 'collectFeature', 'exit', 'getPreviewFrame']);
     for (const cmd of dispatch) {
         if (STILL_LOCAL.has(cmd)) continue;
         const idx = src.indexOf(`command == "${cmd}"`);

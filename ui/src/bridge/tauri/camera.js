@@ -141,3 +141,23 @@ export async function datasetCollectFeature(_command, data) {
     });
     return;
 }
+/**
+ * @this {import('../tauri.js').BridgeTauri}
+ */
+export async function datasetGetPreviewFrame(_command, data) {
+    await this._handleDatasetCommand('getPreviewFrame', data, (response) => {
+        this._dispatchToFrontend({
+            command: 'datasetPreviewFrameResult',
+            requestId: data.requestId,
+            success: response.success,
+            image: response.image || null,
+            width: response.width || 0,
+            height: response.height || 0,
+            frame_id: response.frame_id,
+            encode_ms: response.encode_ms,
+            errorCode: response.errorCode
+        });
+    });
+    return;
+}
+

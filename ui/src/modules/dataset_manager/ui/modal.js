@@ -102,6 +102,8 @@ export function buildModalTemplate({ t, optionList, projectTypes, sourceModes })
                         </div>
                         <div id="dataset-column-list" class="dataset-column-list"></div>
                     </div>
+                     <hr class="dataset-panel-divider">
+                     <div id="dataset-image-preview" style="display: none;"></div>
                 </section>
 
                 <section class="dataset-panel dataset-preview-panel">

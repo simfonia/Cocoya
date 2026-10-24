@@ -1032,7 +1032,6 @@ function refreshDynamicPanels() {
              永遠不生效 —— 使用者回報 dark 主題下預覽上下出現白底即為此故。
              底色改由樣式表/token 決定。 -->
         <div id="dataset-sampler-view" style="display: none; border-radius: 8px; margin-bottom: 12px;"></div>
-        <div id="dataset-image-preview" style="display: none;"></div>
         <div id="dataset-table-preview" style="background: var(--dsm-surface); border-bottom: 1px solid var(--dsm-border-light); max-height: 400px; overflow: auto; display: none;"></div>
         <pre id="dataset-json-preview"></pre>
     `;
@@ -1044,6 +1043,7 @@ function refreshDynamicPanels() {
         // Ctrl+R 後前端狀態重置但 sidecar 可能殘留 running；進 live 先對帳一次，
         // 事件遺失時由 sampler 內部 syncCameraStatus→onStatusChanged→重建校正。
         Sampler.syncCameraStatus().catch(() => undefined);
+        if (Sampler.state.isCamRunning) Sampler.startPreviewPolling();
         if (isFeatureType(projectType)) {
             featurePanel.setupFeatureLiveView(modal, modal.querySelector('#dataset-sampler-view'));
         } else {
@@ -1942,8 +1942,9 @@ export function initDatasetManagerUI() {
     if (typeof document === 'undefined') return null;
 
     // 註冊 Sampler 狀態變更回調，當視窗被手動關閉時能即時重新渲染 UI
-    Sampler.state.onStatusChanged = () => {
+    Sampler.state.onStatusChanged = (running) => {
         refreshDynamicPanels();
+        if (running) Sampler.startPreviewPolling(); else Sampler.stopPreviewPolling();
     };
 
     const button = document.getElementById('btn-dataset-manager');

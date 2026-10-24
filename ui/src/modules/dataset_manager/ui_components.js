@@ -331,9 +331,8 @@ export const UIComponents = {
             <div class="dataset-sampler-container">
                 <div class="dataset-sampler-video-wrapper">
                     <div id="dataset-sampler-placeholder" class="dataset-sampler-placeholder" style="${lastPreviewUrl ? 'display:none;' : ''}">
-                        <div class="dataset-sampler-icon">📷</div>
-                        <div class="dataset-sampler-text">${t('SAMPLER_PLACEHOLDER', '最近一次拍攝')}</div>
-                        <div class="dataset-sampler-sub">${t('SAMPLER_PLACEHOLDER_SUB', '即時影像請看 OpenCV 預覽視窗；此處僅顯示最近一次拍攝')}</div>
+                        <div class="dataset-sampler-text">${t('SAMPLER_PLACEHOLDER', '📷 即時影像')}</div>
+                        <div class="dataset-sampler-sub">${t('SAMPLER_PLACEHOLDER_SUB', '請執行下方【啟動預覽】')}</div>
                     </div>
                     <img id="dataset-sampler-last-preview" class="dataset-sampler-last-img" 
                          src="${lastPreviewUrl || ''}" 

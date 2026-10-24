@@ -212,6 +212,7 @@ class DatasetSidecar:
                 msg = json.loads(trimmed)
                 command = msg.get("command")
                 request_id = msg.get("requestId")
+
                 
                 if command == "ping":
                     # 輕量健康檢查指令，立即回覆，不執行任何耗時操作
@@ -234,23 +235,42 @@ class DatasetSidecar:
                         # 啟動成功顯式推送一次狀態（不依賴 0.5s monitor 差分），
                         # 讓前端啟動分支能立即同步；Ctrl+R 後 sidecar 殘留 running
                         # 時 start() 早退 True，此事件保證前端仍收到明確狀態。
-                        self.send_event("cameraStatus", {"running": True})
+                        self.send_event("cameraStatus", {"running": True, "success": True})
                     self.send_response(request_id, {"success": success})
                 
                 elif command == "stopCamera":
                     self.camera.stop()
-                    self.send_event("cameraStatus", {"running": False})
+                    self.send_event("cameraStatus", {"running": False, "success": False})
                     self.send_response(request_id, {"success": True})
                 
+                elif command == "getPreviewFrame":
+                    print("[Sidecar] getPreviewFrame called", file=sys.stderr, flush=True)
+                    if not self.camera.is_running():
+                        self.send_response(request_id, {"success": False, "errorCode": "NO_FRAME"})
+                        continue
+                    result = self.camera.get_preview_frame()
+                    if result:
+                        self.send_response(request_id, {
+                            "success": True,
+                            "image": result["base64"],
+                            "width": result["width"],
+                            "height": result["height"],
+                            "frame_id": result.get("frame_id"),
+                            "encode_ms": result.get("encode_ms")
+                        })
+                    else:
+                        self.send_response(request_id, {"success": False, "errorCode": "NO_FRAME"})
+                    continue
+
                 elif command == "captureImage":
                     save_path = msg.get("savePath")
                     label = msg.get("label", "unlabeled")
                     print(f"[Sidecar Log] Capturing image for label: {label}", file=sys.stderr)
-                    
+
                     if not self.camera.is_running():
                         self.send_response(request_id, {"success": False, "error": "攝影機預覽已關閉"})
                         continue
-                    
+
                     result = self.camera.capture(save_path)
                     if result:
                         self.send_response(request_id, {
@@ -264,6 +284,7 @@ class DatasetSidecar:
                     else:
                         print(f"[Sidecar Log] Capture failed", file=sys.stderr)
                         self.send_response(request_id, {"success": False, "error": "Capture failed"})
+
 
                 elif command == "collectFeature":
                     # M4：特徵採集——取目前相機幀 → MediaPipe 提取 Hand/Pose landmarks → 回傳
