@@ -14,6 +14,7 @@
 以自己的方向來看，左手 servo 接GP12，右手 servo 接GP13。
 記得修改 COM port
   
+  
   </comment>
   <block type="mcu_board_init" id="board_init_55df8e0b63" x="10" y="-70">
     <field name="BOARD">maker-pi</field>
@@ -165,120 +166,115 @@
                                                   </shadow>
                                                 </value>
                                                 <next>
-                                                  <block type="mcu_car_wait_start" id="ai_wait_start">
-                                                    <field name="PIN">board.GP20</field>
+                                                  <block type="py_io_print" id="print_ready">
+                                                    <value name="TEXT">
+                                                      <shadow type="py_text" id="text_ready">
+                                                        <field name="TEXT">開始接收訊息</field>
+                                                      </shadow>
+                                                    </value>
                                                     <next>
-                                                      <block type="py_io_print" id="print_ready">
-                                                        <value name="TEXT">
-                                                          <shadow type="py_text" id="text_ready">
-                                                            <field name="TEXT">開始接收訊息</field>
-                                                          </shadow>
+                                                      <block type="py_loop_while" id="main_loop">
+                                                        <value name="CONDITION">
+                                                          <block type="py_logic_boolean" id="bool_true">
+                                                            <field name="BOOL">True</field>
+                                                          </block>
                                                         </value>
-                                                        <next>
-                                                          <block type="py_loop_while" id="main_loop">
-                                                            <value name="CONDITION">
-                                                              <block type="py_logic_boolean" id="bool_true">
-                                                                <field name="BOOL">True</field>
-                                                              </block>
+                                                        <statement name="DO">
+                                                          <block type="py_logic_if" id="hp~_8?)}^i!j-;hcF;M%">
+                                                            <mutation elif="0" else="0"></mutation>
+                                                            <value name="IF0">
+                                                              <block type="py_io_serial_available" id="ser_avail"></block>
                                                             </value>
-                                                            <statement name="DO">
-                                                              <block type="py_logic_if" id="hp~_8?)}^i!j-;hcF;M%">
-                                                                <mutation elif="0" else="0"></mutation>
-                                                                <value name="IF0">
-                                                                  <block type="py_io_serial_available" id="ser_avail"></block>
+                                                            <statement name="DO0">
+                                                              <block type="py_variables_set" id="read_line">
+                                                                <field name="VAR" id="v_line">line</field>
+                                                                <value name="VALUE">
+                                                                  <block type="py_io_serial_read" id="ser_read"></block>
                                                                 </value>
-                                                                <statement name="DO0">
-                                                                  <block type="py_variables_set" id="read_line">
-                                                                    <field name="VAR" id="v_line">line</field>
-                                                                    <value name="VALUE">
-                                                                      <block type="py_io_serial_read" id="ser_read"></block>
-                                                                    </value>
-                                                                    <next>
-                                                                      <block type="py_logic_if" id="W=)izAANE*R8j0BAtTx{">
-                                                                        <mutation elif="0" else="0"></mutation>
-                                                                        <value name="IF0">
-                                                                          <block type="py_logic_compare" id="cmp_line_nonempty">
-                                                                            <field name="OP">!=</field>
-                                                                            <value name="A">
-                                                                              <block type="py_variables_get" id="get_line_check">
-                                                                                <field name="VAR" id="v_line">line</field>
-                                                                              </block>
-                                                                            </value>
-                                                                            <value name="B">
-                                                                              <block type="py_text" id="empty_str">
-                                                                                <field name="TEXT"></field>
-                                                                              </block>
-                                                                            </value>
+                                                                <next>
+                                                                  <block type="py_logic_if" id="W=)izAANE*R8j0BAtTx{">
+                                                                    <mutation elif="0" else="0"></mutation>
+                                                                    <value name="IF0">
+                                                                      <block type="py_logic_compare" id="cmp_line_nonempty">
+                                                                        <field name="OP">!=</field>
+                                                                        <value name="A">
+                                                                          <block type="py_variables_get" id="get_line_check">
+                                                                            <field name="VAR" id="v_line">line</field>
                                                                           </block>
                                                                         </value>
-                                                                        <statement name="DO0">
-                                                                          <block type="py_coding_raw_statement" id="jrxk0])E=O8Khe2HnJC[">
-                                                                            <field name="TEXT"># 沒有map與split積木，直接寫程式碼。&amp;#10;theta_L, theta_R = map(int, line.split(","))&amp;#10;&amp;#10;# 左手映射: 180 ~ 0  --&gt;  thetaL0 ~ thetaL1&amp;#10;theta_L = int((theta_L-180)*(thetaL1-thetaL0) / -180 + thetaL0)&amp;#10;&amp;#10;# 右手映射: 180 ~ 0  --&gt;  thetaR0 ~ thetaR1&amp;#10;theta_R =  int((theta_R-180)*(thetaR1-thetaR0) / -180 + thetaR0)</field>
+                                                                        <value name="B">
+                                                                          <block type="py_text" id="empty_str">
+                                                                            <field name="TEXT"></field>
+                                                                          </block>
+                                                                        </value>
+                                                                      </block>
+                                                                    </value>
+                                                                    <statement name="DO0">
+                                                                      <block type="py_coding_raw_statement" id="jrxk0])E=O8Khe2HnJC[">
+                                                                        <field name="TEXT"># 沒有map與split積木，直接寫程式碼。&amp;#10;theta_L, theta_R = map(int, line.split(","))&amp;#10;&amp;#10;# 左手映射: 180 ~ 0  --&gt;  thetaL0 ~ thetaL1&amp;#10;theta_L = int((theta_L-180)*(thetaL1-thetaL0) / -180 + thetaL0)&amp;#10;&amp;#10;# 右手映射: 180 ~ 0  --&gt;  thetaR0 ~ thetaR1&amp;#10;theta_R =  int((theta_R-180)*(thetaR1-thetaR0) / -180 + thetaR0)</field>
+                                                                        <next>
+                                                                          <block type="mcu_car_servo" id="k-jpJtmykYEj8giC}Z]K">
+                                                                            <field name="PIN">board.GP12</field>
+                                                                            <field name="TYPE">GEEK_270</field>
+                                                                            <value name="ANGLE">
+                                                                              <shadow type="math_number" id="]WjU?Tl8mgOarx-PM+46">
+                                                                                <field name="NUM">90</field>
+                                                                              </shadow>
+                                                                              <block type="py_variables_get" id="-0z%{}DCDkJIs|#Z{Yl;">
+                                                                                <field name="VAR" id="A~Py:;dx0|BWFf{WjO+?">theta_L</field>
+                                                                              </block>
+                                                                            </value>
                                                                             <next>
-                                                                              <block type="mcu_car_servo" id="k-jpJtmykYEj8giC}Z]K">
-                                                                                <field name="PIN">board.GP12</field>
+                                                                              <block type="mcu_car_servo" id="n0+y+f3,5HSY1i+~ZlcS">
+                                                                                <field name="PIN">board.GP13</field>
                                                                                 <field name="TYPE">GEEK_270</field>
                                                                                 <value name="ANGLE">
                                                                                   <shadow type="math_number" id="]WjU?Tl8mgOarx-PM+46">
                                                                                     <field name="NUM">90</field>
                                                                                   </shadow>
-                                                                                  <block type="py_variables_get" id="-0z%{}DCDkJIs|#Z{Yl;">
-                                                                                    <field name="VAR" id="A~Py:;dx0|BWFf{WjO+?">theta_L</field>
+                                                                                  <block type="py_variables_get" id="^S^vP4m.a$O=)Vk+p0?W">
+                                                                                    <field name="VAR" id="}?$T|{~YyGC8vkcfY?}D">theta_R</field>
                                                                                   </block>
                                                                                 </value>
                                                                                 <next>
-                                                                                  <block type="mcu_car_servo" id="n0+y+f3,5HSY1i+~ZlcS">
-                                                                                    <field name="PIN">board.GP13</field>
-                                                                                    <field name="TYPE">GEEK_270</field>
-                                                                                    <value name="ANGLE">
-                                                                                      <shadow type="math_number" id="]WjU?Tl8mgOarx-PM+46">
-                                                                                        <field name="NUM">90</field>
+                                                                                  <block type="py_io_print" id="9)K[=7r]^lPHEA[7}Oc!">
+                                                                                    <value name="TEXT">
+                                                                                      <shadow type="py_text" id="yB8GtX?cnXoLZ3=g9m{h">
+                                                                                        <field name="TEXT">Hello Cocoya!</field>
                                                                                       </shadow>
-                                                                                      <block type="py_variables_get" id="^S^vP4m.a$O=)Vk+p0?W">
-                                                                                        <field name="VAR" id="}?$T|{~YyGC8vkcfY?}D">theta_R</field>
-                                                                                      </block>
-                                                                                    </value>
-                                                                                    <next>
-                                                                                      <block type="py_io_print" id="9)K[=7r]^lPHEA[7}Oc!">
-                                                                                        <value name="TEXT">
-                                                                                          <shadow type="py_text" id="yB8GtX?cnXoLZ3=g9m{h">
-                                                                                            <field name="TEXT">Hello Cocoya!</field>
-                                                                                          </shadow>
-                                                                                          <block type="py_text_join" id="KuC^{91z}v/dy;3bA!}s">
-                                                                                            <mutation items="3"></mutation>
-                                                                                            <value name="ADD0">
-                                                                                              <block type="py_variables_get" id=".|J;jg^@8`7deN}I~g10">
-                                                                                                <field name="VAR" id="A~Py:;dx0|BWFf{WjO+?">theta_L</field>
-                                                                                              </block>
-                                                                                            </value>
-                                                                                            <value name="ADD1">
-                                                                                              <block type="py_text" id="g*[kgNSbQ8s)z8}M%{EU">
-                                                                                                <field name="TEXT">,</field>
-                                                                                              </block>
-                                                                                            </value>
-                                                                                            <value name="ADD2">
-                                                                                              <block type="py_variables_get" id="-Ps%~6IUmo.1B)B~);~Z">
-                                                                                                <field name="VAR" id="}?$T|{~YyGC8vkcfY?}D">theta_R</field>
-                                                                                              </block>
-                                                                                            </value>
+                                                                                      <block type="py_text_join" id="KuC^{91z}v/dy;3bA!}s">
+                                                                                        <mutation items="3"></mutation>
+                                                                                        <value name="ADD0">
+                                                                                          <block type="py_variables_get" id=".|J;jg^@8`7deN}I~g10">
+                                                                                            <field name="VAR" id="A~Py:;dx0|BWFf{WjO+?">theta_L</field>
+                                                                                          </block>
+                                                                                        </value>
+                                                                                        <value name="ADD1">
+                                                                                          <block type="py_text" id="g*[kgNSbQ8s)z8}M%{EU">
+                                                                                            <field name="TEXT">,</field>
+                                                                                          </block>
+                                                                                        </value>
+                                                                                        <value name="ADD2">
+                                                                                          <block type="py_variables_get" id="-Ps%~6IUmo.1B)B~);~Z">
+                                                                                            <field name="VAR" id="}?$T|{~YyGC8vkcfY?}D">theta_R</field>
                                                                                           </block>
                                                                                         </value>
                                                                                       </block>
-                                                                                    </next>
+                                                                                    </value>
                                                                                   </block>
                                                                                 </next>
                                                                               </block>
                                                                             </next>
                                                                           </block>
-                                                                        </statement>
+                                                                        </next>
                                                                       </block>
-                                                                    </next>
+                                                                    </statement>
                                                                   </block>
-                                                                </statement>
+                                                                </next>
                                                               </block>
                                                             </statement>
                                                           </block>
-                                                        </next>
+                                                        </statement>
                                                       </block>
                                                     </next>
                                                   </block>

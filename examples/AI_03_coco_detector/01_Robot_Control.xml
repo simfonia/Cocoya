@@ -1,0 +1,232 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
+  <variables>
+    <variable id="var_serial_line">serial_line</variable>
+    <variable id="var_pan">pan</variable>
+    <variable id="var_tilt">tilt</variable>
+  </variables>
+  <comment id="robot_control_comment" x="10" y="-260" w="560" h="220">AI_03_coco_detector / 01_Robot_Control（MCU 端）
+本程式燒錄至 Cytron Maker Pi RP2040，接收 PC 端透過序列埠傳來的物件中心點對應伺服角度，控制 Pan（水平）與 Tilt（垂直）兩顆伺服馬達，使雲台指向手機。
+
+硬體接線：
+- Pan（水平）伺服：GP12
+- Tilt（垂直）伺服：GP13
+- 序列埠波特率：115200（請與 PC 端一致）
+- 請先修改 py_io_serial_init 的 COM 埠號為實際連接埠
+
+PC 端傳送格式（範例）：
+  pan_angle,tilt_angle
+  例如 "120,90" 表示 Pan 轉 120°、Tilt 轉 90°
+角度範圍 0~180，超出會被自動限制。
+
+搭配 PC 端範例：examples/AI_03_coco_detector/02_PC_coco_detector.xml
+  (PC 偵測手機中心點後，將對應角度透過 Serial 傳給本 MCU)
+
+  
+  
+  
+  
+  </comment>
+  <block type="mcu_board_init" id="board_init" x="10" y="30">
+    <field name="BOARD">maker-pi</field>
+  </block>
+  <block type="py_definition_zone" id="def_root" deletable="false" x="10" y="90">
+    <statement name="DEFS">
+      <block type="py_io_serial_init" id="ser_init">
+        <field name="BAUD">115200</field>
+        <value name="PORT">
+          <shadow type="py_text" id="ser_port">
+            <field name="TEXT">COM6</field>
+          </shadow>
+        </value>
+      </block>
+    </statement>
+  </block>
+  <block type="mcu_main" id="main_root" deletable="false" x="10" y="190">
+    <statement name="DO">
+      <block type="mcu_car_servo_setup" id="pan_setup">
+        <field name="HAND">board.GP12</field>
+        <field name="TYPE">GEEK_270</field>
+        <field name="MIN">550</field>
+        <field name="MAX">2400</field>
+        <field name="MAX_ANGLE">270</field>
+        <field name="OFFSET">0</field>
+        <next>
+          <block type="mcu_car_servo_setup" id="tilt_setup">
+            <field name="HAND">board.GP13</field>
+            <field name="TYPE">GEEK_270</field>
+            <field name="MIN">550</field>
+            <field name="MAX">2400</field>
+            <field name="MAX_ANGLE">270</field>
+            <field name="OFFSET">0</field>
+            <next>
+              <block type="py_coding_comment" id="init_comment">
+                <field name="TEXT">將兩顆伺服歸中（135°），雲台預設指向正前方</field>
+                <next>
+                  <block type="mcu_car_servo" id="pan_center">
+                    <field name="PIN">board.GP12</field>
+                    <field name="TYPE">GEEK_270</field>
+                    <value name="ANGLE">
+                      <shadow type="math_number" id="pan_center_shadow">
+                        <field name="NUM">135</field>
+                      </shadow>
+                    </value>
+                    <next>
+                      <block type="mcu_car_servo" id="tilt_center">
+                        <field name="PIN">board.GP13</field>
+                        <field name="TYPE">GEEK_270</field>
+                        <value name="ANGLE">
+                          <shadow type="math_number" id="tilt_center_shadow">
+                            <field name="NUM">135</field>
+                          </shadow>
+                        </value>
+                        <next>
+                          <block type="mcu_car_tone" id="y!ZBU23$F1O@HnPyhtqr">
+                            <value name="FREQ">
+                              <shadow type="math_number" id="Gcdifyn+9f1idWKuH)`i">
+                                <field name="NUM">440</field>
+                              </shadow>
+                            </value>
+                            <value name="MS">
+                              <shadow type="math_number" id="Q[@CAg,oQjdM~g..1Z3m">
+                                <field name="NUM">200</field>
+                              </shadow>
+                            </value>
+                            <next>
+                              <block type="py_io_print" id="print_ready">
+                                <value name="TEXT">
+                                  <shadow type="py_text" id="ready_text">
+                                    <field name="TEXT">MCU 已就緒，等待 PC 傳送 pan,tilt 角度...</field>
+                                  </shadow>
+                                </value>
+                                <next>
+                                  <block type="py_loop_while" id="main_loop">
+                                    <value name="CONDITION">
+                                      <block type="py_logic_boolean" id="loop_true">
+                                        <field name="BOOL">True</field>
+                                      </block>
+                                    </value>
+                                    <statement name="DO">
+                                      <block type="py_logic_if" id="if_serial_avail">
+                                        <mutation elif="0" else="0"></mutation>
+                                        <value name="IF0">
+                                          <block type="py_io_serial_available" id="ser_avail"></block>
+                                        </value>
+                                        <statement name="DO0">
+                                          <block type="py_variables_set" id="set_line">
+                                            <field name="VAR" id="var_serial_line">serial_line</field>
+                                            <value name="VALUE">
+                                              <block type="py_io_serial_read" id="ser_read"></block>
+                                            </value>
+                                            <next>
+                                              <block type="py_logic_if" id="if_line_not_empty">
+                                                <mutation elif="0" else="0"></mutation>
+                                                <value name="IF0">
+                                                  <block type="py_logic_compare" id="cmp_line">
+                                                    <field name="OP">!=</field>
+                                                    <value name="A">
+                                                      <block type="py_variables_get" id="get_line">
+                                                        <field name="VAR" id="var_serial_line">serial_line</field>
+                                                      </block>
+                                                    </value>
+                                                    <value name="B">
+                                                      <shadow type="py_text" id="empty_str">
+                                                        <field name="TEXT"></field>
+                                                      </shadow>
+                                                    </value>
+                                                  </block>
+                                                </value>
+                                                <statement name="DO0">
+                                                  <block type="py_coding_raw_statement" id="parse_line">
+                                                    <field name="TEXT"># 沒有 split 與 map 積木，直接寫程式碼解析 PC 傳來的 "pan,tilt"&amp;#10;cx, cy, frame_w, frame_h = map(float, serial_line.split(","))&amp;#10;# map 像素座標到 0~270° 伺服角度&amp;#10;pan = 270-(cx / frame_w * 270)&amp;#10;tilt = cy / frame_h * 270  &amp;#10;&amp;#10;# 限位避免干涉&amp;#10;pan = int(min(230, max(60, pan)))&amp;#10;tilt = int(min(200, max(70, tilt)))</field>
+                                                    <next>
+                                                      <block type="mcu_car_servo" id="pan_servo">
+                                                        <field name="PIN">board.GP12</field>
+                                                        <field name="TYPE">GEEK_270</field>
+                                                        <value name="ANGLE">
+                                                          <shadow type="math_number" id="pan_angle_shadow">
+                                                            <field name="NUM">90</field>
+                                                          </shadow>
+                                                          <block type="py_variables_get" id="get_pan">
+                                                            <field name="VAR" id="var_pan">pan</field>
+                                                          </block>
+                                                        </value>
+                                                        <next>
+                                                          <block type="mcu_car_servo" id="tilt_servo">
+                                                            <field name="PIN">board.GP13</field>
+                                                            <field name="TYPE">GEEK_270</field>
+                                                            <value name="ANGLE">
+                                                              <shadow type="math_number" id="tilt_angle_shadow">
+                                                                <field name="NUM">90</field>
+                                                              </shadow>
+                                                              <block type="py_variables_get" id="get_tilt">
+                                                                <field name="VAR" id="var_tilt">tilt</field>
+                                                              </block>
+                                                            </value>
+                                                            <next>
+                                                              <block type="py_io_print" id="print_angles">
+                                                                <value name="TEXT">
+                                                                  <block type="py_text_join" id="join_angles">
+                                                                    <mutation items="4"></mutation>
+                                                                    <value name="ADD0">
+                                                                      <shadow type="py_text" id="label_pan">
+                                                                        <field name="TEXT">Pan: </field>
+                                                                      </shadow>
+                                                                    </value>
+                                                                    <value name="ADD1">
+                                                                      <block type="py_variables_get" id="get_pan_val">
+                                                                        <field name="VAR" id="var_pan">pan</field>
+                                                                      </block>
+                                                                    </value>
+                                                                    <value name="ADD2">
+                                                                      <shadow type="py_text" id="label_tilt">
+                                                                        <field name="TEXT"> Tilt: </field>
+                                                                      </shadow>
+                                                                    </value>
+                                                                    <value name="ADD3">
+                                                                      <block type="py_variables_get" id="get_tilt_val">
+                                                                        <field name="VAR" id="var_tilt">tilt</field>
+                                                                      </block>
+                                                                    </value>
+                                                                  </block>
+                                                                </value>
+                                                                <next>
+                                                                  <block type="py_time_sleep" id="loop_delay">
+                                                                    <value name="SECONDS">
+                                                                      <shadow type="py_math_number" id="delay_val">
+                                                                        <field name="NUM">0.05</field>
+                                                                      </shadow>
+                                                                    </value>
+                                                                  </block>
+                                                                </next>
+                                                              </block>
+                                                            </next>
+                                                          </block>
+                                                        </next>
+                                                      </block>
+                                                    </next>
+                                                  </block>
+                                                </statement>
+                                              </block>
+                                            </next>
+                                          </block>
+                                        </statement>
+                                      </block>
+                                    </statement>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </next>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>

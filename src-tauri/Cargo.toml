@@ -1,6 +1,6 @@
 [package]
 name = "cocoya"
-version = "0.8.2"
+version = "0.8.3"
 description = "Cocoya Visual Python IDE"
 authors = ["simfonia"]
 edition = "2021"

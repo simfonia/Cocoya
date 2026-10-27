@@ -2,7 +2,7 @@
     "name": "cocoya",
     "displayName": "Cocoya: Code, Compute, Yield AI",
     "description": "Visual Python programming for AI and Hardware education",
-    "version": "0.8.2",
+    "version": "0.8.3",
     "icon": "resources/extension_icon.png",
     "publisher": "simfonia",
     "extensionKind": [
