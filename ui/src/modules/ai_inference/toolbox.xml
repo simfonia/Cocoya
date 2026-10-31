@@ -6,7 +6,7 @@
         <field name="EPOCHS">20</field>
         <field name="BATCH_SIZE">32</field>
         <field name="LEARNING_RATE">0.001</field>
-        <field name="TASK_TYPE">classifier</field>
+        <field name="TASK_TYPE">image_classification</field>
         <field name="BACKEND">local</field>
     </block>
     

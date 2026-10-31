@@ -1124,6 +1124,7 @@ body.cocoya-dark-mode #panel-resizer.is-dragging {
     font-size: calc(11px * var(--fs-e)) !important;
     outline: none !important;
     background: #ffd0fc !important;
+    color: #333 !important;
     box-sizing: border-box !important;
 }
 

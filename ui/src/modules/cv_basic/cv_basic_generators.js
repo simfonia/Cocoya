@@ -27,6 +27,16 @@ Blockly.Python.forBlock['py_ai_wait_key_break'] = function(block, generator) {
   return code;
 };
 
+Blockly.Python.forBlock['py_ai_frame_width'] = function(block, generator) {
+  var frame = generator.valueToCode(block, 'FRAME', Blockly.Python.ORDER_ATOMIC) || 'frame';
+  return [frame + '.shape[1]', Blockly.Python.ORDER_MEMBER];
+};
+
+Blockly.Python.forBlock['py_ai_frame_height'] = function(block, generator) {
+  var frame = generator.valueToCode(block, 'FRAME', Blockly.Python.ORDER_ATOMIC) || 'frame';
+  return [frame + '.shape[0]', Blockly.Python.ORDER_MEMBER];
+};
+
 Blockly.Python.forBlock['py_ai_release_all'] = function() {
   return 'cap.release()\ncv2.destroyAllWindows()\n';
 };

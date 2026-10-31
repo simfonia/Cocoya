@@ -11,4 +11,6 @@
     </block>
     <block type="py_ai_wait_key_break"></block>
     <block type="py_ai_release_all"></block>
+    <block type="py_ai_frame_width"></block>
+    <block type="py_ai_frame_height"></block>
 </category>

@@ -211,9 +211,30 @@
                   <block type="py_ai_read_frame" id="coco_read">
                     <field name="VAR" id="var_frame">frame</field>
                     <next>
-                      <block type="py_coding_raw_statement" id="coco_get_wh">
-                        <field name="TEXT">FRAME_W = frame.shape[1]&amp;#10;FRAME_H = frame.shape[0]</field>
+                      <block type="py_variables_set" id="coco_init_fw">
+                        <field name="VAR" id="var_frame_w">FRAME_W</field>
+                        <value name="VALUE">
+                            <block type="py_ai_frame_width">
+                                <value name="FRAME">
+                                    <block type="py_variables_get">
+                                        <field name="VAR" id="var_frame">frame</field>
+                                    </block>
+                                </value>
+                            </block>
+                        </value>
                         <next>
+                            <block type="py_variables_set" id="coco_init_fh">
+                                <field name="VAR" id="var_frame_h">FRAME_H</field>
+                                <value name="VALUE">
+                                    <block type="py_ai_frame_height">
+                                        <value name="FRAME">
+                                            <block type="py_variables_get">
+                                                <field name="VAR" id="var_frame">frame</field>
+                                            </block>
+                                        </value>
+                                    </block>
+                                </value>
+                                <next>
                           <block type="py_ai_flip_image" id="coco_flip">
                             <field name="VAR" id="var_frame">frame</field>
                             <field name="CODE">1</field>
@@ -234,9 +255,62 @@
                                       </block>
                                     </value>
                                     <statement name="DO">
-                                      <block type="py_coding_raw_statement" id="coco_calc_cxcy">
-                                        <field name="TEXT">cx = _coco_x + _coco_w / 2&amp;#10;cy = _coco_y + _coco_h / 2</field>
+                                      <block type="py_variables_set" id="coco_calc_cx">
+                                        <field name="VAR" id="var_cx">cx</field>
+                                        <value name="VALUE">
+                                            <block type="py_math_arithmetic">
+                                                <field name="OP">+</field>
+                                                <value name="A">
+                                                    <block type="py_math_arithmetic">
+                                                        <field name="OP">/</field>
+                                                        <value name="A">
+                                                            <block type="py_ai_coco_target_field">
+                                                                <field name="FIELD">w</field>
+                                                            </block>
+                                                        </value>
+                                                        <value name="B">
+                                                            <shadow type="py_math_number">
+                                                                <field name="NUM">2</field>
+                                                            </shadow>
+                                                        </value>
+                                                    </block>
+                                                </value>
+                                                <value name="B">
+                                                    <block type="py_ai_coco_target_field">
+                                                        <field name="FIELD">x</field>
+                                                    </block>
+                                                </value>
+                                            </block>
+                                        </value>
                                         <next>
+                                            <block type="py_variables_set" id="coco_calc_cy">
+                                                <field name="VAR" id="var_cy">cy</field>
+                                                <value name="VALUE">
+                                                    <block type="py_math_arithmetic">
+                                                        <field name="OP">+</field>
+                                                        <value name="A">
+                                                            <block type="py_math_arithmetic">
+                                                                <field name="OP">/</field>
+                                                                <value name="A">
+                                                                    <block type="py_ai_coco_target_field">
+                                                                        <field name="FIELD">h</field>
+                                                                    </block>
+                                                                </value>
+                                                                <value name="B">
+                                                                    <shadow type="py_math_number">
+                                                                        <field name="NUM">2</field>
+                                                                    </shadow>
+                                                                </value>
+                                                            </block>
+                                                        </value>
+                                                        <value name="B">
+                                                            <block type="py_ai_coco_target_field">
+                                                                <field name="FIELD">y</field>
+                                                            </block>
+                                                        </value>
+                                                    </block>
+                                                </value>
+                                                <next>
                                           <block type="py_ai_draw_rect" id="coco_rect">
                                             <field name="VAR" id="var_frame">frame</field>
                                             <value name="START">
@@ -620,6 +694,8 @@
                                           </block>
                                         </next>
                                       </block>
+                                     </next>
+                                     </block>
                                     </statement>
                                     <next>
                                       <block type="py_ai_show_image" id="coco_sh">
@@ -644,6 +720,8 @@
                       </block>
                     </next>
                   </block>
+                 </next>
+               </block>
                 </statement>
                 <next>
                   <block type="py_ai_release_all" id="coco_rel">

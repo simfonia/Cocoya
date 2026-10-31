@@ -14,5 +14,9 @@ Object.assign(Blockly.Msg, {
   "AI_FLIP_HORIZONTALLY": "水平 (鏡像)",
   "AI_FLIP_VERTICALLY": "垂直",
   "AI_FLIP_BOTH": "水平與垂直",
-  "AI_FLIP_TOOLTIP": "對影像進行水平或垂直翻轉。常用於將鏡頭畫面轉為鏡像。"
+  "AI_FLIP_TOOLTIP": "對影像進行水平或垂直翻轉。常用於將鏡頭畫面轉為鏡像。",
+  "AI_FRAME_WIDTH": "影像寬度 %1",
+  "AI_FRAME_WIDTH_TOOLTIP": "傳回 frame 影像的寬度，即 frame.shape[1]。",
+  "AI_FRAME_HEIGHT": "影像高度 %1",
+  "AI_FRAME_HEIGHT_TOOLTIP": "傳回 frame 影像的高度，即 frame.shape[0]。",
 });

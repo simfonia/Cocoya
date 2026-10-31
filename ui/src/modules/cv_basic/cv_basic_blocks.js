@@ -91,7 +91,34 @@ Blockly.Blocks['py_ai_release_all'] = {
       "previousStatement": null,
       "nextStatement": null,
       "colour": Blockly.Msg["COLOUR_AI_BASIC"],
-      "tooltip": Blockly.Msg["AI_RELEASE_ALL_TOOLTIP"]
+      "tooltip": Blockly.Msg["AI_RELEASE_ALL_TOOLTIP"],
+      "helpUrl": "py_ai_release_all"
+    });
+  }
+};
+
+Blockly.Blocks['py_ai_frame_width'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["AI_FRAME_WIDTH"],
+      "args0": [{ "type": "input_value", "name": "FRAME" }],
+      "output": "Number",
+      "colour": Blockly.Msg["COLOUR_AI_BASIC"],
+      "tooltip": Blockly.Msg["AI_FRAME_WIDTH_TOOLTIP"],
+      "helpUrl": "py_ai_frame_width"
+    });
+  }
+};
+
+Blockly.Blocks['py_ai_frame_height'] = {
+  init: function() {
+    this.jsonInit({
+      "message0": Blockly.Msg["AI_FRAME_HEIGHT"],
+      "args0": [{ "type": "input_value", "name": "FRAME" }],
+      "output": "Number",
+      "colour": Blockly.Msg["COLOUR_AI_BASIC"],
+      "tooltip": Blockly.Msg["AI_FRAME_HEIGHT_TOOLTIP"],
+      "helpUrl": "py_ai_frame_height"
     });
   }
 };
