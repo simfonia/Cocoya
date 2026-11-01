@@ -97,7 +97,7 @@ const MIGRATED_COMMANDS = [
     // progress（save/load 進度 + getProjectAnchor 錨定查詢）
     'datasetSaveProgress', 'datasetLoadProgress', 'getProjectAnchor',
     // annotation（唯一直接 tauriInvoke、不走 sidecar 的兩個 dataset case）
-    'datasetDeleteImage', 'datasetRenameLabel'
+    'datasetDeleteImage', 'datasetRenameLabel', 'datasetGetPreviewFrame'
 ];
 
 test('sendHandlers：鍵集合即已遷移 command 的 SSOT（與 MIGRATED_COMMANDS 逐字相符）', () => {

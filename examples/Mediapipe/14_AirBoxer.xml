@@ -119,8 +119,11 @@
                                                     <field name="VAR" id="v_curr_p">curr_pos</field>
                                                     <value name="VALUE">
                                                       <block type="py_ai_pose_get_landmark_xy" id="gxy_val">
-                                                        <field name="WIDTH">640</field>
-                                                        <field name="HEIGHT">480</field>
+                                                        <value name="FRAME">
+                                                          <block type="py_variables_get" id=";_l@|xDezC{[%tFb_T7f">
+                                                            <field name="VAR" id="v_frame">frame</field>
+                                                          </block>
+                                                        </value>
                                                         <value name="LANDMARK">
                                                           <block type="py_ai_pose_get_landmark" id="glm_val">
                                                             <field name="INDEX">16</field>
@@ -141,22 +144,28 @@
                                                             <field name="OP">and</field>
                                                             <value name="A">
                                                               <block type="py_ai_pose_is_in_frame" id="inf1">
-                                                                <field name="WIDTH">640</field>
-                                                                <field name="HEIGHT">480</field>
                                                                 <value name="POS">
                                                                   <block type="py_variables_get" id="XH|QH_abrGf~o}:4LIT)">
                                                                     <field name="VAR" id="v_curr_p">curr_pos</field>
+                                                                  </block>
+                                                                </value>
+                                                                <value name="FRAME">
+                                                                  <block type="py_variables_get" id="0umtcQLlIns=G(z5NFXR">
+                                                                    <field name="VAR" id="v_frame">frame</field>
                                                                   </block>
                                                                 </value>
                                                               </block>
                                                             </value>
                                                             <value name="B">
                                                               <block type="py_ai_pose_is_in_frame" id="inf2">
-                                                                <field name="WIDTH">640</field>
-                                                                <field name="HEIGHT">480</field>
                                                                 <value name="POS">
                                                                   <block type="py_variables_get" id="_FtHY-1[qihiL);Su9w}">
                                                                     <field name="VAR" id="v_prev_p">prev_pos</field>
+                                                                  </block>
+                                                                </value>
+                                                                <value name="FRAME">
+                                                                  <block type="py_variables_get" id="BIn[)ahLUC[jU@%]=Q)v">
+                                                                    <field name="VAR" id="v_frame">frame</field>
                                                                   </block>
                                                                 </value>
                                                               </block>

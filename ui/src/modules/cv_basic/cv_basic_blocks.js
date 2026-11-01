@@ -97,28 +97,25 @@ Blockly.Blocks['py_ai_release_all'] = {
   }
 };
 
-Blockly.Blocks['py_ai_frame_width'] = {
+Blockly.Blocks['py_ai_frame_size'] = {
   init: function() {
     this.jsonInit({
-      "message0": Blockly.Msg["AI_FRAME_WIDTH"],
-      "args0": [{ "type": "input_value", "name": "FRAME" }],
+      "message0": Blockly.Msg["AI_FRAME_SIZE"],
+      "args0": [
+        { "type": "input_value", "name": "FRAME" },
+        {
+          "type": "field_dropdown",
+          "name": "DIM",
+          "options": [
+            [Blockly.Msg["AI_FRAME_WIDTH_OPT"], "width"],
+            [Blockly.Msg["AI_FRAME_HEIGHT_OPT"], "height"]
+          ]
+        }
+      ],
       "output": "Number",
       "colour": Blockly.Msg["COLOUR_AI_BASIC"],
-      "tooltip": Blockly.Msg["AI_FRAME_WIDTH_TOOLTIP"],
-      "helpUrl": "py_ai_frame_width"
-    });
-  }
-};
-
-Blockly.Blocks['py_ai_frame_height'] = {
-  init: function() {
-    this.jsonInit({
-      "message0": Blockly.Msg["AI_FRAME_HEIGHT"],
-      "args0": [{ "type": "input_value", "name": "FRAME" }],
-      "output": "Number",
-      "colour": Blockly.Msg["COLOUR_AI_BASIC"],
-      "tooltip": Blockly.Msg["AI_FRAME_HEIGHT_TOOLTIP"],
-      "helpUrl": "py_ai_frame_height"
+      "tooltip": Blockly.Msg["AI_FRAME_SIZE_TOOLTIP"],
+      "helpUrl": "py_ai_frame_size"
     });
   }
 };

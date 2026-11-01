@@ -90,8 +90,11 @@
                                     <field name="VAR" id="v_p11">p11</field>
                                     <value name="VALUE">
                                       <block type="py_ai_pose_get_landmark_xy" id="xy_p11">
-                                        <field name="WIDTH">640</field>
-                                        <field name="HEIGHT">480</field>
+                                        <value name="FRAME">
+                                          <block type="py_variables_get" id="q)(3L;|(1=L1O0_5a{cC">
+                                            <field name="VAR" id="v_frame">frame</field>
+                                          </block>
+                                        </value>
                                         <value name="LANDMARK">
                                           <block type="py_ai_pose_get_landmark" id="lm_11">
                                             <field name="INDEX">11</field>
@@ -109,8 +112,11 @@
                                         <field name="VAR" id="v_p15">p13</field>
                                         <value name="VALUE">
                                           <block type="py_ai_pose_get_landmark_xy" id="xy_p15">
-                                            <field name="WIDTH">640</field>
-                                            <field name="HEIGHT">480</field>
+                                            <value name="FRAME">
+                                              <block type="py_variables_get" id="Ls?gjwakv;*Kd?xz@Rt/">
+                                                <field name="VAR" id="v_frame">frame</field>
+                                              </block>
+                                            </value>
                                             <value name="LANDMARK">
                                               <block type="py_ai_pose_get_landmark" id="lm_15">
                                                 <field name="INDEX">13</field>
@@ -128,8 +134,11 @@
                                             <field name="VAR" id="v_p12">p12</field>
                                             <value name="VALUE">
                                               <block type="py_ai_pose_get_landmark_xy" id="xy_p12">
-                                                <field name="WIDTH">640</field>
-                                                <field name="HEIGHT">480</field>
+                                                <value name="FRAME">
+                                                  <block type="py_variables_get" id="0{`9iMwskq/:QY^3n6y|">
+                                                    <field name="VAR" id="v_frame">frame</field>
+                                                  </block>
+                                                </value>
                                                 <value name="LANDMARK">
                                                   <block type="py_ai_pose_get_landmark" id="lm_12">
                                                     <field name="INDEX">12</field>
@@ -147,8 +156,11 @@
                                                 <field name="VAR" id="v_p16">p14</field>
                                                 <value name="VALUE">
                                                   <block type="py_ai_pose_get_landmark_xy" id="xy_p16">
-                                                    <field name="WIDTH">640</field>
-                                                    <field name="HEIGHT">480</field>
+                                                    <value name="FRAME">
+                                                      <block type="py_variables_get" id="A%JMJ,x*siprTdsWVC!Z">
+                                                        <field name="VAR" id="v_frame">frame</field>
+                                                      </block>
+                                                    </value>
                                                     <value name="LANDMARK">
                                                       <block type="py_ai_pose_get_landmark" id="lm_16">
                                                         <field name="INDEX">14</field>

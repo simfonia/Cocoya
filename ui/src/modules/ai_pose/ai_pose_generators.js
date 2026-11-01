@@ -36,9 +36,8 @@ Blockly.Python.forBlock['py_ai_pose_get_landmark'] = function(block, generator) 
 
 Blockly.Python.forBlock['py_ai_pose_get_landmark_xy'] = function(block, generator) {
   var landmark = generator.valueToCode(block, 'LANDMARK', Blockly.Python.ORDER_ATOMIC) || 'None';
-  var width = block.getFieldValue('WIDTH');
-  var height = block.getFieldValue('HEIGHT');
-  var code = '(int(' + landmark + '.x * ' + width + '), int(' + landmark + '.y * ' + height + ')) if ' + landmark + ' else (0, 0)';
+  var frame = generator.valueToCode(block, 'FRAME', Blockly.Python.ORDER_ATOMIC) || 'frame';
+  var code = '(int(' + landmark + '.x * ' + frame + '.shape[1]), int(' + landmark + '.y * ' + frame + '.shape[0])) if ' + landmark + ' else (0, 0)';
   return [code, Blockly.Python.ORDER_CONDITIONAL];
 };
 
@@ -84,15 +83,14 @@ Blockly.Python.forBlock['py_ai_pose_draw_indices'] = function(block, generator) 
 Blockly.Python.forBlock['py_ai_pose_calc_dist'] = function(block, generator) {
   var lmA = generator.valueToCode(block, 'LM_A', Blockly.Python.ORDER_ATOMIC) || 'None';
   var lmB = generator.valueToCode(block, 'LM_B', Blockly.Python.ORDER_ATOMIC) || 'None';
-  var w = block.getFieldValue('WIDTH');
-  var h = block.getFieldValue('HEIGHT');
+  var frame = generator.valueToCode(block, 'FRAME', Blockly.Python.ORDER_ATOMIC) || 'frame';
 
   generator.definitions_['func_calc_dist'] = `
 def cocoya_calc_dist(a, b, w, h):
     if not a or not b: return 0
     return (( (a.x - b.x) * w )**2 + ( (a.y - b.y) * h )**2)**0.5
 `;
-  return ['cocoya_calc_dist(' + lmA + ', ' + lmB + ', ' + w + ', ' + h + ')', Blockly.Python.ORDER_FUNCTION_CALL];
+  return ['cocoya_calc_dist(' + lmA + ', ' + lmB + ', ' + frame + '.shape[1], ' + frame + '.shape[0])', Blockly.Python.ORDER_FUNCTION_CALL];
 };
 
 Blockly.Python.forBlock['py_ai_pose_get_velocity'] = function(block, generator) {
@@ -121,9 +119,8 @@ def cocoya_get_angle(a, b, c):
 
 Blockly.Python.forBlock['py_ai_pose_is_in_frame'] = function(block, generator) {
   var pos = generator.valueToCode(block, 'POS', Blockly.Python.ORDER_ATOMIC) || '(0, 0)';
-  var w = block.getFieldValue('WIDTH');
-  var h = block.getFieldValue('HEIGHT');
-  var code = '(0 < ' + pos + '[0] < ' + w + ' and 0 < ' + pos + '[1] < ' + h + ')';
+  var frame = generator.valueToCode(block, 'FRAME', Blockly.Python.ORDER_ATOMIC) || 'frame';
+  var code = '(0 < ' + pos + '[0] < ' + frame + '.shape[1] and 0 < ' + pos + '[1] < ' + frame + '.shape[0])';
   return [code, Blockly.Python.ORDER_RELATIONAL];
 };
 

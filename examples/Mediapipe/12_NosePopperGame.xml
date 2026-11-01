@@ -111,8 +111,11 @@
                                                 <field name="VAR" id="v_nose">nose</field>
                                                 <value name="VALUE">
                                                   <block type="py_ai_pose_get_landmark_xy" id="xy0">
-                                                    <field name="WIDTH">640</field>
-                                                    <field name="HEIGHT">480</field>
+                                                    <value name="FRAME">
+                                                      <block type="py_variables_get" id="1f19zPLTsKD~1n~;F%DK">
+                                                        <field name="VAR" id="v_frame">frame</field>
+                                                      </block>
+                                                    </value>
                                                     <value name="LANDMARK">
                                                       <block type="py_ai_pose_get_landmark" id="lm0">
                                                         <field name="INDEX">0</field>

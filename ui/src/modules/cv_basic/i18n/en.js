@@ -15,8 +15,8 @@ Object.assign(Blockly.Msg, {
   "AI_FLIP_VERTICALLY": "Vertically",
   "AI_FLIP_BOTH": "Both",
   "AI_FLIP_TOOLTIP": "Flip the image horizontally or vertically. Often used for mirroring the camera view.",
-  "AI_FRAME_WIDTH": "Frame width %1",
-  "AI_FRAME_WIDTH_TOOLTIP": "Returns the width of the frame, equivalent to frame.shape[1].",
-  "AI_FRAME_HEIGHT": "Frame height %1",
-  "AI_FRAME_HEIGHT_TOOLTIP": "Returns the height of the frame, equivalent to frame.shape[0].",
+  "AI_FRAME_SIZE": "Get %1 image's %2",
+  "AI_FRAME_WIDTH_OPT": "Width",
+  "AI_FRAME_HEIGHT_OPT": "Height",
+  "AI_FRAME_SIZE_TOOLTIP": "Returns the width or height of the frame.",
 });

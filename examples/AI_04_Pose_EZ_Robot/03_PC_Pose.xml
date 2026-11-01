@@ -18,6 +18,7 @@ https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker
 記得修改 COM port
  
   
+  
   </comment>
   <block type="py_definition_zone" id="def_root" deletable="false" x="10" y="10">
     <statement name="DEFS">
@@ -91,8 +92,6 @@ https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker
                                         <field name="VAR" id="v_p12">p12</field>
                                         <value name="VALUE">
                                           <block type="py_ai_pose_get_landmark_xy" id="xy_p11">
-                                            <field name="WIDTH">640</field>
-                                            <field name="HEIGHT">480</field>
                                             <value name="LANDMARK">
                                               <block type="py_ai_pose_get_landmark" id="lm_11">
                                                 <field name="INDEX">12</field>
@@ -103,6 +102,11 @@ https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker
                                                 </value>
                                               </block>
                                             </value>
+                                            <value name="FRAME">
+                                              <block type="py_variables_get" id="_oufgD=xYNKHrDuTHD)b">
+                                                <field name="VAR" id="v_frame">frame</field>
+                                              </block>
+                                            </value>
                                           </block>
                                         </value>
                                         <next>
@@ -110,8 +114,6 @@ https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker
                                             <field name="VAR" id="v_p16">p14</field>
                                             <value name="VALUE">
                                               <block type="py_ai_pose_get_landmark_xy" id="xy_p15">
-                                                <field name="WIDTH">640</field>
-                                                <field name="HEIGHT">480</field>
                                                 <value name="LANDMARK">
                                                   <block type="py_ai_pose_get_landmark" id="lm_15">
                                                     <field name="INDEX">14</field>
@@ -122,6 +124,11 @@ https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker
                                                     </value>
                                                   </block>
                                                 </value>
+                                                <value name="FRAME">
+                                                  <block type="py_variables_get" id="ms8jU?-c.^N|m.h%-QL;">
+                                                    <field name="VAR" id="v_frame">frame</field>
+                                                  </block>
+                                                </value>
                                               </block>
                                             </value>
                                             <next>
@@ -129,8 +136,6 @@ https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker
                                                 <field name="VAR" id="2s28{{JVPbfe1*Z)lM,?">p16</field>
                                                 <value name="VALUE">
                                                   <block type="py_ai_pose_get_landmark_xy" id="xy_p12">
-                                                    <field name="WIDTH">640</field>
-                                                    <field name="HEIGHT">480</field>
                                                     <value name="LANDMARK">
                                                       <block type="py_ai_pose_get_landmark" id="lm_12">
                                                         <field name="INDEX">16</field>
@@ -141,6 +146,11 @@ https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker
                                                         </value>
                                                       </block>
                                                     </value>
+                                                    <value name="FRAME">
+                                                      <block type="py_variables_get" id="*P|{-9AWpjKH1sDj`m[w">
+                                                        <field name="VAR" id="v_frame">frame</field>
+                                                      </block>
+                                                    </value>
                                                   </block>
                                                 </value>
                                                 <next>
@@ -148,8 +158,6 @@ https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker
                                                     <field name="VAR" id="v_p11">p11</field>
                                                     <value name="VALUE">
                                                       <block type="py_ai_pose_get_landmark_xy" id="xy_p16">
-                                                        <field name="WIDTH">640</field>
-                                                        <field name="HEIGHT">480</field>
                                                         <value name="LANDMARK">
                                                           <block type="py_ai_pose_get_landmark" id="lm_16">
                                                             <field name="INDEX">11</field>
@@ -160,6 +168,11 @@ https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker
                                                             </value>
                                                           </block>
                                                         </value>
+                                                        <value name="FRAME">
+                                                          <block type="py_variables_get" id="G?F4|c][?`x1FQ7dx]_c">
+                                                            <field name="VAR" id="v_frame">frame</field>
+                                                          </block>
+                                                        </value>
                                                       </block>
                                                     </value>
                                                     <next>
@@ -167,8 +180,6 @@ https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker
                                                         <field name="VAR" id="v_p15">p13</field>
                                                         <value name="VALUE">
                                                           <block type="py_ai_pose_get_landmark_xy" id="2$rQ@lFox{t?5X])Lbh=">
-                                                            <field name="WIDTH">640</field>
-                                                            <field name="HEIGHT">480</field>
                                                             <value name="LANDMARK">
                                                               <block type="py_ai_pose_get_landmark" id="M9o?!F[Lh_:#LoJPlV,Y">
                                                                 <field name="INDEX">13</field>
@@ -179,6 +190,11 @@ https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker
                                                                 </value>
                                                               </block>
                                                             </value>
+                                                            <value name="FRAME">
+                                                              <block type="py_variables_get" id="Vah~8(u1:I]}LY*b_)lM">
+                                                                <field name="VAR" id="v_frame">frame</field>
+                                                              </block>
+                                                            </value>
                                                           </block>
                                                         </value>
                                                         <next>
@@ -186,8 +202,6 @@ https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker
                                                             <field name="VAR" id="`NCXe64r1e1]~;TMQoyb">p15</field>
                                                             <value name="VALUE">
                                                               <block type="py_ai_pose_get_landmark_xy" id="Fjb?Mm{jc`[0vZ@-GN|h">
-                                                                <field name="WIDTH">640</field>
-                                                                <field name="HEIGHT">480</field>
                                                                 <value name="LANDMARK">
                                                                   <block type="py_ai_pose_get_landmark" id="%ZxGJ6{%*Ls?aYZXQx]~">
                                                                     <field name="INDEX">15</field>
@@ -196,6 +210,11 @@ https://developers.google.com/edge/mediapipe/solutions/vision/pose_landmarker
                                                                         <field name="VAR" id="v_pose">pose</field>
                                                                       </block>
                                                                     </value>
+                                                                  </block>
+                                                                </value>
+                                                                <value name="FRAME">
+                                                                  <block type="py_variables_get" id="Z%K*-4-FYJ1GPQs7{d~+">
+                                                                    <field name="VAR" id="v_frame">frame</field>
                                                                   </block>
                                                                 </value>
                                                               </block>

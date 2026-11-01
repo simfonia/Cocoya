@@ -104,9 +104,8 @@ Blockly.Blocks['py_ai_pose_get_landmark_xy'] = {
     this.jsonInit({
       "message0": Blockly.Msg["AI_POSE_GET_LANDMARK_XY"],
       "args0": [
-        { "type": "input_value", "name": "LANDMARK", "check": "Landmark" },
-        { "type": "field_number", "name": "WIDTH", "value": 640 },
-        { "type": "field_number", "name": "HEIGHT", "value": 480 }
+        { "type": "input_value", "name": "FRAME", "check": "Image" },
+        { "type": "input_value", "name": "LANDMARK", "check": "Landmark" }
       ],
       "output": "Tuple",
       "inputsInline": true,
@@ -158,10 +157,9 @@ Blockly.Blocks['py_ai_pose_calc_dist'] = {
     this.jsonInit({
       "message0": Blockly.Msg["AI_POSE_CALC_DIST"],
       "args0": [
+        { "type": "input_value", "name": "FRAME", "check": "Image" },
         { "type": "input_value", "name": "LM_A", "check": "Landmark" },
-        { "type": "input_value", "name": "LM_B", "check": "Landmark" },
-        { "type": "field_number", "name": "WIDTH", "value": 640 },
-        { "type": "field_number", "name": "HEIGHT", "value": 480 }
+        { "type": "input_value", "name": "LM_B", "check": "Landmark" }
       ],
       "output": "Number",
       "inputsInline": true,
@@ -213,8 +211,7 @@ Blockly.Blocks['py_ai_pose_is_in_frame'] = {
       "message0": Blockly.Msg["AI_POSE_IS_IN_FRAME"],
       "args0": [
         { "type": "input_value", "name": "POS", "check": "Tuple" },
-        { "type": "field_number", "name": "WIDTH", "value": 640 },
-        { "type": "field_number", "name": "HEIGHT", "value": 480 }
+        { "type": "input_value", "name": "FRAME", "check": "Image" }
       ],
       "output": "Boolean",
       "inputsInline": true,

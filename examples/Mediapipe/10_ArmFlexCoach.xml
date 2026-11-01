@@ -98,8 +98,11 @@
                                                 <field name="VAR" id="v_p12">p12</field>
                                                 <value name="VALUE">
                                                   <block type="py_ai_pose_get_landmark_xy" id=":!z+Z|.3by{YP9Z~OL(1">
-                                                    <field name="WIDTH">640</field>
-                                                    <field name="HEIGHT">480</field>
+                                                    <value name="FRAME">
+                                                      <block type="py_variables_get" id="oRY!?xt]8es4?qs5%[p6">
+                                                        <field name="VAR" id="v_frame">frame</field>
+                                                      </block>
+                                                    </value>
                                                     <value name="LANDMARK">
                                                       <block type="py_ai_pose_get_landmark" id="ePXxFDr(FfP#sXE~EL3;">
                                                         <field name="INDEX">12</field>
@@ -117,8 +120,11 @@
                                                     <field name="VAR" id="v_p14">p14</field>
                                                     <value name="VALUE">
                                                       <block type="py_ai_pose_get_landmark_xy" id="xt[50dA[8sQ?fq^b3hZv">
-                                                        <field name="WIDTH">640</field>
-                                                        <field name="HEIGHT">480</field>
+                                                        <value name="FRAME">
+                                                          <block type="py_variables_get" id="ZFc+pq|vdR5m3|{D?tip">
+                                                            <field name="VAR" id="v_frame">frame</field>
+                                                          </block>
+                                                        </value>
                                                         <value name="LANDMARK">
                                                           <block type="py_ai_pose_get_landmark" id="7=P~txC,9t7?MJK@Yn}|">
                                                             <field name="INDEX">14</field>
@@ -136,8 +142,11 @@
                                                         <field name="VAR" id="v_p16">p16</field>
                                                         <value name="VALUE">
                                                           <block type="py_ai_pose_get_landmark_xy" id=";s]rB6*f]fRVbHAygI7H">
-                                                            <field name="WIDTH">640</field>
-                                                            <field name="HEIGHT">480</field>
+                                                            <value name="FRAME">
+                                                              <block type="py_variables_get" id="/T*-TPnsBG@(-=J[j270">
+                                                                <field name="VAR" id="v_frame">frame</field>
+                                                              </block>
+                                                            </value>
                                                             <value name="LANDMARK">
                                                               <block type="py_ai_pose_get_landmark" id="=L`{IPt5+yi^HqA)h2_1">
                                                                 <field name="INDEX">16</field>
@@ -462,6 +471,13 @@
                                             </value>
                                             <value name="COLOR">
                                               <block type="py_logic_ternary" id="te.wsNVrYB/Y,%/Nk:+=">
+                                                <value name="THEN">
+                                                  <block type="py_ai_color" id="M85B3niyR12CqkDDaoJZ">
+                                                    <field name="B">0</field>
+                                                    <field name="G">255</field>
+                                                    <field name="R">0</field>
+                                                  </block>
+                                                </value>
                                                 <value name="IF">
                                                   <block type="py_logic_compare" id="+.Vg]Mq?[XCC*LX:1Lwi">
                                                     <field name="OP">&lt;</field>
@@ -475,13 +491,6 @@
                                                         <field name="NUM">45</field>
                                                       </block>
                                                     </value>
-                                                  </block>
-                                                </value>
-                                                <value name="THEN">
-                                                  <block type="py_ai_color" id="M85B3niyR12CqkDDaoJZ">
-                                                    <field name="B">0</field>
-                                                    <field name="G">255</field>
-                                                    <field name="R">0</field>
                                                   </block>
                                                 </value>
                                                 <value name="ELSE">

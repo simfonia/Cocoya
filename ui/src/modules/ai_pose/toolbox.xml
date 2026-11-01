@@ -25,6 +25,11 @@
         <field name="INDEX">0</field>
     </block>
     <block type="py_ai_pose_get_landmark_xy">
+        <value name="FRAME">
+            <shadow type="py_variables_get">
+                <field name="VAR">frame</field>
+            </shadow>
+        </value>
         <value name="LANDMARK">
             <block type="py_ai_pose_get_landmark">
                 <value name="POSE">
@@ -35,8 +40,6 @@
                 <field name="INDEX">0</field>
             </block>
         </value>
-        <field name="WIDTH">640</field>
-        <field name="HEIGHT">480</field>
     </block>
     <sep gap="32"></sep>
     <block type="py_ai_pose_draw">
@@ -63,6 +66,11 @@
     </block>
     <sep gap="32"></sep>
     <block type="py_ai_pose_calc_dist">
+        <value name="FRAME">
+            <shadow type="py_variables_get">
+                <field name="VAR">frame</field>
+            </shadow>
+        </value>
         <value name="LM_A">
             <block type="py_ai_pose_get_landmark">
                 <field name="INDEX">11</field>
@@ -87,6 +95,11 @@
         <field name="SENSITIVITY">20</field>
     </block>
     <block type="py_ai_pose_is_in_frame">
+        <value name="FRAME">
+            <shadow type="py_variables_get">
+                <field name="VAR">frame</field>
+            </shadow>
+        </value>
         <value name="POS">
             <block type="py_variables_get"><field name="VAR">curr_pos</field></block>
         </value>

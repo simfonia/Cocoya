@@ -79,8 +79,11 @@
                                         <field name="VAR" id="v_p12">p12</field>
                                         <value name="VALUE">
                                           <block type="py_ai_pose_get_landmark_xy" id="xy12">
-                                            <field name="WIDTH">640</field>
-                                            <field name="HEIGHT">480</field>
+                                            <value name="FRAME">
+                                              <block type="py_variables_get" id="|Pu=Oj=++v{Vu/s@!hp/">
+                                                <field name="VAR" id="v_frame">frame</field>
+                                              </block>
+                                            </value>
                                             <value name="LANDMARK">
                                               <block type="py_ai_pose_get_landmark" id="lm12">
                                                 <field name="INDEX">12</field>
@@ -98,8 +101,11 @@
                                             <field name="VAR" id="v_p16">p16</field>
                                             <value name="VALUE">
                                               <block type="py_ai_pose_get_landmark_xy" id="xy16">
-                                                <field name="WIDTH">640</field>
-                                                <field name="HEIGHT">480</field>
+                                                <value name="FRAME">
+                                                  <block type="py_variables_get" id="$34Sy{Gk!b,t!Ktc]?FJ">
+                                                    <field name="VAR" id="v_frame">frame</field>
+                                                  </block>
+                                                </value>
                                                 <value name="LANDMARK">
                                                   <block type="py_ai_pose_get_landmark" id="lm16">
                                                     <field name="INDEX">16</field>
