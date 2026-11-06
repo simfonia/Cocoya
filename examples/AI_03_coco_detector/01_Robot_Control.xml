@@ -35,7 +35,7 @@ PC 端傳送格式（範例）：
         <field name="BAUD">115200</field>
         <value name="PORT">
           <shadow type="py_text" id="ser_port">
-            <field name="TEXT">COM6</field>
+            <field name="TEXT">COM8</field>
           </shadow>
         </value>
       </block>
@@ -80,14 +80,14 @@ PC 端傳送格式（範例）：
                           </shadow>
                         </value>
                         <next>
-                          <block type="mcu_car_tone" id="y!ZBU23$F1O@HnPyhtqr">
+                          <block type="mcu_car_tone" id="E.rxEC4jIYPKAwkK#nU*">
                             <value name="FREQ">
-                              <shadow type="math_number" id="Gcdifyn+9f1idWKuH)`i">
+                              <shadow type="math_number" id="enjedWI[g2`)_aW/d3cx">
                                 <field name="NUM">440</field>
                               </shadow>
                             </value>
                             <value name="MS">
-                              <shadow type="math_number" id="Q[@CAg,oQjdM~g..1Z3m">
+                              <shadow type="math_number" id="Ap6P?_E(QQ~q?%rd)pDZ">
                                 <field name="NUM">200</field>
                               </shadow>
                             </value>
@@ -137,7 +137,7 @@ PC 端傳送格式（範例）：
                                                 </value>
                                                 <statement name="DO0">
                                                   <block type="py_coding_raw_statement" id="parse_line">
-                                                    <field name="TEXT"># 沒有 split 與 map 積木，直接寫程式碼解析 PC 傳來的 "pan,tilt"&amp;#10;cx, cy, frame_w, frame_h = map(float, serial_line.split(","))&amp;#10;# map 像素座標到 0~270° 伺服角度&amp;#10;pan = 270-(cx / frame_w * 270)&amp;#10;tilt = cy / frame_h * 270  &amp;#10;&amp;#10;# 限位避免干涉&amp;#10;pan = int(min(230, max(60, pan)))&amp;#10;tilt = int(min(200, max(70, tilt)))</field>
+                                                    <field name="TEXT"># 沒有 split 與 map 積木，直接寫程式碼解析 PC 傳來的 "pan,tilt"&amp;#10;cx, cy, frame_w, frame_h = map(float, serial_line.split(","))&amp;#10;# map 像素座標到 0~270° 伺服角度&amp;#10;pan = 270-(cx / frame_w * 270)&amp;#10;tilt = cy / frame_h * 270  &amp;#10;&amp;#10;# 限位，避免干涉&amp;#10;pan = int(min(230, max(60, pan)))  # 60&lt;= pan &lt;= 230&amp;#10;tilt = int(min(200, max(70, tilt)))  # 70&lt;= tilt &lt;= 200</field>
                                                     <next>
                                                       <block type="mcu_car_servo" id="pan_servo">
                                                         <field name="PIN">board.GP12</field>

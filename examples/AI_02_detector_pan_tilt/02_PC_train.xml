@@ -16,7 +16,7 @@
         <field name="FINE_TUNE">FALSE</field>
         <field name="DNN_LAYERS">128,64</field>
         <field name="OPTIMIZER">adam</field>
-        <field name="MODEL_OUTPUT">f32</field>
+        <field name="MODEL_OUTPUT">none</field>
       </block>
     </statement>
   </block>

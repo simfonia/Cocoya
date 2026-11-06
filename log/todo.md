@@ -816,3 +816,18 @@ VS Code 報「L44 必須是 {」「L52 預期為 at-rule 或選取器」，整�
 - [ ] **實機待測**：VSIX + Tauri 開啟範例，確認 toolbox 分類／拖曳／產碼對等
 - [ ] **已知限制**：迴圈變數固定命名不可巢狀；標籤英文名，中文顯示需另備對照字典
 
+### [2026-11-06] 物件偵測雙架構升級：Keras Spatial Head + YOLO（下一階段待辦）
+> **施工計畫 SSOT**：`log/plan/ObjectDetectionUpgrade_MultiScale.md`（完整階段、Gate、驗收及風險）。
+> **使用者決策**：Spatial Head 與 YOLO 並存；Legacy GAP + Dense(4) 偵測架構棄用；Cocoya 尚未發佈，不做舊模型／XML runtime 相容。
+> **POC 證據**：`examples/AI_02_detector_pan_tilt/model/ping_pong_keras_poc_v2/comparison.json`（Spatial Head mean IoU 0.6556，訓練約 168 秒）；`model/ping_pong_yolo_poc/comparison.json`（YOLO 多物件 POC，CPU 訓練約 38.8 分鐘）。兩者都沿用單一連拍序列隨機切分，尚未證明跨場景泛化。
+- [ ] **G0**：拍板 Spatial Head 為 50 分鐘課程快速預設、YOLO 為進階多物件路徑；決定 YOLO 授權／套件與權重取得方式、Windows CPU 支援及效能門檻。
+- [ ] **G1**：建立多個拍攝 session 的含球／無球資料；按 session 分組建立固定 train/validation/test manifest，檢查標註、負樣本、座標與類別分布。
+- [ ] **G2**：以同一 evaluator 比較 Spatial Head 與 YOLO；Spatial Head 驗單目標 IoU、IoU50、center error、空場誤報及完整課堂流程是否 ≤50 分鐘；YOLO 驗 mAP、precision/recall、延遲與模型大小。獨立場景 test 達門檻才整合。
+- [ ] **G3**：將兩支 POC 整理為正式 train template，共用 Dataset Spec parser；`py_ai_train_run` 加 `MODEL_ARCH=spatial_heatmap|yolov8n`，輸出架構 metadata、訓練報告、resume／取消處理；Spatial Head 多框輸入明確拒絕，YOLO 保留多框／多類別／空標籤。
+- [ ] **G4**：PC inference 依 metadata dispatch Spatial Keras/TFLite 或 YOLO `.pt` decoder，統一 `objects` 結果；Spatial Head 加 confidence threshold 與 no-object 測試；移除 Legacy `_detect()`／encoder／decoder。
+- [ ] **G5**：Blockly 提供雙架構選擇；Spatial Head found/confidence/bbox/center 積木；YOLO 巢狀多物件迴圈與欄位解析積木；更新 pan/tilt 快速／進階範例、中英文 help/toolbox。
+- [ ] **Legacy 移除前置**：先將 `line_following` 從共用 `build_detector_model()` 抽離並完成回歸測試，再刪除偵測 Legacy 模型、訓練參數及 decoder；全倉遷移內建 XML／測試／文件，不建相容層。
+- [ ] **G6**：完成乾淨 Windows 安裝、依賴／授權檢查、Spatial Head Float32 TFLite、YOLO PC 推論、Serial pan/tilt 整鏈與 50 分鐘課堂計時驗收；MCU 不執行模型。
+
+> **承接說明**：本節取代 2026-10-12「方向 A/B/C 與 MCU 可行性」的未決策狀態；舊條目保留作歷史，不再依其舊方向執行。近期先做 G0/G1；YOLO 發行打包須等授權 Gate 通過。
+
