@@ -1,0 +1,24 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
+  <block type="py_definition_zone" id="%;A2;(Km;sPn`DBo`2?3" x="100" y="20"></block>
+  <block type="py_main" id="=bWk!6_6d|1Tx!meC@jC" x="100" y="140">
+    <statement name="DO">
+      <block type="py_ai_train_run" id="*_QHVTB{U/n{ZN]9wT#u">
+        <field name="TASK_TYPE">line_following</field>
+        <field name="BACKEND">local</field>
+        <field name="DATASET_DIR">dataset/lines</field>
+        <field name="SYNC_MODE">smart</field>
+        <field name="VALIDATION_SPLIT">0.2</field>
+        <field name="AUGMENTATION">TRUE</field>
+        <field name="DROPOUT">0.2</field>
+        <field name="LEARNING_RATE">0.0005</field>
+        <field name="EPOCHS">40</field>
+        <field name="BATCH_SIZE">32</field>
+        <field name="BACKBONE">mobilenetv2</field>
+        <field name="FINE_TUNE">FALSE</field>
+        <field name="DNN_LAYERS">128,64</field>
+        <field name="OPTIMIZER">adam</field>
+        <field name="MODEL_OUTPUT">f32</field>
+      </block>
+    </statement>
+  </block>
+</xml>

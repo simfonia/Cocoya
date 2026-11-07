@@ -516,7 +516,7 @@ body.cocoya-dark-mode .dataset-image-item.annotated  {
     top: 2px;
     left: 2px;
     font-size: calc(11px * var(--dsm-font-scale));
-    color: #4CAF50;
+    color: #13d719;
     background: var(--dsm-scrim);
     border-radius: 50%;
     width: 16px;
@@ -525,6 +525,14 @@ body.cocoya-dark-mode .dataset-image-item.annotated  {
     text-align: center;
     font-weight: bold;
     z-index: 3;
+}
+
+/* Candy 淺色主題：縮圖綠勾底色改善（2026-11-07）
+   --dsm-scrim 在 candy 下為深紫灰 rgba(90,40,70,0.55)，疊在淺粉色底上
+   會讓綠勾不明顯，改用半透明白色讓綠勾更突出 */
+body.cocoya-light-mode .dataset-image-check,
+body.cocoya-light-mode .dataset-annotation-thumb-item.annotated::after {
+    background: rgba(255, 255, 255, 0.85);
 }
 
 /* 自動儲存已開啟指示（低噪音） */

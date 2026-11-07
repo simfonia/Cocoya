@@ -831,3 +831,11 @@ VS Code 報「L44 必須是 {」「L52 預期為 at-rule 或選取器」，整�
 
 > **承接說明**：本節取代 2026-10-12「方向 A/B/C 與 MCU 可行性」的未決策狀態；舊條目保留作歷史，不再依其舊方向執行。近期先做 G0/G1；YOLO 發行打包須等授權 Gate 通過。
 
+### [2026-11-12] #task[cocoya 循跡推論範例] ✅ 已完成
+
+- [x] **新增 `examples/AI_06_line_tracker/02_PC_inference.xml`**：PC 端循跡即時推論範例，開相機 → `py_ai_model_init(line_following/f32)` → `py_ai_model_predict` → `cv2.arrowedLine` 疊上線段向量箭頭 → `cv2.putText` 顯示 dir/ang/off → 顯示畫面，按 `q` 結束。✅ （細節見 log/work/2026-11-12.md）
+- [x] **修復 `ui/src/modules/ai_inference/ai_inference_generators.js` `_ModelInference.__init__` labels 強制檢查**：僅 `image_classification` / `object_detection` 強制要求 `*_labels.txt`；`line_following` / `table` / `feature` 跳過並設 `self.ls = []`，避免循跡範例因缺 `lines_labels.txt` 拋出 `FileNotFoundError`。✅ （細節見 log/work/2026-11-12.md）
+- [x] **修正箭頭座標與翻轉順序**：移除推論後 `py_ai_flip_image`；改為推論後即畫箭頭（歸一化 0~1 乘上 `w/h` 轉為像素座標），避免模型輸入與顯示座標系不一致。✅ （細節見 log/work/2026-11-12.md）
+- [x] **驗證**：`ai_inference/*.test.mjs` 10/10 綠、`core_contract.test.mjs` 8/8 綠、ESLint 0 error、XML well-formed、純 CRLF。✅ （細節見 log/work/2026-11-12.md）
+
+

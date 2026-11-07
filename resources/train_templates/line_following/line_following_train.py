@@ -41,7 +41,7 @@ if _script_dir.startswith('\\\\?\\'):
     _script_dir = _script_dir[4:]
 sys.path.insert(0, os.path.normpath(os.path.join(_script_dir, '..')))
 from common.line_dataset import load_line_dataset, create_line_augmentation, prepare_line_dataset
-from common.detector_model import build_detector_model  # Dense(4, sigmoid) 回歸頭重用
+from common.line_model import build_line_model  # 循線獨立模型（不依賴 Legacy detector_model）
 from common.training_loop import get_optimizer
 from common.model_export import save_keras_model, export_tflite
 
@@ -62,6 +62,23 @@ def compile_and_train_line(model, train_ds, val_ds, optimizer_name='adam',
     fit_kwargs = {'epochs': epochs, 'verbose': 1}
     if val_ds is not None:
         fit_kwargs['validation_data'] = val_ds
+        # Early Stopping：val_loss 連續 15 epoch 無改善時停止，回到最佳權重
+        # ReduceLROnPlateau：val_loss 連續 7 epoch 無改善時學習率減半（最低 1e-6）
+        fit_kwargs['callbacks'] = [
+            tf.keras.callbacks.EarlyStopping(
+                monitor='val_loss',
+                patience=15,
+                restore_best_weights=True,
+                verbose=1
+            ),
+            tf.keras.callbacks.ReduceLROnPlateau(
+                monitor='val_loss',
+                factor=0.5,
+                patience=7,
+                min_lr=1e-6,
+                verbose=1
+            ),
+        ]
 
     history = model.fit(train_ds, **fit_kwargs)
 
@@ -327,7 +344,7 @@ def main():
 
     # === 建立模型 ===
     print(f"\n建立循線模型 (Backbone: {args.backbone})...")
-    model = build_detector_model(
+    model = build_line_model(
         backbone_name=args.backbone,
         input_shape=(IMG_SIZE, IMG_SIZE, 3),
         dropout_rate=args.dropout,

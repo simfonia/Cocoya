@@ -217,8 +217,10 @@ def load_line_dataset(dataset_dir, img_size=224, batch_size=32, validation_split
 
 def create_line_augmentation(enabled=True):
     """
-    循線專用資料擴增：僅亮度/對比（不改變幾何，避免線段座標失真）。
-    與 detector_augmentation 同策略。
+    循線專用色彩擴增：僅亮度/對比（不改變幾何，避免線段座標失真）。
+
+    幾何擴增（水平翻轉）由 _random_hflip_line() 在 prepare_line_dataset()
+    的 tf.data.map 中單獨處理，以確保線段端點 x 座標同步鏡射。
     """
     if not enabled:
         return tf.keras.Sequential()
@@ -229,11 +231,64 @@ def create_line_augmentation(enabled=True):
     ])
 
 
+def _random_hflip_line(image, line):
+    """
+    對批次中的每張影像獨立以 50% 機率水平翻轉，並同步鏡射線段 x1、x2 座標。
+
+    線段格式：[x1, y1, x2, y2]（歸一化比例座標）
+    翻轉規則：x1_new = 1.0 - x1；x2_new = 1.0 - x2；y1、y2 不變。
+
+    翻轉後 x1_new 可能大於 x2_new（端點順序互換），這是正常的——
+    模型學習迴歸端點座標，不強制端點順序，訓練集混合兩種順序不影響收斂。
+
+    Args:
+        image: float32 Tensor，shape (B, H, W, C)，值域 [0, 1]
+        line: float32 Tensor，shape (B, 4)，格式 [x1, y1, x2, y2]
+
+    Returns:
+        (image, line) tuple，翻轉後的影像與座標批次
+    """
+    batch_size = tf.shape(image)[0]
+    flips = tf.random.uniform((batch_size, 1, 1, 1)) < 0.5
+    image_flipped = tf.image.flip_left_right(image)
+    image = tf.where(flips, image_flipped, image)
+
+    flips_1d = tf.reshape(flips, [batch_size, 1])
+    x1 = line[:, 0:1]
+    y1 = line[:, 1:2]
+    x2 = line[:, 2:3]
+    y2 = line[:, 3:4]
+    line_flipped = tf.concat([1.0 - x1, y1, 1.0 - x2, y2], axis=-1)
+    line = tf.where(flips_1d, line_flipped, line)
+    return image, line
+
+
 def prepare_line_dataset(dataset, augmentation=None, augment_enabled=True):
-    """對循線資料集套用資料擴增（僅影像，座標不動）。"""
-    if augmentation is not None and augment_enabled:
+    """
+    對循線資料集套用資料擴增（僅訓練集使用；驗證集 augment_enabled=False）。
+
+    擴增順序（augment_enabled=True 時）：
+      1. 水平翻轉（座標感知，線段 x1/x2 同步鏡射）
+      2. 色彩擴增（亮度、對比；由 augmentation Sequential 層處理）
+
+    Args:
+        dataset: 原始 tf.data.Dataset，元素為 (image, line)
+        augmentation: 色彩擴增 Sequential 層（可為 None）
+        augment_enabled: 是否啟用資料擴增
+
+    Returns:
+        處理後的 tf.data.Dataset
+    """
+    if augment_enabled:
+        # 1. 水平翻轉（與線段座標同步）
         dataset = dataset.map(
-            lambda x, y: (augmentation(x, training=True), y),
+            _random_hflip_line,
             num_parallel_calls=AUTOTUNE
         )
+        # 2. 色彩擴增（不影響座標）
+        if augmentation is not None:
+            dataset = dataset.map(
+                lambda x, y: (augmentation(x, training=True), y),
+                num_parallel_calls=AUTOTUNE
+            )
     return dataset.prefetch(buffer_size=AUTOTUNE)

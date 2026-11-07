@@ -70,6 +70,7 @@
 6. 模型格式／架構須明確指定或由 metadata 可靠判別，不可在資料夾內有多個模型時依檔案列舉順序猜測。推論統一輸出 `objects` array，但 Spatial Head 只保證單一物件、YOLO 可回傳多物件。
 7. Legacy 偵測將整體移除，不做舊模型檔／舊 XML 相容。因 Cocoya 尚未發佈，所有內建 `object_detection` 範例 XML、測試 fixture、文件及示範模型都在同一遷移切片更新；確認 repo 內沒有仍依賴 Legacy 的對外範例後再刪除舊 encoder/decoder。
 8. `line_following` 目前與 Legacy detector 共用 `build_detector_model()`；移除前先將循線模型建構與其測試抽離為獨立實作，確保循線不受影響。
+   > **✅ 2026-11-09 已完成前置解耦**：`common/line_model.py` 新建（`build_line_model()`，不依賴 `detector_model.py`）；`line_following_train.py` 已改用 `build_line_model()`。Phase 3 刪除 `detector_model.py` 的前置障礙已清除。同時新增 `_random_hflip_line()`（線段 x1/x2 同步鏡射）與 EarlyStopping + ReduceLROnPlateau，詳見 `log/plan/TrainingTemplateUpgrade_Plan.md`（LineFollowingUpgrade）。
 9. VSIX `src/` 已凍結；不得為此新增 VSIX Host handler。共用 Blockly／Python 產生器可在 Tauri 端功能需要時做最小調整，依既有 bridge capability 慣例處理平台差異。
 10. Ultralytics 套件與權重的版本、授權及再散布條件是 YOLO 路徑的正式整合 Gate；未完成法務／產品授權確認前，不把套件或權重包入 Cocoya 發行物。Spatial Head 路徑維持 TensorFlow/Keras/TFLite。
 
@@ -140,6 +141,7 @@
 - [ ] `py_ai_train_run` 增加 `MODEL_ARCH`，值域只允許 `spatial_heatmap`／`yolov8n`。依架構切換顯示參數：Spatial Head 顯示 input size、epochs、batch、learning rate、早停；YOLO 顯示 weights、imgsz、epochs、batch、device、augmentation。移除 Legacy 模型選項及其專用參數。
 - [ ] 訓練入口維持 `task_type=object_detection`，CLI 增加明確的 `--model_arch`；未知架構直接報錯，不得靜默回退。
 - [ ] 抽出共同 Dataset Spec parser：讀每張 image 與完整 annotations array，驗證路徑、座標、class ID、空標籤及標註框數；回傳 canonical normalized record 與固定 manifest。
+  > **✅ 2026-11-09 物件偵測 pipeline 前置已完成**：`detector_dataset.py` 加入 `_random_hflip_detector()`（bbox `cx` 同步鏡射，`cy/w/h` 不變）；色彩擴增與幾何擴增分離處理；`prepare_detector_dataset()` 擴增順序：先水平翻轉 → 再色彩擴增。訓練 pipeline 同時加入 EarlyStopping(patience=10) + ReduceLROnPlateau(patience=5)。
 - [ ] Spatial Head 的資料 target：MVP 限定單一類別／指定追蹤目標，每張最多一個該目標；有目標產生 Gaussian heatmap + size map；無目標影像產生全零 heatmap，尺寸 loss mask 全零。多類別或多個同類目標若選 Spatial Head，訓練前明確拒絕並提示切換 YOLO，不可只取第一框或假設 `class_id=0`。
 - [ ] Spatial Head 補上 objectness／confidence threshold 校準；以含球及無球的 validation set 選 threshold，無目標時必須能輸出 `objects=[]`。目前 POC 沒有驗證負樣本，不能只把 heatmap 最大值一律當成有效物件。
 - [ ] YOLO converter 保留所有有效 bbox 與類別；空標籤影像寫空 `.txt`；class map 順序固定。DM `[x,y,w,h]` → YOLO `[class_id,cx,cy,w,h]`，使用來源影像實際尺寸／正規化座標，不假設固定 640×480。
@@ -211,7 +213,7 @@
 - [ ] YOLO wrapper mock model：無偵測、單框、多框、多類別、低信心過濾、座標正規化、不同 frame 比例、模型載入錯誤。
 - [ ] Python codegen compile 測試：生成的兩種模型 init、predict、多物件迴圈含巢狀迴圈皆能 compile；無 Legacy decoder／架構選項。
 - [ ] Block contract、toolbox、雙語 i18n、help、task type contract 及變異測試。
-- [ ] line_following 回歸：在拆出獨立循線建模後，訓練模型、TFLite 推論、line parser output 不因移除共用 Legacy detector 或切換 object_detection architecture 而變化。
+- [ ] line_following 回歸：在拆出獨立循線建模後，訓練模型、TFLite 推論、line parser output 不因移除共用 Legacy detector 或切換 object_detection architecture 而變化。（✅ 2026-11-09 已完成 `common/line_model.py` 獨立抽離；待補：1 epoch smoke test 與 TFLite 契約守門測試腳本）
 
 #### 實機驗收
 
@@ -226,7 +228,7 @@
 | 區域 | 預期工作 | 注意事項 |
 | :--- | :--- | :--- |
 | `resources/train_templates/object_detection/` | 兩種 architecture 的 train／report 入口或共同 dispatcher | Legacy 入口與 Legacy-only template 移除；不把 prototype script 原樣複製成產品碼 |
-| `resources/train_templates/common/` | 共用 DM Spec parser、Spatial target builder、YOLO staging converter | 確保 line_following 有獨立模型，不再依賴即將刪除的 detector model |
+| `resources/train_templates/common/` | 共用 DM Spec parser、Spatial target builder、YOLO staging converter | 確保 line_following 有獨立模型，不再依賴即將刪除的 detector model（✅ 2026-11-09 已完成：`common/line_model.py` 建立、`line_following_train.py` 改用 `build_line_model()`，Phase 3 刪除 `detector_model.py` 的前置障礙已清除） |
 | `resources/dataset_manager/` | trainLocal architecture 參數／依賴檢查／進度及取消處理 | `TASK_SCRIPTS` route 與 Blockly `MODEL_ARCH` 對齊 |
 | `ui/src/modules/ai_inference/` | architecture 欄位、Spatial decoder、YOLO wrapper、多物件積木 | 同一 output contract；不做 Legacy decoder 相容，符合 VSIX 凍結界線 |
 | `config/python_modules.json`／依賴鎖檔 | TensorFlow Spatial Head 與可選 Ultralytics runtime 安裝／診斷 | Spatial 快速課程不應被 PyTorch 安裝拖慢；不靜默 pip install |
@@ -246,7 +248,7 @@
 | 無標註圖被跳過或未分類框污染 | 產生錯誤負樣本／class mapping | converter 嚴格驗證並報告，空標籤和 `class_id=-1` 分流 |
 | Spatial Head 永遠取 argmax 造成空景假框 | 無物件時錯誤追蹤 | 加入負樣本 heatmap、confidence calibration 與 threshold；空場景測試未通過前不做課堂追蹤 demo |
 | `objects[0]` 假設 | YOLO 使用者只能操作一個框 | 新增可巢狀多物件迴圈；Spatial 路徑明示單目標限制 |
-| 移除共用 Legacy detector 影響循線 | line_following 訓練退化 | 在刪除前先拆出並測試 line_following 獨立模型建立路徑 |
+| 移除共用 Legacy detector 影響循線 | line_following 訓練退化 | 在刪除前先拆出並測試 line_following 獨立模型建立路徑（✅ 2026-11-09 已完成獨立抽離 `common/line_model.py`） |
 | 未發佈但內建 XML/模型假設舊欄位 | 範例載入或訓練失敗 | 全倉盤點並一次更新所有內建 XML／測試／文件；不新增舊格式相容層 |
 | PC-only 與 MCU 模型能力混淆 | 教學誤導／部署失敗 | UI/help/範例標明模型在 PC 執行、MCU 僅收 Serial 控制資料 |
 

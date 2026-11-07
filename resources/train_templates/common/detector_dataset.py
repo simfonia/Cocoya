@@ -323,42 +323,86 @@ def load_detector_dataset(dataset_dir, img_size=224, batch_size=32, validation_s
 
 def create_detector_augmentation(enabled=True):
     """
-    建立物件偵測專用的資料擴增 pipeline。
-    注意：物件偵測的擴增需要同時變換影像與 bbox，
-    此處僅做影像層級的擴增（不影響 bbox 座標的幾何變換）。
+    建立物件偵測專用的色彩擴增 pipeline（不改變幾何，不影響 bbox 座標）。
+
+    幾何擴增（水平翻轉）由 _random_hflip_detector() 在 prepare_detector_dataset()
+    的 tf.data.map 中單獨處理，以確保 bbox 座標同步鏡射。
 
     Args:
         enabled: 是否啟用資料擴增
 
     Returns:
-        tf.keras.Sequential 資料擴增層
+        tf.keras.Sequential 資料擴增層（僅色彩）
     """
     if not enabled:
         return tf.keras.Sequential()
 
-    # 僅使用不影響 bbox 座標的擴增（亮度、對比、色調）
+    # 僅使用不影響 bbox 座標的擴增（亮度、對比）
     return tf.keras.Sequential([
         tf.keras.layers.RandomBrightness(0.1),
         tf.keras.layers.RandomContrast(0.2),
     ])
 
 
+def _random_hflip_detector(image, bbox):
+    """
+    對批次中的每張影像獨立以 50% 機率水平翻轉，並同步鏡射 bbox 中心 x 座標。
+
+    bbox 格式：[cx, cy, w, h]（YOLO 正規化中心點格式）
+    翻轉規則：cx_new = 1.0 - cx；cy、w、h 不變。
+
+    物件本身可能不對稱，但 bbox 中心仍代表物件位置中心，
+    翻轉後中心座標的語意（「框的中心在哪裡」）保持正確。
+
+    Args:
+        image: float32 Tensor，shape (B, H, W, C)，值域 [0, 1]
+        bbox: float32 Tensor，shape (B, 4)，格式 [cx, cy, w, h]
+
+    Returns:
+        (image, bbox) tuple，翻轉後的影像與座標批次
+    """
+    batch_size = tf.shape(image)[0]
+    flips = tf.random.uniform((batch_size, 1, 1, 1)) < 0.5
+    image_flipped = tf.image.flip_left_right(image)
+    image = tf.where(flips, image_flipped, image)
+
+    flips_1d = tf.reshape(flips, [batch_size, 1])
+    cx = bbox[:, 0:1]
+    cy = bbox[:, 1:2]
+    w = bbox[:, 2:3]
+    h = bbox[:, 3:4]
+    bbox_flipped = tf.concat([1.0 - cx, cy, w, h], axis=-1)
+    bbox = tf.where(flips_1d, bbox_flipped, bbox)
+    return image, bbox
+
+
 def prepare_detector_dataset(dataset, augmentation=None, augment_enabled=True):
     """
     對物件偵測資料集套用資料擴增。
 
+    擴增順序（augment_enabled=True 時）：
+      1. 水平翻轉（座標感知，bbox cx 同步鏡射）
+      2. 色彩擴增（亮度、對比；由 augmentation Sequential 層處理）
+
     Args:
-        dataset: 原始 tf.data.Dataset
-        augmentation: 資料擴增層（可為 None）
+        dataset: 原始 tf.data.Dataset，元素為 (image, bbox)
+        augmentation: 色彩擴增 Sequential 層（可為 None）
         augment_enabled: 是否啟用資料擴增
 
     Returns:
         處理後的 tf.data.Dataset
     """
-    if augmentation is not None and augment_enabled:
+    if augment_enabled:
+        # 1. 水平翻轉（與 bbox 座標同步）
         dataset = dataset.map(
-            lambda x, y: (augmentation(x, training=True), y),
+            _random_hflip_detector,
             num_parallel_calls=AUTOTUNE
         )
+        # 2. 色彩擴增（不影響座標）
+        if augmentation is not None:
+            dataset = dataset.map(
+                lambda x, y: (augmentation(x, training=True), y),
+                num_parallel_calls=AUTOTUNE
+            )
 
     return dataset.prefetch(buffer_size=AUTOTUNE)

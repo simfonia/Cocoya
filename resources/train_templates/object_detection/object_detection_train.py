@@ -113,6 +113,23 @@ def compile_and_train_detector(model, train_ds, val_ds, optimizer_name='adam',
     }
     if val_ds is not None:
         fit_kwargs['validation_data'] = val_ds
+        # Early Stopping：val_loss 連續 10 epoch 無改善時停止，回到最佳權重
+        # ReduceLROnPlateau：val_loss 連續 5 epoch 無改善時學習率減半（最低 1e-6）
+        fit_kwargs['callbacks'] = [
+            tf.keras.callbacks.EarlyStopping(
+                monitor='val_loss',
+                patience=10,
+                restore_best_weights=True,
+                verbose=1
+            ),
+            tf.keras.callbacks.ReduceLROnPlateau(
+                monitor='val_loss',
+                factor=0.5,
+                patience=5,
+                min_lr=1e-6,
+                verbose=1
+            ),
+        ]
 
     history = model.fit(train_ds, **fit_kwargs)
 

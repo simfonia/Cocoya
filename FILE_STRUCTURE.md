@@ -79,7 +79,17 @@ C:\Workspace\cocoya\
 │   │   ├── 03_PC_inference.xml # PC 端推論與視覺化
 │   │   └── 04_MCU_tracking.xml # MCU 端雲台追蹤控制
 │   ├── AI_03_Pose_EZ_Robot/   # AI 姿勢辨識，雙手肘角度控制小機器人
-│   └── AI_04_Pose_piCar/   # AI 姿勢辨識控制 πCar
+│   ├── AI_04_Pose_piCar/   # AI 姿勢辨識控制 πCar
+│   ├── AI_06_line_tracker/   # 循跡偵測範例（鏡頭即時偵測線段並疊上向量箭頭）
+│   │   ├── 01_PC_train.xml   # 循跡訓練積木（line_following，產出 model/lines/lines_f32.tflite）
+│   │   ├── 02_PC_inference.xml   # PC 端循跡即時推論：py_ai_model_init → py_ai_model_predict → cv2.arrowedLine 疊上線段向量箭頭＋dir/ang/off 文字
+│   │   ├── dataset/lines/  # 訓練資料集（dataset/lines/line/*.jpg + dataset.json，循跡為單類別 line）
+│   │   ├── line_generator/line_generator.py   # 資料集產生器（Bézier 曲線黑線，輸出歸一化標籤 x1/y1/x2/y2）
+│   │   ├── line_generator/lines_generator_json.py   # 資料集 JSON 匯出輔助腳本
+│   │   ├── model/lines/lines_f32.tflite   # 訓練好的 Float32 循跡模型（PC 端推論使用）
+│   │   ├── model/lines/lines_training_curve.png   # 訓練 Loss/MAE 曲線圖
+│   │   ├── model/lines/lines_training_history.json   # 訓練歷史 JSON
+│   │   └── model/lines/lines_training_report.html   # 訓練報告 HTML
 ├── log/                   # 專案日誌與任務追蹤
 │   ├── details.md         # 技術細節與 API 踩坑紀錄
 │   ├── handover.md        # 任務交接檔

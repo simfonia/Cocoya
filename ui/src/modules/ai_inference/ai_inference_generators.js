@@ -198,11 +198,13 @@ Blockly.Python.forBlock['py_ai_model_init'] = function(block, generator) {
       '        d = os.path.dirname(model_path)\n' +
       '        lbl = os.path.join(d, os.path.basename(d) + "_labels.txt")\n' +
       '        if not os.path.exists(model_path): raise FileNotFoundError("Model: " + model_path)\n' +
-      '        if not os.path.exists(lbl): raise FileNotFoundError("Labels: " + lbl)\n' +
+      '        # 僅分類/偵測任務需要類別標籤；循線/表格型為回歸或預留，不依賴 labels.txt\n' +
+      '        if task_type in ("image_classification", "object_detection") and not os.path.exists(lbl):\n' +
+      '            raise FileNotFoundError("Labels: " + lbl)\n' +
       '        self.it = tflite.Interpreter(model_path=model_path)\n' +
       '        self.it.allocate_tensors(); self.i = self.it.get_input_details(); self.o = self.it.get_output_details()\n' +
       '        self.isf = self.i[0]["dtype"] == np.float32\n' +
-      '        self.ls = [line.strip() for line in open(lbl)]\n' +
+      '        self.ls = [line.strip() for line in open(lbl)] if os.path.exists(lbl) else []\n' +
       '        self.task_type = task_type\n' +
       '    \n' +
       '    def _preprocess(self, frame):\n' +

@@ -1,0 +1,97 @@
+<xml xmlns="https://developers.google.com/blockly/xml" platform="PC">
+  <variables>
+    <variable id="v_frame">frame</variable>
+    <variable id="v_result">result</variable>
+  </variables>
+  <block type="py_definition_zone" id="dz_line_infer" x="100" y="20">
+    <statement name="DEFS">
+      <block type="py_import" id="imp_cv2">
+        <field name="LIB">cv2</field>
+        <next>
+          <block type="py_ai_model_init" id="init_line_model">
+            <field name="MODEL_PATH">model/lines</field>
+            <field name="TASK_TYPE">line_following</field>
+            <field name="MODEL_TYPE">f32</field>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+  <block type="py_main" id="main_line_infer" x="100" y="260">
+    <statement name="DO">
+      <block type="py_ai_open_camera" id="cam_open">
+        <field name="INDEX">0</field>
+        <next>
+          <block type="py_loop_while" id="loop_infer">
+            <value name="CONDITION">
+              <block type="py_logic_boolean" id="cond_true">
+                <field name="BOOL">True</field>
+              </block>
+            </value>
+            <statement name="DO">
+              <block type="py_ai_read_frame" id="cam_read">
+                <field name="VAR" id="v_frame">frame</field>
+                <next>
+                  <block type="py_variables_set" id="set_result">
+                    <field name="VAR" id="v_result">result</field>
+                    <value name="VALUE">
+                      <block type="py_ai_model_predict" id="predict_line">
+                        <value name="FRAME">
+                          <block type="py_variables_get" id="get_frame">
+                            <field name="VAR" id="v_frame">frame</field>
+                          </block>
+                        </value>
+                      </block>
+                    </value>
+                    <next>
+                      <block type="py_coding_raw_statement" id="draw_arrow">
+                        <field name="TEXT">h, w = frame.shape[:2]; line = result.get('line', (0.0, 0.0, 0.0, 0.0)); cv2.arrowedLine(frame, (int(line[0]*w), int(line[1]*h)), (int(line[2]*w), int(line[3]*h)), (0, 255, 0), 4, tipLength=0.3)</field>
+                        <next>
+                          <block type="py_coding_raw_statement" id="draw_info">
+                            <field name="TEXT">cv2.putText(frame, 'dir:%s ang:%.1f off:%.2f' % (result.get('direction', 'none'), result.get('angle', 0.0), result.get('offset', 0.0)), (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)</field>
+                            <next>
+                              <block type="py_io_print" id="print_result">
+                                <value name="TEXT">
+                                  <block type="py_variables_get" id="get_result">
+                                    <field name="VAR" id="v_result">result</field>
+                                  </block>
+                                </value>
+                                <next>
+                                  <block type="py_ai_show_image" id="show_frame">
+                                    <value name="IMAGE">
+                                      <block type="py_variables_get" id="get_frame2">
+                                        <field name="VAR" id="v_frame">frame</field>
+                                      </block>
+                                    </value>
+                                    <next>
+                                      <block type="py_time_sleep" id="sleep_infer">
+                                        <value name="SECONDS">
+                                          <shadow type="py_math_number" id="num_sleep">
+                                            <field name="NUM">0.03</field>
+                                          </shadow>
+                                        </value>
+                                        <next>
+                                          <block type="py_ai_wait_key_break" id="break_q">
+                                            <field name="KEY">q</field>
+                                          </block>
+                                        </next>
+                                      </block>
+                                    </next>
+                                  </block>
+                                </next>
+                              </block>
+                            </next>
+                          </block>
+                        </next>
+                      </block>
+                    </next>
+                  </block>
+                </next>
+              </block>
+            </statement>
+          </block>
+        </next>
+      </block>
+    </statement>
+  </block>
+</xml>
