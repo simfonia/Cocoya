@@ -103,11 +103,13 @@ const PY_HARNESS = `
 import sys, json, types
 import numpy as np
 
-# stub cv2：只需 resize 回傳同尺寸陣列
+# stub cv2：只需 resize 與 cvtColor 回傳同尺寸陣列
 cv2 = types.ModuleType("cv2")
 def _resize(img, size):
     return np.zeros((size[1], size[0], 3), dtype=np.uint8)
 cv2.resize = _resize
+cv2.cvtColor = lambda img, code: img
+cv2.COLOR_BGR2RGB = 4
 sys.modules["cv2"] = cv2
 
 class FakeInterp:

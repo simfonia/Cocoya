@@ -10,8 +10,8 @@
         <field name="VALIDATION_SPLIT">0.2</field>
         <field name="AUGMENTATION">TRUE</field>
         <field name="DROPOUT">0.2</field>
-        <field name="LEARNING_RATE">0.0005</field>
-        <field name="EPOCHS">40</field>
+        <field name="LEARNING_RATE">0.001</field>
+        <field name="EPOCHS">50</field>
         <field name="BATCH_SIZE">32</field>
         <field name="BACKBONE">mobilenetv2</field>
         <field name="FINE_TUNE">FALSE</field>

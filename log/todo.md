@@ -826,7 +826,7 @@ VS Code 報「L44 必須是 {」「L52 預期為 at-rule 或選取器」，整�
 - [ ] **G3**：將兩支 POC 整理為正式 train template，共用 Dataset Spec parser；`py_ai_train_run` 加 `MODEL_ARCH=spatial_heatmap|yolov8n`，輸出架構 metadata、訓練報告、resume／取消處理；Spatial Head 多框輸入明確拒絕，YOLO 保留多框／多類別／空標籤。
 - [ ] **G4**：PC inference 依 metadata dispatch Spatial Keras/TFLite 或 YOLO `.pt` decoder，統一 `objects` 結果；Spatial Head 加 confidence threshold 與 no-object 測試；移除 Legacy `_detect()`／encoder／decoder。
 - [ ] **G5**：Blockly 提供雙架構選擇；Spatial Head found/confidence/bbox/center 積木；YOLO 巢狀多物件迴圈與欄位解析積木；更新 pan/tilt 快速／進階範例、中英文 help/toolbox。
-- [ ] **Legacy 移除前置**：先將 `line_following` 從共用 `build_detector_model()` 抽離並完成回歸測試，再刪除偵測 Legacy 模型、訓練參數及 decoder；全倉遷移內建 XML／測試／文件，不建相容層。
+- [x] **Legacy 移除前置（循線解耦完成）**：已建立獨立 line_model.py 並升級 Spatial Feature Head，解除物件偵測改版相依性 ✅（2026-11-15）。偵測 Legacy 刪除待 G3~G4 執行。
 - [ ] **G6**：完成乾淨 Windows 安裝、依賴／授權檢查、Spatial Head Float32 TFLite、YOLO PC 推論、Serial pan/tilt 整鏈與 50 分鐘課堂計時驗收；MCU 不執行模型。
 
 > **承接說明**：本節取代 2026-10-12「方向 A/B/C 與 MCU 可行性」的未決策狀態；舊條目保留作歷史，不再依其舊方向執行。近期先做 G0/G1；YOLO 發行打包須等授權 Gate 通過。
@@ -837,5 +837,15 @@ VS Code 報「L44 必須是 {」「L52 預期為 at-rule 或選取器」，整�
 - [x] **修復 `ui/src/modules/ai_inference/ai_inference_generators.js` `_ModelInference.__init__` labels 強制檢查**：僅 `image_classification` / `object_detection` 強制要求 `*_labels.txt`；`line_following` / `table` / `feature` 跳過並設 `self.ls = []`，避免循跡範例因缺 `lines_labels.txt` 拋出 `FileNotFoundError`。✅ （細節見 log/work/2026-11-12.md）
 - [x] **修正箭頭座標與翻轉順序**：移除推論後 `py_ai_flip_image`；改為推論後即畫箭頭（歸一化 0~1 乘上 `w/h` 轉為像素座標），避免模型輸入與顯示座標系不一致。✅ （細節見 log/work/2026-11-12.md）
 - [x] **驗證**：`ai_inference/*.test.mjs` 10/10 綠、`core_contract.test.mjs` 8/8 綠、ESLint 0 error、XML well-formed、純 CRLF。✅ （細節見 log/work/2026-11-12.md）
+
+### [2026-11-15] #task[循線模型升級與推論色域修復] ✅ 已完成
+
+- [x] **循線架構解耦與專用模型庫**：建立 `resources/train_templates/common/line_model.py`，解除物件偵測共用相依。✅ （細節見 log/work/2026-11-15.md）
+- [x] **升級 Spatial Feature Head**：改採 7x7 空間網格保留設計，破除均值塌陷（MSE 由 0.046 降至 0.002~0.003）。✅ （細節見 log/work/2026-11-15.md）
+- [x] **批次維度座標感知隨機水平翻轉**：`line_dataset.py` 與 `detector_dataset.py` 實作批次張量切片與左右座標對調，每樣本 50% 機率獨立鏡射。✅ （細節見 log/work/2026-11-15.md）
+- [x] **訓練 Callback 強化**：加入 EarlyStopping 與 ReduceLROnPlateau 自動調節與權重回滾。✅ （細節見 log/work/2026-11-15.md）
+- [x] **推論色彩空間對齊**：`ai_inference_generators.js` 的 `_preprocess` 補入 `cv2.COLOR_BGR2RGB`，解決推論端 BGR 與訓練端 RGB 色彩空間不一致。✅ （細節見 log/work/2026-11-15.md）
+- [x] **遠端 DGX 訓練機制盤點與知識庫更新**：釐清前端正則攔截鏈與 Smart Sync 樣板機制，更新 `log/mappings/AI_Inference.html` 與 `DatasetManager.html`。✅ （細節見 log/work/2026-11-15.md）
+
 
 

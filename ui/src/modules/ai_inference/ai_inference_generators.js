@@ -211,8 +211,9 @@ Blockly.Python.forBlock['py_ai_model_init'] = function(block, generator) {
       '        import numpy as np\n' +
       '        if frame is None or frame.size == 0:\n' +
       '            return None\n' +
+      '        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)\n' +
       '        s = self.i[0]["shape"][1]\n' +
-      '        d2 = cv2.resize(frame, (s, s))\n' +
+      '        d2 = cv2.resize(rgb, (s, s))\n' +
       '        d2 = d2.astype(np.float32)/255.0 if self.isf else d2.astype(np.uint8)\n' +
       '        d2 = np.expand_dims(d2, axis=0)\n' +
       '        return d2\n' +

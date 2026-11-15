@@ -45,6 +45,7 @@
         <li><code>confidence</code>：回歸模型無校正後信心值 → 固定 <b>1.0</b>（與 detector 同策略）。</li>
     </ul>
     <div class="warn"><strong>int8 模型輸出還原</strong>：int8（uint8 in/out）模型的輸出張量是 0~255，必須 <code>/255.0</code> 還原成 0~1。此還原在 <code>_classify</code>、<code>_detect</code>、<code>_follow_line</code> 三處**都必須**存在；<code>_detect</code> 先前缺漏（2026-09-19 修正），缺失會讓 bbox 值放大 255 倍而難以察覺。辨識方式：<code>self.isf</code>（輸入 dtype 是否 float32）。</div>
+    <div class="warn"><strong>推論色彩空間對齊 (RGB vs BGR)</strong>：OpenCV <code>VideoCapture.read()</code> 取得之影格預設為 <b>BGR</b> 通道，而訓練端（<code>tf.io.decode_image</code>）一律解碼為 <b>RGB</b>。推論前處理 <code>_preprocess</code> 必須執行 <code>cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)</code> 完成色域對齊，避免紅藍通道顛倒導致卷積特徵提取嚴重失真。</div>
 
     <h2>3. 兩個「循線」世界（重要觀念區分）</h2>
     <table>
@@ -78,8 +79,32 @@ motor_right = base - steer</pre>
         <li><b>方向符號</b>：馬達左右方向取決於車體接線，務必先以「車置中、線偏左」情境驗證符號再調增益。</li>
     </ul>
     <div class="warn"><strong>標註與訓練的一致性</strong>：模型輸出座標與標註同系（比例座標），因此資料集應固定同一顆鏡頭與安裝角度；若換鏡頭/位移，需重新採集或至少重標一批驗證。線段標註「兩點」不可改為單點——單點會失去方向（D 項）資訊，且與現行 Dense(4) 回歸頭不符。</div>
+    <div class="warn"><strong>循線模型架構：Spatial Feature Head（2026-11-12 升級）</strong>：循線是純空間定位任務。嚴禁在此類回歸任務中使用 <code>GlobalAveragePooling2D</code> (GAP)；GAP 會將 $7\times 7$ 空間網格平均化抹平，在 MSE 損失下引發嚴重的「向全域均值塌陷（Mean Collapse）」，使模型退化為永遠輸出中央固定值。現行 <code>common/line_model.py</code> 採用 $1\times 1$ Conv2D(64) 降維銜接 Flatten，保留完整的 3136 維空間特徵網格對應關係。</div>
 
-    <h2>5. 已知限制</h2>
+    <h2>5. 訓練執行架構（本地 vs 遠端 DGX 雙軌）</h2>
+    <p><code>py_ai_train_run</code> 積木支援「本機」與「遠端主機」兩種執行後端（<code>BACKEND</code> 欄位）：</p>
+    <table>
+        <tr><th>模式</th><th>觸發與執行鏈路</th><th>特性與產物</th></tr>
+        <tr>
+            <td><b>本地訓練 (local)</b></td>
+            <td>產出標準 Python 腳本，直接以本地子進程 <code>subprocess.Popen</code> 執行 <code>resources/train_templates/{task_type}/*_train.py</code>。</td>
+            <td>耗用本機 CPU/GPU，適合中小規模資料集或單機教學環境。直接產出模型與報告至本地 <code>model/{專案}/</code>。</td>
+        </tr>
+        <tr>
+            <td><b>遠端訓練 (remote)</b></td>
+            <td><b>由前端執行攔截器主導</b>：<code>ui/src/ui/base.js</code> 偵測到 <code>backend='remote'</code> 時**直接攔截執行**（不走本地 runCode），彈出 SSH 精靈向後端發送 <code>startRemoteTraining</code>。由 Python Sidecar（<code>remote_ssh.py</code>）建立 SSH/SFTP 連線並執行。</td>
+            <td>
+                <ul>
+                    <li><b>自動更新訓練樣板 (Smart Sync Templates)</b>：啟動時自動比對本地 <code>resources/train_templates/</code> 與遠端主機檔案之修改時間與大小，變更的自訂腳本（如 <code>line_model.py</code>）會自動打包上傳並遠端解壓覆蓋。</li>
+                    <li><b>資料集聰明同步 (Smart Sync Dataset)</b>：只上傳新增或變更之影像。</li>
+                    <li><b>Docker 容器環境</b>：於遠端啟動 GPU 容器（如 <code>cocoya-train-classifier</code> 或自動建立之別名容器），將模板掛載至 <code>/workspace</code> 進行高效加速訓練。</li>
+                    <li><b>產物回傳與本機轉換</b>：遠端訓練完成後，產出之 <code>.keras</code> 與報告透過 SFTP 自動下載回本地專案，再由本地轉換器產出最終之 <code>.tflite</code>。</li>
+                </ul>
+            </td>
+        </tr>
+    </table>
+
+    <h2>6. 已知限制</h2>
     <ul>
         <li><code>py_ai_train_run</code> 的巢狀欄位（驗證比／擴增／Dropout／LR／Epochs／Batch／Backbone／DNN 層／優化器／輸出格式）在 VSIX 與 Tauri 雙模下皆走同一產生器；修改時需同步 <code>resources/train_templates/</code> 的 argparse 介面。</li>
         <li>table 任務（表格資料）推論尚未實作，回傳固定值。</li>

@@ -81,7 +81,7 @@
     <p>相關函式（ui_layout.js）：<code>enterClassificationReviewMode()</code>、<code>loadClassificationImage()</code>、<code>renderClassificationControls()</code>、<code>updateClassifyProgress()</code>。未標註檢查（<code>checkUnannotatedOnExit</code> / 匯出前）僅對 bbox/line 模式生效。狀態機：<code>state.annotationMode.mode</code> = null | 'bbox' | 'line' | 'classification'。</p>
 
     <h2>3. 遠端對接與雲端 AI 傳輸 (Cloud Sync APIs)</h2>
-    <p><strong>狀態更新（2026-09-01，Stage 5 切片 5c / RemoteTrainingRefactor D2）</strong>：Dataset Manager 前端的遠端環境面板與雲端 ZIP 上傳按鈕已移除，以下指令在 DM 前端已無觸發點；<strong>後端（VSIX datasetOps / Tauri checkRemoteEnvironment、trainRemote）保留</strong>，由訓練主線使用。本節保留為歷史契約紀錄。</p>
+    <p><strong>狀態更新（2026-09-01，Stage 5 切片 5c / RemoteTrainingRefactor D2）</strong>：Dataset Manager 前端的遠端環境面板與雲端 ZIP 上傳按鈕已移除，以下指令在 DM 前端已無觸發點；<strong>後端（VSIX trainingOps / Tauri Bridge checkRemoteEnvironment、trainRemote）保留，由訓練主線（即 <code>py_ai_train_run</code> 積木選取 <code>backend='remote'</code> 時由前端攔截觸發）正式使用</strong>。詳細執行與 Smart Sync 模板自動同步機制見 <a href="AI_Inference.html">AI_Inference.html §5</a>。本節保留為指令傳輸契約紀錄。</p>
     <p>本模組於「雲端 AI 模式」開啟且連線至遠端主機時，原提供以下 Host/Webview 傳輸指令：</p>
     <table class="api-table">
         <thead>

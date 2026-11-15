@@ -394,6 +394,7 @@ C:\Workspace\cocoya\
 │   │   │   ├── detector_model.py      # [NEW] 物件偵測回歸模型（MobileNetV2 + Dense(4, sigmoid)）
 │   │   │   ├── table_dataset.py       # [M3] 表格 data.csv＋dataset.json 載入；分類分層/回歸隨機切分
 │   │   │   ├── line_dataset.py        # [M3][C2] 循線雙佈局：匯出 images/＋lines/ 或 DM 落盤（<label>＋dataset.json）；回歸隨機切分
+│   │   │   ├── line_model.py          # [2026-11-15] 循線專屬 Spatial Feature Head 模型（7x7 Conv2D + Flatten + Dense(4, sigmoid)），解耦 detector_model
 │   │   │   ├── training_loop.py       # 訓練迴圈、class weight、優化器選擇（共用）
 │   │   │   ├── model_export.py        # TFLite 轉換、模型儲存（共用）
 │   │   │   └── training_report.py     # 訓練曲線繪製、HTML 報告產生（共用）
@@ -406,7 +407,7 @@ C:\Workspace\cocoya\
 │   │   ├── feature/
 │   │   │   └── feature_train.py       # [M4] 特徵訓練（table 影分身；動態 num_features 依 use_z 108/162 維）
 │   │   └── line_following/
-│   │       └── line_following_train.py # [M3] 循線訓練（線段端點回歸，重用 detector 回歸頭＋報告）
+│   │       └── line_following_train.py # [M3][2026-11-15 升級] 循線訓練（線段端點回歸，改採 line_model Spatial Feature Head＋EarlyStopping/ReduceLROnPlateau＋報告）
 │   ├── dataset_manager/   # Dataset Manager 模組
 │   │   └── (訓練容器模板位於 resources/dataset_manager/train_templates/，2026-10-03 實查該目錄不存在，本條目已移除)
 │   ├── dataset_sidecar.py   # [P2-3 2026-10-03 拆分後 1206→499 行] Sidecar 主進程：stdin JSON 指令解析與分派、stdout 單一 JSON 回應契約（send_response/send_event/send_error）、exportDataset 與相機指令分派、遠端訓練狀態存取（_get/_set_remote_state）；遠端訓練與本地訓練已抽出至下列模組

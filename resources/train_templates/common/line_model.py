@@ -1,13 +1,12 @@
 """
 循線回歸模型建立模組（獨立於 detector_model，不共用 Legacy GAP+Dense(4) 實作）
 
-Phase A：GAP + Dense(4, sigmoid)，語意為線段端點 [x1, y1, x2, y2]（歸一化比例座標）。
-Phase B（預留）：升級為保留空間資訊的 Spatial Feature Head，
-                 輸入輸出格式不變，只改內部 head 結構。
-
-物件偵測升級計畫（ObjectDetectionUpgrade_MultiScale.md）施工原則 §2.8：
-  移除 Legacy detector_model 之前，循線模型建構路徑必須先獨立。
-  本模組是循線訓練的唯一模型建構入口，不依賴 detector_model.py。
+架構：Spatial Feature Head（2026-11-12 升級）
+  - 移除 GlobalAveragePooling2D，避免空間網格座標抹平導致均值塌陷（Mean Collapse）。
+  - Backbone (MobileNetV2) 輸出 (7, 7, 1280) 空間特徵圖。
+  - Conv2D(64, (1, 1), ReLU) 降維至 (7, 7, 64)。
+  - Flatten 展開為 3136 維特徵向量，保留 7x7 空間網格對應關係。
+  - Dense(128, ReLU) + Dropout + Dense(4, sigmoid) 輸出線段端點 [x1, y1, x2, y2]。
 """
 
 import tensorflow as tf
@@ -18,9 +17,9 @@ def build_line_model(backbone_name='mobilenetv2',
                      input_shape=(224, 224, 3), dropout_rate=0.2,
                      dnn_layers=None, fine_tune=False):
     """
-    建立循線回歸模型（線段端點回歸）。
+    建立循線回歸模型（線段端點回歸，具空間感知 Spatial Feature Head）。
 
-    架構（Phase A）：backbone → GlobalAveragePooling → FC layers → Dense(4, sigmoid)
+    架構：backbone → 1x1 Conv2D(64) → Flatten → FC layers → Dense(4, sigmoid)
 
     輸出 4 個值 [x1, y1, x2, y2]，均使用 sigmoid 活化函數限制在 0~1 範圍。
     語意為歸一化的線段端點座標，與 Dataset Manager 標註格式一致。
@@ -43,7 +42,12 @@ def build_line_model(backbone_name='mobilenetv2',
         # 避免小資料集下 BN moving 統計追不上微調漂移，造成部署/推論輸出塌陷。
         freeze_batchnorm_layers(base_model)
 
-    layers = [base_model, tf.keras.layers.GlobalAveragePooling2D()]
+    # Spatial Feature Head：以 1x1 卷積降維，並透過 Flatten 完整保留 7x7 空間位置網格
+    layers = [
+        base_model,
+        tf.keras.layers.Conv2D(64, (1, 1), padding='same', activation='relu', name='line_spatial_conv'),
+        tf.keras.layers.Flatten(name='line_spatial_flatten'),
+    ]
 
     # 自訂全連接層
     if dnn_layers:
