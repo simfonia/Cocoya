@@ -15,6 +15,9 @@
 
 ---
 ## [進行中 / 待辦]
+### [2026-11-16] 序列埠多視窗佔用衝突提示優化（方案二）🟢 已完成
+- [x] **SERIAL_WRITER_BUSY 引導優化**：serial_hub.py、deploy.rs 與 codeRun.js 三層收斂，明確指引使用者切換視窗點擊「停止」按鈕，去除生硬報錯前綴 ✅ （細節見 log/work/2026-11-16.md）
+
 ### [2026-10-23] DM 內嵌相機預覽（路徑 A：polling，取代 OpenCV 視窗）🟢 進行中
 > 計畫 SSOT：`log/plan/DatasetManagerEmbeddedCameraPreview.md`；前置：`log/plan/DatasetManagerLiveCollectionResourceLeak.md`
 - [x] **A-0**：備份原檔 + 跑基線（321/321 全綠；py_compile ×2、node --check ×3 均 OK）✅ （細節見 log/work/2026-10-23.md）

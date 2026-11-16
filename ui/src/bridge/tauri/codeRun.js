@@ -48,7 +48,13 @@ export async function runCode(_command, data) {
         }
     } catch (e) {
         window.CocoyaUI.hideLoadingModal();
-        this.alert('Run failed: ' + e);
+        const errStr = String(e || '');
+        if (errStr.includes('SERIAL_WRITER_BUSY:') || errStr.includes('SERIAL_PORT_BUSY:') || errStr.includes('SERIAL_PORT_BUSY_UPLOAD:')) {
+            const cleanMsg = errStr.replace(/^(?:Error:\s*)?[A-Z_]+:\s*/, '').trim();
+            this.alert(cleanMsg || errStr);
+        } else {
+            this.alert('Run failed: ' + e);
+        }
     }
 }
 

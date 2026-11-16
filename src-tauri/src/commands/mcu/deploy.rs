@@ -69,10 +69,16 @@ fn acquire_hub_upload_lease(
         let _ = child.wait();
         let code = line.trim().strip_prefix("__COCOYA_UPLOAD_LEASE_ERROR__:")
             .unwrap_or("SERIAL_PORT_BUSY");
-        let hint = if lang == "zh-hant" {
-            format!("序列埠 {} 目前由其他視窗或程式寫入／占用，請關閉佔用的視窗或序列埠程式後再試。", port)
+        let hint = if code == "SERIAL_WRITER_BUSY" {
+            if lang == "zh-hant" {
+                format!("序列埠 {} 目前正由另一個視窗（或程式）寫入中。\n若其他視窗正在執行 Python 程式（如相機預覽、AI 追蹤），請先切換至該視窗並點擊「停止」按鈕，然後再試一次。", port)
+            } else {
+                format!("Serial port {} is currently in use by another window or program.\nIf another window is running a Python program (e.g. camera preview, AI tracking), please switch to that window and click \"Stop\", then try again.", port)
+            }
+        } else if lang == "zh-hant" {
+            format!("序列埠 {} 目前由其他程序獨佔中，請稍候或關閉占用序列埠的程式後再試。", port)
         } else {
-            format!("Serial port {} is in use. Close the window or serial application using it, then try again.", port)
+            format!("Serial port {} is currently occupied. Please wait or close the occupying application, then try again.", port)
         };
         return Err(format!("{}: {}", code, hint));
     }

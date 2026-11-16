@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>2026-11-16 工作日誌</title>
+    <style>
+        body { font-family: "Microsoft JhengHei", sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; }
+        h2 { color: #2980b9; margin-top: 30px; }
+        h3 { color: #16a085; }
+        .section { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        code { background: #ecf0f1; padding: 2px 6px; border-radius: 3px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>📋 2026-11-16 工作日誌</h1>
+
+    <h2>本日異動摘要</h2>
+    <table>
+        <tr><th>項目</th><th>內容</th><th>檔案</th></tr>
+        <tr><td>序列埠佔用衝突引導文案優化</td><td>修正 serial_hub.py 的 SERIAL_WRITER_BUSY 錯誤文案，由模糊的「關閉視窗」改為明確引導「在該視窗點擊停止按鈕」</td><td>resources/deploy/serial_hub.py</td></tr>
+        <tr><td>MCU 部署衝突提示結構化</td><td>針對 SERIAL_WRITER_BUSY 提供專屬詳細引導，明確提醒其他視窗若正在執行 Python（如相機、AI）請先停止</td><td>src-tauri/src/commands/mcu/deploy.rs</td></tr>
+        <tr><td>前端提示介面優雅化</td><td>codeRun.js 攔截序列埠衝突錯誤代碼，去除生硬的例外前綴與代碼，以友善、清晰的排版直接呈現指引文案</td><td>ui/src/bridge/tauri/codeRun.js</td></tr>
+    </table>
+
+    <h2>技術深挖 (Technical Deep Dive)</h2>
+    <div class="section">
+        <h3>1. 序列埠「自動暫停寫入、上傳後自動續傳」的架構缺點評估</h3>
+        <p>通訊語意錯亂（MCU重啟後灌入舊協議指令）、即時串流嚴重延遲、雙向交握狀態機失步與假死感。</p>
+        <h3>2. 為何不能單純由 Serial Hub 端主動撤銷 B 的寫入？</h3>
+        <p>Hub 僅為 TCP 連線層，無法跨進程 kill OS 級 Python 行程；Webcam 會殘留占用，B 視窗 UI 亦無法復原。</p>
+        <h3>3. 方案二（優化明確指引）實作落地</h3>
+        <p>維持明確互斥，在各層提供精準明確之「切換至該視窗按停止」指引，並去除生硬報錯前綴。</p>
+    </div>
+
+    <h2>下次啟動方向 (Next Steps)</h2>
+    <div class="section">
+        <ul>
+            <li>保持現有架構穩定，待多視窗實機連線測試驗收。</li>
+        </ul>
+    </div>
+</body>
+</html>

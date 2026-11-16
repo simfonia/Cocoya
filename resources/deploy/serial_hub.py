@@ -167,7 +167,7 @@ def _start_hub(port, baudrate, role="proxy"):
 
 def _friendly_error(code):
     messages = {
-        "SERIAL_WRITER_BUSY": "序列埠已由另一個 Cocoya 視窗寫入；請關閉占用的視窗或序列埠程式後再試。 / The port has another writer. Close the occupying window or serial application, then retry.",
+        "SERIAL_WRITER_BUSY": "序列埠已由另一個 Cocoya 視窗寫入；請先在該視窗點擊「停止」按鈕或關閉占用程式後再試。 / The port is in use by another Cocoya window. Please click \"Stop\" in that window or close the occupying application, then retry.",
         "SERIAL_PORT_BUSY_UPLOAD": "序列埠正由上傳程序獨佔；請稍候再試。 / The port is reserved for upload. Retry after the upload finishes.",
         "SERIAL_HUB_CONFIG_MISMATCH": "同一序列埠的 Hub 已使用不同鮑率；請先停止該埠其他序列工作階段。 / The port's hub uses a different baud rate. Stop other serial sessions first.",
         "SERIAL_HUB_AUTH_FAILED": "無法驗證本機 Serial Hub。 / Local serial hub authentication failed.",
