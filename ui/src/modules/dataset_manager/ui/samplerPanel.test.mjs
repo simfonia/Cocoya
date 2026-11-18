@@ -69,19 +69,25 @@ function makeView() {
     };
 }
 
-test('背景列舉完成後只補下拉選單（渲染時為掃描中佔位）', async () => {
-    const h = makeHarness({ labelMap: {} });
-    const modal = { querySelector: () => null };
-    const view = makeView();
-    h.panel.setupLiveSamplerView(modal, view);
-    assert.match(view._html, /掃描攝影機中/);
-    assert.equal(h.calls.listed, 1);
-    assert.equal(h.rendered.length, 1);
-    await Promise.resolve();
-    await Promise.resolve();
-    const sel = view.getSelect('cam');
-    assert.ok(sel.innerHTML.includes('Camera 0'));
-    assert.equal(sel.disabled, false);
+test('背景列舉完成後只補下拉選單（渲染時為掃描中佔位）', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    try {
+        const h = makeHarness({ labelMap: {} });
+        const modal = { querySelector: () => null };
+        const view = makeView();
+        h.panel.setupLiveSamplerView(modal, view);
+        assert.match(view._html, /掃描攝影機中/);
+        // 進入 workspace 後等 CAMERA_LIST_FIRST_DELAY_MS (2000ms) 才首次呼叫 listCameras()
+        t.mock.timers.tick(2000);
+        await Promise.resolve();
+        assert.equal(h.calls.listed, 1);
+        assert.equal(h.rendered.length, 1);
+        const sel = view.getSelect('cam');
+        assert.ok(sel.innerHTML.includes('Camera 0'));
+        assert.equal(sel.disabled, false);
+    } finally {
+        t.mock.timers.tick(5000);
+    }
 });
 
 test('有標籤時預選首標籤（[T4] 字母序第一個，非鍵插入順序）', () => {
@@ -118,4 +124,38 @@ test('onLabelChange 既有標籤：僅選取，不重建結構面板', () => {
     assert.equal(h.calls.stats || 0, 0);
     assert.equal(h.calls.structure || 0, 0);
     assert.equal(h.calls.preview, 1);
+});
+
+test('掃描首次為空時會輪詢重試，直到攝影機出現或達上限', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    try {
+        const { Sampler, panel } = makeHarness({ labelMap: {}, t: (k) => k, showStatusMessage: () => {} });
+        let listed = 0;
+        Sampler.listCameras = () => {
+            listed += 1;
+            if (listed <= 2) {
+                Sampler.state.cameraList = [];
+                return Promise.resolve([]);
+            }
+            Sampler.state.cameraList = [{ id: 0, name: 'Camera 0 (640x480)' }];
+            return Promise.resolve(Sampler.state.cameraList);
+        };
+        const modal = { querySelector: () => null };
+        const view = makeView();
+        panel.setupLiveSamplerView(modal, view);
+        // 手動分步推進時鐘：2s 首次呼叫，然後每 1s 輪詢；第 3 次（4000ms）才回傳攝影機
+        // 每步後需 await Promise.resolve() 刷新 Promise 微工作，否則 .then() 不會在 tick 之間執行
+        t.mock.timers.tick(2000);
+        await Promise.resolve();
+        t.mock.timers.tick(1000);
+        await Promise.resolve();
+        t.mock.timers.tick(1000);
+        await Promise.resolve();
+        const sel = view.getSelect('cam');
+        assert.ok(sel.innerHTML.includes('Camera 0'));
+        assert.equal(Sampler.state.cameraList.length, 1);
+        assert.equal(listed, 3);
+    } finally {
+        t.mock.timers.tick(5000);
+    }
 });

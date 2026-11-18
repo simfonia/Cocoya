@@ -56,14 +56,16 @@ export function buildModalTemplate({ t, optionList, projectTypes, sourceModes })
                     </label>
                     <label>
                         <span>${t('SOURCE_MODE', '來源模式')}</span>
-                        <select name="sourceMode">${optionList(sourceModes, 'file')}</select>
+                        <div class="dataset-source-mode-radios" role="radiogroup">
+                            ${sourceModeRadioList(sourceModes, sourceModes[0] || 'file')}
+                        </div>
                     </label>
 
                     <div class="dataset-panel-divider"></div>
 
                     <label>
                         <span>${t('PROJECT_NAME', '資料集名稱')}</span>
-                        <input name="projectName" value="dataset" placeholder="${t('PROJECT_NAME_PLACEHOLDER', '僅限英數與下劃線')}">
+                        <input name="projectName" value="dataset_name" placeholder="${t('PROJECT_NAME_PLACEHOLDER', '僅限英數與下劃線')}">
                         <span style="font-size: calc(10px * var(--dsm-font-scale, 1)); color: #999; margin-top: 2px; display: block;">${t('PROJECT_NAME_HINT', '* 僅限英文、數字與下劃線 (用於雲端路徑)')}</span>
                     </label>
                     
@@ -122,4 +124,20 @@ export function buildModalTemplate({ t, optionList, projectTypes, sourceModes })
             </div>
         </section>
     `;
+}
+
+/**
+ * 產生來源模式單選按鈕群組 HTML（橫向排列，顯示原文）。
+ * 純函式，無 DOM 副作用，供 buildModalTemplate 與 ui_layout.js rebuildSourceModeOptions 共用。
+ * @param {string[]} values 允許的來源模式清單（來自 typePolicy.allowedModes）
+ * @param {string} selected 預設/目前選中的模式值
+ * @returns {string} radio 群組 HTML 字串
+ */
+export function sourceModeRadioList(values, selected) {
+    return values
+        .map((value) => {
+            const checked = value === selected ? ' checked' : '';
+            return `<label class="dataset-source-mode-radio-item"><input type="radio" name="sourceMode" value="${value}"${checked}><span>${value}</span></label>`;
+        })
+        .join('');
 }

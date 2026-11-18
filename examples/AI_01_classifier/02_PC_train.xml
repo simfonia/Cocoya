@@ -4,7 +4,7 @@
       <block type="py_ai_train_run" id="Y8]DzD?F[#5O_V_}^Ye0">
         <field name="TASK_TYPE">image_classification</field>
         <field name="BACKEND">local</field>
-        <field name="DATASET_DIR">dataset/classifier_dataset</field>
+        <field name="DATASET_DIR">dataset/dataset_name</field>
         <field name="SYNC_MODE">smart</field>
         <field name="VALIDATION_SPLIT">0.2</field>
         <field name="AUGMENTATION">TRUE</field>

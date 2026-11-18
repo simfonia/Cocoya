@@ -48,8 +48,33 @@ export function createSamplerPanel({
         // 自動列舉可用攝影機：先渲染「掃描中」佔位，背景掃完後只補下拉選單
         // （listCameras 逐 index 試開需 3~5s，不可阻塞首次渲染；回來後若面板已被重建則放棄補寫）
         if (Sampler.state.cameraList.length === 0) {
-            // 背景列舉完成後只補下拉選單（不重建整面，避免焦點跳動＋閉包失效）
-            refreshCameraSelect(samplerView, Promise.resolve(Sampler.listCameras()));
+            // 預設 live 時立即進入 workspace，sidecar 可能尚未完全就緒。
+            // 進入 workspace 後等 CAMERA_LIST_FIRST_DELAY_MS 再首次呼叫 listCameras()，
+            // 避免第一次請求就因 sidecar 未就緒而失敗；之後若回傳空，
+            // pollCameras 內部會每 CAMERA_LIST_RETRY_DELAY_MS 輪詢重試直到攝影機出現。
+            const CAMERA_LIST_FIRST_DELAY_MS = 2000;
+            const CAMERA_LIST_RETRY_DELAY_MS = 1000;
+            const renderCameraSelect = () => {
+                const sel = samplerView.querySelector('#dataset-sampler-camera-select');
+                if (sel) {
+                    sel.innerHTML = Sampler.state.cameraList.map((c) =>
+                        '<option value="' + c.id + '"' +
+                        (c.id === Sampler.state.selectedDeviceId ? ' selected' : '') + '>' +
+                        c.name + '</option>'
+                    ).join('');
+                    sel.disabled = false;
+                }
+            };
+            const pollCameras = () => {
+                Sampler.listCameras().then(() => {
+                    if (Sampler.state.cameraList.length === 0) {
+                        setTimeout(pollCameras, CAMERA_LIST_RETRY_DELAY_MS);
+                    } else {
+                        renderCameraSelect();
+                    }
+                });
+            };
+            setTimeout(pollCameras, CAMERA_LIST_FIRST_DELAY_MS);
         }
     }
 

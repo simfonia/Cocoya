@@ -75,6 +75,7 @@
     "DSM_SAMPLER_PLACEHOLDER": "📷 即時影像",
     "DSM_SAMPLER_PLACEHOLDER_SUB": "請執行下方【啟動預覽】",
     "DSM_SAMPLER_SCANNING": "⏳ 掃描攝影機中...",
+    "DSM_CAMERA_NOT_FOUND": "📷 未偵測到攝影機，請先重新掃描",
     "DSM_SAMPLER_CAMERA": "📷 攝影機:",
     "DSM_SAMPLER_CAMERA_READY": "已就緒 · 點擊拍攝快照",
     "DSM_SAMPLER_REFRESH_CAMERAS": "重新掃描攝影機",

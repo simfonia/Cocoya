@@ -17,6 +17,14 @@
 ## [進行中 / 待辦]
 ### [2026-11-16] 序列埠多視窗佔用衝突提示優化（方案二）🟢 已完成
 - [x] **SERIAL_WRITER_BUSY 引導優化**：serial_hub.py、deploy.rs 與 codeRun.js 三層收斂，明確指引使用者切換視窗點擊「停止」按鈕，去除生硬報錯前綴 ✅ （細節見 log/work/2026-11-16.md）
+- [x] **DM P2 預設資料集名稱**：ui/modal.js 與 ui_layout.js 將左欄資料集名稱輸入框及初始 spec/匯入 fallback/預設名稱檢查/表單重置/重設 spec 預設值由 "dataset" 統一改為 "dataset_name" ✅ （細節見 log/work/2026-11-16.md）
+- [x] **DM P2 來源模式單選 UI**：modal.js、ui_layout.js、form.js、dataset_manager.css、modal.test.mjs 將左欄資料來源模式由下拉清單改為 Radio 單選 UI（橫向排列、顯示原文）✅ （細節見 log/work/2026-11-16.md）
+- [x] **DM P2 來源模式 Radio 聯動修正**：dataset_manager.css 與 ui_layout.js 將 sourceMode radio 文字移至選項圈右方，並對所有 radio 綁定 `onchange`，切換模式後觸發 `refreshDynamicPanels()`/`refreshPreview()`，使匯入按鈕與預覽區正確切換 file/live ✅ （細節見 log/work/2026-11-16.md）
+- [x] **DM P2 Radio 文字位置與切換聯動修正**：dataset_manager.css 加 `width: auto` 讓 radio 文字顯示在選項圈右方；ui_layout.js 改用 modal `change` 事件委派，避免 `innerHTML` 重建後事件丟失，切換 file/live 後匯入按鈕與預覽區可正確聯動 ✅ （細節見 log/work/2026-11-16.md）
+- [x] **DM P2 Radio 與文字仍兩行修正**：dataset_manager.css 將 radio item 選擇器改為 `.dataset-source-panel .dataset-source-mode-radio-item` 具體度 (0,2,0)，覆蓋 `.dataset-source-panel label {display:block}`，使 radio 與文字顯示在同一行 ✅ （細節見 log/work/2026-11-16.md）
+- [x] **DM P2 Radio focus ring 粉紅橢圓修正**：dataset_manager.css focus 規則加 `:not([type="radio"])` 排除 radio input，點擊後不再出現粉紅橢圓，radio 保留原生選中藍圈 ✅ （細節見 log/work/2026-11-16.md）
+- [x] **DM P2 來源模式預設改為 live**：modal.js 預設參數改為 `sourceModes[0] || 'file'`；並修正 `rebuildSourceModeOptions` 不再根據舊 DOM checked 值保留（根本原因：類型切換時讀取舊的 file 值並因 file 在新清單中而保留），總是選第一個可用模式 `modes[0]`，使圖像/特徵類型預設選 live，table/serial 僅有 file 則保持 file ✅ （細節見 log/work/2026-11-16.md）
+- [x] **DM P2 攝影機清單自動重試**：samplerPanel.js 進入 workspace 時立即呼叫 `listCameras()`（相容同步 mock 與 sidecar 已就緒情況），若回傳空則 2 秒後再呼叫一次，之後每 1 秒輪詢直到攝影機出現，自動補下拉選單，避免預設 live 進入 workspace 時攝影機清單長時間為空需手動重新整理 ✅ （細節見 log/work/2026-11-16.md）
 
 ### [2026-10-23] DM 內嵌相機預覽（路徑 A：polling，取代 OpenCV 視窗）🟢 進行中
 > 計畫 SSOT：`log/plan/DatasetManagerEmbeddedCameraPreview.md`；前置：`log/plan/DatasetManagerLiveCollectionResourceLeak.md`

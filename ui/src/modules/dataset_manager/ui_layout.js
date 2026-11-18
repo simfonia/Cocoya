@@ -59,7 +59,7 @@ import { createImportUseCases } from './application/importUseCases.js';
 import { createExportUseCases } from './application/exportUseCases.js';
 import { reconcileRenamedPaths } from './application/labelRenameReconcile.js';
 import { createStatusMessageUI } from './ui/statusMessage.js';
-import { buildModalTemplate } from './ui/modal.js';
+import { buildModalTemplate, sourceModeRadioList } from './ui/modal.js';
 import { createFormPresenter } from './ui/form.js';
 import { createGridScrollManager } from './ui/thumbnails.js';
 import { createClassificationController } from './ui/classification.js';
@@ -77,7 +77,7 @@ const MODAL_ID = 'dataset-manager-modal';
 
 
 const datasetStore = new DatasetStore(createInitialDatasetState(
-    DatasetSpec.createDefault({ name: 'dataset', type: 'table', mode: 'file' })
+    DatasetSpec.createDefault({ name: 'dataset_name', type: 'table', mode: 'file' })
 ));
 const state = datasetStore.getState();
 
@@ -359,13 +359,11 @@ function syncSpecFromUI(includeSamples = true) {
  */
 function rebuildSourceModeOptions(projectType) {
     const modal = getModal();
-    const sourceSelect = modal?.querySelector('[name="sourceMode"]');
-    if (!sourceSelect) return;
+    const radiosContainer = modal?.querySelector('.dataset-source-mode-radios');
+    if (!radiosContainer) return;
     const modes = allowedModes(projectType);
-    const currentMode = sourceSelect.value;
-    const nextMode = modes.includes(currentMode) ? currentMode : modes[0];
-    sourceSelect.innerHTML = optionList(modes, nextMode);
-    sourceSelect.value = nextMode;
+    const nextMode = modes[0];
+    radiosContainer.innerHTML = sourceModeRadioList(modes, nextMode);
 }
 
 /**
@@ -400,8 +398,8 @@ function applyLoadedProgress(spec) {
         }
     }
     if (spec.data_source && spec.data_source.mode) {
-        const modeInput = getModal()?.querySelector('[name="sourceMode"]');
-        if (modeInput) modeInput.value = spec.data_source.mode;
+        const modeInput = getModal()?.querySelector(`[name="sourceMode"][value="${spec.data_source.mode}"]`);
+        if (modeInput) modeInput.checked = true;
     }
 
     // 2. 依 image_path 將 annotations / label 套回重新掃描出的 images[]
@@ -427,7 +425,7 @@ function applyLoadedProgress(spec) {
     //   兩者不同時若寫 savedType，state.spec 會被改回 dataset.json 的類型，
     //   即使下拉已修回 lockedType，統計/篩選/匯出仍依錯的類型運作
     //   （2026-10-13 實測：匯入影像分類資料夾卻以 table 模式開啟）。
-    const projectName = getFormValue('projectName') || (spec.project && spec.project.name) || 'dataset';
+    const projectName = getFormValue('projectName') || (spec.project && spec.project.name) || 'dataset_name';
     state.spec = new DatasetSpec({
         project: {
             name: projectName,
@@ -595,7 +593,7 @@ async function reconcileProjectName(derivedName, sourcePath) {
     const currentName = nameInput ? (nameInput.value || '').trim() : '';
 
     // (1) 首次/仍為預設或空白 → 自動帶入來源名稱，並同步 baseDir
-    if (!currentName || currentName === 'dataset') {
+    if (!currentName || currentName === 'dataset_name') {
         if (nameInput) nameInput.value = derivedName;
         if (dirInput) dirInput.value = `dataset/${derivedName}/`;
         setNameWarning(false);
@@ -1863,17 +1861,16 @@ function bindModalEvents(modal) {
         typeSelect.title = t('TYPE_LOCKED_TIP', '類型已鎖定');
     }
 
-    const sourceSelect = modal.querySelector('[name="sourceMode"]');
-    if (sourceSelect) {
-        sourceSelect.onchange = () => {
+    modal.addEventListener('change', (event) => {
+        if (event.target && event.target.name === 'sourceMode') {
             // 切換模式（例如從 Live 切換到 File）時，應確實關閉攝影機與連拍
             Sampler.stopCamera(true);
             Sampler.stopBurst();
 
             refreshDynamicPanels();
             refreshPreview();
-        };
-    }
+        }
+    });
 
     modal.querySelector('#dataset-add-column').onclick = () => addColumn({
         name: `feature_${getColumnsFromUI().length + 1}`,
@@ -2143,7 +2140,7 @@ function resetSessionData(options = {}) {
             typeSelect.title = keepLockedType ? t('TYPE_LOCKED_TIP', '類型已鎖定') : '';
         }
         const nameInput = modal.querySelector('[name="projectName"]');
-        if (nameInput) nameInput.value = 'dataset';
+        if (nameInput) nameInput.value = 'dataset_name';
         const descInput = modal.querySelector('[name="description"]');
         if (descInput) descInput.value = '';
         const fi = modal.querySelector('#dataset-file-input');
@@ -2152,7 +2149,7 @@ function resetSessionData(options = {}) {
         rebuildSourceModeOptions(lockedType);
     }
 
-    state.spec = DatasetSpec.createDefault({ name: 'dataset', type: lockedType, mode: allowedModes(lockedType)[0] });
+    state.spec = DatasetSpec.createDefault({ name: 'dataset_name', type: lockedType, mode: allowedModes(lockedType)[0] });
 
     // 釋放上一會話的相機預覽 blob，避免記憶體洩漏
     if (Sampler.state.lastPreviewUrl) {
