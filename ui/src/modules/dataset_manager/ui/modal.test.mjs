@@ -59,16 +59,20 @@ test('t 函式被呼叫並填入 i18n 結果（非原始 key）', () => {
     assert.ok(html.includes('[EXPORT:匯出資料集]'), 'EXPORT 應經 t() 翻譯');
 });
 
-test('optionList 用於 projectType / sourceMode 下拉', () => {
+test('optionList 用於 projectType 下拉，sourceMode 用單選按鈕群組', () => {
     const html = buildModalTemplate(deps);
     assert.ok(html.includes('<select name="projectType">'), 'projectType 下拉存在');
-    assert.ok(html.includes('<select name="sourceMode">'), 'sourceMode 下拉存在');
+    // 來源模式改為單選按鈕群組（不再用 select）
+    assert.ok(html.includes('type="radio"'), 'HTML 含來源模式單選按鈕');
+    assert.ok(html.includes('name="sourceMode"'), 'HTML 含 sourceMode 單選按鈕');
     // 專案類型選項皆列於 HTML（由 optionList 注入）
     for (const type of ['table', 'object_detection', 'line_following']) {
         assert.ok(html.includes(`value="${type}"`), `HTML 含 ${type} option`);
     }
-    // 來源模式（sourceModes）也由 optionList 注入
-    assert.ok(html.includes('value="file"'), 'HTML 含 file 來源模式 option');
+    // 來源模式（sourceModes）也由單選按鈕群組注入
+    assert.ok(html.includes('value="file"'), 'HTML 含 file 來源模式選項');
+    // 無殘留 select 下拉（sourceMode 不再用 select）
+    assert.ok(!html.includes('<select name="sourceMode">'), 'sourceMode 不應為下拉選單');
 });
 
 test('無殘留未解析的模板佔位符 ${', () => {

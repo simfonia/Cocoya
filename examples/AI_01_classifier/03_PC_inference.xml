@@ -9,7 +9,7 @@
         <field name="LIB">cv2</field>
         <next>
           <block type="py_ai_model_init" id="ZNXsCDVS3xfW;ngq2tGO">
-            <field name="MODEL_PATH">model/classifier_dataset</field>
+            <field name="MODEL_PATH">model/dataset_name</field>
             <field name="TASK_TYPE">image_classification</field>
             <field name="MODEL_TYPE">f32</field>
             <next>

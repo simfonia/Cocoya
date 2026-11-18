@@ -49,7 +49,17 @@ export function createSamplerPanel({
         // （listCameras 逐 index 試開需 3~5s，不可阻塞首次渲染；回來後若面板已被重建則放棄補寫）
         if (Sampler.state.cameraList.length === 0) {
             // 背景列舉完成後只補下拉選單（不重建整面，避免焦點跳動＋閉包失效）
-            refreshCameraSelect(samplerView, Promise.resolve(Sampler.listCameras()));
+            refreshCameraSelect(samplerView, Sampler.listCameras()).then(() => {
+                // 若第一次列舉為空，可能是 sidecar 尚未完全就緒（預設 live 時立即進入 workspace）
+                // 2 秒後重試一次，避免使用者需手動重新整理
+                if (Sampler.state.cameraList.length === 0) {
+                    setTimeout(() => {
+                        Sampler.listCameras().then((cams2) => {
+                            refreshCameraSelect(samplerView, Promise.resolve(cams2));
+                        });
+                    }, 2000);
+                }
+            });
         }
     }
 

@@ -119,3 +119,31 @@ test('onLabelChange 既有標籤：僅選取，不重建結構面板', () => {
     assert.equal(h.calls.structure || 0, 0);
     assert.equal(h.calls.preview, 1);
 });
+
+test('掃描首次為空時會輪詢重試，直到攝影機出現或達上限', async (t) => {
+    t.mock.timers.enable({ apis: ['setTimeout'] });
+    try {
+        const { state, Sampler, panel } = makeHarness({ labelMap: {}, t: (k) => k, showStatusMessage: () => {} });
+        let listed = 0;
+        Sampler.listCameras = () => {
+            listed += 1;
+            if (listed <= 2) {
+                Sampler.state.cameraList = [];
+                return Promise.resolve([]);
+            }
+            Sampler.state.cameraList = [{ id: 0, name: 'Camera 0 (640x480)' }];
+            return Promise.resolve(Sampler.state.cameraList);
+        };
+        const modal = { querySelector: () => null };
+        const view = makeView();
+        panel.setupLiveSamplerView(modal, view);
+        t.mock.timers.tick(3200);
+        await Promise.resolve();
+        const sel = view.getSelect('cam');
+        assert.ok(sel.innerHTML.includes('Camera 0'));
+        assert.equal(Sampler.state.cameraList.length, 1);
+        assert.equal(listed, 3);
+    } finally {
+        t.mock.timers.tick(5000);
+    }
+});

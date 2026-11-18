@@ -10,7 +10,12 @@ export function createFormPresenter({ getModalRoot = () => null } = {}) {
     function getFormValue(name) {
         const modal = getModalRoot();
         const field = modal?.querySelector(`[name="${name}"]`);
-        return field ? field.value : '';
+        if (!field) return '';
+        if (field.type === 'radio') {
+            const checked = modal?.querySelector(`[name="${name}"]:checked`);
+            return checked ? checked.value : '';
+        }
+        return field.value;
     }
 
     function getColumnsFromUI() {

@@ -75,6 +75,7 @@
     "DSM_SAMPLER_PLACEHOLDER": "📷 Live preview",
     "DSM_SAMPLER_PLACEHOLDER_SUB": " Please run the 'Start Preview' button below to start.",
     "DSM_SAMPLER_SCANNING": "Scanning cameras...",
+    "DSM_CAMERA_NOT_FOUND": "No camera detected, please scan again",
     "DSM_SAMPLER_CAMERA": "📷 Camera:",
     "DSM_SAMPLER_CAMERA_READY": "Ready · Click to capture",
     "DSM_SAMPLER_REFRESH_CAMERAS": "Rescan cameras",

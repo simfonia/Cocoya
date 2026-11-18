@@ -171,6 +171,33 @@
     color: #666666;
 }
 
+/* 來源模式單選按鈕群組（橫向，顯示原文） */
+.dataset-source-mode-radios {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 2px;
+}
+
+.dataset-source-panel .dataset-source-mode-radio-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-size: calc(12px * var(--dsm-font-scale));
+    color: var(--dsm-text);
+    user-select: none;
+}
+.dataset-source-mode-radio-item input {
+    margin: 0;
+    width: auto;
+}
+.dataset-source-panel .dataset-source-mode-radio-item span {
+    display: inline;
+    margin: 0;
+}
+
 .dataset-source-panel input,
 .dataset-source-panel select,
 .dataset-source-panel textarea,
@@ -211,10 +238,10 @@ body.cocoya-dark-mode .dataset-panel-divider  {
     margin-bottom: 8px;
 }
 
-.dataset-source-panel input:focus,
+.dataset-source-panel input:focus:not([type="radio"]),
 .dataset-source-panel select:focus,
 .dataset-source-panel textarea:focus,
-.dataset-column-row input:focus,
+.dataset-column-row input:focus:not([type="radio"]),
 .dataset-column-row select:focus {
     border-color: var(--dsm-brand);
     box-shadow: 0 0 0 2px var(--dsm-focus-ring);
