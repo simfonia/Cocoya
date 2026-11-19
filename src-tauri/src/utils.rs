@@ -234,6 +234,37 @@ pub fn get_train_templates_path(handle: &AppHandle) -> PathBuf {
     }
 }
 
+
+pub fn get_models_path(handle: &AppHandle) -> PathBuf {
+    fn normalize(p: PathBuf) -> PathBuf {
+        let s = p.to_string_lossy().to_string();
+        match s.strip_prefix(r"\\?\") {
+            Some(stripped) => PathBuf::from(stripped),
+            None => p,
+        }
+    }
+
+    // 開發模式：優先使用專案根目錄的 models
+    let mut dev_path = std::env::current_dir().unwrap();
+    if dev_path.ends_with("src-tauri") {
+        dev_path.pop();
+    }
+    dev_path.push("models");
+    if dev_path.exists() {
+        return normalize(dev_path);
+    }
+
+    // 生產模式：從 Resource 目錄解析 resources/models
+    let resource_path = handle
+        .path()
+        .resolve("resources/models", tauri::path::BaseDirectory::Resource);
+
+    match resource_path {
+        Ok(p) if p.exists() => normalize(p),
+        _ => dev_path // 最後 fallback
+    }
+}
+
 /// 判斷目前 examples 是否為 repo 開發模式原始檔（可直接開啟修改、不需複製）
 /// 注意：不可用「examples 目錄存在」判斷——Release 安裝目錄（C:\Program Files\Cocoya）
 /// 也內含打包的 examples，會被誤判為 dev。改以 repo 標記（src-tauri 目錄）判定。

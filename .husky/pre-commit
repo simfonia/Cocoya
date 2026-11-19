@@ -95,7 +95,7 @@ const STD = new Set(["json","os","sys","io","csv","re","time","tempfile","shutil
 const KNOWN_IGNORE = new Set(["common","camera_service","remote_tflite","local_training",
     "remote_ssh","dataset_io","media_pipe_service","training_loop","classifier_dataset",
     "detector_dataset","line_dataset","table_dataset","feature_dataset","cocoya_shared",
-    "image_formats","deploy"]);
+    "image_formats","deploy","object_detection"]);
 
 const req = fs.readFileSync("requirements-dev.txt", "utf8");
 const declared = new Set();

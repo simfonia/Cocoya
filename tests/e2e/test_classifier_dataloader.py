@@ -143,7 +143,7 @@ def test_classifier_dataloader(tmp_path):
         with open(os.path.join(dp, 'labels.txt'), 'w', encoding='utf-8') as f:
             f.write('ball\n')
         d_train, _, d_labels, d_counts = load_detector_dataset(
-            dp, img_size=64, batch_size=1, validation_split=0)
+            dp, img_size=64, batch_size=1, validation_split=0, target_format='bbox')
         dx, dy, dlo, dhi = one_batch(d_train)
         assert dlo is not None and dhi is not None, 'detector 空資料集（測試夾具有誤）'
         check(d_labels == ['ball'] and d_counts == {'ball': 2}, f"detector 只收 bmp: {d_counts}")

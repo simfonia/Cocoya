@@ -206,6 +206,15 @@ Blockly.Python.forBlock['py_ai_model_init'] = function(block, generator) {
       '        self.isf = self.i[0]["dtype"] == np.float32\n' +
       '        self.ls = [line.strip() for line in open(lbl)] if os.path.exists(lbl) else []\n' +
       '        self.task_type = task_type\n' +
+      '        self.hm_idx = None\n' +
+      '        self.sz_idx = None\n' +
+      '        if self.task_type == "object_detection":\n' +
+      '            for od in self.o:\n' +
+      '                shp = od.get("shape", [])\n' +
+      '                if len(shp) == 4 and shp[-1] == 1:\n' +
+      '                    self.hm_idx = od["index"]\n' +
+      '                elif len(shp) == 4 and shp[-1] == 2:\n' +
+      '                    self.sz_idx = od["index"]\n' +
       '    \n' +
       '    def _preprocess(self, frame):\n' +
       '        import numpy as np\n' +
@@ -230,22 +239,43 @@ Blockly.Python.forBlock['py_ai_model_init'] = function(block, generator) {
       '        lb = self.ls[cid] if cid < len(self.ls) else "class_" + str(cid)\n' +
       '        return {"type": "image_classification", "label": lb, "confidence": conf}\n' +
       '    \n' +
-      '    def _detect(self, frame):\n' +
-      '        # 物件偵測推論（單一目標回歸）\n' +
+      '    def _detect(self, frame, conf_threshold=0.3):\n' +
+      '        # 物件偵測推論（Spatial Head 空間特徵解碼）\n' +
       '        import numpy as np\n' +
       '        d2 = self._preprocess(frame)\n' +
       '        if d2 is None:\n' +
-      '            return {"type": "object_detection", "objects": []}\n' +
+      '            return {"type": "object_detection", "objects": [], "confidence": 0.0}\n' +
       '        self.it.set_tensor(self.i[0]["index"], d2); self.it.invoke()\n' +
-      '        out = self.it.get_tensor(self.o[0]["index"])[0]\n' +
-      '        out = out.astype(np.float32)/255.0 if not self.isf else out\n' +
-      '        # out = [cx, cy, w, h] (0~1)\n' +
-      '        cx, cy, w, h = float(out[0]), float(out[1]), float(out[2]), float(out[3])\n' +
-      '        # 轉換為 (x1, y1, x2, y2)\n' +
-      '        x1, y1 = cx - w/2, cy - h/2\n' +
-      '        x2, y2 = cx + w/2, cy + h/2\n' +
-      '        label = self.ls[0] if self.ls else "object"\n' +
-      '        return {"type": "object_detection", "objects": [{"label": label, "confidence": 1.0, "bbox": (x1, y1, x2, y2)}]}\n' +
+      '        hm_idx = getattr(self, "hm_idx", None)\n' +
+      '        sz_idx = getattr(self, "sz_idx", None)\n' +
+      '        if hm_idx is not None and sz_idx is not None:\n' +
+      '            hm = self.it.get_tensor(hm_idx)[0]\n' +
+      '            sz = self.it.get_tensor(sz_idx)[0]\n' +
+      '            if not self.isf:\n' +
+      '                hm = hm.astype(np.float32) / 255.0\n' +
+      '                sz = sz.astype(np.float32) / 255.0\n' +
+      '            cy, cx = np.unravel_index(np.argmax(hm[..., 0]), (28, 28))\n' +
+      '            conf = float(hm[cy, cx, 0])\n' +
+      '            if conf < conf_threshold:\n' +
+      '                return {"type": "object_detection", "objects": [], "confidence": conf}\n' +
+      '            cx_norm = (cx + 0.5) / 28.0\n' +
+      '            cy_norm = (cy + 0.5) / 28.0\n' +
+      '            w = float(sz[cy, cx, 0])\n' +
+      '            h = float(sz[cy, cx, 1])\n' +
+      '            x1 = max(0.0, min(1.0, cx_norm - w / 2.0))\n' +
+      '            y1 = max(0.0, min(1.0, cy_norm - h / 2.0))\n' +
+      '            x2 = max(0.0, min(1.0, cx_norm + w / 2.0))\n' +
+      '            y2 = max(0.0, min(1.0, cy_norm + h / 2.0))\n' +
+      '            label = self.ls[0] if self.ls else "object"\n' +
+      '            return {"type": "object_detection", "objects": [{"label": label, "confidence": conf, "bbox": (x1, y1, x2, y2)}], "confidence": conf}\n' +
+      '        else:\n' +
+      '            out = self.it.get_tensor(self.o[0]["index"])[0]\n' +
+      '            out = out.astype(np.float32)/255.0 if not self.isf else out\n' +
+      '            cx, cy, w, h = float(out[0]), float(out[1]), float(out[2]), float(out[3])\n' +
+      '            x1, y1 = max(0.0, min(1.0, cx - w/2)), max(0.0, min(1.0, cy - h/2))\n' +
+      '            x2, y2 = max(0.0, min(1.0, cx + w/2)), max(0.0, min(1.0, cy + h/2))\n' +
+      '            label = self.ls[0] if self.ls else "object"\n' +
+      '            return {"type": "object_detection", "objects": [{"label": label, "confidence": 1.0, "bbox": (x1, y1, x2, y2)}], "confidence": 1.0}\n' +
       '    \n' +
       '    def _follow_line(self, frame):\n' +
       '        # 循線偵測推論（線段端點回歸）\n' +
