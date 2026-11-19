@@ -827,20 +827,20 @@ VS Code 報「L44 必須是 {」「L52 預期為 at-rule 或選取器」，整�
 - [ ] **實機待測**：VSIX + Tauri 開啟範例，確認 toolbox 分類／拖曳／產碼對等
 - [ ] **已知限制**：迴圈變數固定命名不可巢狀；標籤英文名，中文顯示需另備對照字典
 
-### [2026-11-06] 物件偵測雙架構升級：Keras Spatial Head + YOLO（下一階段待辦）
+### [2026-11-19] 物件偵測架構升級：Keras Spatial Head 優先升級（YOLO 方案 B 後續擴充）🟢 進行中
 > **施工計畫 SSOT**：`log/plan/ObjectDetectionUpgrade_MultiScale.md`（完整階段、Gate、驗收及風險）。
-> **使用者決策**：Spatial Head 與 YOLO 並存；Legacy GAP + Dense(4) 偵測架構棄用；Cocoya 尚未發佈，不做舊模型／XML runtime 相容。
-> **POC 證據**：`examples/AI_02_detector_pan_tilt/model/ping_pong_keras_poc_v2/comparison.json`（Spatial Head mean IoU 0.6556，訓練約 168 秒）；`model/ping_pong_yolo_poc/comparison.json`（YOLO 多物件 POC，CPU 訓練約 38.8 分鐘）。兩者都沿用單一連拍序列隨機切分，尚未證明跨場景泛化。
-- [ ] **G0**：拍板 Spatial Head 為 50 分鐘課程快速預設、YOLO 為進階多物件路徑；決定 YOLO 授權／套件與權重取得方式、Windows CPU 支援及效能門檻。
-- [ ] **G1**：建立多個拍攝 session 的含球／無球資料；按 session 分組建立固定 train/validation/test manifest，檢查標註、負樣本、座標與類別分布。
-- [ ] **G2**：以同一 evaluator 比較 Spatial Head 與 YOLO；Spatial Head 驗單目標 IoU、IoU50、center error、空場誤報及完整課堂流程是否 ≤50 分鐘；YOLO 驗 mAP、precision/recall、延遲與模型大小。獨立場景 test 達門檻才整合。
-- [ ] **G3**：將兩支 POC 整理為正式 train template，共用 Dataset Spec parser；`py_ai_train_run` 加 `MODEL_ARCH=spatial_heatmap|yolov8n`，輸出架構 metadata、訓練報告、resume／取消處理；Spatial Head 多框輸入明確拒絕，YOLO 保留多框／多類別／空標籤。
-- [ ] **G4**：PC inference 依 metadata dispatch Spatial Keras/TFLite 或 YOLO `.pt` decoder，統一 `objects` 結果；Spatial Head 加 confidence threshold 與 no-object 測試；移除 Legacy `_detect()`／encoder／decoder。
-- [ ] **G5**：Blockly 提供雙架構選擇；Spatial Head found/confidence/bbox/center 積木；YOLO 巢狀多物件迴圈與欄位解析積木；更新 pan/tilt 快速／進階範例、中英文 help/toolbox。
-- [x] **Legacy 移除前置（循線解耦完成）**：已建立獨立 line_model.py 並升級 Spatial Feature Head，解除物件偵測改版相依性 ✅（2026-11-15）。偵測 Legacy 刪除待 G3~G4 執行。
-- [ ] **G6**：完成乾淨 Windows 安裝、依賴／授權檢查、Spatial Head Float32 TFLite、YOLO PC 推論、Serial pan/tilt 整鏈與 50 分鐘課堂計時驗收；MCU 不執行模型。
-
-> **承接說明**：本節取代 2026-10-12「方向 A/B/C 與 MCU 可行性」的未決策狀態；舊條目保留作歷史，不再依其舊方向執行。近期先做 G0/G1；YOLO 發行打包須等授權 Gate 通過。
+> **使用者決策（2026-11-19）**：
+> 1. 先實作 Keras Spatial Head，全面替換舊 Legacy GAP + Dense(4)，徹底根治均值塌陷；Cocoya 尚未發佈，不做舊模型／XML runtime 相容。
+> 2. `py_ai_train_run` 積木不增加 `MODEL_ARCH` 欄位，現有「物件偵測」底層直接升級為 Spatial Head，保持入門積木簡潔直覺。
+> 3. YOLO 留待後續進階擴充，並拍板採「方案 B（另立專用進階多物件訓練積木）」實作，不污染基礎積木。
+> **POC 證據**：`examples/AI_02_detector_pan_tilt/model/ping_pong_keras_poc_v2/comparison.json`（Spatial Head mean IoU 0.6556，CPU 訓練僅 168 秒，Float32 TFLite 5.03MB）。
+- [x] **G0 決策與授權拍板**：拍板 Spatial Head 為 50 分鐘課程快速預設，全面替換 Legacy；`py_ai_train_run` 維持單純；YOLO 留待後續以方案 B 獨立積木擴充；保證 Windows CPU-only 與各自分架構門檻 ✅（2026-11-19）
+- [x] **Legacy 移除前置（循線解耦完成）**：已建立獨立 line_model.py 並升級 Spatial Feature Head，解除物件偵測改版相依性 ✅（2026-11-15）。
+- [x] **S1（資料集與標籤生成）**：升級 `resources/train_templates/common/detector_dataset.py`，支援多框/負樣本過濾、生成 stride-8（28x28）Gaussian Heatmap + Size map 標籤、批次維度座標感知隨機水平翻轉；新建 `test_spatial_detector_dataset.py` 守門 5 測全綠 ✅（細節見 log/work/2026-11-19.md）
+- [x] **S2（Spatial Head 模型與訓練模板）**：升級 `resources/train_templates/common/detector_model.py` 與 `object_detection/object_detection_train.py`，以 Spatial Head（stride-8/16 融合 + Conv2D + heatmap/size_map 雙輸出）替換舊 GAP，套用 Focal Loss + Masked L1 Loss、EarlyStopping 與指標評估（IoU/IoU50/FPRate），產出 Float32 TFLite；新建 `test_spatial_detector_model.py` 守門 5 測全綠 ✅（細節見 log/work/2026-11-19.md）
+- [x] **S3（推論解碼器）**：更新 `ui/src/modules/ai_inference/ai_inference_generators.js`，實作 Spatial Head 解碼（Heatmap 峰值 + Size map 還原 bbox + 0.3 置信度門檻空場景抑制），支援 int8 反量化與 fallback 向後相容，統一輸出 `objects` 結構；新建 `spatial_detector_inference.test.mjs` 守門 2 測全綠 ✅（細節見 log/work/2026-11-19.md）
+- [x] **S4（Pan/Tilt 範例與課堂全流程驗收）**：更新 `examples/AI_02_detector_pan_tilt` 範例 XML（`MODEL_OUTPUT` 改為 `f32`）與 README 文件（修正檔名引用與說明），實測以真實資料集 `ping_pong` 完成端到端 Spatial Head 訓練（CPU 耗時僅 2.5 分鐘，產出 Float32 TFLite、標籤、曲線與 HTML 報告）與 Python 即時推論鏈驗證，確保 50 分鐘課堂流程順暢 ✅（細節見 log/work/2026-11-19.md）
+- [ ] **Backlog（YOLO 進階擴充，方案 B）**：後續評估以獨立進階多物件訓練積木引進 YOLOv8n。
 
 ### [2026-11-12] #task[cocoya 循跡推論範例] ✅ 已完成
 

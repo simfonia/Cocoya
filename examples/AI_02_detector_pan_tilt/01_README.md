@@ -66,29 +66,31 @@ dataset/detector_dataset/
 
 ### 2. 模型訓練（使用積木）
 
-開啟 `02_模型訓練.xml` 並執行：
+開啟 `02_PC_train.xml` 並執行：
 
 1. 使用 `py_ai_train_run` 設定訓練參數：
-   - dataset: `dataset/detector_dataset`
-   - task_type: `detector`
-   - epochs: 10（可增加）
-   - model_output: `int8`（量化給 MCU 用）
+   - dataset: `dataset/ping_pong`
+   - task_type: `object_detection`
+   - epochs: 30（具備 EarlyStopping，CPU 訓練約 2~3 分鐘）
+   - model_output: `f32`（推薦 Float32 TFLite，提供 PC 推論最佳精度）
 
 2. 模型將自動儲存至：
-   - `model/detector_dataset.tflite`
-   - `model/detector_dataset_labels.txt`
+   - `model/ping_pong_f32.tflite`
+   - `model/ping_pong_labels.txt`
+   - `model/ping_pong_training_report.html`
 
 ### 3. PC 端推論（使用積木）
 
-開啟 `03_PC端推論控制.xml` 並執行：
+開啟 `03_PC_inference.xml` 並執行：
 
 1. 使用 `py_ai_model_init` 載入模型：
-   - 路徑："model/detector_dataset"
-   - 類型：detector
+   - 路徑："model/ping_pong"
+   - 類型：object_detection
+   - 模型規格：f32
 
 2. 使用 OpenCV 積木開啟攝影機
 
-3. 使用 `py_ai_model_predict` 進行即時推論
+3. 使用 `py_ai_model_predict` 進行即時推論（Spatial Head 空間特徵解碼器，具備 0.3 信心度門檻之空場景目標抑制）
 
 4. 使用 `py_ai_get_bbox_center` 取得目標中心點
 
@@ -98,7 +100,7 @@ dataset/detector_dataset/
 
 ### 4. MCU 端雲台控制（使用積木）
 
-開啟 `04_MCU雲台追蹤.xml` 並燒錄至 πCar：
+開啟 `04_MCU_tracking.xml` 並燒錄至 πCar：
 
 1. 使用 Serial 積木接收角度指令
 
@@ -110,15 +112,16 @@ dataset/detector_dataset/
 
 ### 1. 資料集收集與標註
 - 透過 Dataset Manager UI 操作（無需積木）
-- 物件偵測需先選類別再畫框
+- 物件偵測需先選類別再畫框，亦可收集無目標之背景影像作為負樣本（抑制誤報）
 
 ### 2. 訓練積木
-- `py_ai_train_run`：執行訓練（task_type=detector）
-- 訓練完成後自動儲存 int8 TFLite 模型
+- `py_ai_train_run`：執行訓練（task_type=object_detection）
+- 底層採用 MobileNetV2 雙尺度 (Stride 8+16) 特徵融合與 Spatial Head (Heatmap + Size map)
+- 訓練完成後自動儲存 Float32 TFLite 模型與訓練報告
 
 ### 3. PC 端推論積木
 - `py_ai_model_init`：載入模型與標籤
-- `py_ai_model_predict`：回傳偵測結果
+- `py_ai_model_predict`：回傳偵測結果（Spatial Head 熱圖峰值解碼，空場景自動過濾）
 - `py_ai_get_bbox`：取得邊界框 (x1, y1, x2, y2)
 - `py_ai_get_bbox_center`：取得中心點 (cx, cy)
 - `serial_write`：發送角度給 MCU
@@ -145,6 +148,4 @@ dataset/detector_dataset/
 - **模型載入失敗**：確認 model/ 目錄存在且有正確檔案
 - **標註框不顯示**：確認已選擇類別再畫框
 - **伺服馬達不動**：確認 GP14 接線與伺服馬達供電
-- **偵測不準**：增加標註數量，確保每類別 100+ 張
-</｜｜DSML｜｜>
-</write_to_file>
+- **偵測不準**：增加標註數量，確保每類別 50~100+ 張並包含不同角度與距離

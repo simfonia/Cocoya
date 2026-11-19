@@ -54,7 +54,7 @@
     "DSM_VALIDATE_FAIL_STATUS": "❌ 驗證發現 %1 個錯誤，請查看右欄訊息框",
     "DSM_BACK_TO_MANAGE": "← 回資料集管理",
     "DSM_ANNOTATION_LINE": "線段",
-    "DSM_ANNOTATION_EMPTY": "尚未有標註",
+    "DSM_ANNOTATION_EMPTY": "尚未有標籤",
     "DSM_ANNOTATION_CLASS": "類別",
     "DSM_ANNOTATION_LIST": "標註列表",
     "DSM_ANNOTATION_PROGRESS": "進度: %1/%2 張",

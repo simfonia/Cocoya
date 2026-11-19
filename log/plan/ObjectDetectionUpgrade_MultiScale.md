@@ -1,29 +1,34 @@
-# 物件偵測升級施工計畫：Keras Spatial Head + YOLO 雙架構
+# 物件偵測升級施工計畫：Keras Spatial Head 優先升級（YOLO 方案 B 後續擴充）
 
-建立：2026-10-12  重寫：2026-11-05  修訂：2026-11-06  狀態：雙架構 POC 已完成，正式施工待 Gate 0 拍板
+建立：2026-10-12  重寫：2026-11-05  修訂：2026-11-06  調整：2026-11-19  狀態：使用者拍板定案（Spatial Head 優先，YOLO 方案 B 後續擴充）
 
 ## 0. 決策摘要
 
-### 建議方向
+### 建議方向與最新拍板（2026-11-19 使用者決策）
 
-依使用者決策，Cocoya 的 `object_detection` **同時提供兩種新架構：Keras Spatial Head 與 YOLO；全面棄用目前 Legacy GAP + Dense(4) 單框回歸，不實作舊架構相容層**。兩種新架構共用任務類型、資料來源與推論結果契約，但訓練 head、依賴、artifact 和解碼各自獨立。Spatial Head 是 50 分鐘課堂流程的預設快速路徑；YOLO 是多物件／進階路徑，POC 的 CPU 訓練約 38.8 分鐘，尚未計資料前處理、下載及推論驗收，**不可承諾完整教學流程能在 50 分鐘內完成**。先完成獨立場景 benchmark 與授權決策，再將雙架構接入 Cocoya 訓練／推論流程。
+1. **分階段推進，Spatial Head 優先**：
+   - 先專注實作 **Keras Spatial Head**（Stride-8/16 空間特徵融合 + Heatmap + Size map），全面棄用 Legacy GAP + Dense(4) 單框回歸（破除均值塌陷）。
+   - Spatial Head CPU 訓練僅 168 秒（約 2.8 分鐘），產出 Float32 TFLite（約 5MB），完全滿足 50 分鐘課堂內「採集→標註→訓練→PC 即時推論追蹤」之全流程。
+2. **Blockly 入門積木保持簡潔（不增欄位）**：
+   - 現有 `py_ai_train_run` 的「物件偵測（`object_detection`）」底層直接升級為 Spatial Head，**不額外增加 `MODEL_ARCH` 欄位**，讓學生與教師無負擔上手。
+3. **YOLO 列為後續擴充，採方案 B 實作**：
+   - YOLOv8n CPU 訓練耗時約 38.8 分鐘，定位為進階多物件路徑。
+   - 拍板採**「方案 B：另立專用進階多物件訓練積木」**（或擴充工具箱），不將龐大且不同屬性的超參數（imgsz, weights 等）污染現有基礎積木。
+   - 外部依賴政策：Cocoya 安裝包不直接打包 Ultralytics 套件與預訓練權重，採外部選配依賴。
 
-### 本階段包含
+### 本階段包含（Spatial Head 核心升級）
 
-- Dataset Manager 的 `object_detection` 標註資料供兩種架構共用；converter 保留每張圖完整 annotation、無物件影像與類別映射。
-- 以固定、可追溯的場景分組切分建立 benchmark，同時評估 Spatial Head 和 YOLO；Legacy 僅作已完成的歷史研究 baseline，正式流程不再產生或載入 Legacy 模型。
-- 在同一訓練入口提供 `spatial_heatmap` 與 `yolov8n` 架構選擇，產生各自的模型、metadata、訓練紀錄與報告。
-- PC 推論依模型 metadata dispatch 至 Keras/TFLite Spatial Head 或 YOLO `.pt`，並回傳共同的 `objects` 結果結構。
-- 新增多物件解析積木；Pan/Tilt 範例預設使用 Spatial Head 快速路徑，YOLO 路徑作為進階選項。
-- 驗證 PC 即時影像與 Serial 傳框流程；MCU 只接收座標／控制值，不在 MCU 執行任一模型。
+- `detector_dataset.py` 升級：支援完整 annotations 讀取、無物件負樣本、產生 28×28 Gaussian Heatmap 與 Size map 標籤、批次維度座標感知隨機水平翻轉。
+- `detector_model.py` 升級：實作 MobileNetV2 空間特徵融合（Stride-8 block_6 + Stride-16 block_13 雙尺度融合）+ 雙輸出頭（Heatmap, Size map）。
+- `object_detection_train.py` 訓練模板重構：引入 Focal Loss（熱圖中心焦點損失）+ Masked L1 Size Loss + EarlyStopping + ReduceLROnPlateau，導出 Float32 TFLite。
+- PC 端推論解碼器實作：`ai_inference_generators.js` 實作 Heatmap argmax 峰值定位 + Size map 尺寸還原 + confidence threshold 門檻抑制空場景，統一輸出 `objects = [{"label", "confidence", "bbox"}]` 契約。
+- 驗證 PC 即時影像與 Serial 傳框（Pan/Tilt 範例恢復高精準追蹤）；MCU 只接收座標／控制值。
 
 ### 本階段不包含
 
-- 自行撰寫 YOLO 的 anchor、target assignment、loss、head 或 NMS；YOLO 路徑使用經授權的 Ultralytics 實作。
-- YOLO int8／TFLite Micro／ESP32-S3／RP2040 部署與效能承諾；Spatial Head 的 Float32 TFLite 可列入 PC 驗證，MCU 部署仍另案。
-- 改寫 `line_following` 模型。它與現有偵測共用部分 Legacy 建模碼；應先將循線模型建立入口抽離，再移除偵測 Legacy，確保循線不受影響。
-- Legacy 舊模型、舊推論 decoder、舊訓練 API 的 runtime 相容性不在範圍內。Cocoya 尚未發佈，既有範例 XML／產物可以同步遷移或重生。
-- 未經獨立場景驗證就宣稱產品級準確率，或把本次同一連拍序列的結果當泛化證據。
+- YOLOv8n 正式訓練與推論接入（列入 Backlog，待後續方案 B 獨立積木實作）。
+- YOLO int8／TFLite Micro／ESP32-S3／RP2040 部署與效能承諾。
+- Legacy 舊模型、舊推論 decoder、舊訓練 API 的相容層（Cocoya 尚未發佈，徹底淘汰 Legacy）。
 
 ## 1. 背景、現況與實驗證據
 
@@ -265,12 +270,17 @@
 - 已知本機環境：Python 3.11.6、Ultralytics 8.3.228、PyTorch 2.1.1+cpu、CPU-only；訓練使用 YOLOv8n 預訓練權重與 640 輸入。
 - 以上模型只屬研究 POC，不是正式產品支援承諾；結果不能取代 Phase 1 的跨場景測試。
 
-## 8. 待使用者拍板
+## 8. 使用者決策紀錄（2026-11-19 拍板）
 
-1. 已決策：**Spatial Head 與 YOLO 同時存在；棄用 Legacy；不做舊模型／XML runtime 相容**。所有未發佈內建範例隨架構升級一併更新。
-2. 是否接受 Spatial Head 作為 50 分鐘課程的預設路徑，YOLO 作為進階路徑（訓練本身 POC 約 38.8 分鐘，完整課程不適合即席訓練）？
-3. Cocoya 發行物是否允許 YOLO 選配依賴 Ultralytics／PyTorch？接受何種授權及權重取得方式？若不接受，是否仍保留 YOLO 教師／使用者自行安裝模式，或改以不隨產品發行的研究選項？
-4. 第一版支援 CPU-only Windows 嗎？可接受的訓練耗時、模型大小、啟動耗時、即時推論 FPS 與最低硬體門檻是多少？
-5. 是否接受本計畫 benchmark 驗收方式，並由使用者收集具獨立場景來源的 test 資料？
+1. **實作順序**：先實作 **Keras Spatial Head**，作為 50 分鐘課程唯一且極速的單目標預設路徑；YOLO 留待後續進階擴充。
+2. **積木設計方案**：
+   - 現有 `py_ai_train_run` 維持單純，**不新增 `MODEL_ARCH` 欄位**，物件偵測底層直接改用 Spatial Head。
+   - YOLO 後續實作採**「方案 B：另立專用進階多物件訓練積木」**，不破壞入門教學積木結構。
+3. **部署與相容性**：首版為 PC 推論 + MCU Serial 控制；徹底棄用 Legacy GAP 單框回歸，不做舊模型／XML runtime 相容。
+4. **依賴政策**：Ultralytics / PyTorch 不隨 Cocoya 安裝包直接散布，維持外部選配依賴。
 
-**可立即繼續資料品質、空場景標註、benchmark 與雙架構 UI/模型介面原型；YOLO 發行打包需先通過授權 Gate。Spatial Head 的 Legacy 清理前置是先抽離 line_following，再移除 Legacy detector。**
+**目前立即執行順序**：
+- **S1**：升級 `detector_dataset.py`（Heatmap + Size map 生成、無物件負樣本、批次座標感知水平翻轉）。
+- **S2**：升級 `detector_model.py` 與 `object_detection_train.py`（Spatial Head + 雙損失函數 + Float32 TFLite 匯出）。
+- **S3**：升級推論解碼器（Heatmap 峰值與尺寸還原、confidence 門檻過濾空場景）。
+- **S4**：Pan/Tilt 範例全鏈驗收。

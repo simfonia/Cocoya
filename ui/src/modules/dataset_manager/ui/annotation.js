@@ -434,7 +434,7 @@ export function createAnnotationController({
                 `;
             }
             return '';
-        }).join('') || '<p style="color: #999;">' + t('ANNOTATION_EMPTY', '尚未有標註') + '</p>';
+        }).join('') || '<p style="color: #999;">' + t('ANNOTATION_EMPTY', '尚未有標籤') + '</p>';
 
         // 綁定點擊高亮事件
         list.querySelectorAll('.dataset-annotation-item').forEach(item => {

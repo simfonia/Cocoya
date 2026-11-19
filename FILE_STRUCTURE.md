@@ -209,7 +209,8 @@ C:\Workspace\cocoya\
 │   │   │   │   ├── ai_inference_generators.js  # 訓練/推論積木 Python 產生器（多候選路徑搜尋，候選 0 讀 COCOYA_TRAIN_TEMPLATES env）；注入 _ModelInference 類，含 _follow_line 線段端點回歸與 int8 輸出還原
 │   │   │   │   ├── toolbox.xml                 # 工具箱（訓練／推論／結果解析）
 │   │   │   │   ├── i18n/                       # zh-hant.js / en.js 文案（key 需對等）
-│   │   │   │   └── line_inference.test.mjs     # [2026-09-19] 循線推論契約測試（stub interpreter 實跑 _follow_line/_detect 含 int8 還原）
+│   │   │   │   ├── line_inference.test.mjs     # [2026-09-19] 循線推論契約測試（stub interpreter 實跑 _follow_line/_detect 含 int8 還原）
+│   │   │   │   └── spatial_detector_inference.test.mjs # [2026-11-19] 物件偵測 Spatial Head 即時推論契約測試（2 測：峰值座標與尺寸還原、conf < 0.3 空場景目標抑制）
 │   │   │   ├── ai_coco/              # [NEW 2026-10-14] COCO 物件偵測積木模組 (MediaPipe Tasks EfficientDet-Lite0，高階教學封裝)
 │   │   │   │   ├── ai_coco_blocks.js       # 積木定義 5 塊（init/detect/for_each_target/target_field/close）
 │   │   │   │   ├── ai_coco_generators.js   # Python 產生器（VIDEO 模式＋timestamp 遞增＋雙層 threshold 過濾＋bbox 拆解）
@@ -353,7 +354,7 @@ C:\Workspace\cocoya\
 │       ├── utils.rs       # [NEW] 路徑與資源解析工具（含 examples AppData 播種 ensure_examples_seeded/copy_dir_merge）
 │       └── commands/      # [NEW] 分類指令處理器
 │           ├── mod.rs       # 指令集匯出
-│           ├── python.rs    # Python 執行與環境診斷（注入 UTF-8 編碼與 COCOYA_TRAIN_TEMPLATES 環境變數）；install_python_module/abort_install_module 為套件安裝專用命令（獨立進程 + install-module-* 事件 + kill_tree）
+│           ├── python.rs    # Python 執行與環境診斷（注入 UTF-8 編碼、COCOYA_TRAIN_TEMPLATES 與 COCOYA_MODELS 預訓練權重環境變數）；install_python_module/abort_install_module 為套件安裝專用命令（獨立進程 + install-module-* 事件 + kill_tree）
 │           ├── file/            # [P2-5 2026-10-03 拆分：原 file.rs 925 行 → 7 檔] 檔案讀寫、備份與鎖定。子模組：manifest（core_manifest.json/toolbox 讀取）、anchor（ProjectAnchor＋release_session）、examples（範例路徑守衛、複製開啟、seed 還原）、openfile（open_file/open_examples/restore_examples）、savefile（save_file＋examples 唯讀保護＋跨視窗檔案鎖）、backup（auto_backup/check_startup_backup/clear_backup/reject_recovery/delete_file）、dataset（DM 支援：標籤改名、匯入掃描、標註進度存讀、選檔）
 │           ├── mcu/            # [P2-5 2026-10-03 拆分：原 mcu.rs 1018 行 → 7 檔] 硬體通訊、韌體與序列埠。子模組：board（序列埠列舉＋VID/PID 板辨識）、deploy（deploy_mcu 韌體上傳）、monitor（序列埠監看＋視窗焦點交接 set_window_focus）、firmware（erase_filesystem＋esptool/UF2 燒錄）、raw_dump（ProjectRoot/raw_dump.log 路徑解析與環境注入）、stream（輸出背壓與時間窗聚合）
 │           │   └── ⚠ Tauri 邊界：`#[tauri::command]` 產生的 `__cmd__<fn>` 巨集無法經 pub use 跨模組轉出，故 lib.rs 的 generate_handler! 必用完整子模組路徑（如 commands::mcu::board::get_serial_ports）
@@ -382,6 +383,8 @@ C:\Workspace\cocoya\
 │       ├── gesture_model.keras # Keras 原始模型
 │       ├── gesture_model.tflite # TFLite Float32 模型
 │       └── labels.txt         # 分類標籤
+├── models/                # [NEW 2026-11-19] 預訓練模型權重目錄（離線備援，已納入 tauri.conf.json bundle.resources）
+│   └── ImageNet/          # MobileNetV2 等 ImageNet 預訓練權重檔（離線訓練備援）
 ├── resources/             # 靜態資源
 │   ├── deploy_mcu.py      # [OPTIMIZED] 具備硬體感知與分塊寫入的部署工具
 │   ├── extension_icon.png # 插件圖示
@@ -390,8 +393,8 @@ C:\Workspace\cocoya\
 │   │   │   ├── __init__.py            # 模組包
 │   │   │   ├── classifier_dataset.py  # 分類資料集載入、驗證、分割、擴增
 │   │   │   ├── classifier_model.py    # 分類模型建立、backbone 管理、FC 層自訂
-│   │   │   ├── detector_dataset.py    # [C2] 雙佈局載入：YOLO 匯出包（images/+labels/）或 DM 落盤（<label>/*.jpg＋dataset.json），bbox 解析
-│   │   │   ├── detector_model.py      # [NEW] 物件偵測回歸模型（MobileNetV2 + Dense(4, sigmoid)）
+│   │   │   ├── detector_dataset.py    # [C2][2026-11-19] 物件偵測資料集載入（雙佈局支援、Stride-8 Gaussian Heatmap 28x28x1 與 Size map 28x28x2 生成、負樣本保留、批次特徵圖隨機水平翻轉）
+│   │   │   ├── detector_model.py      # [2026-11-19 升級] 物件偵測 Spatial Head 模型（MobileNetV2 Stride-8/16 雙尺度融合 + 雙輸出頭；Modified CenterNet Focal Loss + Masked L1 Size Loss；離線 ImageNet 本地備援與防呆提示）
 │   │   │   ├── table_dataset.py       # [M3] 表格 data.csv＋dataset.json 載入；分類分層/回歸隨機切分
 │   │   │   ├── line_dataset.py        # [M3][C2] 循線雙佈局：匯出 images/＋lines/ 或 DM 落盤（<label>＋dataset.json）；回歸隨機切分
 │   │   │   ├── line_model.py          # [2026-11-15] 循線專屬 Spatial Feature Head 模型（7x7 Conv2D + Flatten + Dense(4, sigmoid)），解耦 detector_model

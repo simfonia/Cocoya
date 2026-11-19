@@ -35,7 +35,7 @@ export function createLabelManager({
             + '<select class="dataset-label-manager-select">'
             + (entries.length > 0
                 ? entries.map(([name, id]) => '<option value="' + id + '">' + escapeHtml(name) + '</option>').join('')
-                : '<option value="-1" disabled selected>' + t('ANNOTATION_EMPTY', '尚未有標註') + '</option>')
+                : '<option value="-1" disabled selected>' + t('ANNOTATION_EMPTY', '尚未有標籤') + '</option>')
             + '</select>'
             + '<button type="button" class="dataset-icon-btn" data-action="add" title="' + t('ANNOTATION_CLASS_ADD', '新增') + '">+</button>'
             + '<button type="button" class="dataset-icon-btn" data-action="edit" title="' + t('ANNOTATION_CLASS_EDIT', '編輯') + '">✏️</button>'

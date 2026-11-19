@@ -79,12 +79,19 @@ def test_detector_layout_b(tmp_path, write_image):
     check(set(class_counts.keys()) <= set(labels),
           f"class_counts 鍵為標籤名且合法: {class_counts}")
 
-    # 取一批驗證解碼（路徑為 <label>/ 絕對路徑）
+    # 取一批驗證解碼（路徑為 <label>/ 絕對路徑，支援 Spatial 目標與 Bbox 目標）
     bx, by = next(iter(val_ds if val_ds is not None else train_ds))
-    check(bx.shape[-1] == 3 and by.shape[-1] == 4,
-          f"batch 解碼 OK image={bx.shape} bbox={by.shape}")
-    check(float(np.min(by)) >= 0.0 and float(np.max(by)) <= 1.0,
-          f"bbox 全在 [0,1]: min={float(np.min(by)):.3f} max={float(np.max(by)):.3f}")
+    if isinstance(by, (tuple, list)):
+        b_hm, b_sz = by
+        check(bx.shape[-1] == 3 and b_hm.shape[-1] == 1 and b_sz.shape[-1] == 3,
+              f"batch 解碼 OK image={bx.shape} heatmap={b_hm.shape} size={b_sz.shape}")
+        check(float(np.min(b_hm)) >= 0.0 and float(np.max(b_hm)) <= 1.0,
+              f"heatmap 全在 [0,1]: min={float(np.min(b_hm)):.3f} max={float(np.max(b_hm)):.3f}")
+    else:
+        check(bx.shape[-1] == 3 and by.shape[-1] == 4,
+              f"batch 解碼 OK image={bx.shape} bbox={by.shape}")
+        check(float(np.min(by)) >= 0.0 and float(np.max(by)) <= 1.0,
+              f"bbox 全在 [0,1]: min={float(np.min(by)):.3f} max={float(np.max(by)):.3f}")
 
 
 def test_line_dataset_layout_b(tmp_path, write_image):

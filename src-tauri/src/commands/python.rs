@@ -123,6 +123,8 @@ pub async fn run_python(
         .env("COCOYA_SERIAL_HUB_SCRIPT", serial_hub_path);
     // 訓練模板路徑權威注入（release 從 Resource 解析，dev 從專案根），供產生碼 train_model() 使用
     cmd.env("COCOYA_TRAIN_TEMPLATES", crate::utils::get_train_templates_path(&handle));
+    // 預訓練模型路徑權威注入（release 從 Resource/resources/models 解析，dev 從專案根 models 解析）
+    cmd.env("COCOYA_MODELS", crate::utils::get_models_path(&handle));
     cmd.arg("-u") // Unbuffered mode
         .arg(&script_path)
         .current_dir(&work_dir)

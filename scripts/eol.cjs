@@ -30,7 +30,7 @@ const ROOT = path.resolve(__dirname, '..');
 //    是「.eslintrc.json」，若只靠 SCAN_ROOT_FILES 列举會漏掉（踩坑紀錄）。
 const SCAN_DIRS = [
   'ui/src', 'ui/test', 'src', 'src-tauri/src', 'resources', 'docs',
-  'scripts', 'examples', 'test', 'log', '.vscode',
+  'scripts', 'examples', 'test', 'tests', 'log', '.vscode',
   'ui',                        // 掃 ui/ 根（ui/.eslintrc.json 等點開頭設定檔）
   'src-tauri',                 // 掃 src-tauri/ 根（src-tauri/Cargo.toml）
 ];
