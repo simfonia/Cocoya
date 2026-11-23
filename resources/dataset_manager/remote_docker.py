@@ -72,10 +72,11 @@ def run_docker_training(ssh, run, project_name, output_dir, hyperparams, docker_
     remote_keras_cache = '~/cocoya_ai/keras_cache/models'
     run('eval mkdir -p "' + remote_keras_cache + '"')
     log("[Remote] 啟動 Docker 訓練容器: " + docker_image + " (task=" + task_type + ", model_output=" + remote_model_output + ", bind=/workspace)")
-    docker_cmd = (
-        'docker run --gpus all --rm '
-        '--entrypoint python3 '
-        '--name ' + str(get_state().get("container")) + ' '
+    container_name = (get_state() or {}).get("container") or ("cocoya_train_" + "".join(ch if (ch.isalnum() or ch in "_.-") else "_" for ch in str(project_name)))
+    docker_cmd = (
+        'docker run --gpus all --rm '
+        '--entrypoint python3 '
+        '--name ' + str(container_name) + ' '
         '-v "$(eval realpath ' + remote_dataset_dir + ')\":/dataset '
         '-v "$(eval realpath ' + remote_keras_cache + ')\":/root/.keras/models '
         '-v "$(eval realpath ' + remote_output_dir + ')\":/output '

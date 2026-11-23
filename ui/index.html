@@ -278,6 +278,13 @@
             <div id="terminalBody">
                 <div id="terminalTextPane">
                     <div id="terminalContent"></div>
+                    <!-- stdin 輸入列：Python input() 互動用；預設隱藏，run_python 後由 JS 控制顯示 -->
+                    <div id="terminalStdinRow">
+                        <span id="terminalStdinPrompt">&gt;</span>
+                        <input id="terminalStdinInput" type="text" autocomplete="off" spellcheck="false"
+                               aria-label="stdin input" placeholder="%{BKY_TERMINAL_STDIN_PLACEHOLDER}">
+                        <button id="terminalStdinSend" title="%{BKY_TERMINAL_STDIN_SEND}">↵</button>
+                    </div>
                 </div>
                 <div id="plotDivider" role="separator" aria-orientation="vertical"
                      title="%{BKY_PLOT_RESIZE_HINT}"></div>

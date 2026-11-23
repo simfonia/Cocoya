@@ -1,9 +1,11 @@
 <xml xmlns="https://developers.google.com/blockly/xml" platform="MicroPython">
-<variables>
+  <variables>
     <variable id="v_line">line</variable>
     <variable id="v_percent_val">percent_val</variable>
   </variables>
-  <block type="mcu_board_init" id="board_init_4a7aaf87c3" x="10" y="-70"><field name="BOARD">maker-pi</field></block>
+  <block type="mcu_board_init" id="board_init_4a7aaf87c3" x="10" y="-70">
+    <field name="BOARD">maker-pi</field>
+  </block>
   <block type="py_definition_zone" id="def_root" deletable="false" x="10" y="10"></block>
   <block type="mcu_main" id="main_root" deletable="false" x="10" y="90">
     <statement name="DO">
@@ -90,19 +92,31 @@
                                               </block>
                                             </value>
                                             <next>
-                                              <block type="mcu_car_move_hands" id="move_picar_hands">
-                                                <field name="TYPE">STANDARD</field>
-                                                <field name="HAND">BOTH</field>
-                                                <value name="PERCENT">
-                                                  <block type="py_variables_get" id="get_percent_val">
+                                              <block type="py_io_print" id="M.ULq~F~jrpzMh.G;Q3p">
+                                                <value name="TEXT">
+                                                  <shadow type="py_text" id="uY0;48eigB=,@V6(V4r:">
+                                                    <field name="TEXT">Hello Cocoya!</field>
+                                                  </shadow>
+                                                  <block type="py_variables_get" id="44{u)SYPFSBg)^|]+:32">
                                                     <field name="VAR" id="v_percent_val">percent_val</field>
                                                   </block>
                                                 </value>
-                                                <value name="SPEED">
-                                                  <shadow type="math_number" id="hands_speed">
-                                                    <field name="NUM">10</field>
-                                                  </shadow>
-                                                </value>
+                                                <next>
+                                                  <block type="mcu_car_move_hands" id="move_picar_hands">
+                                                    <field name="TYPE">STANDARD</field>
+                                                    <field name="HAND">BOTH</field>
+                                                    <value name="PERCENT">
+                                                      <block type="py_variables_get" id="get_percent_val">
+                                                        <field name="VAR" id="v_percent_val">percent_val</field>
+                                                      </block>
+                                                    </value>
+                                                    <value name="SPEED">
+                                                      <shadow type="math_number" id="hands_speed">
+                                                        <field name="NUM">10</field>
+                                                      </shadow>
+                                                    </value>
+                                                  </block>
+                                                </next>
                                               </block>
                                             </next>
                                           </block>

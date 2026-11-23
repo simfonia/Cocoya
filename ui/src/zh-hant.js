@@ -173,6 +173,8 @@
     "TLB_DRAG_RESIZE_HEIGHT": "拖動以調整高度",
     "TLB_CLEAR_CONSOLE": "清除終端機",
     "TLB_CLOSE_PANEL": "關閉面板",
+    "TERMINAL_STDIN_PLACEHOLDER": "輸入文字後按 Enter 送出至程式...",
+    "TERMINAL_STDIN_SEND": "送出 (Enter)",
 
     // 序列繪圖（Plotter，2026-10-11 移植自 CodeBridge）
     "PLOT_OPEN": "開啟示波器",

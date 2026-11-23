@@ -1,4 +1,4 @@
-﻿pub mod state;
+pub mod state;
 pub mod utils;
 pub mod commands;
 
@@ -15,6 +15,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .manage(AppState {
             python_processes: Arc::new(Mutex::new(HashMap::new())),
+            python_stdin_senders: Arc::new(Mutex::new(HashMap::new())),
             install_processes: Arc::new(Mutex::new(HashMap::new())),
             current_paths: Arc::new(Mutex::new(HashMap::new())),
             file_locks: Arc::new(Mutex::new(HashMap::new())),
@@ -28,6 +29,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::run_python, 
             commands::stop_python,
+            commands::send_stdin,
             commands::file::manifest::get_manifest,
             commands::file::manifest::get_module_toolbox,
             commands::file::openfile::open_file,
@@ -141,6 +143,11 @@ pub fn run() {
                             crate::commands::python::kill_tree(&mut child);
                             let _ = child.wait();
                         }
+                    }
+                    {
+                        // 關窗時清理 stdin sender（Sender dropped → writer 執行緒結束）
+                        let mut senders = state.python_stdin_senders.lock().unwrap();
+                        senders.remove(&label);
                     }
                     {
                         // 關窗即中止安裝（E4-B）：避免 pip 子進程成為孤兒（視窗關了還在裝）。

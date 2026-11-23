@@ -124,6 +124,9 @@
 
         // 初始同步
         this.syncTerminalToggle();
+
+        // 初始化 stdin 輸入列事件
+        this._initStdinRow();
     };
 
     /**
@@ -259,7 +262,6 @@
             const item = items[i];
             const text = item.text;
             const type = item.type || 'out';
-            const inline = !!item.inline;
 
             const isSameType = curLast && curLast.className === `term-${type}`;
             // 2026-10-05：用 ?. / ?? 取代直接 .length。
@@ -269,10 +271,12 @@
             const curText = (curLast && curLast.textContent) || '';
             const isNotTooLong = curLast && (curText.length + text.length <= MAX_SPAN_TEXT_LEN);
 
-            if (isSameType && inline && !curText.endsWith('\n') && isNotTooLong) {
+            // 串流文字追加契約：
+            // 1. 若上一段未以 \n 結尾，代表此處為同一行被拆分的串流 chunk（如 input 提示詞、C++ 底層單字元輸出），
+            //    必須直接拼接（curText + text），絕對嚴禁插入 '\n'（避免一個字元一行的階梯垂直輸出）。
+            // 2. 若上一段已以 \n 結尾，新輸出建立新 span 節點，維持行級節點邊界以利容量修剪。
+            if (isSameType && !curText.endsWith('\n') && isNotTooLong) {
                 curLast.textContent = curText + text;
-            } else if (isSameType && !curText.endsWith('\n') && isNotTooLong) {
-                curLast.textContent = curText + '\n' + text;
             } else {
                 const span = document.createElement('span');
                 span.className = `term-${type}`;
@@ -416,6 +420,77 @@
         }
         const content = document.getElementById('terminalContent');
         if (content) content.innerHTML = '';
+    };
+
+    // ===== stdin 輸入列 API =====
+
+    /**
+     * 顯示 stdin 輸入列（run_python 後由 bridge 呼叫）。
+     * 顯示時自動聚焦輸入框。
+     */
+    UI.showStdinRow = function() {
+        const row = document.getElementById('terminalStdinRow');
+        if (row) {
+            row.classList.add('visible');
+            const input = document.getElementById('terminalStdinInput');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+        }
+    };
+
+    /**
+     * 隱藏 stdin 輸入列（stop_python 或程式結束後由 bridge 呼叫）。
+     */
+    UI.hideStdinRow = function() {
+        const row = document.getElementById('terminalStdinRow');
+        if (row) {
+            row.classList.remove('visible');
+            const input = document.getElementById('terminalStdinInput');
+            if (input) input.value = '';
+        }
+    };
+
+    /**
+     * 初始化 stdin 輸入列事件（由 initTerminal 呼叫）。
+     * 送出方式：按 Enter 或點「↵」按鈕 → 呼叫 bridge.send('stdinSend', { text })。
+     */
+    UI._initStdinRow = function() {
+        const input = document.getElementById('terminalStdinInput');
+        const sendBtn = document.getElementById('terminalStdinSend');
+        if (!input || !sendBtn) return;
+
+        // 若 placeholder 仍為 %{BKY_...} 佔位符，嘗試從 Blockly.Msg 賦值
+        if (input.placeholder && input.placeholder.startsWith('%{BKY_') && window.Blockly?.Msg) {
+            const key = input.placeholder.substring(6, input.placeholder.length - 1);
+            if (window.Blockly.Msg[key]) {
+                input.placeholder = window.Blockly.Msg[key];
+            }
+        }
+
+        const doSend = () => {
+            const text = input.value;
+            // 空字串也允許送出（Python input() 收到空行為合法輸入）
+            input.value = '';
+            // 在終端機顯示使用者輸入（模擬回顯）
+            if (window.CocoyaUI) {
+                window.CocoyaUI.appendTerminal(text + '\n', 'info');
+            }
+            // 透過 bridge 送給 Rust send_stdin
+            if (window.CocoyaBridge && typeof window.CocoyaBridge.send === 'function') {
+                window.CocoyaBridge.send('stdinSend', { text });
+            }
+        };
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                doSend();
+            }
+        });
+
+        sendBtn.addEventListener('click', () => doSend());
     };
 
 })(window.CocoyaUI = window.CocoyaUI || {});

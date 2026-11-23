@@ -1,6 +1,7 @@
 use std::process::{Command, Stdio};
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::collections::HashMap;
+use std::sync::mpsc;
 use std::fs;
 use tauri::{State, Window, Emitter};
 use crate::state::AppState;
@@ -128,6 +129,7 @@ pub async fn run_python(
     cmd.arg("-u") // Unbuffered mode
         .arg(&script_path)
         .current_dir(&work_dir)
+        .stdin(Stdio::piped())   // 保留 stdin pipe 供 send_stdin 寫入
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
 
@@ -144,40 +146,61 @@ pub async fn run_python(
     let stdout = child.stdout.take().unwrap();
     let stderr = child.stderr.take().unwrap();
 
+    // stdin pipe：建立 mpsc 通道，讓 send_stdin 透過 Sender 寫入，
+    // 背景執行緒持有 ChildStdin 實際寫入。send_stdin 可從不同 async 任務安全呼叫。
+    let child_stdin = child.stdin.take().unwrap();
+    let (stdin_tx, stdin_rx) = mpsc::channel::<String>();
+    std::thread::spawn(move || {
+        let mut writer = std::io::BufWriter::new(child_stdin);
+        for line in stdin_rx {
+            // 附加 '\n' 讓 Python input() 收到完整行
+            if writer.write_all(line.as_bytes()).is_err() { break; }
+            if writer.write_all(b"\n").is_err() { break; }
+            let _ = writer.flush();
+        }
+        // channel 關閉（Sender dropped）→ stdin EOF → Python input() 收到 EOFError
+    });
+
     // 將進程存入狀態以便停止
     {
         let mut procs = state.python_processes.lock().unwrap();
         procs.insert(window.label().to_string(), child);
     }
+    {
+        let mut senders = state.python_stdin_senders.lock().unwrap();
+        senders.insert(window.label().to_string(), stdin_tx);
+    }
 
     // 4. 即時串流日誌到前端
-    // 對齊 VSIX 版：顯示實際執行命令，讓使用者知道使用了哪個腳本
     let own_label = window.label().to_string();
-    // 精準單播：只發給本視窗，避免多視窗終端機互相污染
-    let _ = window.emit_to(&own_label, "python-log", format!(
-        "& \"{}\" \"{}\"\n",
-        python_path, script_path.display()
-    ));
-
     let run_stdout_label = own_label.clone();
 
     let window_clone = window.clone();
     std::thread::spawn(move || {
-        let mut reader = BufReader::new(stdout);
-        let mut buffer = Vec::new();
+        let mut reader = stdout;
+        let mut buf = [0u8; 1024];
+        let mut pending = Vec::new();
         loop {
-            buffer.clear();
-            match reader.read_until(b'\n', &mut buffer) {
+            match reader.read(&mut buf) {
                 Ok(0) => break, // EOF
-                Ok(_) => {
-                    // 用 from_utf8_lossy 處理編碼，避免中文亂碼
-                    let raw = String::from_utf8_lossy(&buffer);
-                    // 過濾 ANSI 色碼，對齊 VSIX 終端機輸出
-                    let cleaned = strip_ansi_codes(&raw);
-                    let _ = window_clone.emit_to(&run_stdout_label, "python-log", cleaned);
+                Ok(n) => {
+                    pending.extend_from_slice(&buf[..n]);
+                    let tail_len = crate::commands::mcu::stream::utf8_incomplete_tail_len(&pending);
+                    let ready_len = pending.len() - tail_len;
+                    if ready_len > 0 {
+                        let ready_bytes: Vec<u8> = pending.drain(..ready_len).collect();
+                        let raw = String::from_utf8_lossy(&ready_bytes);
+                        let cleaned = strip_ansi_codes(&raw);
+                        let _ = window_clone.emit_to(&run_stdout_label, "python-log", cleaned);
+                    }
                 }
                 Err(_) => break,
             }
+        }
+        if !pending.is_empty() {
+            let raw = String::from_utf8_lossy(&pending);
+            let cleaned = strip_ansi_codes(&raw);
+            let _ = window_clone.emit_to(&run_stdout_label, "python-log", cleaned);
         }
     });
 
@@ -187,19 +210,30 @@ pub async fn run_python(
 
     let window_clone_err = window.clone();
     std::thread::spawn(move || {
-        let mut reader = BufReader::new(stderr);
-        let mut buffer = Vec::new();
+        let mut reader = stderr;
+        let mut buf = [0u8; 1024];
+        let mut pending = Vec::new();
         loop {
-            buffer.clear();
-            match reader.read_until(b'\n', &mut buffer) {
+            match reader.read(&mut buf) {
                 Ok(0) => break, // EOF
-                Ok(_) => {
-                    let raw = String::from_utf8_lossy(&buffer);
-                    let cleaned = strip_ansi_codes(&raw);
-                    let _ = window_clone_err.emit_to(&run_stderr_label, "python-error", cleaned);
+                Ok(n) => {
+                    pending.extend_from_slice(&buf[..n]);
+                    let tail_len = crate::commands::mcu::stream::utf8_incomplete_tail_len(&pending);
+                    let ready_len = pending.len() - tail_len;
+                    if ready_len > 0 {
+                        let ready_bytes: Vec<u8> = pending.drain(..ready_len).collect();
+                        let raw = String::from_utf8_lossy(&ready_bytes);
+                        let cleaned = strip_ansi_codes(&raw);
+                        let _ = window_clone_err.emit_to(&run_stderr_label, "python-error", cleaned);
+                    }
                 }
                 Err(_) => break,
             }
+        }
+        if !pending.is_empty() {
+            let raw = String::from_utf8_lossy(&pending);
+            let cleaned = strip_ansi_codes(&raw);
+            let _ = window_clone_err.emit_to(&run_stderr_label, "python-error", cleaned);
         }
     });
 
@@ -216,6 +250,11 @@ pub async fn stop_python(window: Window, state: State<'_, AppState>) -> Result<(
         kill_tree(child);
         let _ = child.wait();
     }
+    // stdin sender 移除 → channel 關閉 → writer 執行緒結束
+    {
+        let mut senders = state.python_stdin_senders.lock().unwrap();
+        senders.remove(window.label());
+    }
     // 一併釋放該視窗的串列埠監看（若有），避免與執行/部署資源重疊；
     // 並清除 serial_wants：按「停止」是明確終止意圖，重新聚焦不應自動重開監看
     let own_label = window.label().to_string();
@@ -223,6 +262,25 @@ pub async fn stop_python(window: Window, state: State<'_, AppState>) -> Result<(
     state.serial_wants.lock().unwrap().remove(&own_label);
     if let Some(snapshot) = state.serial_monitor_registry.finish_current(&own_label) {
         let _ = window.emit_to(&own_label, "serial-monitor-state", snapshot);
+    }
+    Ok(())
+}
+
+/// 向正在執行的 Python 子進程寫入一行 stdin（對應 input() 呼叫）。
+/// 若該視窗無進行中的進程，靜默忽略（不返回錯誤，讓前端不需處理競態）。
+#[tauri::command]
+pub async fn send_stdin(
+    window: Window,
+    state: State<'_, AppState>,
+    text: String,
+) -> Result<(), String> {
+    let sender = {
+        let senders = state.python_stdin_senders.lock().unwrap();
+        senders.get(window.label()).cloned()
+    };
+    if let Some(tx) = sender {
+        // 忽略 SendError（進程已結束）
+        let _ = tx.send(text);
     }
     Ok(())
 }

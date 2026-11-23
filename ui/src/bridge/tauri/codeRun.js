@@ -2,6 +2,7 @@
  * ui/src/bridge/tauri/codeRun.js — 程式執行／停止指令群（P2-1 拆檔）
  *
  * 對應原 `BridgeTauri.send()` switch 內 2 個 case：runCode / stopCode
+ * 2026-11-23：新增 stdinSend（Python input() 互動）
  *
  * 【handler 契約】簽名 `async function handler(command, data)`，以
  * `handler.call(this, command, data)` 呼叫。**回傳值被刻意丟棄**（原 send() 的
@@ -45,6 +46,10 @@ export async function runCode(_command, data) {
                 pythonPath: pythonPath
             });
             window.CocoyaUI.flashButton('btn-run', '#75FB4C');
+            // stdin 輸入列：PC Python 程式啟動後顯示（MicroPython 不需要）
+            if (window.CocoyaUI && typeof window.CocoyaUI.showStdinRow === 'function') {
+                window.CocoyaUI.showStdinRow();
+            }
         }
     } catch (e) {
         window.CocoyaUI.hideLoadingModal();
@@ -68,4 +73,17 @@ export async function stopCode() {
         // 停止遠端訓練失敗不影響本機停止（sidecar 可能已結束），靜默忽略。
     });
     await this.tauriInvoke('stop_python');
+    // 停止後隱藏 stdin 輸入列
+    if (window.CocoyaUI && typeof window.CocoyaUI.hideStdinRow === 'function') {
+        window.CocoyaUI.hideStdinRow();
+    }
+}
+
+/**
+ * 向 Python 子進程的 stdin 寫入一行（對應 input() 呼叫）。
+ * @this {import('../tauri.js').BridgeTauri}
+ */
+export async function stdinSend(_command, data) {
+    if (!this.tauriInvoke) return;
+    await this.tauriInvoke('send_stdin', { text: data.text ?? '' });
 }

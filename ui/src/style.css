@@ -1724,8 +1724,7 @@ body.cocoya-dark-mode .btn-close {
     background: #555;
 }
 
-/* ===== 序列繪圖（Plotter，2026-10-11 移植自 CodeBridge） =====
- * `#terminalBody` 是分欄容器：左＝Monitor 文字、右＝Plotter 波形。
+/* ===== 序列繪圖（Plotter，2026-10-11 移植自 CodeBridge） ===== * `#terminalBody` 是分欄容器：左＝Monitor 文字、右＝Plotter 波形。
  *
  * 顏色沿用終端機既有的深色系（#1e1e1e 家族），**不引入新色碼也不走主題 token**：
  * Cocoya 的終端機面板本身就是三主題共用一組固定深色（`#terminalArea` 寫死
@@ -1752,6 +1751,73 @@ body.cocoya-dark-mode .btn-close {
     display: flex;
     flex-direction: column;
     min-height: 0;
+}
+
+/* ===== stdin 輸入列（2026-11-23，Python input() 互動）=====
+ * 預設 display:none；run_python 後由 terminal.js showStdinRow() 顯示，
+ * stop_python / 程式結束後由 hideStdinRow() 隱藏。
+ * 顏色沿用終端機既有深色系，不引入新色碼。 */
+#terminalStdinRow {
+    display: none;
+    flex-direction: row;
+    align-items: center;
+    padding: 3px 8px;
+    background: #252526;
+    border-top: 1px solid #3c3c3c;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+#terminalStdinRow.visible {
+    display: flex;
+}
+
+#terminalStdinPrompt {
+    color: #FE2F89;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: calc(13px * var(--fs-e));
+    font-weight: bold;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+#terminalStdinInput {
+    flex: 1;
+    background: #1e1e1e;
+    color: #cccccc;
+    border: 1px solid #555;
+    border-radius: 3px;
+    padding: 3px 6px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: calc(12px * var(--fs-e));
+    outline: none;
+    min-width: 0;
+}
+
+#terminalStdinInput:focus {
+    border-color: #FE2F89;
+}
+
+#terminalStdinInput::placeholder {
+    color: #555;
+}
+
+#terminalStdinSend {
+    background: #3c3c3c;
+    color: #ccc;
+    border: 1px solid #555;
+    border-radius: 3px;
+    padding: 3px 8px;
+    font-size: calc(13px * var(--fs-e));
+    cursor: pointer;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+#terminalStdinSend:hover {
+    background: #FE2F89;
+    color: #fff;
+    border-color: #FE2F89;
 }
 
 #plotDivider {

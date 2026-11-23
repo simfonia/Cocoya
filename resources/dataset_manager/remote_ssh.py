@@ -380,7 +380,8 @@ def handle_train_remote(msg, request_id, send_response, send_event, get_state, s
         "host": msg.get("host"), "port": msg.get("port", 22),
         "username": msg.get("username"), "password": msg.get("password"),
         "container": "cocoya_train_" + _safe
-    }
+    }
+    set_state(_state)
     host = msg.get("host")
     port = msg.get("port", 22)
     username = msg.get("username")

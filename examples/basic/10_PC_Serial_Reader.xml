@@ -6,6 +6,7 @@
 1. 請先執行 'pip install pyserial'。
 2. 修改下面 'COM4' 為你的埠號。
   
+  
   </comment>
   <block type="py_definition_zone" id="def_root" x="10" y="110">
     <statement name="DEFS">
@@ -35,7 +36,8 @@
               </block>
             </value>
             <statement name="DO">
-              <block type="controls_if" id="if1">
+              <block type="py_logic_if" id="FRm^.;?D(mj`2RB~RN:X">
+                <mutation elif="0" else="0"></mutation>
                 <value name="IF0">
                   <block type="py_io_serial_available" id="av1"></block>
                 </value>

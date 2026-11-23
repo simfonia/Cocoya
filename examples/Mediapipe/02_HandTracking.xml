@@ -122,19 +122,16 @@
                                                       <block type="py_variables_set" id="set_tip_x">
                                                         <field name="VAR" id="tip_x_id">tip_x</field>
                                                         <value name="VALUE">
-                                                          <block type="lists_getIndex" id="get_x_id">
-                                                            <mutation statement="false" at="true"></mutation>
-                                                            <field name="MODE">GET</field>
-                                                            <field name="WHERE">FROM_START</field>
-                                                            <value name="VALUE">
+                                                          <block type="py_types_get_item" id="N(#h{)e^/u%{E]*naHQ(">
+                                                            <value name="OBJ">
                                                               <block type="py_variables_get" id="get_tip_pos_var_x">
                                                                 <field name="VAR" id="tip_pos_id">tip_pos</field>
                                                               </block>
                                                             </value>
-                                                            <value name="AT">
-                                                              <block type="math_number" id="index_1">
-                                                                <field name="NUM">1</field>
-                                                              </block>
+                                                            <value name="INDEX">
+                                                              <shadow type="py_math_number" id="]DfQpL7*N55ZcXH36b*G">
+                                                                <field name="NUM">0</field>
+                                                              </shadow>
                                                             </value>
                                                           </block>
                                                         </value>
@@ -142,19 +139,16 @@
                                                           <block type="py_variables_set" id="set_tip_y">
                                                             <field name="VAR" id="tip_y_id">tip_y</field>
                                                             <value name="VALUE">
-                                                              <block type="lists_getIndex" id="get_y_id">
-                                                                <mutation statement="false" at="true"></mutation>
-                                                                <field name="MODE">GET</field>
-                                                                <field name="WHERE">FROM_START</field>
-                                                                <value name="VALUE">
-                                                                  <block type="py_variables_get" id="get_tip_pos_var_y">
+                                                              <block type="py_types_get_item" id="$=JL2{;C!skGwQoJmJrW">
+                                                                <value name="OBJ">
+                                                                  <block type="py_variables_get" id="$?8WZ8armbh5)Dlr{#NN">
                                                                     <field name="VAR" id="tip_pos_id">tip_pos</field>
                                                                   </block>
                                                                 </value>
-                                                                <value name="AT">
-                                                                  <block type="math_number" id="index_2">
-                                                                    <field name="NUM">2</field>
-                                                                  </block>
+                                                                <value name="INDEX">
+                                                                  <shadow type="py_math_number" id="VJRyFim^D;-v{49DB~q[">
+                                                                    <field name="NUM">1</field>
+                                                                  </shadow>
                                                                 </value>
                                                               </block>
                                                             </value>
@@ -183,7 +177,7 @@
                                                                           </block>
                                                                         </value>
                                                                         <value name="B">
-                                                                          <block type="math_number" id="num_10">
+                                                                          <block type="py_math_number" id="CV,ltfADtER9;6,Pe)|t">
                                                                             <field name="NUM">10</field>
                                                                           </block>
                                                                         </value>

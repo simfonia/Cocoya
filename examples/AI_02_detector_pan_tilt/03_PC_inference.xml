@@ -15,7 +15,7 @@
             <field name="TASK_TYPE">object_detection</field>
             <field name="MODEL_TYPE">f32</field>
             <next>
-              <block type="py_io_serial_init" id="det_ser_init" disabled-reasons="MANUALLY_DISABLED">
+              <block type="py_io_serial_init" id="det_ser_init">
                 <field name="BAUD">115200</field>
                 <value name="PORT">
                   <shadow type="py_text" id="det_ser_port">
@@ -89,7 +89,7 @@
                               </block>
                             </value>
                             <next>
-                              <block type="py_io_serial_write" id="det_serial_send" disabled-reasons="MANUALLY_DISABLED">
+                              <block type="py_io_serial_write" id="det_serial_send">
                                 <value name="DATA">
                                   <block type="py_variables_get" id="det_get_center_serial">
                                     <field name="VAR" id="var_center">center</field>

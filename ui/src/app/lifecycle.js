@@ -136,6 +136,10 @@ window.CocoyaApp = Object.assign(window.CocoyaApp || {}, {
             
             this.workspace = Blockly.inject('blocklyDiv', injectOptions);
             this._installZombieTrap(this.workspace);
+            // 防止刪除頂層/孤兒積木或註解時，Blockly v12 FocusManager 將焦點恢復到最上方第一個頂層積木並自動捲動視口
+            this.workspace.getRestoredFocusableNode = function() {
+                return this.getRootFocusableNode();
+            };
             this.initMinimap();
 
             setTimeout(() => {

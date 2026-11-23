@@ -5,7 +5,7 @@
     <variable id="v_sorted">sorted_result</variable>
     <variable id="v_scores">scores_dict</variable>
   </variables>
-  <block type="py_main" id="main_root" x="20" y="20">
+  <block type="py_main" id="main_root" x="37" y="45">
     <statement name="DO">
       <block type="py_coding_comment" id="c1">
         <field name="TEXT">1. 型別轉換與運算</field>
@@ -194,8 +194,8 @@
                                                   </block>
                                                 </value>
                                                 <next>
-                                                  <block type="controls_if" id="if1">
-                                                    <mutation else="1"></mutation>
+                                                  <block type="py_logic_if" id="vgD|.ETI9vO0yL9HuWDh">
+                                                    <mutation elif="0" else="0"></mutation>
                                                     <value name="IF0">
                                                       <block type="py_types_in" id="in2">
                                                         <value name="ITEM">

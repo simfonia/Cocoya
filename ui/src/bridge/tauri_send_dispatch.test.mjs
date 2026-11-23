@@ -79,7 +79,7 @@ const MIGRATED_COMMANDS = [
     // serial（refreshSerialPorts 與 getSerialPorts 為原 switch 的 fallthrough）
     'openSerialMonitor', 'toggleSerialMonitor', 'getSerialPorts', 'refreshSerialPorts',
     // codeRun
-    'runCode', 'stopCode',
+    'runCode', 'stopCode', 'stdinSend',
     // pythonEnv
     'setPythonPath', 'getPythonPath', 'checkEnvironment', 'installModule', 'abortInstall',
     // fileOps (saveFile/saveFileAs and newFile/createWindow were fallthrough groups)

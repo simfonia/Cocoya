@@ -157,7 +157,7 @@ C:\Workspace\cocoya\
 │   │   │   ├── tauri_progress_anchor.test.mjs # [2026-10-04 T7] saveProgress/getProjectAnchor 契約測試（17 測；三層專案根 fallback、不可信空快照須重查、snake_case 整合、未錨定回 PROJECT_ROOT_REQUIRED 且不靜默存檔、CODE 前綴解析、invoke reject 字串的型別契約）
 │   │   │   └── vscode.js  # VS Code 專屬橋接
 │   │   ├── ui/          # UI 功能子模組
-│   │   │   ├── terminal.js # 終端機邏輯（有界隊列、rAF 批次 flush、1000 行保護、單節點字元長度防護）
+│   │   │   ├── terminal.js # 終端機邏輯（有界隊列、rAF 批次 flush、1000 行保護、單節點字元長度防護、stdin 互動輸入列控制）
 │   │   │   ├── terminal_batch.test.mjs # [2026-09-25] 終端機高頻日誌批次渲染與背壓測試
 │   │   │   ├── renderer.js # 渲染與佈局邏輯
 │   │   │   ├── hardware.js # 序列埠、韌體、Python 環境狀態機與 Raw Dump 診斷偏好開關
@@ -354,7 +354,7 @@ C:\Workspace\cocoya\
 │       ├── utils.rs       # [NEW] 路徑與資源解析工具（含 examples AppData 播種 ensure_examples_seeded/copy_dir_merge）
 │       └── commands/      # [NEW] 分類指令處理器
 │           ├── mod.rs       # 指令集匯出
-│           ├── python.rs    # Python 執行與環境診斷（注入 UTF-8 編碼、COCOYA_TRAIN_TEMPLATES 與 COCOYA_MODELS 預訓練權重環境變數）；install_python_module/abort_install_module 為套件安裝專用命令（獨立進程 + install-module-* 事件 + kill_tree）
+│           ├── python.rs    # Python 執行與環境診斷（注入 UTF-8 編碼、COCOYA_TRAIN_TEMPLATES 與 COCOYA_MODELS 預訓練權重環境變數；run_python 保留 stdin pipe 並以非阻塞 chunk 讀取 stdout/stderr；send_stdin 命令；install_python_module/abort_install_module 為套件安裝專用命令）
 │           ├── file/            # [P2-5 2026-10-03 拆分：原 file.rs 925 行 → 7 檔] 檔案讀寫、備份與鎖定。子模組：manifest（core_manifest.json/toolbox 讀取）、anchor（ProjectAnchor＋release_session）、examples（範例路徑守衛、複製開啟、seed 還原）、openfile（open_file/open_examples/restore_examples）、savefile（save_file＋examples 唯讀保護＋跨視窗檔案鎖）、backup（auto_backup/check_startup_backup/clear_backup/reject_recovery/delete_file）、dataset（DM 支援：標籤改名、匯入掃描、標註進度存讀、選檔）
 │           ├── mcu/            # [P2-5 2026-10-03 拆分：原 mcu.rs 1018 行 → 7 檔] 硬體通訊、韌體與序列埠。子模組：board（序列埠列舉＋VID/PID 板辨識）、deploy（deploy_mcu 韌體上傳）、monitor（序列埠監看＋視窗焦點交接 set_window_focus）、firmware（erase_filesystem＋esptool/UF2 燒錄）、raw_dump（ProjectRoot/raw_dump.log 路徑解析與環境注入）、stream（輸出背壓與時間窗聚合）
 │           │   └── ⚠ Tauri 邊界：`#[tauri::command]` 產生的 `__cmd__<fn>` 巨集無法經 pub use 跨模組轉出，故 lib.rs 的 generate_handler! 必用完整子模組路徑（如 commands::mcu::board::get_serial_ports）

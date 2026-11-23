@@ -170,6 +170,8 @@
     "TLB_DRAG_RESIZE_HEIGHT": "Drag to resize height",
     "TLB_CLEAR_CONSOLE": "Clear Console",
     "TLB_CLOSE_PANEL": "Close Panel",
+    "TERMINAL_STDIN_PLACEHOLDER": "Type input and press Enter to send...",
+    "TERMINAL_STDIN_SEND": "Send (Enter)",
 
     // Serial Plotter (ported from CodeBridge, 2026-10-11)
     "PLOT_OPEN": "Plotter",

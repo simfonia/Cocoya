@@ -7,6 +7,7 @@
     <variable id="v_p14">p14</variable>
     <variable id="v_dist">dist</variable>
   </variables>
+  <comment id="{]a4$FG(LIsC]meg2yU(" x="10" y="-130" w="215.99996948242188" h="104.30769348144531">偵測上下唇的距離</comment>
   <block type="py_definition_zone" id="def_zone" deletable="false" x="10" y="10">
     <statement name="DEFS">
       <block type="py_import" id="imp_math">
@@ -48,6 +49,7 @@
                         </value>
                         <next>
                           <block type="py_logic_if" id="if_face">
+                            <mutation elif="0" else="0"></mutation>
                             <value name="IF0">
                               <block type="py_ai_face_is_detected" id="is_det">
                                 <field name="VAR" id="v_results_face">results_face</field>
@@ -172,41 +174,37 @@
                                                                           <block type="py_math_arithmetic" id="calc_dx">
                                                                             <field name="OP">-</field>
                                                                             <value name="A">
-                                                                              <block type="lists_getIndex" id="get_p13x">
-                                                                                <field name="MODE">GET</field>
-                                                                                <field name="WHERE">FROM_START</field>
-                                                                                <value name="VALUE">
-                                                                                  <block type="py_variables_get" id="get_p13_var">
+                                                                              <block type="py_types_get_item" id="a;|v)ncfN!.@4H?!,UY2">
+                                                                                <value name="OBJ">
+                                                                                  <block type="py_variables_get" id="1rN5)1$q/k?#d)TIEEVy">
                                                                                     <field name="VAR" id="v_p13">p13</field>
                                                                                   </block>
                                                                                 </value>
-                                                                                <value name="AT">
-                                                                                  <block type="math_number" id="idx1">
-                                                                                    <field name="NUM">1</field>
-                                                                                  </block>
+                                                                                <value name="INDEX">
+                                                                                  <shadow type="py_math_number" id="woT1_q?e+h.SQ`N{K/9K">
+                                                                                    <field name="NUM">0</field>
+                                                                                  </shadow>
                                                                                 </value>
                                                                               </block>
                                                                             </value>
                                                                             <value name="B">
-                                                                              <block type="lists_getIndex" id="get_p14x">
-                                                                                <field name="MODE">GET</field>
-                                                                                <field name="WHERE">FROM_START</field>
-                                                                                <value name="VALUE">
-                                                                                  <block type="py_variables_get" id="get_p14_var">
+                                                                              <block type="py_types_get_item" id="4.2m{Sgs0#w]iN{(7j,+">
+                                                                                <value name="OBJ">
+                                                                                  <block type="py_variables_get" id="uQ*OU=hYQ9i0ktr}Rn+0">
                                                                                     <field name="VAR" id="v_p14">p14</field>
                                                                                   </block>
                                                                                 </value>
-                                                                                <value name="AT">
-                                                                                  <block type="math_number" id="idx1b">
-                                                                                    <field name="NUM">1</field>
-                                                                                  </block>
+                                                                                <value name="INDEX">
+                                                                                  <shadow type="py_math_number" id="NW]u`A`jglYUk!Tt=+[=">
+                                                                                    <field name="NUM">0</field>
+                                                                                  </shadow>
                                                                                 </value>
                                                                               </block>
                                                                             </value>
                                                                           </block>
                                                                         </value>
                                                                         <value name="B">
-                                                                          <block type="math_number" id="num2">
+                                                                          <block type="py_math_number" id="a82N$oG1bWd~PQmswwt7">
                                                                             <field name="NUM">2</field>
                                                                           </block>
                                                                         </value>
@@ -219,41 +217,37 @@
                                                                           <block type="py_math_arithmetic" id="calc_dy">
                                                                             <field name="OP">-</field>
                                                                             <value name="A">
-                                                                              <block type="lists_getIndex" id="get_p13y">
-                                                                                <field name="MODE">GET</field>
-                                                                                <field name="WHERE">FROM_START</field>
-                                                                                <value name="VALUE">
-                                                                                  <block type="py_variables_get" id="get_p13_var2">
+                                                                              <block type="py_types_get_item" id="BCgMst=HV{`6I27RR$l9">
+                                                                                <value name="OBJ">
+                                                                                  <block type="py_variables_get" id="Zrlh~hd/cdjgDg*r|IB{">
                                                                                     <field name="VAR" id="v_p13">p13</field>
                                                                                   </block>
                                                                                 </value>
-                                                                                <value name="AT">
-                                                                                  <block type="math_number" id="idx2">
-                                                                                    <field name="NUM">2</field>
-                                                                                  </block>
+                                                                                <value name="INDEX">
+                                                                                  <shadow type="py_math_number" id="Fjv|:rRvkbKI7*Q|Ixw:">
+                                                                                    <field name="NUM">1</field>
+                                                                                  </shadow>
                                                                                 </value>
                                                                               </block>
                                                                             </value>
                                                                             <value name="B">
-                                                                              <block type="lists_getIndex" id="get_p14y">
-                                                                                <field name="MODE">GET</field>
-                                                                                <field name="WHERE">FROM_START</field>
-                                                                                <value name="VALUE">
+                                                                              <block type="py_types_get_item" id="*W:lwTIS#AOE9Jivy:ey">
+                                                                                <value name="OBJ">
                                                                                   <block type="py_variables_get" id="get_p14_var2">
                                                                                     <field name="VAR" id="v_p14">p14</field>
                                                                                   </block>
                                                                                 </value>
-                                                                                <value name="AT">
-                                                                                  <block type="math_number" id="idx2b">
-                                                                                    <field name="NUM">2</field>
-                                                                                  </block>
+                                                                                <value name="INDEX">
+                                                                                  <shadow type="py_math_number" id="FBe]!p=-{:tB7maws1[w">
+                                                                                    <field name="NUM">1</field>
+                                                                                  </shadow>
                                                                                 </value>
                                                                               </block>
                                                                             </value>
                                                                           </block>
                                                                         </value>
                                                                         <value name="B">
-                                                                          <block type="math_number" id="num2b">
+                                                                          <block type="py_math_number" id="(TzI,,`)a[xKcB5gLmr=">
                                                                             <field name="NUM">2</field>
                                                                           </block>
                                                                         </value>
@@ -265,6 +259,7 @@
                                                             </value>
                                                             <next>
                                                               <block type="py_logic_if" id="check_open">
+                                                                <mutation elif="0" else="0"></mutation>
                                                                 <value name="IF0">
                                                                   <block type="py_logic_compare" id="dist_big">
                                                                     <field name="OP">&gt;</field>
@@ -274,7 +269,7 @@
                                                                       </block>
                                                                     </value>
                                                                     <value name="B">
-                                                                      <block type="math_number" id="thresh">
+                                                                      <block type="py_math_number" id="ywjLn*#na[n9{B(Q-63t">
                                                                         <field name="NUM">15</field>
                                                                       </block>
                                                                     </value>
@@ -356,4 +351,3 @@
     </statement>
   </block>
 </xml>
-

@@ -16,7 +16,7 @@
     <variable id="v_theta">theta</variable>
     <variable id="v_percent">percent</variable>
   </variables>
-  <block type="py_definition_zone" id="def_root" deletable="false" x="10" y="10">
+  <block type="py_definition_zone" id="def_root" deletable="false" x="30" y="-10">
     <statement name="DEFS">
       <block type="py_coding_comment" id="cmt_intro">
         <field name="TEXT">PC 端 MediaPipe 雙臂夾角即時控制器&amp;#10;1. 透過攝影機取得人體左肩左肘、右肩右肘連線夾角。&amp;#10;2. 雙手水平以下時為 0%，雙手抬起至垂直向上為 100%。&amp;#10;3. 即時發送百分比數值給 πCar。</field>
@@ -43,7 +43,7 @@
       </block>
     </statement>
   </block>
-  <block type="py_main" id="main_root" deletable="false" x="10" y="250">
+  <block type="py_main" id="main_root" deletable="false" x="30" y="250">
     <statement name="DO">
       <block type="py_ai_open_camera" id="open_cam">
         <field name="INDEX">0</field>
@@ -180,36 +180,30 @@
                                                       <block type="py_math_arithmetic" id="sub_dx_l">
                                                         <field name="OP">-</field>
                                                         <value name="A">
-                                                          <block type="lists_getIndex" id="idx_p15_x">
-                                                            <mutation statement="false" at="true"></mutation>
-                                                            <field name="MODE">GET</field>
-                                                            <field name="WHERE">FROM_START</field>
-                                                            <value name="VALUE">
-                                                              <block type="py_variables_get" id="get_p15_dx">
+                                                          <block type="py_types_get_item" id="SuED9Hb=9:5Zq%Wyt]zY">
+                                                            <value name="OBJ">
+                                                              <block type="py_variables_get" id="=hgTAYj$qyk9p6iYoG^~">
                                                                 <field name="VAR" id="v_p15">p13</field>
                                                               </block>
                                                             </value>
-                                                            <value name="AT">
-                                                              <block type="math_number" id="num_1_l">
-                                                                <field name="NUM">1</field>
-                                                              </block>
+                                                            <value name="INDEX">
+                                                              <shadow type="py_math_number" id="?B^ap,6=;+zBe2gZ]#R)">
+                                                                <field name="NUM">0</field>
+                                                              </shadow>
                                                             </value>
                                                           </block>
                                                         </value>
                                                         <value name="B">
-                                                          <block type="lists_getIndex" id="idx_p11_x">
-                                                            <mutation statement="false" at="true"></mutation>
-                                                            <field name="MODE">GET</field>
-                                                            <field name="WHERE">FROM_START</field>
-                                                            <value name="VALUE">
-                                                              <block type="py_variables_get" id="get_p11_dx">
+                                                          <block type="py_types_get_item" id="{h!{5!|(*+)P7_cx!s*;">
+                                                            <value name="OBJ">
+                                                              <block type="py_variables_get" id=",n]pjcHJN5EXpEyMr)YC">
                                                                 <field name="VAR" id="v_p11">p11</field>
                                                               </block>
                                                             </value>
-                                                            <value name="AT">
-                                                              <block type="math_number" id="num_1_l2">
-                                                                <field name="NUM">1</field>
-                                                              </block>
+                                                            <value name="INDEX">
+                                                              <shadow type="py_math_number" id="L_7NvPnB(#izLwA`YtYK">
+                                                                <field name="NUM">0</field>
+                                                              </shadow>
                                                             </value>
                                                           </block>
                                                         </value>
@@ -222,36 +216,30 @@
                                                           <block type="py_math_arithmetic" id="sub_dy_l">
                                                             <field name="OP">-</field>
                                                             <value name="A">
-                                                              <block type="lists_getIndex" id="idx_p15_y">
-                                                                <mutation statement="false" at="true"></mutation>
-                                                                <field name="MODE">GET</field>
-                                                                <field name="WHERE">FROM_START</field>
-                                                                <value name="VALUE">
-                                                                  <block type="py_variables_get" id="get_p15_dy">
+                                                              <block type="py_types_get_item" id="y=rIyJiJ^=+GxYkiGRMj">
+                                                                <value name="OBJ">
+                                                                  <block type="py_variables_get" id="R62)KK-CYcjIh]DvB;F.">
                                                                     <field name="VAR" id="v_p15">p13</field>
                                                                   </block>
                                                                 </value>
-                                                                <value name="AT">
-                                                                  <block type="math_number" id="num_2_l">
-                                                                    <field name="NUM">2</field>
-                                                                  </block>
+                                                                <value name="INDEX">
+                                                                  <shadow type="py_math_number" id="m~)Z!Y5i[_8`lx{Brd)+">
+                                                                    <field name="NUM">1</field>
+                                                                  </shadow>
                                                                 </value>
                                                               </block>
                                                             </value>
                                                             <value name="B">
-                                                              <block type="lists_getIndex" id="idx_p11_y">
-                                                                <mutation statement="false" at="true"></mutation>
-                                                                <field name="MODE">GET</field>
-                                                                <field name="WHERE">FROM_START</field>
-                                                                <value name="VALUE">
-                                                                  <block type="py_variables_get" id="get_p11_dy">
+                                                              <block type="py_types_get_item" id="e`7h1(1].oK7d:!=!_!z">
+                                                                <value name="OBJ">
+                                                                  <block type="py_variables_get" id="{T:H]@e76G(L!7/,4Ki?">
                                                                     <field name="VAR" id="v_p11">p11</field>
                                                                   </block>
                                                                 </value>
-                                                                <value name="AT">
-                                                                  <block type="math_number" id="num_2_l2">
-                                                                    <field name="NUM">2</field>
-                                                                  </block>
+                                                                <value name="INDEX">
+                                                                  <shadow type="py_math_number" id="_#..#Lf3IBqO%EWn3+d)">
+                                                                    <field name="NUM">1</field>
+                                                                  </shadow>
                                                                 </value>
                                                               </block>
                                                             </value>
@@ -264,36 +252,30 @@
                                                               <block type="py_math_arithmetic" id="sub_dx_r">
                                                                 <field name="OP">-</field>
                                                                 <value name="A">
-                                                                  <block type="lists_getIndex" id="idx_p16_x">
-                                                                    <mutation statement="false" at="true"></mutation>
-                                                                    <field name="MODE">GET</field>
-                                                                    <field name="WHERE">FROM_START</field>
-                                                                    <value name="VALUE">
-                                                                      <block type="py_variables_get" id="get_p16_dx">
+                                                                  <block type="py_types_get_item" id="BCdV3X%0!5rzg)Fm[@G/">
+                                                                    <value name="OBJ">
+                                                                      <block type="py_variables_get" id="5!cQvV7-+l=%_bl6f{`}">
                                                                         <field name="VAR" id="v_p16">p14</field>
                                                                       </block>
                                                                     </value>
-                                                                    <value name="AT">
-                                                                      <block type="math_number" id="num_1_r">
-                                                                        <field name="NUM">1</field>
-                                                                      </block>
+                                                                    <value name="INDEX">
+                                                                      <shadow type="py_math_number" id="NdnNsYEfGY^UudG}$W55">
+                                                                        <field name="NUM">0</field>
+                                                                      </shadow>
                                                                     </value>
                                                                   </block>
                                                                 </value>
                                                                 <value name="B">
-                                                                  <block type="lists_getIndex" id="idx_p12_x">
-                                                                    <mutation statement="false" at="true"></mutation>
-                                                                    <field name="MODE">GET</field>
-                                                                    <field name="WHERE">FROM_START</field>
-                                                                    <value name="VALUE">
-                                                                      <block type="py_variables_get" id="get_p12_dx">
+                                                                  <block type="py_types_get_item" id="]`khA..BurtOlO++giv=">
+                                                                    <value name="OBJ">
+                                                                      <block type="py_variables_get" id="-Hg,a%.5,NZ/VK-/@4k.">
                                                                         <field name="VAR" id="v_p12">p12</field>
                                                                       </block>
                                                                     </value>
-                                                                    <value name="AT">
-                                                                      <block type="math_number" id="num_1_r2">
-                                                                        <field name="NUM">1</field>
-                                                                      </block>
+                                                                    <value name="INDEX">
+                                                                      <shadow type="py_math_number" id="b)7^N0N~bfmaGLOAu^dg">
+                                                                        <field name="NUM">0</field>
+                                                                      </shadow>
                                                                     </value>
                                                                   </block>
                                                                 </value>
@@ -306,36 +288,30 @@
                                                                   <block type="py_math_arithmetic" id="sub_dy_r">
                                                                     <field name="OP">-</field>
                                                                     <value name="A">
-                                                                      <block type="lists_getIndex" id="idx_p16_y">
-                                                                        <mutation statement="false" at="true"></mutation>
-                                                                        <field name="MODE">GET</field>
-                                                                        <field name="WHERE">FROM_START</field>
-                                                                        <value name="VALUE">
-                                                                          <block type="py_variables_get" id="get_p16_dy">
+                                                                      <block type="py_types_get_item" id="hY2_s+6Q^{AZ~}s7.N:U">
+                                                                        <value name="OBJ">
+                                                                          <block type="py_variables_get" id="1s(`Y#NmGqng.r}|EXlI">
                                                                             <field name="VAR" id="v_p16">p14</field>
                                                                           </block>
                                                                         </value>
-                                                                        <value name="AT">
-                                                                          <block type="math_number" id="num_2_r">
-                                                                            <field name="NUM">2</field>
-                                                                          </block>
+                                                                        <value name="INDEX">
+                                                                          <shadow type="py_math_number" id="i2n5E1,4)1oy,#;s(kVP">
+                                                                            <field name="NUM">1</field>
+                                                                          </shadow>
                                                                         </value>
                                                                       </block>
                                                                     </value>
                                                                     <value name="B">
-                                                                      <block type="lists_getIndex" id="idx_p12_y">
-                                                                        <mutation statement="false" at="true"></mutation>
-                                                                        <field name="MODE">GET</field>
-                                                                        <field name="WHERE">FROM_START</field>
-                                                                        <value name="VALUE">
-                                                                          <block type="py_variables_get" id="get_p12_dy">
+                                                                      <block type="py_types_get_item" id="}T_}7QD1X0v,`O^veqan">
+                                                                        <value name="OBJ">
+                                                                          <block type="py_variables_get" id="f*g|+z-MibLe|jo9yr5I">
                                                                             <field name="VAR" id="v_p12">p12</field>
                                                                           </block>
                                                                         </value>
-                                                                        <value name="AT">
-                                                                          <block type="math_number" id="num_2_r2">
-                                                                            <field name="NUM">2</field>
-                                                                          </block>
+                                                                        <value name="INDEX">
+                                                                          <shadow type="py_math_number" id="ejG)$s*H5)RdQ]Ysls?X">
+                                                                            <field name="NUM">1</field>
+                                                                          </shadow>
                                                                         </value>
                                                                       </block>
                                                                     </value>
@@ -404,7 +380,8 @@
                                                                               </block>
                                                                             </value>
                                                                             <next>
-                                                                              <block type="controls_if" id="if_theta_gt_180">
+                                                                              <block type="py_logic_if" id="bLT?)e/Ow)*zEX,1N#C]">
+                                                                                <mutation elif="0" else="0"></mutation>
                                                                                 <value name="IF0">
                                                                                   <block type="py_logic_compare" id="1~Mrtv)IWbGyR(2$7O[i">
                                                                                     <field name="OP">&gt;</field>
@@ -414,7 +391,7 @@
                                                                                       </block>
                                                                                     </value>
                                                                                     <value name="B">
-                                                                                      <block type="math_number" id="num_180">
+                                                                                      <block type="py_math_number" id="j;%=WTMfy5{#3%:OEl}L">
                                                                                         <field name="NUM">180</field>
                                                                                       </block>
                                                                                     </value>
@@ -427,7 +404,7 @@
                                                                                       <block type="py_math_arithmetic" id="sub_360_theta">
                                                                                         <field name="OP">-</field>
                                                                                         <value name="A">
-                                                                                          <block type="math_number" id="num_360">
+                                                                                          <block type="py_math_number" id="5GcFXW~k1h.P:$yub7b^">
                                                                                             <field name="NUM">360</field>
                                                                                           </block>
                                                                                         </value>
@@ -450,36 +427,30 @@
                                                                                           <block type="py_logic_compare" id="p15_y_gt_p11_y">
                                                                                             <field name="OP">&gt;</field>
                                                                                             <value name="A">
-                                                                                              <block type="lists_getIndex" id="get_p15_y_val">
-                                                                                                <mutation statement="false" at="true"></mutation>
-                                                                                                <field name="MODE">GET</field>
-                                                                                                <field name="WHERE">FROM_START</field>
-                                                                                                <value name="VALUE">
+                                                                                              <block type="py_types_get_item" id="aZj.{IKKq23@6,rE8hK,">
+                                                                                                <value name="OBJ">
                                                                                                   <block type="py_variables_get" id="get_p15_y_check">
                                                                                                     <field name="VAR" id="v_p15">p13</field>
                                                                                                   </block>
                                                                                                 </value>
-                                                                                                <value name="AT">
-                                                                                                  <block type="math_number" id="num_2_check1">
-                                                                                                    <field name="NUM">2</field>
-                                                                                                  </block>
+                                                                                                <value name="INDEX">
+                                                                                                  <shadow type="py_math_number" id="s@v^Vxot|C9sIm7S9`7s">
+                                                                                                    <field name="NUM">1</field>
+                                                                                                  </shadow>
                                                                                                 </value>
                                                                                               </block>
                                                                                             </value>
                                                                                             <value name="B">
-                                                                                              <block type="lists_getIndex" id="get_p11_y_val">
-                                                                                                <mutation statement="false" at="true"></mutation>
-                                                                                                <field name="MODE">GET</field>
-                                                                                                <field name="WHERE">FROM_START</field>
-                                                                                                <value name="VALUE">
-                                                                                                  <block type="py_variables_get" id="get_p11_y_check">
+                                                                                              <block type="py_types_get_item" id="07Nv2ttHCBmUez:agF=j">
+                                                                                                <value name="OBJ">
+                                                                                                  <block type="py_variables_get" id="4E1Pj!=ldd-2:`%63;fx">
                                                                                                     <field name="VAR" id="v_p11">p11</field>
                                                                                                   </block>
                                                                                                 </value>
-                                                                                                <value name="AT">
-                                                                                                  <block type="math_number" id="num_2_check2">
-                                                                                                    <field name="NUM">2</field>
-                                                                                                  </block>
+                                                                                                <value name="INDEX">
+                                                                                                  <shadow type="py_math_number" id="s-j5~:Rz)OI0XB6*{55,">
+                                                                                                    <field name="NUM">1</field>
+                                                                                                  </shadow>
                                                                                                 </value>
                                                                                               </block>
                                                                                             </value>
@@ -489,36 +460,30 @@
                                                                                           <block type="py_logic_compare" id="p16_y_gt_p12_y">
                                                                                             <field name="OP">&gt;</field>
                                                                                             <value name="A">
-                                                                                              <block type="lists_getIndex" id="get_p16_y_val">
-                                                                                                <mutation statement="false" at="true"></mutation>
-                                                                                                <field name="MODE">GET</field>
-                                                                                                <field name="WHERE">FROM_START</field>
-                                                                                                <value name="VALUE">
-                                                                                                  <block type="py_variables_get" id="get_p16_y_check">
+                                                                                              <block type="py_types_get_item" id="l8~@CA6iPP!_DnO$.pa%">
+                                                                                                <value name="OBJ">
+                                                                                                  <block type="py_variables_get" id="w%/?a@{qGx^S6TY:CFyf">
                                                                                                     <field name="VAR" id="v_p16">p14</field>
                                                                                                   </block>
                                                                                                 </value>
-                                                                                                <value name="AT">
-                                                                                                  <block type="math_number" id="num_2_check3">
-                                                                                                    <field name="NUM">2</field>
-                                                                                                  </block>
+                                                                                                <value name="INDEX">
+                                                                                                  <shadow type="py_math_number" id="n;[dO7W.2M-1zG]2+-`0">
+                                                                                                    <field name="NUM">1</field>
+                                                                                                  </shadow>
                                                                                                 </value>
                                                                                               </block>
                                                                                             </value>
                                                                                             <value name="B">
-                                                                                              <block type="lists_getIndex" id="get_p12_y_val">
-                                                                                                <mutation statement="false" at="true"></mutation>
-                                                                                                <field name="MODE">GET</field>
-                                                                                                <field name="WHERE">FROM_START</field>
-                                                                                                <value name="VALUE">
-                                                                                                  <block type="py_variables_get" id="get_p12_y_check">
+                                                                                              <block type="py_types_get_item" id="7E[B%#6jwK}d!8?,Sj6m">
+                                                                                                <value name="OBJ">
+                                                                                                  <block type="py_variables_get" id="1hLFK*(naty;}}a4dCve">
                                                                                                     <field name="VAR" id="v_p12">p12</field>
                                                                                                   </block>
                                                                                                 </value>
-                                                                                                <value name="AT">
-                                                                                                  <block type="math_number" id="num_2_check4">
-                                                                                                    <field name="NUM">2</field>
-                                                                                                  </block>
+                                                                                                <value name="INDEX">
+                                                                                                  <shadow type="py_math_number" id="j^(yGH@6x1FE~~/SRU{-">
+                                                                                                    <field name="NUM">1</field>
+                                                                                                  </shadow>
                                                                                                 </value>
                                                                                               </block>
                                                                                             </value>
@@ -530,7 +495,7 @@
                                                                                       <block type="py_variables_set" id="percent_0">
                                                                                         <field name="VAR" id="v_percent">percent</field>
                                                                                         <value name="VALUE">
-                                                                                          <block type="math_number" id="num_0">
+                                                                                          <block type="py_math_number" id="xcIFU[!wpSLOaB:E/Bqk">
                                                                                             <field name="NUM">0</field>
                                                                                           </block>
                                                                                         </value>
@@ -554,7 +519,7 @@
                                                                                                       <block type="py_math_arithmetic" id="sub_theta">
                                                                                                         <field name="OP">-</field>
                                                                                                         <value name="A">
-                                                                                                          <block type="math_number" id="num_180_2">
+                                                                                                          <block type="py_math_number" id="PFNeE)%1!u@~:qG[g2Wz">
                                                                                                             <field name="NUM">180</field>
                                                                                                           </block>
                                                                                                         </value>
@@ -566,14 +531,14 @@
                                                                                                       </block>
                                                                                                     </value>
                                                                                                     <value name="B">
-                                                                                                      <block type="math_number" id="num_180_3">
+                                                                                                      <block type="py_math_number" id="66c~EnOyms8;0tlklt7a">
                                                                                                         <field name="NUM">180</field>
                                                                                                       </block>
                                                                                                     </value>
                                                                                                   </block>
                                                                                                 </value>
                                                                                                 <value name="B">
-                                                                                                  <block type="math_number" id="num_100">
+                                                                                                  <block type="py_math_number" id="_jBCZfX`[Wj8AGsAOH@Z">
                                                                                                     <field name="NUM">100</field>
                                                                                                   </block>
                                                                                                 </value>

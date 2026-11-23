@@ -1,9 +1,10 @@
-﻿[[permission]]
+[[permission]]
 identifier = "allow-all-commands"
 description = "Allows all custom commands for Cocoya"
 commands.allow = [
   "run_python",
   "stop_python",
+  "send_stdin",
   "get_manifest",
   "get_module_toolbox",
   "open_file",

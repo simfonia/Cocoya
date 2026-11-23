@@ -36,16 +36,16 @@
       <block type="py_variables_set" id="init_score">
         <field name="VAR" id="v_score">score</field>
         <value name="VALUE">
-          <block type="math_number" id="n0">
-            <field name="NUM">0</field>
+          <block type="py_math_number" id="^3E{*ciei/2SE?~_ZV;H">
+            <field name="NUM">123</field>
           </block>
         </value>
         <next>
           <block type="py_variables_set" id="init_fs">
             <field name="VAR" id="v_fspeed">fall_speed</field>
             <value name="VALUE">
-              <block type="math_number" id="n_fs">
-                <field name="NUM">10</field>
+              <block type="py_math_number" id="}UrP1#steOA-bo],p]5U">
+                <field name="NUM">0</field>
               </block>
             </value>
             <next>
@@ -54,12 +54,12 @@
                 <value name="VALUE">
                   <block type="py_math_random" id="r1">
                     <value name="FROM">
-                      <block type="math_number" id="n50">
+                      <block type="py_math_number" id="caakBi1O$Of4(mo@rgkL">
                         <field name="NUM">50</field>
                       </block>
                     </value>
                     <value name="TO">
-                      <block type="math_number" id="n590">
+                      <block type="py_math_number" id="xfkKT:Lf~cUtw_:4-}]k">
                         <field name="NUM">590</field>
                       </block>
                     </value>
@@ -69,7 +69,7 @@
                   <block type="py_variables_set" id="init_by">
                     <field name="VAR" id="v_by">ball_y</field>
                     <value name="VALUE">
-                      <block type="math_number" id="n_50">
+                      <block type="py_math_number" id="=FFlrMNbhNm~R3G$S]LX">
                         <field name="NUM">-50</field>
                       </block>
                     </value>
@@ -144,19 +144,16 @@
                                                                   <block type="py_math_arithmetic" id="dx">
                                                                     <field name="OP">-</field>
                                                                     <value name="A">
-                                                                      <block type="lists_getIndex" id="nx">
-                                                                        <mutation statement="false" at="true"></mutation>
-                                                                        <field name="MODE">GET</field>
-                                                                        <field name="WHERE">FROM_START</field>
-                                                                        <value name="VALUE">
+                                                                      <block type="py_types_get_item" id="/W5g(^,tE=N^y3!X^eCv">
+                                                                        <value name="OBJ">
                                                                           <block type="py_variables_get" id="gn">
                                                                             <field name="VAR" id="v_nose">nose</field>
                                                                           </block>
                                                                         </value>
-                                                                        <value name="AT">
-                                                                          <block type="math_number" id="n1">
-                                                                            <field name="NUM">1</field>
-                                                                          </block>
+                                                                        <value name="INDEX">
+                                                                          <shadow type="py_math_number" id="}At`6sN7BNT]Qc+MbUra">
+                                                                            <field name="NUM">0</field>
+                                                                          </shadow>
                                                                         </value>
                                                                       </block>
                                                                     </value>
@@ -168,7 +165,7 @@
                                                                   </block>
                                                                 </value>
                                                                 <value name="B">
-                                                                  <block type="math_number" id="n2">
+                                                                  <block type="py_math_number" id="T(6rNV{w/z*U|j#!j/(:">
                                                                     <field name="NUM">2</field>
                                                                   </block>
                                                                 </value>
@@ -181,19 +178,16 @@
                                                                   <block type="py_math_arithmetic" id="dy">
                                                                     <field name="OP">-</field>
                                                                     <value name="A">
-                                                                      <block type="lists_getIndex" id="ny">
-                                                                        <mutation statement="false" at="true"></mutation>
-                                                                        <field name="MODE">GET</field>
-                                                                        <field name="WHERE">FROM_START</field>
-                                                                        <value name="VALUE">
-                                                                          <block type="py_variables_get" id="gn2">
+                                                                      <block type="py_types_get_item" id="x(mP,kdlrXL)G?]O,1YA">
+                                                                        <value name="OBJ">
+                                                                          <block type="py_variables_get" id="/6j[e[ApJ?Wld8?-op2H">
                                                                             <field name="VAR" id="v_nose">nose</field>
                                                                           </block>
                                                                         </value>
-                                                                        <value name="AT">
-                                                                          <block type="math_number" id="n2_">
-                                                                            <field name="NUM">2</field>
-                                                                          </block>
+                                                                        <value name="INDEX">
+                                                                          <shadow type="py_math_number" id="}VnPhd1D7qn+S``anHy8">
+                                                                            <field name="NUM">1</field>
+                                                                          </shadow>
                                                                         </value>
                                                                       </block>
                                                                     </value>
@@ -205,7 +199,7 @@
                                                                   </block>
                                                                 </value>
                                                                 <value name="B">
-                                                                  <block type="math_number" id="n2__">
+                                                                  <block type="py_math_number" id="npQnJB;_Bq4uKBQk;ESd">
                                                                     <field name="NUM">2</field>
                                                                   </block>
                                                                 </value>
@@ -227,7 +221,7 @@
                                                               </block>
                                                             </value>
                                                             <value name="B">
-                                                              <block type="math_number" id="n40">
+                                                              <block type="py_math_number" id="N=DHaYhp2MkG5y:$Bvs]">
                                                                 <field name="NUM">40</field>
                                                               </block>
                                                             </value>
@@ -245,7 +239,7 @@
                                                                   </block>
                                                                 </value>
                                                                 <value name="B">
-                                                                  <block type="math_number" id="n1_">
+                                                                  <block type="py_math_number" id="|/ZsB=4ka?U7YX:/Y~Zb">
                                                                     <field name="NUM">1</field>
                                                                   </block>
                                                                 </value>
@@ -255,7 +249,7 @@
                                                               <block type="py_variables_set" id="reset_y">
                                                                 <field name="VAR" id="v_by">ball_y</field>
                                                                 <value name="VALUE">
-                                                                  <block type="math_number" id="n_100">
+                                                                  <block type="py_math_number" id="0)UwmK:E1S76LXY)%-md">
                                                                     <field name="NUM">-100</field>
                                                                   </block>
                                                                 </value>
@@ -265,12 +259,12 @@
                                                                     <value name="VALUE">
                                                                       <block type="py_math_random" id="r2">
                                                                         <value name="FROM">
-                                                                          <block type="math_number" id="n50_">
+                                                                          <block type="py_math_number" id="|`k4j)`UVVeidij|r`$0">
                                                                             <field name="NUM">50</field>
                                                                           </block>
                                                                         </value>
                                                                         <value name="TO">
-                                                                          <block type="math_number" id="n590_">
+                                                                          <block type="py_math_number" id="OPK-^^gDbV]^k7BM8R~n">
                                                                             <field name="NUM">590</field>
                                                                           </block>
                                                                         </value>
@@ -318,7 +312,7 @@
                                                           </block>
                                                         </value>
                                                         <value name="B">
-                                                          <block type="math_number" id="n480">
+                                                          <block type="py_math_number" id="ScR,WQ.#,Ui(hYnv((/Z">
                                                             <field name="NUM">480</field>
                                                           </block>
                                                         </value>
@@ -328,7 +322,7 @@
                                                       <block type="py_variables_set" id="miss_reset_y">
                                                         <field name="VAR" id="v_by">ball_y</field>
                                                         <value name="VALUE">
-                                                          <block type="math_number" id="n_50_">
+                                                          <block type="py_math_number" id="MOV)o:q)C;Gg}5iq$bd?">
                                                             <field name="NUM">-50</field>
                                                           </block>
                                                         </value>
@@ -338,12 +332,12 @@
                                                             <value name="VALUE">
                                                               <block type="py_math_random" id="r3">
                                                                 <value name="FROM">
-                                                                  <block type="math_number" id="n50__">
+                                                                  <block type="py_math_number" id="F~=kL]N~%KEG5k*,md3J">
                                                                     <field name="NUM">50</field>
                                                                   </block>
                                                                 </value>
                                                                 <value name="TO">
-                                                                  <block type="math_number" id="n590__">
+                                                                  <block type="py_math_number" id="#Y;Y*!Xca.uN2yl=Z$9C">
                                                                     <field name="NUM">590</field>
                                                                   </block>
                                                                 </value>
@@ -372,7 +366,7 @@
                                                           </block>
                                                         </value>
                                                         <value name="RADIUS">
-                                                          <block type="math_number" id="br">
+                                                          <block type="py_math_number" id=";9!65mM$l1jsr!Sz3Ooz">
                                                             <field name="NUM">30</field>
                                                           </block>
                                                         </value>
@@ -384,7 +378,7 @@
                                                           </block>
                                                         </value>
                                                         <value name="THICKNESS">
-                                                          <block type="math_number" id="bt_">
+                                                          <block type="py_math_number" id="/ro;OLj]WY.bIGuvb+kD">
                                                             <field name="NUM">-1</field>
                                                           </block>
                                                         </value>

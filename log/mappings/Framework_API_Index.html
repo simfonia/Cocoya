@@ -196,5 +196,16 @@ console.log(spec.toJSON());
     <li><b>回歸測試（新增）</b>：<code>ui/src/app/block_jsoninit.test.mjs</code>——靜態抽取所有 <code>*_blocks.js</code> 的 <code>jsonInit({...})</code> 字面值，以（主 i18n＋模組 i18n）stub Msg 求值後驗證每個 <code>messageN</code> 的 <code>%k</code> 涵蓋 <code>argsN</code> 全部 arg（含 <code>%{BKY_*}</code> 轉引展開；zh-hant 與 en 都掃）。<code>cd ui; node --test "src/app/*.test.mjs"</code>。</li>
   </ul>
   <p><b>回歸測試</b>：<code>ui/src/app/platform_restore.test.mjs</code>（<code>cd ui; node --test "src/app/*.test.mjs"</code>）。</p>
+  <h2>10. 終端機雙向互動 (stdin) 與即時串流契約（2026-11-23 實作蒸餾）</h2>
+  <p><b>背景</b>：Cocoya 底部終端機原先為單向輸出模擬。當 Python 程式執行 <code>input()</code> 時，子進程因 stdin 無寫入端會拋出 <code>EOFError</code> 或死等；且 <code>input("prompt")</code> 的提示文字因結尾無 <code>\n</code>，若使用行阻塞讀取會延遲到程式結束才顯現。</p>
+  <p><b>架構契約</b>：</p>
+  <ul>
+    <li><b>stdin 管道</b>：Rust <code>run_python</code> 宣告 <code>.stdin(Stdio::piped())</code>，子進程啟動後以 <code>mpsc::channel</code> 橋接，背景執行緒持有 <code>ChildStdin</code>，寫入後自動附加 <code>\n</code> 並即時 <code>flush()</code>。</li>
+    <li><b>非行阻塞區塊讀取 (Chunk Streaming)</b>：stdout/stderr 必須使用 <code>reader.read(&amp;mut buf)</code> 搭配 <code>utf8_incomplete_tail_len</code> 邊界保護，<b>嚴禁使用 <code>read_until(b'\n')</code></b>，以保證無換行符的互動 prompt 能在微秒級推播至前端。</li>
+    <li><b>前端輸入列與回顯</b>：<code>#terminalStdinRow</code> 於執行 PC Python 時顯示，停止或關閉時隱藏；使用者按 Enter 或點擊送出按鈕時，將文字以 <code>term-info</code> 樣式回顯至終端機，並透過 <code>bridge.send('stdinSend', { text })</code> 呼叫 Tauri 的 <code>send_stdin</code> 指令。</li>
+    <li><b>佔位符 i18n 契約</b>：<code>applyI18n()</code> 同時掃描 <code>[title]</code>、<code>[placeholder]</code> 與葉子節點 <code>textContent</code> 之 <code>%{BKY_*}</code> 佔位符。</li>
+  </ul>
+
+  <p><b>回歸測試</b>：<code>ui/src/bridge/tauri_send_dispatch.test.mjs</code>（涵蓋 <code>stdinSend</code> 的 SSOT 派遣一致性）。</p>
 </body>
 </html>

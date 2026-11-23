@@ -157,7 +157,17 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
             }
         });
 
-        // 2. 處理文字內容 (textContent) - 僅限葉子節點標籤，避免誤刪容器內的 img
+        // 2. 處理輸入框佔位文字 (placeholder)
+        const placeholderElements = document.querySelectorAll('[placeholder^="%{BKY_"]');
+        placeholderElements.forEach(el => {
+            const placeholder = el.getAttribute('placeholder');
+            if (placeholder && placeholder.startsWith('%{BKY_')) {
+                const key = placeholder.substring(6, placeholder.length - 1);
+                if (Blockly.Msg[key]) el.setAttribute('placeholder', Blockly.Msg[key]);
+            }
+        });
+
+        // 3. 處理文字內容 (textContent) - 僅限葉子節點標籤，避免誤刪容器內的 img
         const textElements = document.querySelectorAll('span, p, button, option');
         textElements.forEach(el => {
             const text = el.textContent.trim();
@@ -443,12 +453,12 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                             });
                             if (!sshConfig) {
                                 if (window.CocoyaUI?.appendTerminal) {
-                                    window.CocoyaUI.appendTerminal('--- Remote training cancelled (no SSH config) ---', 'info');
+                                    window.CocoyaUI.appendTerminal('--- Remote training cancelled (no SSH config) ---\n', 'info');
                                 }
                                 return;
                             }
                             if (window.CocoyaUI?.appendTerminal) {
-                                window.CocoyaUI.appendTerminal(`--- Remote training: sync=${syncMode}, dataset=${datasetDir} ---`, 'info');
+                                window.CocoyaUI.appendTerminal(`--- Remote training: sync=${syncMode}, dataset=${datasetDir} ---\n`, 'info');
                             }
                             // 連線動態提示（D4 UX）：每 0.7s 補一個 '.'，收到第一筆訓練事件即停止
                             if (self._remoteConnTimer) { clearInterval(self._remoteConnTimer); self._remoteConnTimer = null; }
@@ -840,27 +850,35 @@ window.CocoyaUI = Object.assign(window.CocoyaUI || {}, {
                         const key = msg.remote ? 'MSG_TRAINING_COMPLETE_REMOTE' : 'MSG_TRAINING_COMPLETE_LOCAL';
                         const fallback = msg.remote ? '--- Remote training complete: %1 ---' : '--- Training complete: %1 ---';
                         const text = ((Blockly.Msg && Blockly.Msg[key]) || fallback).replace('%1', msg.modelDir || '');
-                        window.CocoyaUI.appendTerminal(text, 'info');
+                        window.CocoyaUI.appendTerminal(text.endsWith('\n') ? text : (text + '\n'), 'info');
                     }
                 } else if (msg.command === 'trainingLog') {
                     // D4 遠端訓練即時日誌（VSIX postMessage / Tauri sidecar-event 轉發）
                     // 注意：連線階段的「連線中」回報不算進度，不停止點點計時器；
                     // 收到連線成功/同步/錯誤等實質進度才停。
                     if (self._remoteConnTimer && msg.message && /連線成功|同步檢查|錯誤|error/i.test(msg.message)) {
-                        clearInterval(self._remoteConnTimer); self._remoteConnTimer = null;
+                        clearInterval(self._remoteConnTimer);
+                        self._remoteConnTimer = null;
+                        if (window.CocoyaUI?.appendTerminal) window.CocoyaUI.appendTerminal('\n', 'info');
                     }
                     if (window.CocoyaUI?.appendTerminal && msg.message) {
-                        window.CocoyaUI.appendTerminal(msg.message, 'info');
+                        const logText = msg.message.endsWith('\n') ? msg.message : (msg.message + '\n');
+                        window.CocoyaUI.appendTerminal(logText, 'info');
                     }
                 } else if (msg.command === 'trainingError') {
                     // D4 遠端訓練失敗（含 SSH 認證失敗）：必須顯示於終端機，避免看似卡住
-                    if (self._remoteConnTimer) { clearInterval(self._remoteConnTimer); self._remoteConnTimer = null; }
+                    if (self._remoteConnTimer) {
+                        clearInterval(self._remoteConnTimer);
+                        self._remoteConnTimer = null;
+                        if (window.CocoyaUI?.appendTerminal) window.CocoyaUI.appendTerminal('\n', 'info');
+                    }
                     if (window.CocoyaUI?.appendTerminal) {
                         // P1-5：後端錯誤碼在此轉為 i18n 文案（後端不輸出展示用文案）
                         const errText = (msg.errorCode === 'SSH_PARAMIKO_MISSING')
                             ? ((Blockly.Msg && Blockly.Msg['MSG_PARAMIKO_MISSING']) || 'paramiko not installed')
                             : (msg.error || '未知錯誤');
-                        window.CocoyaUI.appendTerminal('[Remote] 錯誤: ' + errText, 'err');
+                        const fullErr = '[Remote] 錯誤: ' + errText;
+                        window.CocoyaUI.appendTerminal(fullErr.endsWith('\n') ? fullErr : (fullErr + '\n'), 'err');
                     }
                     // 連線失敗時清除 session SSH 設定，下次執行重新跳出精靈讓使用者修正
                     if (window.CocoyaUI && /SSH|連線失敗|timed out|Authentication|auth/i.test(msg.error || '')) {

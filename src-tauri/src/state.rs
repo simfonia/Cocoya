@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::process::Child;
 use std::path::PathBuf;
 use serde::Serialize;
+use std::sync::mpsc::Sender;
 
 /// Sidecar process wrapper that holds stdin handle and child process
 pub struct SidecarProcess {
@@ -249,6 +250,9 @@ impl SerialMonitorRegistry {
 
 pub struct AppState {
     pub python_processes: Arc<Mutex<HashMap<String, Child>>>,
+    /// Window Label -> Python 子進程的 stdin 傳送端（供 send_stdin 寫入）。
+    /// run_python 啟動時插入；stop_python / CloseRequested 時移除。
+    pub python_stdin_senders: Arc<Mutex<HashMap<String, Sender<String>>>>,
     /// Window Label -> 進行中的 pip 安裝子進程。
     /// 必須獨立於 `python_processes`：pip 安裝不應走 `run_python`（其開頭會 `stop_python`，
     /// 會誤殺使用者正在執行的程式並誤釋放該視窗的串列埠監看）。
