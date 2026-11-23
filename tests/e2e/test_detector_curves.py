@@ -1,8 +1,8 @@
-"""e2e：物件偵測訓練曲線圖「Loss / MAE / IoU 三面板」檢查（不跑訓練）。
+"""e2e：物件偵測訓練曲線圖「Total / Heatmap / Size Map 三面板」檢查（不跑訓練）。
 
 用途：以假 history 直接呼叫 detector_train.plot_detector_curves，
-驗證（1）面板數依 history 欄位動態決定、（2）MAE 面板確實被繪製、
-（3）舊 history（無 mae／bbox_iou）不中斷、（4）PNG 實體檔案產出。
+驗證（1）面板數依 history 欄位動態決定、（2）Heatmap / Size Map 面板確實被繪製、
+（3）缺 loss component 時不中斷、（4）PNG 實體檔案產出。
 
 執行：
   & "C:\\WPy64-31160\\python-3.11.6.amd64\\python.exe" temp_scripts/e2e_detector_curve_check.py
@@ -54,12 +54,12 @@ def make_history(kind):
         'loss': [0.5 - 0.05 * i for i in range(n)],
         'val_loss': [0.6 - 0.04 * i for i in range(n)],
     }
-    if kind in ('full', 'no_iou', 'no_mae'):
-        base['mae'] = [0.4 - 0.03 * i for i in range(n)]
-        base['val_mae'] = [0.45 - 0.02 * i for i in range(n)]
-    if kind in ('full', 'no_mae'):
-        base['bbox_iou'] = [0.1 + 0.05 * i for i in range(n)]
-        base['val_bbox_iou'] = [0.08 + 0.04 * i for i in range(n)]
+    if kind in ('full', 'no_size'):
+        base['heatmap_loss'] = [0.4 - 0.03 * i for i in range(n)]
+        base['val_heatmap_loss'] = [0.45 - 0.02 * i for i in range(n)]
+    if kind in ('full', 'no_heatmap'):
+        base['size_map_loss'] = [0.3 - 0.02 * i for i in range(n)]
+        base['val_size_map_loss'] = [0.35 - 0.015 * i for i in range(n)]
     return base
 
 
@@ -115,14 +115,14 @@ def test_detector_curves(tmp_path):
     print(f'輸出目錄: {out_dir}\n')
 
     run_case(mod, plt, 'full', 3,
-             ['Training Loss (MSE)', 'Validation Loss (MSE)',
-              'Training MAE', 'Validation MAE',
-              'Training IoU', 'Validation IoU'], out_dir)
-    # 舊 history：無 IoU 欄 → Loss + MAE 兩面板
-    run_case(mod, plt, 'no_iou', 2,
-             ['Training Loss (MSE)', 'Training MAE', 'Validation MAE'], out_dir)
-    # 舊 history：無 MAE／無 IoU → 僅 Loss（MAE 欄位是 compile metrics 保證存在，
-    # 此案例模擬外部匯入的殘缺 history，確認不中斷）
-    run_case(mod, plt, 'minimal', 1, ['Training Loss (MSE)'], out_dir)
+             ['Train Total Loss', 'Val Total Loss',
+              'Train Heatmap Loss', 'Val Heatmap Loss',
+              'Train Size Loss', 'Val Size Loss'], out_dir)
+    # 缺 size_map_loss → Total + Heatmap 兩面板
+    run_case(mod, plt, 'no_size', 2,
+             ['Train Total Loss', 'Val Total Loss', 'Train Heatmap Loss', 'Val Heatmap Loss'], out_dir)
+    # 僅有 Total Loss（外部匯入的殘缺 history，確認不中斷）
+    
+    run_case(mod, plt, 'minimal', 1, ['Train Total Loss', 'Val Total Loss'], out_dir)
 
     print()
